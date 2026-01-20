@@ -126,6 +126,8 @@ bun install
 
 Python (from repo root):
 ```bash
+conda create -n monopolybench python=3.13 -y
+conda activate monopolybench
 cd python
 uv sync --all-packages
 ```
