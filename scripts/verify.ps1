@@ -32,7 +32,7 @@ try {
   Invoke-Step -Name "Tooling: verify prerequisites" -ScriptBlock {
     Assert-Command -Name "node"
     Assert-Command -Name "uv"
-    Assert-Command -Name "yarn"
+    Assert-Command -Name "bun"
   }
 
   Invoke-Step -Name "Contracts: validate examples" -ScriptBlock {
@@ -96,7 +96,7 @@ try {
   Invoke-Step -Name "Frontend: lint" -ScriptBlock {
     Push-Location frontend
     try {
-      yarn lint
+      bun lint
     } finally {
       Pop-Location
     }
@@ -105,7 +105,7 @@ try {
   Invoke-Step -Name "Frontend: build" -ScriptBlock {
     Push-Location frontend
     try {
-      yarn build
+      bun run build
     } finally {
       Pop-Location
     }

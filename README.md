@@ -95,7 +95,7 @@ For repo boundaries and “don’t break the benchmark” rules (determinism, co
 
 ### Prerequisites
 - Node.js (for the frontend)
-- Yarn via Corepack (recommended): `corepack enable`
+- Bun
 - Python via `uv` (workspace is under `python/`)
 - OpenRouter API key
 
@@ -115,13 +115,13 @@ OPENROUTER_API_KEY=...
 
 ### 2) Install dependencies
 
-I recommend using `uv` for Python and `yarn` for the frontend.
+I recommend using `uv` for Python and `bun` for the frontend.
 I also recommend using a Python virtual environment.
 
 Frontend:
 ```bash
 cd frontend
-yarn
+bun install
 ```
 
 Python (from repo root):
@@ -132,7 +132,7 @@ uv sync --all-packages
 
 ### 3) Run verification (recommended before pushing)
 
-From repo root:
+From repo root (must have powershell 7+):
 ```powershell
 pwsh -File scripts/verify.ps1
 ```
@@ -154,7 +154,7 @@ Health check: open `http://127.0.0.1:8000/health` and expect `{"ok": true}`.
 ### 5) Run the frontend
 ```bash
 cd frontend
-yarn dev
+bun run dev
 ```
 
 Open `http://localhost:5173`.
