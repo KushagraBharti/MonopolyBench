@@ -18,6 +18,8 @@ class OpenRouterResult:
     error: str | None
     error_type: str | None
     request_id: str | None
+    request_payload_raw: str | None = None
+    response_text: str | None = None
 
 
 class OpenRouterClient:
@@ -54,16 +56,6 @@ class OpenRouterClient:
         max_tokens: int | None = None,
         reasoning: dict[str, Any] | None = None,
     ) -> OpenRouterResult:
-        if not self._api_key:
-            return OpenRouterResult(
-                ok=False,
-                status_code=None,
-                response_json=None,
-                error="OPENROUTER_API_KEY not set",
-                error_type="no_api_key",
-                request_id=None,
-            )
-
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
@@ -77,6 +69,19 @@ class OpenRouterClient:
             payload["max_tokens"] = max_tokens
         if reasoning is not None:
             payload["reasoning"] = reasoning
+        payload_text = json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+        if not self._api_key:
+            return OpenRouterResult(
+                ok=False,
+                status_code=None,
+                response_json=None,
+                error="OPENROUTER_API_KEY not set",
+                error_type="no_api_key",
+                request_id=None,
+                request_payload_raw=payload_text,
+                response_text=None,
+            )
 
         headers = {
             "Authorization": f"Bearer {self._api_key}",
@@ -87,7 +92,8 @@ class OpenRouterClient:
         last_error: OpenRouterResult | None = None
         for attempt in range(self._max_retries + 1):
             try:
-                response = await self._client.post(url, headers=headers, json=payload)
+                response = await self._client.post(url, headers=headers, content=payload_text)
+                response_text = response.text
                 request_id = response.headers.get("x-request-id") or response.headers.get("openrouter-request-id")
                 if response.status_code >= 400:
                     status_code = response.status_code
@@ -103,7 +109,7 @@ class OpenRouterClient:
                     if retryable and attempt < self._max_retries:
                         await asyncio.sleep(self._backoff_delay(attempt))
                         continue
-                    error_text = response.text.strip()
+                    error_text = response_text.strip()
                     return OpenRouterResult(
                         ok=False,
                         status_code=status_code,
@@ -111,6 +117,8 @@ class OpenRouterClient:
                         error=error_text or f"HTTP {status_code}",
                         error_type=error_type,
                         request_id=request_id,
+                        request_payload_raw=payload_text,
+                        response_text=response_text,
                     )
                 try:
                     data = response.json()
@@ -122,6 +130,8 @@ class OpenRouterClient:
                         error="Invalid JSON response from OpenRouter",
                         error_type="invalid_json",
                         request_id=request_id,
+                        request_payload_raw=payload_text,
+                        response_text=response_text,
                     )
                 if request_id is None:
                     request_id = data.get("id")
@@ -132,6 +142,8 @@ class OpenRouterClient:
                     error=None,
                     error_type=None,
                     request_id=request_id,
+                    request_payload_raw=payload_text,
+                    response_text=response_text,
                 )
             except (httpx.TimeoutException, httpx.RequestError) as exc:
                 last_error = OpenRouterResult(
@@ -141,6 +153,8 @@ class OpenRouterClient:
                     error=str(exc),
                     error_type="network_error",
                     request_id=None,
+                    request_payload_raw=payload_text,
+                    response_text=None,
                 )
                 if attempt < self._max_retries:
                     await asyncio.sleep(self._backoff_delay(attempt))
@@ -154,6 +168,8 @@ class OpenRouterClient:
             error="OpenRouter request failed",
             error_type="unknown",
             request_id=None,
+            request_payload_raw=payload_text,
+            response_text=None,
         )
 
     async def aclose(self) -> None:

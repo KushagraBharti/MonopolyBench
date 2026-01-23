@@ -370,12 +370,13 @@ class LlmRunner:
                 prompt_payload_raw=prompt_bundle.user_content,
             )
         )
+        tool_choice = "required"
         if player_config.reasoning is not None:
             result = await self._openrouter.create_chat_completion(
                 model=player_config.openrouter_model_id,
                 messages=prompt_bundle.messages,
                 tools=tools,
-                tool_choice="required",
+                tool_choice=tool_choice,
                 reasoning=player_config.reasoning,
             )
         else:
@@ -383,9 +384,22 @@ class LlmRunner:
                 model=player_config.openrouter_model_id,
                 messages=prompt_bundle.messages,
                 tools=tools,
-                tool_choice="required",
+                tool_choice=tool_choice,
             )
         response_end_ms = _now_ms()
+        request_payload_raw = result.request_payload_raw or self._build_request_payload_raw(
+            model=player_config.openrouter_model_id,
+            messages=prompt_bundle.messages,
+            tools=tools,
+            tool_choice=tool_choice,
+            reasoning=player_config.reasoning,
+        )
+        self._write_quality_artifacts(
+            decision_id=decision["decision_id"],
+            attempt_index=0,
+            request_text=request_payload_raw,
+            response_text=result.response_text,
+        )
         attempt = self._attempt_from_response(
             prompt_bundle,
             result,
@@ -433,7 +447,7 @@ class LlmRunner:
                     model=player_config.openrouter_model_id,
                     messages=retry_bundle.messages,
                     tools=tools,
-                    tool_choice="required",
+                    tool_choice=tool_choice,
                     reasoning=player_config.reasoning,
                 )
             else:
@@ -441,9 +455,22 @@ class LlmRunner:
                     model=player_config.openrouter_model_id,
                     messages=retry_bundle.messages,
                     tools=tools,
-                    tool_choice="required",
+                    tool_choice=tool_choice,
                 )
             retry_end_ms = _now_ms()
+            retry_request_payload_raw = retry_result.request_payload_raw or self._build_request_payload_raw(
+                model=player_config.openrouter_model_id,
+                messages=retry_bundle.messages,
+                tools=tools,
+                tool_choice=tool_choice,
+                reasoning=player_config.reasoning,
+            )
+            self._write_quality_artifacts(
+                decision_id=decision["decision_id"],
+                attempt_index=1,
+                request_text=retry_request_payload_raw,
+                response_text=retry_result.response_text,
+            )
             retry_attempt = self._attempt_from_response(
                 retry_bundle,
                 retry_result,
@@ -900,6 +927,45 @@ class LlmRunner:
             "action": action_name,
             "args": args,
         }
+
+    def _build_request_payload_raw(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
+        tool_choice: str | dict[str, Any] | None,
+        reasoning: dict[str, Any] | None,
+    ) -> str:
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.0,
+        }
+        if tools is not None:
+            payload["tools"] = tools
+        if tool_choice is not None:
+            payload["tool_choice"] = tool_choice
+        if reasoning is not None:
+            payload["reasoning"] = reasoning
+        return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+    def _write_quality_artifacts(
+        self,
+        *,
+        decision_id: str,
+        attempt_index: int,
+        request_text: str | None,
+        response_text: str | None,
+    ) -> None:
+        if self._run_files is None:
+            return
+        self._run_files.write_quality_artifacts(
+            decision_id=decision_id,
+            attempt_index=attempt_index,
+            request_text=request_text,
+            response_text=response_text,
+        )
 
     async def _close_openrouter(self) -> None:
         close = getattr(self._openrouter, "aclose", None)

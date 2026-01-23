@@ -18,6 +18,7 @@ class RunFiles:
     actions_path: Path
     snapshots_dir: Path
     prompts_dir: Path
+    quality_dir: Path | None
     summary_path: Path
 
     def write_event(self, event: dict[str, Any]) -> None:
@@ -92,11 +93,29 @@ class RunFiles:
                 encoding="utf-8",
             )
 
+    def write_quality_artifacts(
+        self,
+        *,
+        decision_id: str,
+        attempt_index: int,
+        request_text: str | None,
+        response_text: str | None,
+    ) -> None:
+        if self.quality_dir is None:
+            return
+        prefix = _prompt_file_prefix(decision_id, attempt_index=attempt_index)
+        self.quality_dir.mkdir(parents=True, exist_ok=True)
+        if request_text is not None:
+            (self.quality_dir / f"{prefix}_request.txt").write_text(request_text, encoding="utf-8")
+        if response_text is not None:
+            (self.quality_dir / f"{prefix}_response.txt").write_text(response_text, encoding="utf-8")
+
 
 def init_run_files(runs_dir: Path, run_id: str) -> RunFiles:
     run_dir = runs_dir / run_id
     snapshots_dir = run_dir / "state"
     prompts_dir = run_dir / "prompts"
+    quality_dir = runs_dir.parent / "quality_check" / run_id
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     return RunFiles(
         run_id=run_id,
@@ -106,6 +125,7 @@ def init_run_files(runs_dir: Path, run_id: str) -> RunFiles:
         actions_path=run_dir / "actions.jsonl",
         snapshots_dir=snapshots_dir,
         prompts_dir=prompts_dir,
+        quality_dir=quality_dir,
         summary_path=run_dir / "summary.json",
     )
 

@@ -247,6 +247,7 @@ class RunManager:
             actions_path=run_dir / "actions.jsonl",
             snapshots_dir=run_dir / "state",
             prompts_dir=run_dir / "prompts",
+            quality_dir=self._runs_dir.parent / "quality_check" / run_id,
             summary_path=run_dir / "summary.json",
         )
 
