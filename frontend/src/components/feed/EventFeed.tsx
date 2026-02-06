@@ -14,11 +14,19 @@ import {
 } from '@/domain/monopoly/formatters';
 
 const severityBorders: Record<EventSeverity, string> = {
-  neutral: 'border-neo-border',
-  info: 'border-neo-blue',
-  success: 'border-neo-green',
-  warning: 'border-neo-yellow',
-  danger: 'border-neo-pink',
+  neutral: 'border-black/20',
+  info: 'border-neo-blue/60',
+  success: 'border-neo-green/60',
+  warning: 'border-neo-yellow/70',
+  danger: 'border-neo-pink/60',
+};
+
+const severityAccents: Record<EventSeverity, string> = {
+  neutral: 'bg-gray-100',
+  info: 'bg-neo-blue/10',
+  success: 'bg-neo-green/8',
+  warning: 'bg-neo-yellow/10',
+  danger: 'bg-neo-pink/8',
 };
 
 const KNOWN_EVENT_TYPES = new Set<string>([
@@ -40,7 +48,7 @@ const KNOWN_EVENT_TYPES = new Set<string>([
 
 const PlayerName = ({ id }: { id: string }) => (
   <span
-    className="font-brutal px-1.5 py-0.5 border border-black text-[10px] items-center inline-flex shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+    className="font-mono font-bold px-1.5 py-px border border-black/60 text-[9px] items-center inline-flex rounded-[2px]"
     style={{ backgroundColor: getPlayerColor(id), color: 'white' }}
   >
     {id}
@@ -50,14 +58,14 @@ const PlayerName = ({ id }: { id: string }) => (
 const MoneyAmount = ({ amount, showSign }: { amount: number; showSign?: boolean }) => {
   const isNegative = amount < 0;
   return (
-    <span className={cn('font-mono font-bold', isNegative ? 'text-neo-red' : 'text-neo-green')}>
+    <span className={cn('font-mono font-bold text-[11px]', isNegative ? 'text-neo-red' : 'text-neo-green')}>
       {formatMoney(amount, showSign)}
     </span>
   );
 };
 
 const SpaceLabel = ({ index }: { index: number }) => (
-  <span className="font-mono text-[9px] border border-black px-1 py-0.5 bg-neo-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+  <span className="font-mono text-[9px] border border-black/40 px-1 py-px bg-neo-bg rounded-[2px]">
     {formatSpaceLabel(index)}
   </span>
 );
@@ -116,64 +124,61 @@ const EventItem = ({ event }: { event: Event }) => {
     <div
       onClick={() => setExpanded(!expanded)}
       className={cn(
-        'group relative mb-2 cursor-pointer select-none outline-none',
+        'group relative cursor-pointer select-none outline-none',
         'animate-snap-in',
-        card.isMinor && !expanded ? 'opacity-70 hover:opacity-100' : 'opacity-100'
+        card.isMinor && !expanded ? 'opacity-60 hover:opacity-100' : 'opacity-100'
       )}
     >
       <div className={cn(
-        'bg-white border-2 p-2 shadow-neo transition-all duration-150',
-        'group-hover:translate-x-[-1px] group-hover:translate-y-[-1px] group-hover:shadow-neo-lg',
+        'bg-white border-[1.5px] p-2 rounded-[3px] transition-all duration-150',
+        'hover:shadow-neo-sm',
         severityBorders[card.severity]
       )}>
-        <div className="flex justify-between items-start gap-2">
+        <div className="flex items-start gap-2">
           {/* Left: Icon */}
-          <div className="flex-shrink-0 pt-0.5">
+          <div className="flex-shrink-0 pt-px">
             <span className={cn(
-              "flex items-center justify-center w-6 h-6 border-2 border-black bg-neo-bg font-mono text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
-              isUnknown && "bg-gray-200 text-gray-500"
+              "flex items-center justify-center w-5 h-5 border-[1.5px] border-black/40 rounded-[2px] font-mono text-[10px] leading-none",
+              isUnknown ? "bg-gray-100 text-gray-400" : severityAccents[card.severity]
             )}>
               {card.icon}
             </span>
           </div>
 
           {/* Center: Content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <div className="flex items-baseline justify-between">
-              <span className="font-brutal text-xs uppercase tracking-wide leading-none">
+          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-bold text-[10px] uppercase tracking-wide leading-none text-gray-800">
                 {card.title}
-                <span className="ml-2 font-mono text-[9px] text-gray-400 font-normal">#{card.turnIndex}</span>
               </span>
+              <span className="font-mono text-[8px] text-gray-300 tabular-nums">#{card.turnIndex}</span>
             </div>
 
-            <div className="text-xs leading-snug flex flex-wrap gap-x-1 gap-y-1 items-center">
+            <div className="text-[11px] leading-snug flex flex-wrap gap-x-1 gap-y-0.5 items-center">
               {card.parts.map(renderPart)}
             </div>
           </div>
 
           {/* Right: Chevron */}
-          <div className="flex-shrink-0 text-black opacity-40 group-hover:opacity-100 transition-opacity self-start pt-1">
+          <div className="flex-shrink-0 text-gray-300 group-hover:text-gray-600 transition-colors self-start pt-0.5">
             <ChevronIcon expanded={expanded} />
           </div>
         </div>
 
-        {/* Badges Footer (if any or expanded) */}
-        {(card.badges.length > 0 || expanded) && (
-          <div className={cn(
-            "mt-2 pt-2 border-t-2 border-dashed border-gray-200 flex flex-wrap gap-1 transition-all",
-            !expanded && card.badges.length === 0 && "hidden"
-          )}>
+        {/* Badges Footer */}
+        {card.badges.length > 0 && (
+          <div className="mt-1.5 pt-1.5 border-t border-dashed border-gray-100 flex flex-wrap gap-1">
             {card.badges.map((badge, idx) => (
               <Badge key={`${badge.text}-${idx}`} badge={badge} />
             ))}
           </div>
         )}
 
-        {/* Expanded Details: Raw JSON */}
+        {/* Expanded Details */}
         {expanded && (
           <div className="mt-2 text-[10px] font-mono">
-            <div className="bg-neo-bg border-2 border-black p-2 shadow-inner overflow-x-auto">
-              <pre className="text-gray-700 whitespace-pre-wrap break-all">
+            <div className="bg-neo-bg/80 border border-black/15 rounded-[2px] p-2 overflow-x-auto">
+              <pre className="text-gray-600 whitespace-pre-wrap break-all leading-relaxed">
                 {JSON.stringify(card.details, null, 2)}
               </pre>
             </div>
@@ -201,14 +206,14 @@ export const EventFeed = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-t-2 border-black font-sans">
+    <div className="flex flex-col h-full bg-white font-sans">
       {/* Resume Banner */}
       {!autoScroll && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30">
           <button
             type="button"
             onClick={() => setAutoScroll(true)}
-            className="brutal-btn bg-neo-yellow text-[10px] py-1 shadow-neo"
+            className="brutal-btn bg-neo-yellow text-[9px] py-1 px-3 shadow-neo-sm rounded-[2px]"
           >
             RESUME LIVE
           </button>
@@ -217,13 +222,13 @@ export const EventFeed = () => {
 
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-2 brutal-scroll space-y-2 pb-10"
+        className="flex-1 overflow-y-auto px-2 py-2 brutal-scroll space-y-1.5 pb-8"
         onScroll={handleScroll}
       >
         {events.length === 0 && (
-          <div className="flex flex-col items-center justify-center pt-20 text-gray-400 opacity-50">
-            <span className="text-4xl mb-2">⚡</span>
-            <span className="font-brutal text-xs">Waiting for events...</span>
+          <div className="flex flex-col items-center justify-center pt-20 text-gray-300">
+            <span className="text-3xl mb-2 opacity-40">~</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide">Waiting for events</span>
           </div>
         )}
 

@@ -77,7 +77,7 @@ export const PlayerStackPanel = () => {
 
   if (players.length === 0) {
     return (
-      <div className="rounded-sm border-2 border-black bg-white p-3 text-[12px] text-gray-500 shadow-neo-sm">
+      <div className="rounded-[3px] border border-black/10 bg-white p-3 text-[11px] text-gray-400">
         Waiting for players...
       </div>
     );

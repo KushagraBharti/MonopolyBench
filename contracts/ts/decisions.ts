@@ -291,6 +291,7 @@ export interface DecisionPoint {
   post_turn?: {
     options: {
       can_trade_with: string[];
+      max_trade_exchanges?: number;
       mortgageable_space_indices: number[];
       unmortgageable_space_indices: number[];
       buildable_space_indices: number[];

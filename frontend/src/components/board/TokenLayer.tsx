@@ -46,24 +46,24 @@ export const TokenLayer = () => {
                         animate={{
                             left: `calc(${x}% + ${offsetX}px)`,
                             top: `calc(${y}% + ${offsetY}px)`,
-                            // Scale active player slightly, but no pulsing
-                            scale: isActive ? 1.06 : 1.0,
+                            scale: isActive ? 1.1 : 1.0,
                             zIndex: isActive ? 100 : 50 + indexAtPos,
-                            y: isActive ? -10 : 0,
+                            y: isActive ? -8 : 0,
                         }}
                         transition={{
                             type: "spring",
-                            stiffness: 150,
-                            damping: 18,
+                            stiffness: 140,
+                            damping: 20,
+                            mass: 0.8,
                         }}
                         className="absolute w-0 h-0 flex items-center justify-center"
                     >
                         <div
-                            className={cn("relative w-10 h-10 shrink-0")}
+                            className={cn("relative w-10 h-10 shrink-0 transition-[filter] duration-300")}
                             style={{
                                 filter: isActive
-                                    ? 'drop-shadow(0px 0px 10px rgba(255, 242, 0, 0.9)) drop-shadow(0px 6px 0px rgba(0,0,0,1))'
-                                    : 'drop-shadow(0px 6px 0px rgba(0,0,0,1))',
+                                    ? 'drop-shadow(0px 0px 8px rgba(255, 217, 0, 0.7)) drop-shadow(0px 4px 0px rgba(0,0,0,0.8))'
+                                    : 'drop-shadow(0px 4px 0px rgba(0,0,0,0.6))',
                             }}
                         >
                             <img

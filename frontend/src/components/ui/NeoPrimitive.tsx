@@ -11,7 +11,7 @@ export const NeoCard = forwardRef<HTMLDivElement, NeoProps>(
             <div
                 ref={ref}
                 className={cn(
-                    "bg-white border-3 border-black p-4",
+                    "bg-white border-2 border-black rounded-[3px]",
                     variant === 'default' && "shadow-neo",
                     variant === 'flat' && "shadow-none",
                     className
@@ -51,7 +51,7 @@ export const NeoButton = forwardRef<HTMLButtonElement, ButtonProps>(
                 className={cn(
                     variants[variant],
                     sizes[size],
-                    "font-bold uppercase tracking-wider transition-all active:translate-y-1 active:shadow-none border-3 border-black shadow-neo",
+                    "font-bold uppercase tracking-wider transition-all duration-100 active:translate-y-0.5 active:shadow-none border-2 border-black shadow-neo rounded-[3px] select-none",
                     variant === 'ghost' && "shadow-none active:translate-y-0",
                     className
                 )}
@@ -68,17 +68,17 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 
 export const NeoBadge = ({ className, variant = 'neutral', ...props }: BadgeProps) => {
     const variants = {
-        neutral: "bg-gray-200 text-black",
-        success: "bg-neo-green text-black",
-        warning: "bg-neo-yellow text-black",
-        error: "bg-neo-pink text-white",
-        info: "bg-neo-cyan text-black",
+        neutral: "bg-gray-100 text-gray-700 border-gray-300",
+        success: "bg-neo-green/90 text-black border-black",
+        warning: "bg-neo-yellow/90 text-black border-black",
+        error: "bg-neo-pink/90 text-white border-black",
+        info: "bg-neo-cyan/90 text-black border-black",
     };
 
     return (
         <span
             className={cn(
-                "inline-flex items-center px-2 py-0.5 border-2 border-black text-xs font-bold uppercase shadow-neo-sm",
+                "inline-flex items-center px-2 py-0.5 border-[1.5px] text-[10px] font-bold uppercase tracking-wide rounded-[2px]",
                 variants[variant],
                 className
             )}

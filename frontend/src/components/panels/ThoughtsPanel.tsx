@@ -105,20 +105,20 @@ export const ThoughtsPanel = () => {
   }
 
   return (
-    <div className="rounded-sm border border-neo-border bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-2 py-1 border-b border-gray-200">
-        <div className="text-[10px] font-bold uppercase tracking-wider">Thoughts</div>
+    <div className="rounded-[3px] border border-black/10 bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-black/5">
+        <div className="text-[10px] font-black uppercase tracking-wide text-gray-700">Thoughts</div>
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="text-[9px] font-mono text-gray-600 hover:text-black"
+          className="text-[9px] font-mono text-gray-400 hover:text-black transition-colors"
         >
           {isOpen ? 'Hide' : 'Show'}
         </button>
       </div>
 
       {isOpen && (
-        <div className="p-2 flex flex-col gap-2">
+        <div className="p-2 flex flex-col gap-1.5">
           <div className="flex flex-wrap gap-1">
             {players.map((player) => (
               <button
@@ -126,10 +126,10 @@ export const ThoughtsPanel = () => {
                 type="button"
                 onClick={() => setActivePlayerId(player.playerId)}
                 className={cn(
-                  'px-2 py-0.5 text-[9px] font-bold uppercase border border-gray-300 rounded-sm',
+                  'px-1.5 py-0.5 text-[8px] font-bold uppercase border rounded-[2px] transition-colors select-none',
                   resolvedActivePlayerId === player.playerId
                     ? 'bg-black text-white border-black'
-                    : 'bg-white text-gray-700 hover:border-gray-500'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
                 )}
               >
                 {player.name}
@@ -137,27 +137,27 @@ export const ThoughtsPanel = () => {
             ))}
           </div>
 
-          <div className="text-[9px] text-gray-500 uppercase tracking-wide">
+          <div className="text-[8px] text-gray-400 uppercase tracking-wide">
             {activeName} private thoughts
           </div>
 
-          <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1 brutal-scroll">
+          <div className="flex flex-col gap-1.5 max-h-[280px] overflow-y-auto pr-1 brutal-scroll">
             {thoughts.length === 0 && (
-              <div className="text-[10px] text-gray-400">No private thoughts yet.</div>
+              <div className="text-[10px] text-gray-400 italic">No private thoughts yet.</div>
             )}
             {thoughts.map((group) => (
               <details
                 key={group.key}
-                className="border border-gray-200 rounded-sm bg-gray-50"
+                className="border border-black/8 rounded-[2px] bg-neo-bg/40"
                 open
               >
-                <summary className="px-2 py-1 cursor-pointer text-[9px] font-mono text-gray-700">
+                <summary className="px-2 py-1 cursor-pointer text-[9px] font-mono text-gray-500 hover:text-gray-700 transition-colors select-none">
                   Turn {group.turnIndex}
                   {group.decisionId ? ` - ${group.decisionId}` : ''}
                 </summary>
-                <div className="px-2 py-1 text-[10px] text-gray-800 space-y-1">
+                <div className="px-2 py-1 text-[10px] text-gray-700 space-y-1 border-t border-black/5">
                   {group.entries.map((entry) => (
-                    <div key={entry.eventId} className="whitespace-pre-wrap">
+                    <div key={entry.eventId} className="whitespace-pre-wrap leading-snug">
                       {entry.thought}
                     </div>
                   ))}

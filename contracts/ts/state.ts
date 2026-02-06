@@ -32,6 +32,13 @@ export interface AuctionState {
   active_bidders_player_ids: string[];
   current_bidder_player_id: string | null;
   initiator_player_id: string;
+  action_count?: number;
+  history?: Array<{
+    index: number;
+    action: "BID" | "DROP_OUT";
+    player_id: string;
+    bid_amount?: number;
+  }>;
 }
 
 export interface TradeBundle {
@@ -51,6 +58,7 @@ export interface TradeState {
   counterparty_player_id: string;
   max_exchanges: number;
   exchange_index: number;
+  history?: TradeExchange[];
   history_last_2: TradeExchange[];
   current_offer: {
     offer: TradeBundle;

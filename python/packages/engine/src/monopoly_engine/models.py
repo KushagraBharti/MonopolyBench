@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -86,6 +86,8 @@ class AuctionState:
     initiator_player_id: str
     turn_owner_player_id: str
     rolled_double: bool
+    action_count: int = 0
+    history: list[dict[str, Any]] = field(default_factory=list)
 
     def to_snapshot(self) -> dict[str, Any]:
         current_bidder = None
@@ -101,6 +103,8 @@ class AuctionState:
             "active_bidders_player_ids": list(self.active_bidders_player_ids),
             "current_bidder_player_id": current_bidder,
             "initiator_player_id": self.initiator_player_id,
+            "action_count": int(self.action_count),
+            "history": [dict(entry) for entry in self.history],
         }
 
 
@@ -150,6 +154,7 @@ class TradeThread:
             "counterparty_player_id": self.counterparty_player_id,
             "max_exchanges": self.max_exchanges,
             "exchange_index": self.exchange_index,
+            "history": [entry.to_snapshot() for entry in self.history],
             "history_last_2": [entry.to_snapshot() for entry in history_slice],
             "current_offer": {
                 "offer": self.current_offer.offer.to_snapshot(),

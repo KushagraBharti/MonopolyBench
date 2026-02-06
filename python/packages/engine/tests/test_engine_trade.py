@@ -68,7 +68,14 @@ def test_trade_counter_flips_actor_and_caps_at_max_exchanges() -> None:
         {"player_id": "p1", "name": "P1"},
         {"player_id": "p2", "name": "P2"},
     ]
-    engine = Engine(seed=78, players=players, run_id="run-trade-counter", max_turns=3, ts_step_ms=1)
+    engine = Engine(
+        seed=78,
+        players=players,
+        run_id="run-trade-counter",
+        max_turns=3,
+        ts_step_ms=1,
+        max_trade_exchanges=5,
+    )
     decision = _start_post_turn(engine, "p1")
     action = {
         "schema_version": "v1",
@@ -103,7 +110,9 @@ def test_trade_counter_flips_actor_and_caps_at_max_exchanges() -> None:
             assert next_decision["player_id"] == expected_actor
             expected_actor = "p2" if expected_actor == "p1" else "p1"
         else:
-            assert next_decision is None
+            assert next_decision is not None
+            assert next_decision["decision_type"] == "POST_TURN_ACTION_DECISION"
+            assert next_decision["player_id"] == "p1"
             assert engine.state.trade is None
             assert any(event["type"] == "TRADE_EXPIRED" for event in events)
 

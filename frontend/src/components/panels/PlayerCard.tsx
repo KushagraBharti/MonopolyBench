@@ -45,52 +45,60 @@ export const PlayerCard = ({
     <NeoCard
       data-player-card-id={playerId}
       className={cn(
-        'p-3 flex flex-col gap-2 h-full',
-        isActive ? 'bg-neo-yellow/20' : 'bg-white'
+        'p-2.5 flex flex-col gap-1.5 h-full transition-colors duration-200',
+        isActive
+          ? 'bg-neo-yellow/15 border-neo-yellow/60 shadow-[2px_2px_0_0_rgba(255,217,0,0.3)]'
+          : bankrupt
+            ? 'bg-gray-50 opacity-60'
+            : 'bg-white'
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 min-w-0">
+      {/* Header: Name + Status */}
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
           <div
-            className="w-4 h-4 rounded-sm border-2 border-black shrink-0"
+            className="w-3 h-3 rounded-[2px] border-[1.5px] border-black shrink-0"
             style={{ backgroundColor: badgeColor }}
             title={`Player ${playerId}`}
           />
           <div className="min-w-0">
-            <div className={cn('text-[12px] font-black uppercase truncate', bankrupt && 'line-through opacity-60')}>
+            <div className={cn('text-[11px] font-black uppercase truncate leading-tight', bankrupt && 'line-through')}>
               {name || getPlayerInitials(playerId)}
-            </div>
-            <div className="text-[10px] text-gray-600 font-mono truncate max-w-[160px]">
-              {modelId ?? 'model unknown'}
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {isActive && (
-            <span className="text-[9px] font-black uppercase text-neo-blue">Active</span>
+            <span className="text-[8px] font-bold uppercase text-neo-blue bg-neo-blue/10 px-1 py-px rounded-[2px]">Active</span>
           )}
-          {(inJail || bankrupt) && (
-            <div className="flex gap-1">
-              {inJail && <span className="text-[9px] font-black uppercase text-neo-orange">Jail</span>}
-              {bankrupt && <span className="text-[9px] font-black uppercase text-neo-red">Bankrupt</span>}
-            </div>
+          {inJail && (
+            <span className="text-[8px] font-bold uppercase text-neo-orange bg-neo-orange/10 px-1 py-px rounded-[2px]">Jail</span>
+          )}
+          {bankrupt && (
+            <span className="text-[8px] font-bold uppercase text-neo-red bg-neo-red/10 px-1 py-px rounded-[2px]">Out</span>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-[11px] text-gray-700">
+      {/* Model ID */}
+      <div className="text-[9px] text-gray-400 font-mono truncate leading-none -mt-0.5">
+        {modelId ?? 'model unknown'}
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-1 bg-neo-bg/60 rounded-[2px] px-1.5 py-1">
         <div className="flex flex-col">
-          <span className="text-[9px] uppercase tracking-wide">Cash</span>
-          <span className="font-mono text-[12px] text-black">${formatMoney(cash)}</span>
+          <span className="text-[8px] uppercase tracking-wide text-gray-400 leading-none">Cash</span>
+          <span className="font-mono text-[11px] font-bold text-black tabular-nums">${formatMoney(cash)}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[9px] uppercase tracking-wide">Props</span>
-          <span className="font-mono text-[12px] text-black">{propertyCount}</span>
+          <span className="text-[8px] uppercase tracking-wide text-gray-400 leading-none">Props</span>
+          <span className="font-mono text-[11px] font-bold text-black tabular-nums">{propertyCount}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[9px] uppercase tracking-wide">Net</span>
+          <span className="text-[8px] uppercase tracking-wide text-gray-400 leading-none">Net</span>
           <span
-            className="font-mono text-[12px] text-black"
+            className="font-mono text-[11px] font-bold text-black tabular-nums"
             title="Net worth = cash + sum(price) - sum(price/2 for mortgaged)"
           >
             ${formatMoney(netWorth)}
@@ -98,9 +106,10 @@ export const PlayerCard = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <span className="text-[9px] uppercase tracking-wide text-gray-600">Properties</span>
-        <div className="flex flex-wrap gap-1">
+      {/* Properties */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[8px] uppercase tracking-wide text-gray-400">Properties</span>
+        <div className="flex flex-wrap gap-0.5">
           {properties.length > 0 ? (
             properties.map((space) => (
               <PropertyChip
@@ -111,16 +120,16 @@ export const PlayerCard = ({
               />
             ))
           ) : (
-            <span className="text-[10px] text-gray-500">No properties</span>
+            <span className="text-[9px] text-gray-400 italic">None</span>
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-1 border-t border-black/10 pt-2">
-        <span className="text-[9px] uppercase tracking-wide text-gray-600">Latest Thought</span>
-        <div
-          className="text-[11px] text-gray-800 min-h-[18px] whitespace-pre-wrap"
-        >
-          {latestThought ?? <span className="text-gray-400">No private thoughts yet.</span>}
+
+      {/* Latest Thought */}
+      <div className="flex flex-col gap-0.5 border-t border-black/5 pt-1.5 mt-auto">
+        <span className="text-[8px] uppercase tracking-wide text-gray-400">Thought</span>
+        <div className="text-[10px] text-gray-600 min-h-[14px] whitespace-pre-wrap leading-snug line-clamp-3">
+          {latestThought ?? <span className="text-gray-300 italic">...</span>}
         </div>
       </div>
     </NeoCard>

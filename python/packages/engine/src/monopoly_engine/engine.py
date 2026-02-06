@@ -41,7 +41,8 @@ CHANCE_REPAIR_HOTEL_COST = 100
 COMMUNITY_REPAIR_HOUSE_COST = 40
 COMMUNITY_REPAIR_HOTEL_COST = 115
 UTILITY_CARD_MULTIPLIER = 10
-MAX_TRADE_EXCHANGES = 5
+DEFAULT_MAX_TRADE_EXCHANGES = 20
+DEFAULT_MAX_AUCTION_ACTIONS = 200
 
 
 class Engine:
@@ -55,6 +56,8 @@ class Engine:
         start_ts_ms: int = 0,
         ts_step_ms: int = 250,
         allow_extra_turns: bool = True,
+        max_trade_exchanges: int = DEFAULT_MAX_TRADE_EXCHANGES,
+        max_auction_actions: int = DEFAULT_MAX_AUCTION_ACTIONS,
     ) -> None:
         self.run_id = run_id
         self._rng = DeterministicRng(seed)
@@ -62,6 +65,8 @@ class Engine:
         self._start_ts_ms = start_ts_ms
         self._ts_step_ms = ts_step_ms
         self._allow_extra_turns = allow_extra_turns
+        self._max_trade_exchanges = max(1, int(max_trade_exchanges))
+        self._max_auction_actions = max(1, int(max_auction_actions))
         self._seq = 0
         self._started = False
         self._stop_reason: str | None = None
@@ -436,16 +441,10 @@ class Engine:
             if action_name == "accept_trade":
                 self._apply_trade_accept(trade, events)
                 self.state.trade = None
-                turn_owner = self._find_player(trade.turn_owner_player_id)
-                if turn_owner is not None:
-                    self._end_turn(
-                        events,
-                        turn_owner,
-                        allow_extra_turn=trade.rolled_double
-                        and not turn_owner.bankrupt
-                        and not turn_owner.in_jail,
-                    )
+                next_decision = self._resume_post_turn_after_trade(trade, events)
                 snapshot = self.get_snapshot()
+                if next_decision is not None:
+                    return self.state, events, next_decision, snapshot
                 if self._should_end_game():
                     self._finish_game(events)
                     snapshot = self.get_snapshot()
@@ -461,16 +460,10 @@ class Engine:
                     )
                 )
                 self.state.trade = None
-                turn_owner = self._find_player(trade.turn_owner_player_id)
-                if turn_owner is not None:
-                    self._end_turn(
-                        events,
-                        turn_owner,
-                        allow_extra_turn=trade.rolled_double
-                        and not turn_owner.bankrupt
-                        and not turn_owner.in_jail,
-                    )
+                next_decision = self._resume_post_turn_after_trade(trade, events)
                 snapshot = self.get_snapshot()
+                if next_decision is not None:
+                    return self.state, events, next_decision, snapshot
                 if self._should_end_game():
                     self._finish_game(events)
                     snapshot = self.get_snapshot()
@@ -491,7 +484,16 @@ class Engine:
         if decision_type == "POST_TURN_ACTION_DECISION":
             rolled_double = bool(pending_turn.get("rolled_double", False))
             if action_name == "end_turn":
-                pass
+                self._end_turn(
+                    events,
+                    player,
+                    allow_extra_turn=rolled_double and not player.bankrupt and not player.in_jail,
+                )
+                snapshot = self.get_snapshot()
+                if self._should_end_game():
+                    self._finish_game(events)
+                    snapshot = self.get_snapshot()
+                return self.state, events, None, snapshot
             elif action_name == "mortgage_property":
                 self._apply_mortgage(player, action, events)
             elif action_name == "unmortgage_property":
@@ -508,12 +510,14 @@ class Engine:
             else:
                 raise ValueError(f"Unsupported action: {action_name}")
 
-            self._end_turn(
+            next_decision = self._maybe_start_post_turn_decision(
                 events,
                 player,
-                allow_extra_turn=rolled_double and not player.bankrupt and not player.in_jail,
+                rolled_double=rolled_double,
             )
             snapshot = self.get_snapshot()
+            if next_decision is not None:
+                return self.state, events, next_decision, snapshot
             if self._should_end_game():
                 self._finish_game(events)
                 snapshot = self.get_snapshot()
@@ -1387,6 +1391,7 @@ class Engine:
         decision_id = f"{self.run_id}-dec-{self._decision_seq:06d}"
         self._decision_seq += 1
         options = self._compute_post_turn_options(player)
+        options["max_trade_exchanges"] = self._max_trade_exchanges
         legal_actions: list[dict[str, Any]] = [
             self._build_space_action("end_turn"),
         ]
@@ -1577,6 +1582,8 @@ class Engine:
             initiator_player_id=player.player_id,
             turn_owner_player_id=player.player_id,
             rolled_double=rolled_double,
+            action_count=0,
+            history=[],
         )
         self.state.auction = auction
         current_bidder = auction.active_bidders_player_ids[auction.current_bidder_index]
@@ -1620,8 +1627,17 @@ class Engine:
         bid_amount: int,
         events: list[Event],
     ) -> None:
+        auction.action_count += 1
         auction.current_high_bid = bid_amount
         auction.current_leader_player_id = player.player_id
+        auction.history.append(
+            {
+                "index": auction.action_count,
+                "action": "BID",
+                "player_id": player.player_id,
+                "bid_amount": int(bid_amount),
+            }
+        )
         events.append(
             self._build_event(
                 "AUCTION_BID_PLACED",
@@ -1648,7 +1664,15 @@ class Engine:
     ) -> None:
         if not auction.active_bidders_player_ids:
             return
+        auction.action_count += 1
         dropped = auction.active_bidders_player_ids.pop(auction.current_bidder_index)
+        auction.history.append(
+            {
+                "index": auction.action_count,
+                "action": "DROP_OUT",
+                "player_id": dropped,
+            }
+        )
         events.append(
             self._build_event(
                 "AUCTION_PLAYER_DROPPED",
@@ -1667,10 +1691,15 @@ class Engine:
 
     def _maybe_finish_auction(self, auction: AuctionState, events: list[Event]) -> None:
         if len(auction.active_bidders_player_ids) > 1:
+            if auction.action_count >= self._max_auction_actions:
+                self._finalize_auction(auction, events, reason="MAX_ACTIONS")
             return
-        self._finalize_auction(auction, events)
+        if auction.current_leader_player_id is not None:
+            self._finalize_auction(auction, events, reason="SOLD")
+            return
+        self._finalize_auction(auction, events, reason="NO_BIDS")
 
-    def _finalize_auction(self, auction: AuctionState, events: list[Event]) -> None:
+    def _finalize_auction(self, auction: AuctionState, events: list[Event], *, reason: str) -> None:
         space = self.state.board[auction.property_space_index]
         winner_id = auction.current_leader_player_id
         winning_bid = auction.current_high_bid if winner_id is not None else None
@@ -1686,7 +1715,7 @@ class Engine:
                     "property_space": auction.property_space_key,
                     "winner_player_id": winner_id,
                     "winning_bid": winning_bid,
-                    "reason": "SOLD" if winner_id is not None else "NO_BIDS",
+                    "reason": reason,
                 },
                 turn_index=self.state.turn_index,
             )
@@ -1973,16 +2002,7 @@ class Engine:
                 )
             )
             self.state.trade = None
-            turn_owner = self._find_player(trade.turn_owner_player_id)
-            if turn_owner is not None:
-                self._end_turn(
-                    events,
-                    turn_owner,
-                    allow_extra_turn=trade.rolled_double
-                    and not turn_owner.bankrupt
-                    and not turn_owner.in_jail,
-                )
-            return None
+            return self._resume_post_turn_after_trade(trade, events)
 
         decision = self._build_trade_response_decision(trade, actor_player_id=counterparty.player_id)
         self.state.phase = "AWAITING_DECISION"
@@ -2058,7 +2078,7 @@ class Engine:
         trade = TradeThread(
             initiator_player_id=player.player_id,
             counterparty_player_id=counterparty.player_id,
-            max_exchanges=MAX_TRADE_EXCHANGES,
+            max_exchanges=self._max_trade_exchanges,
             exchange_index=0,
             history=[],
             current_offer=TradeExchange(
@@ -2098,6 +2118,20 @@ class Engine:
             )
         )
         return decision
+
+    def _resume_post_turn_after_trade(
+        self,
+        trade: TradeThread,
+        events: list[Event],
+    ) -> DecisionPoint | None:
+        turn_owner = self._find_player(trade.turn_owner_player_id)
+        if turn_owner is None:
+            return None
+        return self._maybe_start_post_turn_decision(
+            events,
+            turn_owner,
+            rolled_double=trade.rolled_double,
+        )
 
     def _build_space_action(
         self,

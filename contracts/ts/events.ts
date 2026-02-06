@@ -140,7 +140,7 @@ export interface AuctionEndedEvent extends BaseEvent {
     property_space: string;
     winner_player_id: string | null;
     winning_bid: number | null;
-    reason: "SOLD" | "NO_BIDS";
+    reason: "SOLD" | "NO_BIDS" | "MAX_ACTIONS";
   };
 }
 

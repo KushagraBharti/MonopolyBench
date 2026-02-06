@@ -19,7 +19,7 @@ from monopoly_engine.board import (
 from .player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig
 
 
-PROMPT_SCHEMA_VERSION = "v1"
+PROMPT_SCHEMA_VERSION = "v2"
 JAIL_FINE = 50
 
 def build_space_key_by_index() -> dict[int, str]:
@@ -212,6 +212,23 @@ def build_full_state(
     if len(others) != 3:
         raise ValueError("Expected exactly 3 other players for LLM prompts.")
 
+    board_view = []
+    for space in board:
+        space_index = int(space.get("index", 0))
+        board_view.append(
+            {
+                "space_index": space_index,
+                "space_key": space_key_for_index(space_index, space_key_by_index),
+                "kind": space.get("kind"),
+                "group": space.get("group"),
+                "price": space.get("price"),
+                "owner_id": space.get("owner_id"),
+                "mortgaged": bool(space.get("mortgaged", False)),
+                "houses": int(space.get("houses", 0)),
+                "hotel": bool(space.get("hotel", False)),
+            }
+        )
+
     return {
         "schema_version": PROMPT_SCHEMA_VERSION,
         "metadata": {
@@ -221,6 +238,7 @@ def build_full_state(
             "active_player_id": snapshot.get("active_player_id"),
             "you_player_id": you_player.get("player_id"),
         },
+        "board": board_view,
         "you": you_view,
         "others": others,
         "bank": {
@@ -233,10 +251,18 @@ def build_full_state(
 
 def _augment_args_schema(args_schema: dict[str, Any] | None) -> dict[str, Any]:
     schema = copy.deepcopy(args_schema or {"type": "object", "additionalProperties": False})
+    schema.setdefault("type", "object")
+    schema.setdefault("additionalProperties", False)
     properties = schema.setdefault("properties", {})
     if isinstance(properties, dict):
         properties.setdefault("public_message", {"type": "string"})
         properties.setdefault("private_thought", {"type": "string"})
+    required = schema.setdefault("required", [])
+    if isinstance(required, list):
+        if "public_message" not in required:
+            required.append("public_message")
+        if "private_thought" not in required:
+            required.append("private_thought")
     return schema
 
 
@@ -512,6 +538,7 @@ def build_post_turn_action_decision_focus(
             "note": "Choose ONE optional strategic action, or end your turn.",
             "options": {
                 "can_trade_with": list(options.get("can_trade_with", [])),
+                "max_trade_exchanges": options.get("max_trade_exchanges"),
                 "mortgageable_space_keys": _space_keys_for_indices(
                     options.get("mortgageable_space_indices"),
                     space_key_by_index,
@@ -588,6 +615,7 @@ def build_auction_bid_decision_focus(
     min_next_bid = current_high_bid + 1
     active_bidders = list(auction.get("active_bidders_player_ids", []))
     leader_id = auction.get("current_leader_player_id")
+    history = list(auction.get("history", []))
 
     tools: list[dict[str, Any]] = []
     for entry in decision.get("legal_actions", []):
@@ -620,6 +648,8 @@ def build_auction_bid_decision_focus(
             "current_leader_player_id": leader_id,
             "min_next_bid": min_next_bid,
             "active_bidders_player_ids": active_bidders,
+            "action_count": auction.get("action_count"),
+            "history": history,
         },
         "legal_tools": tools,
     }
@@ -630,6 +660,12 @@ def build_trade_propose_decision_focus(decision: dict[str, Any]) -> dict[str, An
     state = decision.get("state", {})
     players = state.get("players", [])
     actor_id = decision.get("player_id")
+    post_turn = decision.get("post_turn")
+    if not isinstance(post_turn, dict):
+        post_turn = {}
+    options = post_turn.get("options")
+    if not isinstance(options, dict):
+        options = {}
     eligible = [
         player.get("player_id")
         for player in players
@@ -651,7 +687,7 @@ def build_trade_propose_decision_focus(decision: dict[str, Any]) -> dict[str, An
         "decision_type": decision.get("decision_type"),
         "actor_player_id": actor_id,
         "scenario": {
-            "max_exchanges": 5,
+            "max_exchanges": options.get("max_trade_exchanges"),
             "eligible_counterparties_player_ids": eligible,
         },
         "legal_tools": tools,
@@ -668,17 +704,24 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
         counterparty if actor_id == initiator else initiator if initiator else counterparty
     )
     history: list[dict[str, Any]] = []
-    for entry in trade.get("history_last_2", []):
+    trade_history = trade.get("history")
+    if not isinstance(trade_history, list):
+        trade_history = trade.get("history_last_2", [])
+    for entry in trade_history:
         if not isinstance(entry, dict):
             continue
         history.append(
             {
                 "from_player_id": entry.get("from_player_id"),
-                "offer": {},
-                "request": {},
+                "offer": entry.get("offer"),
+                "request": entry.get("request"),
             }
         )
-    current_offer: dict[str, dict[str, Any]] = {"offer": {}, "request": {}}
+    current_offer_payload = trade.get("current_offer", {})
+    current_offer: dict[str, Any] = {
+        "offer": current_offer_payload.get("offer"),
+        "request": current_offer_payload.get("request"),
+    }
     tools: list[dict[str, Any]] = []
     for entry in decision.get("legal_actions", []):
         action_name = entry.get("action")
@@ -714,7 +757,7 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
             "max_exchanges": trade.get("max_exchanges"),
             "exchange_index": trade.get("exchange_index"),
             "counterparty_player_id": counterparty_id,
-            "history_last_2": history,
+            "history": history,
             "current_offer": current_offer,
         },
         "legal_tools": tools,
@@ -793,11 +836,15 @@ def build_prompt_bundle(
     decision_focus = build_decision_focus(decision, space_key_by_index=space_key_by_index)
     if retry_errors:
         decision_focus = _with_retry_notes(decision_focus, retry_errors)
-    payload = {
+    action_state = {
         "schema_version": PROMPT_SCHEMA_VERSION,
-        "full_state": full_state,
         "decision": compact_decision,
         "decision_focus": decision_focus,
+    }
+    payload = {
+        "schema_version": PROMPT_SCHEMA_VERSION,
+        "game_state": full_state,
+        "action_state": action_state,
     }
     if player.reasoning is not None:
         payload["llm"] = {"reasoning": player.reasoning}

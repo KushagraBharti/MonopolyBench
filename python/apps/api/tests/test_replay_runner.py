@@ -32,6 +32,27 @@ def _make_players() -> list[PlayerConfig]:
 
 
 def _tool_call_response(name: str, args: dict[str, Any]) -> OpenRouterResult:
+    return _tool_calls_response([(name, args)])
+
+
+def _tool_calls_response(calls: list[tuple[str, dict[str, Any]]]) -> OpenRouterResult:
+    tool_calls = []
+    for index, (name, raw_args) in enumerate(calls, start=1):
+        args = {
+            **raw_args,
+            "public_message": raw_args.get("public_message", ""),
+            "private_thought": raw_args.get("private_thought", "test"),
+        }
+        tool_calls.append(
+            {
+                "id": f"call-{index}",
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "arguments": json.dumps(args),
+                },
+            }
+        )
     payload = {
         "id": "resp-1",
         "choices": [
@@ -39,16 +60,7 @@ def _tool_call_response(name: str, args: dict[str, Any]) -> OpenRouterResult:
                 "message": {
                     "role": "assistant",
                     "content": None,
-                    "tool_calls": [
-                        {
-                            "id": "call-1",
-                            "type": "function",
-                            "function": {
-                                "name": name,
-                                "arguments": json.dumps(args),
-                            },
-                        }
-                    ],
+                    "tool_calls": tool_calls,
                 }
             }
         ],
@@ -71,6 +83,13 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
             payload = json.loads(message.get("content", "{}"))
         except json.JSONDecodeError:
             continue
+        if "action_state" in payload and "game_state" in payload:
+            action_state = payload.get("action_state", {})
+            normalized = dict(payload)
+            normalized["decision"] = action_state.get("decision", {})
+            normalized["decision_focus"] = action_state.get("decision_focus", {})
+            normalized["full_state"] = payload.get("game_state")
+            return normalized
         if "decision" in payload and "full_state" in payload:
             return payload
     return None
@@ -90,6 +109,8 @@ class TradeOpenRouter:
         decision = payload["decision"]
         focus = payload["decision_focus"]
         tool_name, args = self._policy(decision, focus)
+        if decision.get("decision_type") == "POST_TURN_ACTION_DECISION" and tool_name == "propose_trade":
+            return _tool_calls_response([(tool_name, args), ("end_turn", {})])
         return _tool_call_response(tool_name, args)
 
 

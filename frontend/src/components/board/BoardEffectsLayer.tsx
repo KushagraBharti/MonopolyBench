@@ -355,10 +355,11 @@ export const BoardEffectsLayer = () => {
                         initial={{ opacity: 0, scale: 0.8, y: 40 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, y: 40 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black text-white border-4 border-neo-red p-4 shadow-neo-lg z-[70]"
+                        transition={{ type: 'spring', stiffness: 140, damping: 18 }}
+                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/95 text-white border-2 border-neo-red rounded-[3px] p-4 shadow-[6px_6px_0_0_rgba(0,0,0,0.6)] z-[70]"
                     >
-                        <div className="text-[18px] font-black uppercase text-neo-red tracking-tight">Sent to Jail</div>
-                        <div className="text-center font-mono text-[11px] mt-2">
+                        <div className="text-[16px] font-black uppercase text-neo-red tracking-tight text-center">Sent to Jail</div>
+                        <div className="text-center font-mono text-[10px] mt-1.5 text-white/70">
                             {activeItem.event.payload.reason || 'Jail'}
                         </div>
                     </motion.div>
@@ -379,13 +380,13 @@ export const BoardEffectsLayer = () => {
                             style={{ left: item.origin.x, top: item.origin.y }}
                         >
                             <span
-                                className={`font-black text-[14px] drop-shadow-[1px_1px_0_#FFF] ${isPositive ? 'text-neo-green' : 'text-neo-red'}`}
-                                style={{ textShadow: '1px 1px 0 #000, -1px -1px 0 #000' }}
+                                className={`font-black text-[13px] ${isPositive ? 'text-neo-green' : 'text-neo-red'}`}
+                                style={{ textShadow: '1px 1px 0 rgba(255,255,255,0.9), -1px -1px 0 rgba(255,255,255,0.9)' }}
                             >
                                 {isPositive ? '+' : ''}{item.amount}
                             </span>
                             {item.reason && (
-                                <span className="bg-black text-white text-[8px] px-1 rounded-sm uppercase font-bold mt-1">
+                                <span className="bg-black/85 text-white text-[7px] px-1.5 py-px rounded-[2px] uppercase font-bold mt-0.5">
                                     {item.reason}
                                 </span>
                             )}

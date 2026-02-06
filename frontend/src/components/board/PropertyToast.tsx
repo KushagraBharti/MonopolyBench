@@ -50,25 +50,25 @@ export const PropertyToast = ({
                     transition={{ type: 'spring', stiffness: 180, damping: 20 }}
                     onAnimationComplete={triggerComplete}
                 >
-                    <div className="bg-white border-2 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)] p-2 w-56 rounded-sm">
+                    <div className="bg-white border-[1.5px] border-black/80 shadow-[4px_4px_0_0_rgba(0,0,0,0.8)] p-2 w-52 rounded-[3px]">
                         <div
-                            className="w-full h-7 mb-2 border border-black flex items-center justify-center font-black uppercase text-[10px] tracking-tight"
+                            className="w-full h-6 mb-2 border border-black/40 rounded-[2px] flex items-center justify-center font-black uppercase text-[9px] tracking-tight text-white"
                             style={{ backgroundColor: groupColor }}
                         >
                             {space.kind === 'PROPERTY' ? 'Title Deed' : space.name}
                         </div>
 
                         <div className="text-center">
-                            <h3 className="text-[13px] font-black uppercase leading-tight mb-2 px-1">
+                            <h3 className="text-[12px] font-black uppercase leading-tight mb-1.5 px-1">
                                 {space.name}
                             </h3>
 
-                            <div className="border-t border-black pt-1 mt-1 flex items-center justify-center gap-2">
-                                <span className="text-[9px] font-bold bg-black text-white px-1.5 py-0.5 rounded-sm uppercase">
+                            <div className="border-t border-black/10 pt-1.5 mt-1 flex items-center justify-center gap-2">
+                                <span className="text-[8px] font-bold bg-black/90 text-white px-1.5 py-0.5 rounded-[2px] uppercase">
                                     {method}
                                 </span>
                                 {typeof price === 'number' ? (
-                                    <span className="font-mono text-[11px] text-gray-700">${price}</span>
+                                    <span className="font-mono text-[11px] text-gray-600">${price}</span>
                                 ) : null}
                             </div>
                         </div>

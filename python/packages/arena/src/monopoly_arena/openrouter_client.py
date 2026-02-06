@@ -52,6 +52,7 @@ class OpenRouterClient:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
         tool_choice: str | dict[str, Any] | None = None,
+        parallel_tool_calls: bool | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
         reasoning: dict[str, Any] | None = None,
@@ -65,6 +66,8 @@ class OpenRouterClient:
             payload["tools"] = tools
         if tool_choice is not None:
             payload["tool_choice"] = tool_choice
+        if parallel_tool_calls is not None:
+            payload["parallel_tool_calls"] = parallel_tool_calls
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
         if reasoning is not None:
