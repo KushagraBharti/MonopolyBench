@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type UIEvent } from 'react';
 import type { Event } from '@/net/contracts';
 import { useGameStore } from '@/state/store';
-import { NeoBadge } from '@/components/ui/NeoPrimitive';
 import { cn } from '@/components/ui/cn';
 import { getPlayerColor } from '@/domain/monopoly/colors';
 import { formatCardTitle, formatMoney, formatSpaceLabel } from '@/domain/monopoly/formatters';
@@ -512,24 +511,24 @@ const LlmBubble = ({
   onInspect: () => void;
 }) => {
   return (
-    <div className="flex flex-col items-start gap-2">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
+    <div className="flex flex-col items-start gap-1.5">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase">
         <span
-          className="inline-flex items-center px-2 py-0.5 border-2 border-black shadow-neo-sm"
+          className="inline-flex items-center px-2 py-0.5 border-[1.5px] border-black/60 rounded-[2px]"
           style={{ backgroundColor: getPlayerColor(playerId), color: 'white' }}
         >
           {playerLabel}
         </span>
-        {modelLabel && <span className="text-gray-500 font-mono">{modelLabel}</span>}
+        {modelLabel && <span className="text-gray-400 font-mono text-[9px] normal-case">{modelLabel}</span>}
         <button
           type="button"
           onClick={onInspect}
-          className="brutal-btn bg-neo-yellow text-[9px] py-0.5 px-2"
+          className="text-[8px] font-bold uppercase text-gray-400 hover:text-neo-blue transition-colors px-1"
         >
           Inspect
         </button>
       </div>
-      <div className="max-w-[90%] border-2 border-black p-3 text-sm shadow-neo-sm bg-white text-black">
+      <div className="max-w-[92%] border-[1.5px] border-black/30 p-2.5 text-[12px] rounded-[3px] bg-white text-black leading-relaxed">
         <div className="whitespace-pre-wrap">{message}</div>
       </div>
     </div>
@@ -540,8 +539,8 @@ const SystemCard = ({ text, tone }: { text: string; tone?: FeedSystemTone }) => 
   <div className="flex justify-center">
     <div
       className={cn(
-        'px-3 py-1 text-[11px] font-bold uppercase border-2 shadow-neo-sm bg-neo-bg',
-        tone ? toneClasses[tone] : 'border-black'
+        'px-3 py-1 text-[10px] font-bold uppercase border-[1.5px] rounded-[2px] bg-neo-bg/60',
+        tone ? toneClasses[tone] : 'border-black/20'
       )}
     >
       {text}
@@ -560,15 +559,15 @@ const GroupCard = ({
   lines: string[];
   tone?: FeedSystemTone;
 }) => (
-  <details className="border-2 border-black bg-white shadow-neo-sm">
-    <summary className="cursor-pointer list-none px-3 py-2 flex items-center justify-between gap-2">
-      <div className="text-[10px] font-bold uppercase text-gray-500">{title}</div>
-      <div className="text-[11px] font-medium text-gray-900 flex-1">{summary}</div>
-      <span className={cn('text-[9px] font-bold uppercase', tone ? toneTextClasses[tone] : 'text-gray-500')}>
+  <details className="border-[1.5px] border-black/25 bg-white rounded-[3px]">
+    <summary className="cursor-pointer list-none px-3 py-1.5 flex items-center justify-between gap-2">
+      <div className="text-[9px] font-bold uppercase text-gray-400">{title}</div>
+      <div className="text-[11px] font-medium text-gray-800 flex-1">{summary}</div>
+      <span className={cn('text-[8px] font-bold uppercase', tone ? toneTextClasses[tone] : 'text-gray-400')}>
         Details
       </span>
     </summary>
-    <div className="border-t-2 border-black/10 px-3 py-2 text-[11px] text-gray-700 space-y-1">
+    <div className="border-t border-black/8 px-3 py-2 text-[11px] text-gray-600 space-y-0.5">
       {lines.map((line, index) => (
         <div key={`${title}-line-${index}`}>{line}</div>
       ))}
@@ -616,17 +615,17 @@ export const ChatFeed = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-t-2 border-black font-sans">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b-2 border-black bg-gray-50">
-        <span className="text-[10px] font-black uppercase tracking-wider">Feed</span>
-        <label className="flex items-center gap-2 text-[10px] font-bold uppercase">
+    <div className="flex flex-col h-full bg-white font-sans">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-black/10 bg-white">
+        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Game Feed</span>
+        <label className="flex items-center gap-1.5 text-[9px] font-bold uppercase text-gray-400 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={showThoughts}
             onChange={(event) => setShowThoughts(event.target.checked)}
-            className="accent-black w-4 h-4"
+            className="accent-black w-3.5 h-3.5"
           />
-          Show private thoughts
+          Thoughts
         </label>
       </div>
       {!autoScroll && (
@@ -634,7 +633,7 @@ export const ChatFeed = () => {
           <button
             type="button"
             onClick={() => setAutoScroll(true)}
-            className="brutal-btn bg-neo-yellow text-[10px] py-1 shadow-neo"
+            className="brutal-btn bg-neo-yellow text-[9px] py-1 px-3 shadow-neo-sm rounded-[2px]"
           >
             RESUME LIVE
           </button>
@@ -642,29 +641,29 @@ export const ChatFeed = () => {
       )}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-3 brutal-scroll space-y-6"
+        className="flex-1 overflow-y-auto px-3 py-2 brutal-scroll space-y-5"
         onScroll={handleScroll}
       >
         {turnBlocks.length === 0 && (
-          <div className="flex flex-col items-center justify-center pt-12 text-gray-400 opacity-60">
-            <span className="text-3xl mb-2">?</span>
-            <span className="font-brutal text-xs">Waiting for messages...</span>
+          <div className="flex flex-col items-center justify-center pt-12 text-gray-300">
+            <span className="text-2xl mb-2 opacity-40">~</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide">Waiting for messages</span>
           </div>
         )}
 
         {turnBlocks.map((block) => {
           const playerLabel = block.playerId ? formatPlayer(block.playerId, playerNames) : 'System';
           return (
-            <div key={block.id} className="space-y-3">
+            <div key={block.id} className="space-y-2">
               <div className="flex items-center gap-2">
-                <NeoBadge variant="neutral" className="text-[9px]">
-                  {block.turnIndex !== null ? `Turn ${block.turnIndex}` : 'Setup'}
-                </NeoBadge>
-                <span className="text-[10px] font-bold uppercase text-gray-600">{playerLabel}</span>
-                <div className="h-[1px] flex-1 bg-black/10" />
+                <span className="text-[9px] font-bold uppercase text-gray-400 bg-neo-bg/60 px-1.5 py-0.5 rounded-[2px] border border-black/10 tabular-nums">
+                  {block.turnIndex !== null ? `T${block.turnIndex}` : 'Setup'}
+                </span>
+                <span className="text-[10px] font-bold uppercase text-gray-500">{playerLabel}</span>
+                <div className="h-px flex-1 bg-black/6" />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2 pl-1">
                 {block.items.map((item) => {
                   if (item.kind === 'system') {
                     return <SystemCard key={item.id} text={item.text} tone={item.tone} />;

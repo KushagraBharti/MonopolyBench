@@ -42,12 +42,11 @@ export const Board = ({ spaces, className }: BoardProps) => {
     return (
         <div className={cn('relative p-3', className)} data-board-root="true">
             {/* Board Physical Base */}
-            <div className="relative w-full h-full bg-[linear-gradient(135deg,#f7f3ea,#f0e8db)] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] rounded-sm overflow-hidden">
-                <div className="absolute inset-2 border-2 border-black/20 pointer-events-none" />
-                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,#000_1px,transparent_1px)] bg-size-[18px_18px]" />
+            <div className="relative w-full h-full bg-[linear-gradient(145deg,#f9f6f0,#f0eadd)] border-[6px] border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,0.85)] rounded-[2px] overflow-hidden">
+                <div className="absolute inset-[6px] border border-black/15 pointer-events-none rounded-[1px]" />
 
-                {/* The Grid - Tight gaps for printed look */}
-                <div className="absolute inset-0 grid grid-cols-11 grid-rows-11 gap-px bg-[#1c1c1c] p-0.5">
+                {/* The Grid */}
+                <div className="absolute inset-0 grid grid-cols-11 grid-rows-11 gap-px bg-[#1a1a1a] p-[2px]">
                     {safeSpaces.map((space) => {
                         const { row, col } = getGridPosition(space.index);
                         return (
@@ -76,17 +75,17 @@ export const Board = ({ spaces, className }: BoardProps) => {
                     })}
 
                     {/* Center Board Area */}
-                    <div className="row-start-2 row-end-11 col-start-2 col-end-11 bg-[#f8f5ef] flex items-center justify-center flex-col relative overflow-hidden">
+                    <div className="row-start-2 row-end-11 col-start-2 col-end-11 bg-[#f8f5ee] flex items-center justify-center flex-col relative overflow-hidden">
 
                         {/* Subtle Center Texture */}
-                        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,#000_1px,transparent_1px)] bg-size-[16px_16px]" />
+                        <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(circle_at_center,#000_0.8px,transparent_0.8px)] bg-size-[14px_14px]" />
 
                         {/* Branding */}
                         <div className="z-10 transform -rotate-6">
                             <img
                                 src="/../logo2.png"
                                 alt="Monopoly Bench"
-                                className="w-auto h-64 md:h-150 drop-shadow-[4px_4px_0_rgba(0,0,0,0.12)]"
+                                className="w-auto h-64 md:h-150 drop-shadow-[3px_3px_0_rgba(0,0,0,0.08)]"
                             />
                         </div>
                     </div>

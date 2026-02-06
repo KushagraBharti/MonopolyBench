@@ -132,8 +132,8 @@ const CopyButton = ({
       onClick={handleCopy}
       disabled={!value}
       className={cn(
-        'brutal-btn text-[9px] py-0.5 px-2 border-black',
-        value ? 'bg-neo-yellow text-black' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        'text-[9px] py-0.5 px-2 font-bold uppercase rounded-[2px] border transition-colors',
+        value ? 'bg-neo-yellow/80 text-black border-black/20 hover:bg-neo-yellow' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
       )}
     >
       Copy
@@ -150,13 +150,13 @@ const ArtifactSection = ({
   value: string | null;
   onCopied: (label: string) => void;
 }) => (
-  <div className="border-2 border-black bg-white shadow-neo-sm flex flex-col min-h-[120px]">
-    <div className="flex items-center justify-between px-2 py-1 border-b-2 border-black bg-neo-bg">
-      <span className="text-[10px] font-black uppercase tracking-wide">{title}</span>
+  <div className="border border-black/15 bg-white rounded-[2px] flex flex-col min-h-[120px]">
+    <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-black/10 bg-neo-bg/60">
+      <span className="text-[10px] font-black uppercase tracking-wide text-gray-700">{title}</span>
       <CopyButton value={value} label={title} onCopied={onCopied} />
     </div>
-    <div className="p-2 text-[11px] font-mono whitespace-pre-wrap overflow-auto">
-      {value ? value : <span className="text-gray-400">Artifact unavailable.</span>}
+    <div className="p-2.5 text-[11px] font-mono whitespace-pre-wrap overflow-auto text-gray-700 leading-relaxed">
+      {value ? value : <span className="text-gray-400 italic">Artifact unavailable.</span>}
     </div>
   </div>
 );
@@ -172,8 +172,8 @@ const DiffSection = ({
 }) => {
   if (!leftValue && !rightValue) {
     return (
-      <div className="border-2 border-black bg-white shadow-neo-sm">
-        <div className="px-2 py-1 border-b-2 border-black bg-neo-bg text-[10px] font-black uppercase">
+      <div className="border border-black/15 bg-white rounded-[2px]">
+        <div className="px-2 py-1 border-b border-black/10 bg-neo-bg/60 text-[10px] font-black uppercase">
           {title}
         </div>
         <div className="p-2 text-[11px] text-gray-400">Artifact unavailable.</div>
@@ -182,8 +182,8 @@ const DiffSection = ({
   }
   if (!leftValue || !rightValue) {
     return (
-      <div className="border-2 border-black bg-white shadow-neo-sm">
-        <div className="px-2 py-1 border-b-2 border-black bg-neo-bg text-[10px] font-black uppercase">
+      <div className="border border-black/15 bg-white rounded-[2px]">
+        <div className="px-2 py-1 border-b border-black/10 bg-neo-bg/60 text-[10px] font-black uppercase">
           {title}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 text-[11px] font-mono">
@@ -201,8 +201,8 @@ const DiffSection = ({
   const diff = diffLines(leftValue, rightValue);
   if (diff.truncated) {
     return (
-      <div className="border-2 border-black bg-white shadow-neo-sm">
-        <div className="px-2 py-1 border-b-2 border-black bg-neo-bg text-[10px] font-black uppercase">
+      <div className="border border-black/15 bg-white rounded-[2px]">
+        <div className="px-2 py-1 border-b border-black/10 bg-neo-bg/60 text-[10px] font-black uppercase">
           {title}
         </div>
         <div className="p-2 text-[11px] text-gray-500">
@@ -217,8 +217,8 @@ const DiffSection = ({
   }
 
   return (
-    <div className="border-2 border-black bg-white shadow-neo-sm">
-      <div className="px-2 py-1 border-b-2 border-black bg-neo-bg text-[10px] font-black uppercase">
+    <div className="border border-black/15 bg-white rounded-[2px]">
+      <div className="px-2 py-1 border-b border-black/10 bg-neo-bg/60 text-[10px] font-black uppercase">
         {title}
       </div>
       <div className="p-2 text-[11px] font-mono whitespace-pre-wrap max-h-[240px] overflow-auto">
@@ -437,8 +437,8 @@ export const LlmIoPanel = () => {
         type="button"
         onClick={() => setSelectedDecisionId(entry.decision_id)}
         className={cn(
-          'border-2 border-black p-2 text-left bg-white shadow-neo-sm transition-all',
-          isSelected && 'bg-neo-yellow/30'
+          'border border-black/15 rounded-[2px] p-2 text-left bg-white transition-all hover:border-black/30',
+          isSelected && 'bg-neo-yellow/20 border-neo-yellow/50'
         )}
       >
         <div className="flex items-center gap-2">
@@ -489,19 +489,19 @@ export const LlmIoPanel = () => {
   return (
     <div className="h-full flex flex-col min-h-0">
       {copyNotice && (
-        <div className="absolute top-4 right-6 bg-black text-white text-[10px] font-bold px-3 py-1 shadow-neo">
+        <div className="absolute top-4 right-6 bg-black/90 text-white text-[10px] font-bold px-3 py-1 rounded-[2px] shadow-[3px_3px_0_0_rgba(0,0,0,0.3)]">
           {copyNotice}
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)] gap-3 h-full min-h-0">
-        <div className="border-2 border-black bg-white shadow-neo-sm flex flex-col min-h-0">
-          <div className="px-2 py-2 border-b-2 border-black bg-neo-bg">
+        <div className="border border-black/15 bg-white rounded-[2px] flex flex-col min-h-0">
+          <div className="px-2 py-2 border-b border-black/10 bg-neo-bg/60">
             <div className="text-[10px] font-black uppercase tracking-wider">Decisions</div>
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search..."
-              className="mt-2 w-full border-2 border-black px-2 py-1 text-[11px] font-mono bg-white"
+              className="mt-2 w-full border border-black/20 rounded-[2px] px-2 py-1 text-[11px] font-mono bg-white focus:outline-none focus:border-black/40"
             />
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-2 brutal-scroll">
@@ -522,8 +522,8 @@ export const LlmIoPanel = () => {
         </div>
 
         <div className="col-span-1 lg:col-span-2 flex flex-col min-h-0 gap-3">
-          <div className="border-2 border-black bg-white shadow-neo-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 border-b-2 border-black bg-neo-bg">
+          <div className="border border-black/15 bg-white rounded-[2px]">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 border-b border-black/10 bg-neo-bg/60">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase">LLM I/O</span>
                 {activeBundle?.summary?.decision_type && (
@@ -547,7 +547,7 @@ export const LlmIoPanel = () => {
                   <label className="text-[9px] font-bold uppercase flex items-center gap-1">
                     Attempt
                     <select
-                      className="border-2 border-black px-2 py-1 text-[10px] font-mono"
+                      className="border border-black/20 rounded-[2px] px-2 py-1 text-[10px] font-mono"
                       value={selectedAttempt ?? latestAttempt ?? ''}
                       onChange={(event) => setSelectedAttempt(Number(event.target.value))}
                     >
@@ -602,12 +602,12 @@ export const LlmIoPanel = () => {
 
           {activeBundle && compareMode && (
             <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto brutal-scroll pr-1">
-              <div className="border-2 border-black bg-white shadow-neo-sm">
-                <div className="flex flex-wrap items-center gap-3 px-2 py-2 border-b-2 border-black bg-neo-bg">
+              <div className="border border-black/15 bg-white rounded-[2px]">
+                <div className="flex flex-wrap items-center gap-3 px-2 py-2 border-b border-black/10 bg-neo-bg/60">
                   <label className="text-[9px] font-bold uppercase flex items-center gap-2">
                     Attempt A
                     <select
-                      className="border-2 border-black px-2 py-1 text-[10px] font-mono"
+                      className="border border-black/20 rounded-[2px] px-2 py-1 text-[10px] font-mono"
                       value={compareAttemptA ?? ''}
                       onChange={(event) => setCompareAttempts(Number(event.target.value), compareAttemptB)}
                     >
@@ -621,7 +621,7 @@ export const LlmIoPanel = () => {
                   <label className="text-[9px] font-bold uppercase flex items-center gap-2">
                     Attempt B
                     <select
-                      className="border-2 border-black px-2 py-1 text-[10px] font-mono"
+                      className="border border-black/20 rounded-[2px] px-2 py-1 text-[10px] font-mono"
                       value={compareAttemptB ?? ''}
                       onChange={(event) => setCompareAttempts(compareAttemptA, Number(event.target.value))}
                     >

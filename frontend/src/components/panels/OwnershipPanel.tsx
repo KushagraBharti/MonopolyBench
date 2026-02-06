@@ -34,8 +34,8 @@ const MiniTile = ({ tile, isSelected, onSelect }: MiniTileProps) => {
       className={cn(
         'relative flex flex-col border-[1.5px] border-black h-14 w-11 text-[8px] text-center bg-white transition-all cursor-pointer overflow-hidden',
         isSelected
-          ? 'scale-110 shadow-neo-lg z-10 ring-2 ring-neo-pink'
-          : 'hover:scale-105 shadow-neo-sm hover:shadow-neo',
+          ? 'scale-110 z-10 ring-2 ring-neo-pink ring-offset-1 shadow-[3px_3px_0_0_rgba(0,0,0,0.5)]'
+          : 'hover:scale-105 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)] hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.4)]',
         tile.mortgaged && 'opacity-60 grayscale'
       )}
       title={`${tile.name}${tile.owner_id ? ` (Owned by ${tile.owner_id})` : ''}`}
@@ -87,10 +87,10 @@ export const OwnershipPanel = () => {
   if (!snapshot) return null;
 
   return (
-    <NeoCard className="flex flex-col gap-0 border-neo-border shadow-neo overflow-hidden h-full min-h-0 bg-white">
-      <div className="flex flex-col border-b-2 border-black bg-white p-2 gap-2 shadow-sm z-10">
+    <NeoCard className="flex flex-col gap-0 overflow-hidden h-full min-h-0 bg-white">
+      <div className="flex flex-col border-b border-black/10 bg-white p-2 gap-2 z-10">
         <div className="flex justify-between items-center">
-          <h3 className="text-xs font-black uppercase tracking-wider">Deeds</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-wide">Deeds</h3>
           {filterPlayerId && (
             <button onClick={() => setFilterPlayerId(null)} className="text-[9px] font-bold underline hover:text-neo-blue">
               Show All
@@ -103,10 +103,10 @@ export const OwnershipPanel = () => {
           <button
             onClick={() => setFilterPlayerId(null)}
             className={cn(
-              "px-2 py-0.5 text-[8px] font-bold uppercase border border-black transition-all",
+              "px-1.5 py-0.5 text-[8px] font-bold uppercase border rounded-[2px] transition-all select-none",
               filterPlayerId === null
-                ? "bg-black text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)]"
-                : "bg-white hover:bg-gray-100"
+                ? "bg-black text-white border-black"
+                : "bg-white border-black/20 hover:bg-gray-50"
             )}
           >
             ALL
@@ -116,7 +116,7 @@ export const OwnershipPanel = () => {
               key={p.player_id}
               onClick={() => setFilterPlayerId(p.player_id)}
               className={cn(
-                "px-2 py-0.5 text-[8px] font-bold uppercase border border-black transition-all text-white shadow-[1px_1px_0_0_rgba(0,0,0,1)]",
+                "px-1.5 py-0.5 text-[8px] font-bold uppercase border border-black/40 rounded-[2px] transition-all text-white select-none",
                 filterPlayerId === p.player_id ? "opacity-100 scale-105" : "opacity-60 hover:opacity-100"
               )}
               style={{ backgroundColor: getPlayerColor(p.player_id) }}

@@ -51,38 +51,38 @@ export const CardModal = ({ isOpen, deck, card, originOffset, onClose }: CardMod
                         initial={{ rotateY: 90, scale: 0.75, x: offsetX, y: offsetY }}
                         animate={{ rotateY: 0, scale: 1, x: 0, y: 0 }}
                         exit={{ rotateY: -90, scale: 0.8, opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 110, damping: 16 }}
+                        transition={{ type: 'spring', stiffness: 120, damping: 18 }}
                         onClick={onClose}
                     >
                         <div
                             className={cn(
-                                'absolute inset-0 bg-white border-4 border-black shadow-[10px_10px_0_0_rgba(0,0,0,1)] rounded-sm flex flex-col items-center text-center p-4 select-none'
+                                'absolute inset-0 bg-white border-2 border-black/90 shadow-[6px_6px_0_0_rgba(0,0,0,0.85)] rounded-[3px] flex flex-col items-center text-center p-4 select-none'
                             )}
                         >
-                            <div className="absolute inset-2 border border-black/10 pointer-events-none" />
-                            <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(135deg,#000,#000_2px,transparent_2px,transparent_6px)]" />
+                            <div className="absolute inset-2.5 border border-black/6 rounded-[2px] pointer-events-none" />
+                            <div className="absolute inset-0 opacity-[0.03] bg-[repeating-linear-gradient(135deg,#000,#000_2px,transparent_2px,transparent_6px)]" />
                             <div
-                                className="w-full flex justify-between items-center mb-2 border-b-2 border-black pb-1"
+                                className="w-full flex justify-between items-center mb-2 border-b border-black/15 pb-1.5"
                                 style={{ color: primaryColor }}
                             >
-                                <span className="font-black uppercase tracking-tight text-sm">
+                                <span className="font-black uppercase tracking-tight text-[13px]">
                                     {isChance ? 'Chance' : 'Community Chest'}
                                 </span>
-                                <span className="text-xl leading-none">
+                                <span className="text-xl leading-none opacity-80">
                                     <Icon />
                                 </span>
                             </div>
 
                             <div className="flex-1 flex flex-col justify-center items-center w-full">
-                                <h3 className="font-black text-lg leading-tight uppercase mb-2">
+                                <h3 className="font-black text-[16px] leading-tight uppercase mb-2">
                                     {card.title}
                                 </h3>
-                                <p className="font-mono text-[11px] leading-snug text-gray-700">
+                                <p className="font-mono text-[11px] leading-snug text-gray-600">
                                     {card.description}
                                 </p>
                             </div>
 
-                            <div className="w-full h-2 mt-2 bg-black" style={{ backgroundColor: secondaryColor }} />
+                            <div className="w-full h-1.5 mt-2 rounded-full" style={{ backgroundColor: secondaryColor }} />
                         </div>
                     </motion.div>
                 </motion.div>

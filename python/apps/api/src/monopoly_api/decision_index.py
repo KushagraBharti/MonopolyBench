@@ -147,9 +147,11 @@ class DecisionIndex:
                     "tools": attempt.get("tools"),
                     "response": attempt.get("response"),
                     "parsed_tool_call": attempt.get("parsed_tool_call"),
+                    "parsed_tool_calls": attempt.get("parsed_tool_calls"),
                     "validation_errors": attempt.get("validation_errors"),
                     "error_reason": attempt.get("error_reason"),
                     "tool_action": attempt.get("tool_action"),
+                    "sequence_meta": attempt.get("sequence_meta"),
                 }
                 for attempt in attempts
             ],
@@ -218,9 +220,11 @@ class DecisionIndex:
             attempt[kind] = parsed
             if kind == "parsed" and isinstance(parsed, dict):
                 attempt["parsed_tool_call"] = parsed.get("parsed_tool_call")
+                attempt["parsed_tool_calls"] = parsed.get("parsed_tool_calls")
                 attempt["validation_errors"] = parsed.get("validation_errors") or []
                 attempt["error_reason"] = parsed.get("error_reason")
                 attempt["tool_action"] = parsed.get("tool_action")
+                attempt["sequence_meta"] = parsed.get("sequence_meta")
         return [attempts[idx] for idx in sorted(attempts)]
 
 

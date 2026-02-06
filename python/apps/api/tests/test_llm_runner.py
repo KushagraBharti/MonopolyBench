@@ -38,6 +38,11 @@ def _make_players() -> list[PlayerConfig]:
 
 
 def _tool_call_response(name: str, args: dict[str, Any]) -> OpenRouterResult:
+    args = {
+        **args,
+        "public_message": args.get("public_message", ""),
+        "private_thought": args.get("private_thought", "test"),
+    }
     payload = {
         "id": "resp-1",
         "choices": [
@@ -88,6 +93,13 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
             payload = json.loads(message.get("content", "{}"))
         except json.JSONDecodeError:
             continue
+        if "action_state" in payload and "game_state" in payload:
+            action_state = payload.get("action_state", {})
+            normalized = dict(payload)
+            normalized["decision"] = action_state.get("decision", {})
+            normalized["decision_focus"] = action_state.get("decision_focus", {})
+            normalized["full_state"] = payload.get("game_state")
+            return normalized
         if "decision" in payload and "full_state" in payload:
             return payload
     return None
@@ -360,25 +372,26 @@ def test_prompt_payload_shape(tmp_path) -> None:
     assert payload is not None
     assert raw_payload is not None
     assert json.loads(raw_payload) == payload
-    assert set(payload.keys()) <= {"schema_version", "full_state", "decision", "decision_focus", "llm"}
-    assert {"schema_version", "full_state", "decision", "decision_focus"}.issubset(payload.keys())
+    assert set(payload.keys()) <= {"schema_version", "game_state", "action_state", "llm"}
+    assert {"schema_version", "game_state", "action_state"}.issubset(payload.keys())
 
-    full_state = payload["full_state"]
-    assert "board" not in full_state
-    assert "space_name" not in json.dumps(full_state)
-    assert len(full_state["others"]) == 3
-    assert isinstance(full_state["you"]["position"], str)
-    for player in [full_state["you"], *full_state["others"]]:
+    game_state = payload["game_state"]
+    assert len(game_state["board"]) == 40
+    assert "space_name" not in json.dumps(game_state)
+    assert len(game_state["others"]) == 3
+    assert isinstance(game_state["you"]["position"], str)
+    for player in [game_state["you"], *game_state["others"]]:
         for holding in player["holdings"]["owned"]:
             assert "space_key" in holding
             assert "name" not in holding
 
-    decision = payload["decision"]
+    action_state = payload["action_state"]
+    decision = action_state["decision"]
     assert "state" not in decision
     assert "run_id" not in decision
 
-    focus = payload["decision_focus"]
-    assert focus["schema_version"] == "v1"
+    focus = action_state["decision_focus"]
+    assert focus["schema_version"] == "v2"
     assert focus["decision_type"] == "BUY_OR_AUCTION_DECISION"
     assert "jail_turns" not in json.dumps(focus)
     scenario = focus["scenario"]
@@ -415,7 +428,7 @@ def test_jail_decision_focus_shape() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    focus = prompt.user_payload["decision_focus"]
+    focus = prompt.user_payload["action_state"]["decision_focus"]
     assert focus["decision_type"] == "JAIL_DECISION"
     assert "jail_turns" not in json.dumps(focus)
     options = focus["scenario"]["options"]
@@ -452,7 +465,7 @@ def test_post_turn_decision_focus_shape() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    focus = prompt.user_payload["decision_focus"]
+    focus = prompt.user_payload["action_state"]["decision_focus"]
 
     assert focus["decision_type"] == "POST_TURN_ACTION_DECISION"
     assert "cash" not in json.dumps(focus)
@@ -511,7 +524,7 @@ def test_liquidation_decision_focus_shape() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    focus = prompt.user_payload["decision_focus"]
+    focus = prompt.user_payload["action_state"]["decision_focus"]
 
     assert focus["decision_type"] == "LIQUIDATION_DECISION"
     assert "cash" not in json.dumps(focus)
@@ -568,7 +581,7 @@ def test_auction_decision_focus_shape() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    focus = prompt.user_payload["decision_focus"]
+    focus = prompt.user_payload["action_state"]["decision_focus"]
 
     assert focus["decision_type"] == "AUCTION_BID_DECISION"
     assert "cash" not in json.dumps(focus)
@@ -619,7 +632,7 @@ def test_auction_tool_schema_includes_bid_amount() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    tools = build_openrouter_tools(prompt.user_payload["decision"])
+    tools = build_openrouter_tools(prompt.user_payload["action_state"]["decision"])
 
     bid_tool = next(tool for tool in tools if tool["function"]["name"] == "bid_auction")
     bid_params = bid_tool["function"]["parameters"]
@@ -666,18 +679,19 @@ def test_trade_response_decision_focus_shape() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    focus = prompt.user_payload["decision_focus"]
+    focus = prompt.user_payload["action_state"]["decision_focus"]
 
     assert focus["decision_type"] == "TRADE_RESPONSE_DECISION"
-    assert "cash" not in json.dumps(focus)
     assert "position" not in json.dumps(focus)
     assert "jail_turns" not in json.dumps(focus)
     scenario = focus["scenario"]
     assert scenario["counterparty_player_id"] == "p1"
-    assert scenario["max_exchanges"] == 5
+    assert scenario["max_exchanges"] == 20
     assert scenario["exchange_index"] == 0
-    assert isinstance(scenario["history_last_2"], list)
-    assert "current_offer" in scenario
+    assert isinstance(scenario["history"], list)
+    assert len(scenario["history"]) == 0
+    assert scenario["current_offer"]["offer"]["cash"] == 0
+    assert scenario["current_offer"]["request"]["cash"] == 0
     tools = focus["legal_tools"]
     tool_names = {tool["tool_name"] for tool in tools}
     assert "accept_trade" in tool_names
@@ -714,7 +728,7 @@ def test_post_turn_tool_schema_includes_build_and_sell_plans() -> None:
         memory=PromptMemory(space_key_by_index=space_key_by_index),
         space_key_by_index=space_key_by_index,
     )
-    tools = build_openrouter_tools(prompt.user_payload["decision"])
+    tools = build_openrouter_tools(prompt.user_payload["action_state"]["decision"])
 
     build_tool = next(tool for tool in tools if tool["function"]["name"] == "build_houses_or_hotel")
     build_params = build_tool["function"]["parameters"]
@@ -1018,3 +1032,4 @@ def test_decisions_jsonl_pairs_and_applied(tmp_path) -> None:
     assert resolved_by_id[second_id]["fallback_used"] is False
     assert resolved_by_id[third_id]["retry_used"] is True
     assert resolved_by_id[third_id]["fallback_used"] is True
+

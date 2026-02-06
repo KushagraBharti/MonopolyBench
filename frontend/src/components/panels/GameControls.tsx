@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { getApiBaseUrl } from '@/net/ws';
 import { useGameStore } from '@/state/store';
-import { NeoBadge, NeoCard } from '@/components/ui/NeoPrimitive';
 import { cn } from '@/components/ui/cn';
 
 export const GameControls = () => {
@@ -88,49 +87,40 @@ export const GameControls = () => {
   const isLoading = loadingAction !== null || pendingStart || pendingResume;
 
   return (
-    <NeoCard className="flex flex-col gap-1.5 p-1.5 border-neo-border bg-white shadow-neo">
-      <div className="flex justify-between items-center mb-0.5 px-0.5">
-        <span className="text-[9px] font-black uppercase tracking-wider">Session Control</span>
-        <div className="flex items-center gap-2">
-          {isPaused && (
-            <NeoBadge variant="warning" className="text-[8px] py-0 px-1">
-              PAUSED
-            </NeoBadge>
-          )}
-          {isLoading && <span className="animate-spin">?</span>}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
         <button
           onClick={handleStart}
           disabled={isLoading || isRunning}
-          className="brutal-btn bg-neo-black text-white hover:bg-neutral-800 disabled:opacity-50 w-full text-[10px] px-2 py-1.5"
+          className={cn(
+            "brutal-btn flex-1 text-[10px] px-2 py-1.5 rounded-[2px]",
+            isRunning
+              ? "bg-gray-100 text-gray-400 border-gray-300 shadow-none cursor-default"
+              : "bg-neo-black text-white hover:bg-neutral-800"
+          )}
         >
-          {isRunning ? 'RUNNING' : 'START RUN'}
+          {isRunning ? 'LIVE' : 'START'}
         </button>
 
-        <button
-          onClick={handleStop}
-          disabled={isLoading || !isRunning}
-          className="brutal-btn bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed text-neo-red border-neo-red w-full text-[10px] px-2 py-1.5"
-        >
-          STOP
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1">
         <button
           onClick={isPaused ? handleResume : handlePause}
           disabled={isLoading || !isRunning}
           className={cn(
-            'brutal-btn w-full text-[10px] px-2 py-1.5',
+            'brutal-btn flex-1 text-[10px] px-2 py-1.5 rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed',
             isPaused ? 'bg-neo-green text-black hover:bg-green-300' : 'bg-neo-yellow text-black hover:bg-yellow-300'
           )}
         >
           {isPaused ? 'RESUME' : 'PAUSE'}
         </button>
+
+        <button
+          onClick={handleStop}
+          disabled={isLoading || !isRunning}
+          className="brutal-btn text-[10px] px-2 py-1.5 rounded-[2px] bg-white hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed text-neo-red border-neo-red/60 hover:border-neo-red"
+        >
+          STOP
+        </button>
       </div>
-    </NeoCard>
+    </div>
   );
 };

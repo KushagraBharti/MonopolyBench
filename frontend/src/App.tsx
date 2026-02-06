@@ -122,35 +122,17 @@ function App() {
     <div className="h-screen w-screen bg-neo-bg text-black font-sans overflow-hidden flex relative">
 
       {/* Sidebar: Left Panel (Players & Controls & Ownership) */}
-      <aside className="w-137.5 h-full border-r-4 border-black bg-white flex flex-col z-30 shadow-neo-lg">
-        <header className="p-1.5 border-b-2 border-black bg-gray-50 shrink-0">
-          <h1 className="text-lg font-black uppercase tracking-tighter leading-none mb-0.5">
-            Monopoly <span className="text-neo-pink">Bench</span>
-          </h1>
-
-          <div className="flex flex-col gap-0.5 mt-0.5">
-            {/* Connection Status */}
-            <div className="flex justify-between items-center">
-              <span className="text-[8px] font-bold uppercase text-gray-500 flex items-center gap-1">
-                <span className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  isConnected ? "bg-neo-green" : "bg-neo-pink animate-pulse"
-                )} />
-                Connection
-              </span>
-              <NeoBadge
-                variant={isConnected ? 'success' : 'error'}
-                className={cn(!isConnected && "animate-pulse", "text-[8px] py-0 px-1 h-3")}
-              >
-                {isConnected ? 'ONLINE' : 'OFFLINE'}
-              </NeoBadge>
-            </div>
-
-            {/* Run Status */}
-            <div className="flex justify-between items-center">
-              <span className="text-[8px] font-bold uppercase text-gray-500">
-                Run Status
-              </span>
+      <aside className="w-137.5 h-full border-r-2 border-black bg-white flex flex-col z-30 shadow-[4px_0_16px_rgba(0,0,0,0.06)]">
+        <header className="px-3 py-2.5 border-b-2 border-black bg-neo-bg/60 shrink-0">
+          <div className="flex items-center justify-between">
+            <h1 className="text-base font-black uppercase tracking-tighter leading-none">
+              Monopoly<span className="text-neo-pink ml-0.5">Bench</span>
+            </h1>
+            <div className="flex items-center gap-1.5">
+              <span className={cn(
+                "w-2 h-2 rounded-full transition-colors duration-300",
+                isConnected ? "bg-neo-green" : "bg-neo-pink animate-pulse"
+              )} />
               <NeoBadge
                 variant={
                   runState === 'RUNNING' ? 'info' :
@@ -158,29 +140,27 @@ function App() {
                       runState === 'COMPLETE' ? 'success' :
                         'neutral'
                 }
-                className="text-[8px] py-0 px-1 h-3"
+                className="text-[8px] py-0 px-1.5"
               >
-                {runState === 'COMPLETE' && 'OK '}
-                {runState === 'RUNNING' && '>> '}
                 {runBadgeLabel}
               </NeoBadge>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col min-h-0 bg-neo-bg">
+        <div className="flex-1 flex flex-col min-h-0 bg-neo-bg/30">
           {/* Controls - Fixed */}
-          <div className="shrink-0 flex flex-col gap-1 p-1 border-b-2 border-black bg-white z-10">
+          <div className="shrink-0 p-2 border-b border-black/10 bg-white z-10">
             <GameControls />
           </div>
 
           {/* Scrolling Area for Players/Auction/Trade */}
-          <div className="flex-1 overflow-y-auto p-1 min-h-0 relative bg-neo-bg">
+          <div className="flex-1 overflow-y-auto p-2 min-h-0 relative brutal-scroll">
             <div className="mb-2">
               <PlayerStackPanel />
             </div>
             {(showAuction || showTrade) && (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 mt-2">
                 <AuctionPanel visible={showAuction} />
                 <TradeInspectorPanel visible={showTrade} />
               </div>
@@ -192,46 +172,41 @@ function App() {
       {/* Main Area: Board (Centered & Scaled) */}
       <main className="flex-1 h-full relative flex items-center justify-center bg-neo-bg p-4 overflow-hidden">
         {/* Background Image */}
-        <div className="absolute inset-0 opacity-100 pointer-events-none" 
+        <div className="absolute inset-0 pointer-events-none"
           style={{
-        backgroundImage: 'url(/background.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
+            backgroundImage: 'url(/background.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
           }}
         />
 
-        <Board spaces={snapshot?.board || []} className="h-full max-h-[95vh] w-auto aspect-square shadow-2xl relative z-10" />
+        <Board spaces={snapshot?.board || []} className="h-full max-h-[95vh] w-auto aspect-square relative z-10" />
         <BoardEffectsLayer />
       </main>
 
       {/* Right Sidebar: Feed */}
-      <aside className="w-96 h-full border-l-4 border-black bg-white flex flex-col z-20 shadow-[-8px_0px_0px_0px_rgba(0,0,0,1)]">
-        <div className="px-4 py-3 border-b-2 border-neo-bg flex justify-between items-center bg-gray-50">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setRightTab('dev')}
-              className={cn(
-                "px-2 py-1 text-[10px] font-bold uppercase border-2 border-black",
-                rightTab === 'dev' ? "bg-black text-white" : "bg-white text-black shadow-neo-sm"
-              )}
-            >
-              Dev Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setRightTab('feed')}
-              className={cn(
-                "px-2 py-1 text-[10px] font-bold uppercase border-2 border-black",
-                rightTab === 'feed' ? "bg-black text-white" : "bg-white text-black shadow-neo-sm"
-              )}
-            >
-              Feed
-            </button>
+      <aside className="w-96 h-full border-l-2 border-black bg-white flex flex-col z-20 shadow-[-4px_0_16px_rgba(0,0,0,0.06)]">
+        <div className="px-3 py-2.5 border-b-2 border-black flex justify-between items-center bg-neo-bg/60">
+          <div className="flex items-center gap-1">
+            {(['dev', 'feed'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setRightTab(tab)}
+                className={cn(
+                  "px-3 py-1 text-[10px] font-bold uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100 select-none",
+                  rightTab === tab
+                    ? "bg-black text-white shadow-none"
+                    : "bg-white text-black shadow-neo-sm hover:-translate-y-px hover:shadow-neo"
+                )}
+              >
+                {tab === 'dev' ? 'Events' : 'Feed'}
+              </button>
+            ))}
           </div>
-          <div className="text-right leading-none">
-            <span className="text-[10px] font-bold block text-gray-500">TURN</span>
-            <span className="text-xl font-mono font-black">{snapshot?.turn_index ?? 0}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold uppercase text-gray-400 tracking-wide">Turn</span>
+            <span className="text-lg font-mono font-black leading-none tabular-nums">{snapshot?.turn_index ?? 0}</span>
           </div>
         </div>
         <div className="flex-1 min-h-0 relative">

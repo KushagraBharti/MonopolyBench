@@ -16,6 +16,13 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
             payload = json.loads(message.get("content", "{}"))
         except json.JSONDecodeError:
             continue
+        if "action_state" in payload and "game_state" in payload:
+            action_state = payload.get("action_state", {})
+            normalized = dict(payload)
+            normalized["decision"] = action_state.get("decision", {})
+            normalized["decision_focus"] = action_state.get("decision_focus", {})
+            normalized["full_state"] = payload.get("game_state")
+            return normalized
         if "decision" in payload and "full_state" in payload:
             return payload
     return None
@@ -36,6 +43,11 @@ class DeterministicOpenRouter:
             action_name, args = "reject_trade", {}
         else:
             action_name, args = next(iter(legal)), {}
+        args = {
+            **args,
+            "public_message": "",
+            "private_thought": "test",
+        }
         payload = {
             "id": "resp-1",
             "choices": [

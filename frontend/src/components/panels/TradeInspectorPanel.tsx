@@ -42,38 +42,43 @@ export const TradeInspectorPanel = ({ visible }: TradeInspectorPanelProps) => {
   };
 
   return (
-    <NeoCard className="p-3 border-3 border-black bg-white">
-      <div className="text-xs font-bold uppercase">Trade Inspector</div>
-      <div className="text-[10px] font-mono opacity-70 mt-1">
+    <NeoCard className="p-2.5 bg-white">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-black uppercase tracking-wide">Trade</span>
+        <span className="text-[8px] font-bold uppercase text-neo-blue bg-neo-blue/10 px-1.5 py-px rounded-[2px]">Active</span>
+      </div>
+      <div className="text-[9px] font-mono text-gray-400 leading-none">
         {formatPlayer(trade.initiator_player_id)}
         {' <-> '}
         {formatPlayer(trade.counterparty_player_id)}
       </div>
-      <div className="mt-2 text-[10px] space-y-1">
-        <div className="flex justify-between">
-          <span className="uppercase text-gray-500">Exchange</span>
-          <span className="font-mono">
-            {trade.exchange_index}/{trade.max_exchanges}
-          </span>
-        </div>
-        <div>
-          <span className="uppercase text-gray-500">Current Offer</span>
-          <div className="font-mono mt-1">
-            <div>Offer: {formatBundle(trade.current_offer.offer)}</div>
-            <div>Request: {formatBundle(trade.current_offer.request)}</div>
+      <div className="mt-2 text-[10px] space-y-1.5">
+        <div className="bg-neo-bg/60 rounded-[2px] px-2 py-1.5">
+          <div className="flex justify-between mb-1">
+            <span className="text-[8px] uppercase text-gray-400">Exchange</span>
+            <span className="font-mono font-bold tabular-nums">
+              {trade.exchange_index}/{trade.max_exchanges}
+            </span>
+          </div>
+          <div>
+            <span className="text-[8px] uppercase text-gray-400">Current Offer</span>
+            <div className="font-mono text-[10px] mt-0.5 space-y-0.5">
+              <div className="text-neo-green">Offer: {formatBundle(trade.current_offer.offer)}</div>
+              <div className="text-neo-pink">Request: {formatBundle(trade.current_offer.request)}</div>
+            </div>
           </div>
         </div>
         {trade.history_last_2.length > 0 && (
-          <div>
-            <span className="uppercase text-gray-500">Recent Exchanges</span>
-            <div className="font-mono mt-1 space-y-1">
+          <div className="pt-1 border-t border-black/5">
+            <span className="text-[8px] uppercase text-gray-400">Recent Exchanges</span>
+            <div className="font-mono text-[10px] mt-1 space-y-1.5">
               {trade.history_last_2.map((entry, index) => (
-                <div key={`trade-history-${index}`}>
-                  <div>{formatPlayer(entry.from_player_id)}</div>
-                  <div className="opacity-80">
+                <div key={`trade-history-${index}`} className="bg-neo-bg/40 rounded-[2px] px-1.5 py-1">
+                  <div className="text-[9px] font-bold">{formatPlayer(entry.from_player_id)}</div>
+                  <div className="text-gray-500">
                     Offer: {formatBundle(entry.offer)}
                   </div>
-                  <div className="opacity-80">
+                  <div className="text-gray-500">
                     Request: {formatBundle(entry.request)}
                   </div>
                 </div>

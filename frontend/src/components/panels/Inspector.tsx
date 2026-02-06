@@ -8,17 +8,17 @@ type Tab = 'snapshot' | 'last' | 'stream' | 'raw' | 'llm_io';
 
 const JsonPane = ({ title, data }: { title: string; data: unknown }) => (
   <div className="flex flex-col gap-1 h-full min-h-0">
-    <div className="flex items-center justify-between border-b-2 border-black bg-neo-bg px-2 py-1">
-      <span className="text-[10px] uppercase font-black tracking-wider">{title}</span>
+    <div className="flex items-center justify-between border-b border-black/15 bg-neo-bg px-2.5 py-1.5">
+      <span className="text-[10px] uppercase font-black tracking-wider text-gray-700">{title}</span>
       <button
         onClick={() => navigator.clipboard.writeText(JSON.stringify(data, null, 2))}
-        className="text-[9px] font-mono hover:text-neo-blue uppercase"
+        className="text-[9px] font-mono text-gray-400 hover:text-neo-blue uppercase transition-colors"
       >
         Copy
       </button>
     </div>
-    <div className="flex-1 overflow-auto bg-white p-2 font-mono text-[10px] brutal-scroll">
-      <pre>{JSON.stringify(data, null, 2)}</pre>
+    <div className="flex-1 overflow-auto bg-white p-2.5 font-mono text-[10px] brutal-scroll leading-relaxed">
+      <pre className="text-gray-700">{JSON.stringify(data, null, 2)}</pre>
     </div>
   </div>
 );
@@ -27,10 +27,10 @@ const ToggleSwitch = ({ label, active, onClick }: { label: string; active: boole
   <button
     onClick={onClick}
     className={cn(
-      "relative px-4 py-1.5 min-w-[80px] text-xs font-bold uppercase transition-all duration-100 border-2 border-black",
+      "relative px-3 py-1 min-w-[70px] text-[10px] font-bold uppercase transition-all duration-100 border-[1.5px] rounded-[2px] select-none",
       active
-        ? "bg-black text-white shadow-none translate-y-[2px] translate-x-[2px]"
-        : "bg-white text-black shadow-neo hover:translate-y-[-1px] hover:translate-x-[-1px] hover:shadow-neo-lg"
+        ? "bg-black text-white border-black shadow-none translate-y-[1px]"
+        : "bg-white text-gray-700 border-black/40 hover:border-black/70 shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.25)]"
     )}
   >
     {label}
@@ -108,54 +108,56 @@ export const Inspector = () => {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setInspectorOpen(true)}
-          className="w-12 h-12 bg-black border-2 border-neo-white text-white shadow-neo-lg hover:rotate-90 transition-transform duration-300 flex items-center justify-center"
+          className="w-10 h-10 bg-black/90 border-[1.5px] border-white/20 text-white shadow-[3px_3px_0_0_rgba(0,0,0,0.4)] rounded-[3px] hover:rotate-90 transition-transform duration-300 flex items-center justify-center"
           title="Open Inspector"
         >
-          <span className="font-mono text-xl">⚙</span>
+          <span className="font-mono text-lg">⚙</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-[2px] p-2 md:p-4 animate-fade-in-up">
-      <div className="w-full max-w-[98vw] md:max-w-[92vw] h-[92vh] md:h-[94vh] flex flex-col bg-neo-bg border-4 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] relative">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[3px] p-2 md:p-4 animate-fade-in-up">
+      <div className="w-full max-w-[98vw] md:max-w-[92vw] h-[92vh] md:h-[94vh] flex flex-col bg-neo-bg border-2 border-black/90 shadow-[10px_10px_0px_0px_rgba(0,0,0,0.85)] rounded-[3px] relative overflow-hidden">
 
         {/* Header Bar */}
-        <div className="h-12 bg-black text-white flex justify-between items-center px-4 select-none shrink-0">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-black uppercase tracking-tighter">System Inspector</h2>
-            <div className="hidden md:block h-6 w-[2px] bg-white/30" />
-            <div className="hidden md:flex font-mono text-[10px] text-gray-400 gap-4">
+        <div className="h-11 bg-black text-white flex justify-between items-center px-4 select-none shrink-0">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[14px] font-black uppercase tracking-tight">System Inspector</h2>
+            <div className="hidden md:block h-5 w-px bg-white/20" />
+            <div className="hidden md:flex font-mono text-[9px] text-gray-500 gap-3">
               <span>RUN: {snapshot?.run_id?.slice(0, 8) ?? 'N/A'}</span>
               <span>TURN: {snapshot?.turn_index ?? 0}</span>
               <span>SCHEMA: {snapshot?.schema_version ?? '1.0'}</span>
             </div>
           </div>
-          {focusLabel && (
-            <NeoBadge variant="info" className="text-[9px] py-0 px-2">
-              {focusLabel}
-            </NeoBadge>
-          )}
-          {runStatus.players && runStatus.players.length > 0 && runStatus.players.length !== 4 && (
-            <NeoBadge variant="warning" className="text-[9px] py-0 px-2">
-              PLAYERS {runStatus.players.length}/4
-            </NeoBadge>
-          )}
-          <button
-            onClick={() => {
-              setInspectorOpen(false);
-              setInspectorFocus(null);
-            }}
-            className="w-8 h-8 flex items-center justify-center bg-neo-red text-white font-bold hover:bg-red-400 transition-colors"
-          >
-            X
-          </button>
+          <div className="flex items-center gap-2">
+            {focusLabel && (
+              <NeoBadge variant="info" className="text-[9px] py-0 px-2">
+                {focusLabel}
+              </NeoBadge>
+            )}
+            {runStatus.players && runStatus.players.length > 0 && runStatus.players.length !== 4 && (
+              <NeoBadge variant="warning" className="text-[9px] py-0 px-2">
+                PLAYERS {runStatus.players.length}/4
+              </NeoBadge>
+            )}
+            <button
+              onClick={() => {
+                setInspectorOpen(false);
+                setInspectorFocus(null);
+              }}
+              className="w-7 h-7 flex items-center justify-center bg-neo-red/90 text-white text-[11px] font-bold hover:bg-red-400 transition-colors rounded-[2px]"
+            >
+              X
+            </button>
+          </div>
         </div>
 
         {/* Toolbar */}
-        <div className="bg-white border-b-2 border-black p-3 flex flex-wrap gap-4 items-center shrink-0">
-          <div className="flex flex-wrap items-center gap-2 mr-auto pb-1 md:pb-0">
+        <div className="bg-white border-b border-black/15 px-3 py-2 flex flex-wrap gap-3 items-center shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 mr-auto pb-1 md:pb-0">
             {(['snapshot', 'last', 'stream', 'raw', 'llm_io'] as Tab[]).map((tab) => (
               <ToggleSwitch
                 key={tab}
@@ -167,12 +169,12 @@ export const Inspector = () => {
           </div>
 
           {inspectorTab === 'stream' && (
-            <label className="flex items-center gap-2 cursor-pointer font-bold text-xs uppercase bg-neo-bg px-2 py-1 border-2 border-black active:translate-y-[1px] select-none">
+            <label className="flex items-center gap-1.5 cursor-pointer font-bold text-[10px] uppercase bg-neo-bg px-2 py-1 border border-black/20 rounded-[2px] active:translate-y-[1px] select-none">
               <input
                 type="checkbox"
                 checked={showThoughts}
                 onChange={(e) => setShowThoughts(e.target.checked)}
-                className="accent-black w-4 h-4"
+                className="accent-black w-3.5 h-3.5"
               />
               Show Thoughts
             </label>
@@ -180,12 +182,10 @@ export const Inspector = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden p-4 bg-neo-bg relative">
-          <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIi8+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiLz4KPC9zdmc+')]"></div>
-
-          <div className="h-full bg-white border-2 border-black shadow-neo-sm overflow-hidden flex flex-col relative z-10">
+        <div className="flex-1 overflow-hidden p-3 bg-neo-bg relative">
+          <div className="h-full bg-white border border-black/15 rounded-[2px] overflow-hidden flex flex-col relative z-10">
             {inspectorTab === 'snapshot' && (
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x-2 divide-black overflow-hidden">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-black/10 overflow-hidden">
                 <JsonPane title="Live State" data={snapshot ?? {}} />
                 <JsonPane title="Previous State" data={previousSnapshot ?? {}} />
               </div>
@@ -199,13 +199,13 @@ export const Inspector = () => {
 
             {inspectorTab === 'stream' && (
               <div className="flex-1 flex flex-col min-h-0 bg-white">
-                <div className="bg-black text-white px-2 py-1 text-[10px] uppercase font-bold flex justify-between">
+                <div className="bg-black/90 text-white px-2.5 py-1 text-[9px] uppercase font-bold flex justify-between rounded-t-[2px]">
                   <span>Event Log (Last 100)</span>
-                  <span>{streamEvents.length} items</span>
+                  <span className="text-gray-400 tabular-nums">{streamEvents.length} items</span>
                 </div>
                 <div className="flex-1 overflow-y-auto brutal-scroll p-0">
                   {streamEvents.length === 0 && (
-                    <div className="p-8 text-center text-gray-400 font-mono text-xs">No events to display.</div>
+                    <div className="p-8 text-center text-gray-400 font-mono text-[10px]">No events to display.</div>
                   )}
                   {streamEvents.map((event, idx) => {
                     const isThought = event.type === 'LLM_PRIVATE_THOUGHT';
@@ -214,16 +214,16 @@ export const Inspector = () => {
                       <div
                         key={`${event.event_id}-${idx}`}
                         className={cn(
-                          "flex items-baseline gap-2 p-2 border-b border-gray-100 font-mono text-[10px] hover:bg-blue-50 transition-colors",
-                          isThought && "bg-gray-50 text-gray-500 italic",
-                          isFocused && "bg-neo-yellow/40"
+                          "flex items-baseline gap-2 px-2.5 py-1.5 border-b border-gray-100/80 font-mono text-[10px] hover:bg-blue-50/50 transition-colors",
+                          isThought && "bg-gray-50/60 text-gray-500 italic",
+                          isFocused && "bg-neo-yellow/30"
                         )}
                       >
-                        <span className="w-8 shrink-0 text-gray-400">#{event.turn_index}</span>
-                        <span className={cn("font-bold w-40 shrink-0 truncate", isThought ? "text-gray-500" : "text-blue-700")}>
+                        <span className="w-8 shrink-0 text-gray-400 tabular-nums">#{event.turn_index}</span>
+                        <span className={cn("font-bold w-40 shrink-0 truncate", isThought ? "text-gray-400" : "text-neo-blue")}>
                           {event.type}
                         </span>
-                        <span className="truncate flex-1 opacity-70">
+                        <span className="truncate flex-1 text-gray-500">
                           {isThought
                             ? getThoughtText(event)
                             : JSON.stringify(event.payload).slice(0, 100)}
@@ -236,7 +236,7 @@ export const Inspector = () => {
             )}
 
             {inspectorTab === 'raw' && (
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x-2 divide-black overflow-hidden">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-black/10 overflow-hidden">
                 <JsonPane title="Websocket Connection" data={connection} />
                 <JsonPane title="Runner Status" data={runStatus} />
               </div>

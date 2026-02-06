@@ -207,6 +207,24 @@
         },
         "initiator_player_id": {
           "type": "string"
+        },
+        "action_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["index", "action", "player_id"],
+            "properties": {
+              "index": { "type": "integer", "minimum": 1 },
+              "action": { "type": "string", "enum": ["BID", "DROP_OUT"] },
+              "player_id": { "type": "string" },
+              "bid_amount": { "type": "integer", "minimum": 0 }
+            }
+          }
         }
       }
     },
@@ -227,6 +245,43 @@
         "max_exchanges": { "type": "integer", "minimum": 1 },
         "exchange_index": { "type": "integer", "minimum": 0 },
         "history_last_2": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from_player_id", "offer", "request"],
+            "properties": {
+              "from_player_id": { "type": "string" },
+              "offer": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["cash", "properties", "get_out_of_jail_cards"],
+                "properties": {
+                  "cash": { "type": "integer", "minimum": 0 },
+                  "properties": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "get_out_of_jail_cards": { "type": "integer", "minimum": 0 }
+                }
+              },
+              "request": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["cash", "properties", "get_out_of_jail_cards"],
+                "properties": {
+                  "cash": { "type": "integer", "minimum": 0 },
+                  "properties": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "get_out_of_jail_cards": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        "history": {
           "type": "array",
           "items": {
             "type": "object",

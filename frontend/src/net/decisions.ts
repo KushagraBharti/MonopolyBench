@@ -21,9 +21,11 @@ export type DecisionAttempt = {
   tools?: unknown | null;
   response?: unknown | null;
   parsed_tool_call?: unknown | null;
+  parsed_tool_calls?: unknown | null;
   validation_errors?: string[] | null;
   error_reason?: string | null;
   tool_action?: unknown | null;
+  sequence_meta?: unknown | null;
 };
 
 export type DecisionBundle = {
