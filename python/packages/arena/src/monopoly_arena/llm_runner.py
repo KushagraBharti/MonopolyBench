@@ -269,8 +269,7 @@ class LlmRunner:
         if queue is None:
             return None
         if queue.owner_player_id != decision.get("player_id") or queue.turn_index != decision.get("turn_index"):
-            if decision.get("turn_index") != queue.turn_index:
-                self._post_turn_queue = None
+            self._post_turn_queue = None
             return None
         if decision.get("decision_type") != "POST_TURN_ACTION_DECISION":
             return None
@@ -791,16 +790,17 @@ class LlmRunner:
 
         if decision_type == "POST_TURN_ACTION_DECISION":
             action_names = [str(action.get("action")) for action in actions]
-            if "end_turn" not in action_names:
+            if len(actions) > 1 and "end_turn" not in action_names:
                 errors = ["POST_TURN_ACTION_DECISION sequences must include end_turn"]
                 attempt.validation_errors.extend(errors)
                 return None, errors, "invalid_tool_call", [], None
             boundary = None
-            end_turn_index = action_names.index("end_turn")
-            if end_turn_index < len(actions) - 1:
-                boundary = "tail_after_end_turn_ignored"
-                actions = actions[: end_turn_index + 1]
-                action_names = action_names[: end_turn_index + 1]
+            if "end_turn" in action_names:
+                end_turn_index = action_names.index("end_turn")
+                if end_turn_index < len(actions) - 1:
+                    boundary = "tail_after_end_turn_ignored"
+                    actions = actions[: end_turn_index + 1]
+                    action_names = action_names[: end_turn_index + 1]
             first_action = actions[0]
             errors = validate_decision_action(decision, first_action)
             if errors:

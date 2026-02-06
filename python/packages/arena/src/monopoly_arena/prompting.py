@@ -660,6 +660,12 @@ def build_trade_propose_decision_focus(decision: dict[str, Any]) -> dict[str, An
     state = decision.get("state", {})
     players = state.get("players", [])
     actor_id = decision.get("player_id")
+    post_turn = decision.get("post_turn")
+    if not isinstance(post_turn, dict):
+        post_turn = {}
+    options = post_turn.get("options")
+    if not isinstance(options, dict):
+        options = {}
     eligible = [
         player.get("player_id")
         for player in players
@@ -681,7 +687,7 @@ def build_trade_propose_decision_focus(decision: dict[str, Any]) -> dict[str, An
         "decision_type": decision.get("decision_type"),
         "actor_player_id": actor_id,
         "scenario": {
-            "max_exchanges": decision.get("post_turn", {}).get("options", {}).get("max_trade_exchanges"),
+            "max_exchanges": options.get("max_trade_exchanges"),
             "eligible_counterparties_player_ids": eligible,
         },
         "legal_tools": tools,
