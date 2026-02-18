@@ -147,7 +147,7 @@ This will ensure that everything is running perfectly.
 
 ### 4) Run the backend
 ```bash
-cd python/apps/api
+cd apps/api
 uv run uvicorn monopoly_api.main:app --reload
 ```
 
