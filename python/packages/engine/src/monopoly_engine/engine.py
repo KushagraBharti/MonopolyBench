@@ -43,6 +43,8 @@ COMMUNITY_REPAIR_HOTEL_COST = 115
 UTILITY_CARD_MULTIPLIER = 10
 DEFAULT_MAX_TRADE_EXCHANGES = 20
 DEFAULT_MAX_AUCTION_ACTIONS = 200
+MAX_TRADE_EXCHANGES_CAP = 200
+MAX_AUCTION_ACTIONS_CAP = 1000
 
 
 class Engine:
@@ -65,8 +67,8 @@ class Engine:
         self._start_ts_ms = start_ts_ms
         self._ts_step_ms = ts_step_ms
         self._allow_extra_turns = allow_extra_turns
-        self._max_trade_exchanges = max(1, int(max_trade_exchanges))
-        self._max_auction_actions = max(1, int(max_auction_actions))
+        self._max_trade_exchanges = min(MAX_TRADE_EXCHANGES_CAP, max(1, int(max_trade_exchanges)))
+        self._max_auction_actions = min(MAX_AUCTION_ACTIONS_CAP, max(1, int(max_auction_actions)))
         self._seq = 0
         self._started = False
         self._stop_reason: str | None = None

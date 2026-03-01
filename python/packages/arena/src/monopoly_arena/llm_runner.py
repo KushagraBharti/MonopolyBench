@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any, AsyncIterable, Awaitable, Callable
 
 from monopoly_engine import Engine
+from monopoly_engine.board import normalize_space_key
 from monopoly_telemetry import RunFiles, build_summary
 
 from .openrouter_client import OpenRouterClient, OpenRouterResult
@@ -63,14 +64,6 @@ class PendingResolution:
     outcome: DecisionOutcome
 
 
-@dataclass(slots=True)
-class PostTurnQueue:
-    owner_player_id: str
-    turn_index: int
-    actions: list[dict[str, Any]]
-    origin_decision_id: str
-
-
 class LlmRunner:
     def __init__(
         self,
@@ -104,6 +97,8 @@ class LlmRunner:
             max_auction_actions=max_auction_actions,
         )
         self._event_delay_s = event_delay_s
+        self._max_trade_exchanges = max_trade_exchanges
+        self._max_auction_actions = max_auction_actions
         self._space_key_by_index = build_space_key_by_index()
         self._prompt_memory = PromptMemory(space_key_by_index=self._space_key_by_index)
         self._paused = False
@@ -112,7 +107,6 @@ class LlmRunner:
         self._pending_resolution: PendingResolution | None = None
         self._advance_lock = asyncio.Lock()
         self._applied_decision_ids: set[str] = set()
-        self._post_turn_queue: PostTurnQueue | None = None
 
     def request_stop(self, reason: str = "STOPPED") -> None:
         self._engine.request_stop(reason)
@@ -175,10 +169,16 @@ class LlmRunner:
             if self._event_delay_s > 0:
                 await asyncio.sleep(self._event_delay_s)
             if summary_handler is not None:
+                summary: dict[str, Any]
                 if self._run_files is not None:
-                    await summary_handler(build_summary(self._run_files))
+                    summary = build_summary(self._run_files)
                 else:
-                    await summary_handler(self._engine.build_summary())
+                    summary = self._engine.build_summary()
+                summary["run_config"] = {
+                    "max_trade_exchanges": self._max_trade_exchanges,
+                    "max_auction_actions": self._max_auction_actions,
+                }
+                await summary_handler(summary)
         finally:
             await self._close_openrouter()
 
@@ -204,9 +204,7 @@ class LlmRunner:
                 yield event
             if decision is not None:
                 await self._await_resume()
-                outcome = await self._resolve_decision_from_queue(decision, write_decision)
-                if outcome is None:
-                    outcome = await self._resolve_decision(decision, write_decision)
+                outcome = await self._resolve_decision(decision, write_decision)
                 self._pending_resolution = PendingResolution(decision=decision, outcome=outcome)
                 await self._await_resume()
                 pending = self._pending_resolution
@@ -259,103 +257,6 @@ class LlmRunner:
                 continue
             if self._engine.is_game_over():
                 break
-
-    async def _resolve_decision_from_queue(
-        self,
-        decision: dict[str, Any],
-        log_writer: DecisionCallback | None,
-    ) -> DecisionOutcome | None:
-        queue = self._post_turn_queue
-        if queue is None:
-            return None
-        if queue.owner_player_id != decision.get("player_id") or queue.turn_index != decision.get("turn_index"):
-            self._post_turn_queue = None
-            return None
-        if decision.get("decision_type") != "POST_TURN_ACTION_DECISION":
-            return None
-        if not queue.actions:
-            self._post_turn_queue = None
-            return None
-
-        planned = queue.actions[0]
-        if log_writer is not None:
-            player_config = self._player_configs[decision["player_id"]]
-            await log_writer(
-                self._build_decision_log_entry(
-                    decision=decision,
-                    player_config=player_config,
-                    phase="decision_started",
-                    action=None,
-                    attempts=[],
-                    retry_used=False,
-                    fallback_used=False,
-                    fallback_reason=None,
-                    request_start_ms=_now_ms(),
-                    prompt_messages=[],
-                    prompt_payload=None,
-                    prompt_payload_raw=None,
-                    sequence_meta={
-                        "origin_decision_id": queue.origin_decision_id,
-                        "executed_from_queue": True,
-                        "queued_remaining": len(queue.actions),
-                    },
-                    automated=True,
-                )
-            )
-        action: dict[str, Any] = {
-            "schema_version": "v1",
-            "decision_id": decision["decision_id"],
-            "action": planned.get("action"),
-            "args": planned.get("args", {}),
-            "public_message": planned.get("public_message", ""),
-            "private_thought": planned.get("private_thought", ""),
-        }
-        errors = validate_decision_action(decision, action)
-        if errors:
-            if log_writer is not None:
-                player_config = self._player_configs[decision["player_id"]]
-                await log_writer(
-                    self._build_decision_log_entry(
-                        decision=decision,
-                        player_config=player_config,
-                        phase="sequence_queue_failed",
-                        action=None,
-                        attempts=[],
-                        retry_used=False,
-                        fallback_used=False,
-                        fallback_reason=None,
-                        sequence_meta={
-                            "origin_decision_id": queue.origin_decision_id,
-                            "failed_step_index": int(planned.get("step_index", 0)),
-                            "queue_remainder": queue.actions,
-                            "errors": errors,
-                        },
-                        automated=True,
-                    )
-                )
-            self._post_turn_queue = None
-            return None
-
-        queue.actions.pop(0)
-        remaining = len(queue.actions)
-        if action["action"] == "end_turn" or remaining == 0:
-            self._post_turn_queue = None
-
-        return self._build_decision_outcome(
-            decision=decision,
-            action=action,
-            attempts=[],
-            retry_used=False,
-            fallback_used=False,
-            fallback_reason=None,
-            sequence_meta={
-                "origin_decision_id": queue.origin_decision_id,
-                "executed_from_queue": True,
-                "executed_step_index": int(planned.get("step_index", 0)),
-                "queued_remaining": remaining,
-            },
-            automated=True,
-        )
 
     async def _resolve_decision(
         self,
@@ -493,7 +394,7 @@ class LlmRunner:
             )
         )
         tool_choice = "required"
-        parallel_tool_calls = decision.get("decision_type") == "POST_TURN_ACTION_DECISION"
+        parallel_tool_calls = False
         if player_config.reasoning is not None:
             result = await self._openrouter.create_chat_completion(
                 model=player_config.openrouter_model_id,
@@ -534,26 +435,11 @@ class LlmRunner:
             include_prompt=False,
         )
         attempts.append(attempt)
-        action, errors, error_reason, queued_actions, sequence_meta = self._build_action_from_attempt(
+        action, errors, error_reason, sequence_meta = self._build_action_from_attempt(
             decision,
             attempt,
         )
         outcome_sequence_meta = sequence_meta
-        if not errors and queued_actions:
-            self._post_turn_queue = PostTurnQueue(
-                owner_player_id=decision["player_id"],
-                turn_index=int(decision["turn_index"]),
-                actions=queued_actions,
-                origin_decision_id=decision["decision_id"],
-            )
-            if outcome_sequence_meta is None:
-                outcome_sequence_meta = {}
-            outcome_sequence_meta.update(
-                {
-                    "origin_decision_id": decision["decision_id"],
-                    "queued_remaining": len(queued_actions),
-                }
-            )
         artifact_attempts.append(
             {
                 "attempt_index": 0,
@@ -628,26 +514,11 @@ class LlmRunner:
                 include_prompt=True,
             )
             attempts.append(retry_attempt)
-            retry_action, retry_errors, retry_error_reason, retry_queued_actions, retry_sequence_meta = self._build_action_from_attempt(
+            retry_action, retry_errors, retry_error_reason, retry_sequence_meta = self._build_action_from_attempt(
                 decision,
                 retry_attempt,
             )
             outcome_sequence_meta = retry_sequence_meta
-            if not retry_errors and retry_queued_actions:
-                self._post_turn_queue = PostTurnQueue(
-                    owner_player_id=decision["player_id"],
-                    turn_index=int(decision["turn_index"]),
-                    actions=retry_queued_actions,
-                    origin_decision_id=decision["decision_id"],
-                )
-                if outcome_sequence_meta is None:
-                    outcome_sequence_meta = {}
-                outcome_sequence_meta.update(
-                    {
-                        "origin_decision_id": decision["decision_id"],
-                        "queued_remaining": len(retry_queued_actions),
-                    }
-                )
             artifact_attempts.append(
                 {
                     "attempt_index": 1,
@@ -765,81 +636,29 @@ class LlmRunner:
         self,
         decision: dict[str, Any],
         attempt: DecisionAttempt,
-    ) -> tuple[dict[str, Any] | None, list[str], str | None, list[dict[str, Any]], dict[str, Any] | None]:
+    ) -> tuple[dict[str, Any] | None, list[str], str | None, dict[str, Any] | None]:
         parsed_tool_calls = attempt.parsed_tool_calls or []
         if not parsed_tool_calls:
             errors = attempt.validation_errors or ["Missing tool call"]
             if not attempt.validation_errors:
                 attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", [], None
+            return None, errors, "invalid_tool_call", None
 
-        decision_type = decision.get("decision_type")
-        if decision_type != "POST_TURN_ACTION_DECISION" and len(parsed_tool_calls) != 1:
+        if len(parsed_tool_calls) != 1:
             errors = [f"Expected exactly one tool call, got {len(parsed_tool_calls)}"]
             attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", [], None
+            return None, errors, "invalid_tool_call", None
 
-        actions: list[dict[str, Any]] = []
-        for index, tool_call in enumerate(parsed_tool_calls):
-            action = tool_call_to_action(decision, tool_call)
-            if action is None:
-                errors = [f"Unable to map tool call #{index} to action"]
-                attempt.validation_errors.extend(errors)
-                return None, errors, "invalid_tool_call", [], None
-            actions.append(action)
-
-        if decision_type == "POST_TURN_ACTION_DECISION":
-            action_names = [str(action.get("action")) for action in actions]
-            if len(actions) > 1 and "end_turn" not in action_names:
-                errors = ["POST_TURN_ACTION_DECISION sequences must include end_turn"]
-                attempt.validation_errors.extend(errors)
-                return None, errors, "invalid_tool_call", [], None
-            boundary = None
-            if "end_turn" in action_names:
-                end_turn_index = action_names.index("end_turn")
-                if end_turn_index < len(actions) - 1:
-                    boundary = "tail_after_end_turn_ignored"
-                    actions = actions[: end_turn_index + 1]
-                    action_names = action_names[: end_turn_index + 1]
-            first_action = actions[0]
-            errors = validate_decision_action(decision, first_action)
-            if errors:
-                attempt.validation_errors.extend(errors)
-                return first_action, errors, "invalid_action", [], None
-
-            queued: list[dict[str, Any]] = []
-            for index, action in enumerate(actions[1:], start=1):
-                queued.append(
-                    {
-                        "step_index": index,
-                        "action": action.get("action"),
-                        "args": action.get("args", {}),
-                        "public_message": action.get("public_message", ""),
-                        "private_thought": action.get("private_thought", ""),
-                    }
-                )
-            for idx, action_name in enumerate(action_names):
-                if action_name == "propose_trade" and idx < len(action_names) - 1:
-                    boundary = "trade_suspend"
-                    break
-            sequence_meta: dict[str, Any] = {
-                "parsed_tool_calls_count": len(parsed_tool_calls),
-                "queued_remaining": len(queued),
-            }
-            if boundary is not None:
-                sequence_meta["boundary_transition"] = boundary
-            return first_action, [], None, queued, sequence_meta
-
-        action = actions[0]
+        action, conversion_error = tool_call_to_action(decision, parsed_tool_calls[0])
         if action is None:
-            errors = ["Unable to map tool call to action"]
+            errors = [conversion_error or "Unable to map tool call to action"]
             attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", [], None
+            return None, errors, "invalid_tool_call", None
         errors = validate_decision_action(decision, action)
         if errors:
             attempt.validation_errors.extend(errors)
-            return action, errors, "invalid_action", [], None
-        return action, [], None, [], {"parsed_tool_calls_count": len(parsed_tool_calls)}
+            return action, errors, "invalid_action", None
+        return action, [], None, {"parsed_tool_calls_count": len(parsed_tool_calls)}
 
     def _build_decision_outcome(
         self,
@@ -1288,39 +1107,51 @@ def parse_tool_calls(response_json: dict[str, Any]) -> tuple[list[dict[str, Any]
     return None, "No tool call found"
 
 
-def tool_call_to_action(decision: dict[str, Any], tool_call: dict[str, Any]) -> dict[str, Any] | None:
+def tool_call_to_action(
+    decision: dict[str, Any],
+    tool_call: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
     tool_name = tool_call.get("name")
     if not tool_name:
-        return None
+        return None, "Tool call missing name"
     legal_actions = [entry.get("action") for entry in decision.get("legal_actions", [])]
     action_name = _resolve_action_name(tool_name, legal_actions)
     if action_name is None:
-        return None
+        return None, f"Tool '{tool_name}' is not legal for this decision"
 
     arguments = tool_call.get("arguments")
     if isinstance(arguments, str):
         try:
             args_payload = json.loads(arguments)
         except json.JSONDecodeError:
-            return None
+            return None, "Tool call arguments are not valid JSON"
     elif isinstance(arguments, dict):
         args_payload = arguments
     else:
         args_payload = {}
 
-    args = _filter_action_args(decision, action_name, args_payload)
+    if not isinstance(args_payload, dict):
+        return None, "Tool call arguments must be an object"
+
+    payload_without_messages, messages, message_errors = _extract_message_fields(args_payload)
+    if message_errors:
+        return None, "; ".join(message_errors)
+
+    args, arg_errors = _canonicalize_action_args(action_name, payload_without_messages)
+    if arg_errors:
+        return None, "; ".join(arg_errors)
+
     action = {
         "schema_version": "v1",
         "decision_id": decision["decision_id"],
         "action": action_name,
         "args": args,
     }
-    if isinstance(args_payload, dict):
-        if "public_message" in args_payload:
-            action["public_message"] = args_payload.get("public_message")
-        if "private_thought" in args_payload:
-            action["private_thought"] = args_payload.get("private_thought")
-    return action
+    if "public_message" in messages:
+        action["public_message"] = messages.get("public_message")
+    if "private_thought" in messages:
+        action["private_thought"] = messages.get("private_thought")
+    return action, None
 
 
 def _resolve_action_name(tool_name: str, legal_actions: list[str | None]) -> str | None:
@@ -1338,17 +1169,224 @@ def _normalize_tool_name(value: str) -> str:
     return value.strip().replace("-", "_").replace(" ", "_").lower()
 
 
-def _filter_action_args(
-    decision: dict[str, Any],
+def _normalize_kind(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    normalized = _normalize_tool_name(value)
+    if normalized == "house":
+        return "HOUSE"
+    if normalized == "hotel":
+        return "HOTEL"
+    return value
+
+
+def _normalize_space_key_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return normalize_space_key(value)
+    return value
+
+
+def _canonicalize_object_keys(
+    args_payload: dict[str, Any],
+    *,
+    allowed_keys: set[str],
+    context: str,
+) -> tuple[dict[str, Any], list[str]]:
+    by_normalized: dict[str, str] = {}
+    for key in allowed_keys:
+        normalized = _normalize_tool_name(key)
+        existing = by_normalized.get(normalized)
+        if existing is None:
+            by_normalized[normalized] = key
+        elif existing != key:
+            return {}, [f"Non-unique key alias mapping in {context} for '{normalized}'"]
+
+    mapped: dict[str, Any] = {}
+    errors: list[str] = []
+    for raw_key, value in args_payload.items():
+        if not isinstance(raw_key, str):
+            mapped[raw_key] = value
+            continue
+        canonical = by_normalized.get(_normalize_tool_name(raw_key))
+        if canonical is None:
+            mapped[raw_key] = value
+            continue
+        if canonical in mapped and mapped[canonical] != value:
+            errors.append(f"Ambiguous key mapping for {context}.{canonical}")
+            continue
+        mapped[canonical] = value
+    return mapped, errors
+
+
+def _extract_message_fields(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+    canonical, errors = _canonicalize_object_keys(
+        payload,
+        allowed_keys={"public_message", "private_thought"},
+        context="args",
+    )
+    if errors:
+        return {}, {}, errors
+    action_args = dict(canonical)
+    messages: dict[str, Any] = {}
+    if "public_message" in action_args:
+        messages["public_message"] = action_args.pop("public_message")
+    if "private_thought" in action_args:
+        messages["private_thought"] = action_args.pop("private_thought")
+    return action_args, messages, []
+
+
+def _canonicalize_trade_bundle(
+    payload: Any,
+    *,
+    context: str,
+) -> tuple[Any, list[str]]:
+    if not isinstance(payload, dict):
+        return payload, []
+    bundle, errors = _canonicalize_object_keys(
+        payload,
+        allowed_keys={"cash", "properties", "get_out_of_jail_cards"},
+        context=context,
+    )
+    if errors:
+        return None, errors
+    properties = bundle.get("properties")
+    if isinstance(properties, list):
+        bundle["properties"] = [
+            _normalize_space_key_value(item) if isinstance(item, str) else item for item in properties
+        ]
+    return bundle, []
+
+
+def _canonicalize_plan_entries(
+    entries: Any,
+    *,
+    context: str,
+) -> tuple[Any, list[str]]:
+    if not isinstance(entries, list):
+        return entries, []
+    normalized_entries: list[Any] = []
+    errors: list[str] = []
+    for index, item in enumerate(entries):
+        if not isinstance(item, dict):
+            normalized_entries.append(item)
+            continue
+        normalized_item, item_errors = _canonicalize_object_keys(
+            item,
+            allowed_keys={"space_key", "kind", "count"},
+            context=f"{context}[{index}]",
+        )
+        if item_errors:
+            errors.extend(item_errors)
+            continue
+        if "space_key" in normalized_item:
+            normalized_item["space_key"] = _normalize_space_key_value(normalized_item["space_key"])
+        if "kind" in normalized_item:
+            normalized_item["kind"] = _normalize_kind(normalized_item["kind"])
+        normalized_entries.append(normalized_item)
+    if errors:
+        return None, errors
+    return normalized_entries, []
+
+
+def _canonicalize_action_args(
     action_name: str,
     args_payload: dict[str, Any],
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
     if not isinstance(args_payload, dict):
-        return {}
-    args = dict(args_payload)
-    args.pop("public_message", None)
-    args.pop("private_thought", None)
-    return args
+        return {}, []
+
+    # Zero-arg actions ignore extra fields after message extraction.
+    if action_name in {
+        "ROLL_DICE",
+        "buy_property",
+        "start_auction",
+        "drop_out",
+        "accept_trade",
+        "reject_trade",
+        "pay_jail_fine",
+        "use_get_out_of_jail_card",
+        "roll_for_doubles",
+        "end_turn",
+        "declare_bankruptcy",
+    }:
+        return {}, []
+
+    if action_name == "bid_auction":
+        args, errors = _canonicalize_object_keys(
+            args_payload,
+            allowed_keys={"bid_amount"},
+            context=action_name,
+        )
+        return args, errors
+
+    if action_name in {"mortgage_property", "unmortgage_property"}:
+        args, errors = _canonicalize_object_keys(
+            args_payload,
+            allowed_keys={"space_key"},
+            context=action_name,
+        )
+        if errors:
+            return {}, errors
+        if "space_key" in args:
+            args["space_key"] = _normalize_space_key_value(args["space_key"])
+        return args, []
+
+    if action_name in {"build_houses_or_hotel", "sell_houses_or_hotel"}:
+        plan_key = "build_plan" if action_name == "build_houses_or_hotel" else "sell_plan"
+        args, errors = _canonicalize_object_keys(
+            args_payload,
+            allowed_keys={plan_key},
+            context=action_name,
+        )
+        if errors:
+            return {}, errors
+        if plan_key in args:
+            normalized_entries, entry_errors = _canonicalize_plan_entries(
+                args.get(plan_key),
+                context=f"{action_name}.{plan_key}",
+            )
+            if entry_errors:
+                return {}, entry_errors
+            args[plan_key] = normalized_entries
+        return args, []
+
+    if action_name in {"propose_trade", "counter_trade"}:
+        top_level = {"offer", "request"}
+        if action_name == "propose_trade":
+            top_level.add("to_player_id")
+        args, errors = _canonicalize_object_keys(
+            args_payload,
+            allowed_keys=top_level,
+            context=action_name,
+        )
+        if errors:
+            return {}, errors
+        if "offer" in args:
+            offer, offer_errors = _canonicalize_trade_bundle(args.get("offer"), context=f"{action_name}.offer")
+            if offer_errors:
+                return {}, offer_errors
+            args["offer"] = offer
+        if "request" in args:
+            request, request_errors = _canonicalize_trade_bundle(
+                args.get("request"),
+                context=f"{action_name}.request",
+            )
+            if request_errors:
+                return {}, request_errors
+            args["request"] = request
+        return args, []
+
+    if action_name == "NOOP":
+        args, errors = _canonicalize_object_keys(
+            args_payload,
+            allowed_keys={"reason"},
+            context=action_name,
+        )
+        return args, errors
+
+    return dict(args_payload), []
 
 
 def validate_decision_action(decision: dict[str, Any], action: dict[str, Any]) -> list[str]:

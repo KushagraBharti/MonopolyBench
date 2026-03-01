@@ -156,11 +156,11 @@ class ScriptedOpenRouter:
             return _tool_call_response(tool_name, args)
         if decision_number == 1:
             if attempt == 0:
-                return _tool_call_response("buy_property", {"space_index": 0})
+                return _tool_call_response("buy_property_invalid", {})
             tool_name, args = _choose_buy_if_legal(decision, decision_focus)
             return _tool_call_response(tool_name, args)
         if decision_number == 2:
-            return _tool_call_response("buy_property", {"space_index": 0})
+            return _tool_call_response("buy_property_invalid", {})
         tool_name, args = _choose_buy_if_legal(decision, decision_focus)
         return _tool_call_response(tool_name, args)
 
@@ -254,7 +254,7 @@ def test_retry_then_valid_action(tmp_path) -> None:
         if decision.get("decision_type") == "BUY_OR_AUCTION_DECISION":
             call_state["count"] += 1
             if call_state["count"] == 1:
-                return "buy_property", {"space_index": 0}
+                return "buy_property_invalid", {}
         return _choose_buy_if_legal(decision, decision_focus)
 
     fake = PolicyOpenRouter(policy)
@@ -303,7 +303,7 @@ def test_invalid_twice_fallback(tmp_path) -> None:
     run_files = init_run_files(tmp_path, "run-fallback")
     def policy(decision: dict[str, Any], decision_focus: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         if decision.get("decision_type") == "BUY_OR_AUCTION_DECISION":
-            return "buy_property", {"space_index": 0}
+            return "buy_property_invalid", {}
         return _choose_buy_if_legal(decision, decision_focus)
 
     fake = PolicyOpenRouter(policy)
@@ -332,7 +332,7 @@ def test_invalid_twice_fallback(tmp_path) -> None:
     resolved = next(entry for entry in entries if entry["decision_id"] == decision_id and entry["phase"] == "decision_resolved")
     assert resolved["retry_used"] is True
     assert resolved["fallback_used"] is True
-    assert resolved["fallback_reason"] == "invalid_action"
+    assert resolved["fallback_reason"] == "invalid_tool_call"
     assert resolved["applied"] is True
     assert "LLM_DECISION_RESPONSE" in resolved["emitted_event_types"]
 

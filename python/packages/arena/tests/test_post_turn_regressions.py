@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import json
 
-from monopoly_arena.llm_runner import DecisionAttempt, LlmRunner, PostTurnQueue
+from monopoly_arena.llm_runner import DecisionAttempt, LlmRunner
 from monopoly_arena.player_config import PlayerConfig
 from monopoly_arena.prompting import build_trade_propose_decision_focus
 
@@ -34,37 +33,6 @@ def _runner() -> LlmRunner:
         run_id="run_test",
         openrouter=_DummyOpenRouter(),
     )
-
-
-def test_post_turn_queue_clears_on_owner_mismatch() -> None:
-    runner = _runner()
-    runner._post_turn_queue = PostTurnQueue(  # noqa: SLF001
-        owner_player_id="P1",
-        turn_index=7,
-        actions=[
-            {
-                "step_index": 1,
-                "action": "end_turn",
-                "args": {},
-                "public_message": "",
-                "private_thought": "",
-            }
-        ],
-        origin_decision_id="origin_decision",
-    )
-    decision = {
-        "decision_id": "decision_new",
-        "run_id": "run_test",
-        "turn_index": 7,
-        "decision_type": "POST_TURN_ACTION_DECISION",
-        "player_id": "P2",
-        "legal_actions": [{"action": "end_turn"}],
-    }
-
-    outcome = asyncio.run(runner._resolve_decision_from_queue(decision, None))  # noqa: SLF001
-
-    assert outcome is None
-    assert runner._post_turn_queue is None  # noqa: SLF001
 
 
 def test_post_turn_single_action_without_end_turn_is_valid() -> None:
@@ -106,7 +74,7 @@ def test_post_turn_single_action_without_end_turn_is_valid() -> None:
         latency_ms=None,
     )
 
-    action, errors, error_reason, queued, sequence_meta = runner._build_action_from_attempt(  # noqa: SLF001
+    action, errors, error_reason, sequence_meta = runner._build_action_from_attempt(  # noqa: SLF001
         decision,
         attempt,
     )
@@ -115,11 +83,10 @@ def test_post_turn_single_action_without_end_turn_is_valid() -> None:
     assert error_reason is None
     assert action is not None
     assert action["action"] == "mortgage_property"
-    assert queued == []
-    assert sequence_meta == {"parsed_tool_calls_count": 1, "queued_remaining": 0}
+    assert sequence_meta == {"parsed_tool_calls_count": 1}
 
 
-def test_post_turn_multi_call_still_requires_end_turn() -> None:
+def test_post_turn_multi_call_is_rejected() -> None:
     runner = _runner()
     decision = {
         "decision_id": "decision_post_turn",
@@ -169,16 +136,15 @@ def test_post_turn_multi_call_still_requires_end_turn() -> None:
         latency_ms=None,
     )
 
-    action, errors, error_reason, queued, sequence_meta = runner._build_action_from_attempt(  # noqa: SLF001
+    action, errors, error_reason, sequence_meta = runner._build_action_from_attempt(  # noqa: SLF001
         decision,
         attempt,
     )
 
     assert action is None
-    assert queued == []
     assert sequence_meta is None
     assert error_reason == "invalid_tool_call"
-    assert errors == ["POST_TURN_ACTION_DECISION sequences must include end_turn"]
+    assert errors == ["Expected exactly one tool call, got 2"]
 
 
 def test_trade_propose_focus_handles_non_dict_post_turn_and_options() -> None:

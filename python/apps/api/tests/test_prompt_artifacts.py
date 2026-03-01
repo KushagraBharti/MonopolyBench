@@ -175,10 +175,10 @@ def _policy(decision_number: int, attempt: int, decision: dict[str, Any], focus:
         return _choose_buy_if_legal(decision, focus)
     if decision_number == 1:
         if attempt == 0:
-            return "buy_property", {"space_index": 0}
+            return "buy_property_invalid", {}
         return _choose_buy_if_legal(decision, focus)
     if decision_number == 2:
-        return "buy_property", {"space_index": 0}
+        return "buy_property_invalid", {}
     return _choose_buy_if_legal(decision, focus)
 
 

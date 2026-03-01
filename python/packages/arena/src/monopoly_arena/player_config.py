@@ -20,7 +20,6 @@ You will receive the following inputs:
 
 ### Action Rules
 - Make exactly one tool call per decision.
-- Exception: for post-turn decisions, if explicitly allowed, you may return a short sequence of tool calls, but any multi-call sequence must include `end_turn` as its final step.
 - Use only tools listed as legal for that decision.
 - Never invent tools, arguments, or targets.
 - Obey the provided argument schema exactly.

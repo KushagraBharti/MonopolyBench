@@ -14,7 +14,13 @@ from .paths import default_players_config_path, resolve_repo_root, resolve_repo_
 from .player_config import PlayerConfig, build_player_configs
 
 
-def _generate_run_id(seed: int, players: list[PlayerConfig]) -> str:
+def _generate_run_id(
+    seed: int,
+    players: list[PlayerConfig],
+    *,
+    max_trade_exchanges: int,
+    max_auction_actions: int,
+) -> str:
     players_blob = [
         {
             "player_id": player.player_id,
@@ -24,7 +30,15 @@ def _generate_run_id(seed: int, players: list[PlayerConfig]) -> str:
         }
         for player in players
     ]
-    seed_blob = json.dumps({"seed": seed, "players": players_blob}, sort_keys=True)
+    seed_blob = json.dumps(
+        {
+            "seed": seed,
+            "players": players_blob,
+            "max_trade_exchanges": max_trade_exchanges,
+            "max_auction_actions": max_auction_actions,
+        },
+        sort_keys=True,
+    )
     digest = hashlib.sha1(seed_blob.encode("utf-8")).hexdigest()[:8]
     return f"headless-{seed}-{digest}"
 
@@ -33,7 +47,12 @@ async def _run(args: argparse.Namespace) -> int:
     runs_dir = resolve_repo_path(args.runs_dir) if args.runs_dir else resolve_repo_root() / "runs"
     players_path = resolve_repo_path(args.players) if args.players else default_players_config_path()
     players = build_player_configs(requested_players=None, config_path=players_path)
-    run_id = args.run_id or _generate_run_id(args.seed, players)
+    run_id = args.run_id or _generate_run_id(
+        args.seed,
+        players,
+        max_trade_exchanges=args.max_trade_exchanges,
+        max_auction_actions=args.max_auction_actions,
+    )
     run_files = init_run_files(runs_dir, run_id)
 
     runner = LlmRunner(
@@ -46,6 +65,8 @@ async def _run(args: argparse.Namespace) -> int:
         event_delay_s=args.event_delay_s,
         start_ts_ms=0,
         ts_step_ms=args.ts_step_ms,
+        max_trade_exchanges=args.max_trade_exchanges,
+        max_auction_actions=args.max_auction_actions,
     )
     run_files.write_snapshot(runner.get_snapshot())
 
@@ -83,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-turns", type=int, default=20)
     parser.add_argument("--event-delay-s", type=float, default=0.0)
     parser.add_argument("--ts-step-ms", type=int, default=250)
+    parser.add_argument("--max-trade-exchanges", type=int, default=20)
+    parser.add_argument("--max-auction-actions", type=int, default=200)
     parser.add_argument("--stop-after-decisions", type=int, default=None)
     args = parser.parse_args(argv)
     return asyncio.run(_run(args))

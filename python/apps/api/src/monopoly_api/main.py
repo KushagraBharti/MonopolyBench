@@ -43,6 +43,8 @@ class PlayerSpec(BaseModel):
 class StartRunRequest(BaseModel):
     seed: int | None = None
     players: list[PlayerSpec] | None = None
+    max_trade_exchanges: int | None = None
+    max_auction_actions: int | None = None
 
 
 @app.post("/run/start")
@@ -61,7 +63,12 @@ async def run_start(body: StartRunRequest) -> dict:
             status_code=400,
             detail=f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.",
         )
-    run_id = await run_manager.start_run(seed=seed, players=players)
+    run_id = await run_manager.start_run(
+        seed=seed,
+        players=players,
+        max_trade_exchanges=max(1, int(body.max_trade_exchanges or 20)),
+        max_auction_actions=max(1, int(body.max_auction_actions or 200)),
+    )
     return {"run_id": run_id}
 
 

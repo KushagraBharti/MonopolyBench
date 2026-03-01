@@ -15,7 +15,15 @@ from .paths import default_players_config_path, resolve_repo_path, resolve_repo_
 from .player_config import PlayerConfig, build_player_configs
 
 
-def _generate_run_id(batch_id: str, index: int, seed: int, players: list[PlayerConfig]) -> str:
+def _generate_run_id(
+    batch_id: str,
+    index: int,
+    seed: int,
+    players: list[PlayerConfig],
+    *,
+    max_trade_exchanges: int,
+    max_auction_actions: int,
+) -> str:
     players_blob = [
         {
             "player_id": player.player_id,
@@ -25,7 +33,15 @@ def _generate_run_id(batch_id: str, index: int, seed: int, players: list[PlayerC
         }
         for player in players
     ]
-    seed_blob = json.dumps({"seed": seed, "players": players_blob}, sort_keys=True)
+    seed_blob = json.dumps(
+        {
+            "seed": seed,
+            "players": players_blob,
+            "max_trade_exchanges": max_trade_exchanges,
+            "max_auction_actions": max_auction_actions,
+        },
+        sort_keys=True,
+    )
     digest = hashlib.sha1(seed_blob.encode("utf-8")).hexdigest()[:8]
     return f"{batch_id}-{index:03d}-{seed}-{digest}"
 
@@ -40,6 +56,8 @@ async def run_batch(
     seeds = [int(seed) for seed in config.get("seeds", []) if isinstance(seed, (int, float))]
     matches = int(config.get("matches", len(seeds) if seeds else 0))
     players_path = config.get("players")
+    max_trade_exchanges = int(config.get("max_trade_exchanges", 20))
+    max_auction_actions = int(config.get("max_auction_actions", 200))
     players_file = (
         resolve_repo_path(str(players_path))
         if players_path
@@ -61,7 +79,14 @@ async def run_batch(
 
     for match_index in range(matches):
         seed = seeds[match_index % len(seeds)]
-        run_id = _generate_run_id(batch_id, match_index, seed, players)
+        run_id = _generate_run_id(
+            batch_id,
+            match_index,
+            seed,
+            players,
+            max_trade_exchanges=max_trade_exchanges,
+            max_auction_actions=max_auction_actions,
+        )
         run_files = init_run_files(runs_root, run_id)
         runner = LlmRunner(
             seed=seed,
@@ -70,6 +95,8 @@ async def run_batch(
             openrouter=factory(),
             run_files=run_files,
             event_delay_s=0,
+            max_trade_exchanges=max_trade_exchanges,
+            max_auction_actions=max_auction_actions,
         )
 
         run_files.write_snapshot(runner.get_snapshot())

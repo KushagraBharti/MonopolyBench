@@ -43,11 +43,23 @@ class RunManager:
         self._runner_factory = runner_factory or LlmRunner
         self._openrouter_factory = openrouter_factory or OpenRouterClient
 
-    async def start_run(self, seed: int, players: list[PlayerConfig]) -> str:
+    async def start_run(
+        self,
+        seed: int,
+        players: list[PlayerConfig],
+        *,
+        max_trade_exchanges: int = 20,
+        max_auction_actions: int = 200,
+    ) -> str:
         async with self._lock:
             if len(players) != EXPECTED_PLAYER_COUNT:
                 raise ValueError(f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.")
-            run_id = self._generate_run_id(seed, players)
+            run_id = self._generate_run_id(
+                seed,
+                players,
+                max_trade_exchanges=max_trade_exchanges,
+                max_auction_actions=max_auction_actions,
+            )
             if self._is_running() and self._run_id == run_id:
                 return run_id
             if self._runner_task is not None and self._runner_task.done():
@@ -64,6 +76,8 @@ class RunManager:
                 run_id=run_id,
                 openrouter=self._openrouter_factory(),
                 run_files=self._telemetry,
+                max_trade_exchanges=max_trade_exchanges,
+                max_auction_actions=max_auction_actions,
             )
             self._paused = False
             self._snapshot = self._runner.get_snapshot()
@@ -167,7 +181,13 @@ class RunManager:
         self._paused = False
 
     @staticmethod
-    def _generate_run_id(seed: int, players: list[PlayerConfig]) -> str:
+    def _generate_run_id(
+        seed: int,
+        players: list[PlayerConfig],
+        *,
+        max_trade_exchanges: int,
+        max_auction_actions: int,
+    ) -> str:
         players_blob = [
             {
                 "player_id": player.player_id,
@@ -177,7 +197,15 @@ class RunManager:
             }
             for player in players
         ]
-        seed_blob = json.dumps({"seed": seed, "players": players_blob}, sort_keys=True)
+        seed_blob = json.dumps(
+            {
+                "seed": seed,
+                "players": players_blob,
+                "max_trade_exchanges": max_trade_exchanges,
+                "max_auction_actions": max_auction_actions,
+            },
+            sort_keys=True,
+        )
         digest = hashlib.sha1(seed_blob.encode("utf-8")).hexdigest()[:8]
         return f"mock-{seed}-{digest}"
 

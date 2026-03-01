@@ -32,6 +32,8 @@ def replay_actions(
     max_turns: int = 200,
     start_ts_ms: int = 0,
     ts_step_ms: int = 250,
+    max_trade_exchanges: int = 20,
+    max_auction_actions: int = 200,
     assert_decision_ids: bool = True,
 ) -> list[dict[str, Any]]:
     engine = Engine(
@@ -41,6 +43,8 @@ def replay_actions(
         max_turns=max_turns,
         start_ts_ms=start_ts_ms,
         ts_step_ms=ts_step_ms,
+        max_trade_exchanges=max_trade_exchanges,
+        max_auction_actions=max_auction_actions,
     )
     events: list[dict[str, Any]] = []
 

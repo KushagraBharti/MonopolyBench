@@ -101,6 +101,7 @@ class TradeOpenRouter:
         policy: Callable[[dict[str, Any], dict[str, Any]], tuple[str, dict[str, Any]]],
     ) -> None:
         self._policy = policy
+        self._trade_proposed_turns: set[int] = set()
 
     async def create_chat_completion(self, *, messages: list[dict[str, Any]], **_: Any) -> OpenRouterResult:
         payload = _extract_payload(messages)
@@ -110,7 +111,10 @@ class TradeOpenRouter:
         focus = payload["decision_focus"]
         tool_name, args = self._policy(decision, focus)
         if decision.get("decision_type") == "POST_TURN_ACTION_DECISION" and tool_name == "propose_trade":
-            return _tool_calls_response([(tool_name, args), ("end_turn", {})])
+            turn_index = int(decision.get("turn_index", -1))
+            if turn_index in self._trade_proposed_turns:
+                return _tool_call_response("end_turn", {})
+            self._trade_proposed_turns.add(turn_index)
         return _tool_call_response(tool_name, args)
 
 
@@ -142,6 +146,8 @@ def _policy(decision: dict[str, Any], focus: dict[str, Any]) -> tuple[str, dict[
 
 def test_replay_matches_event_stream_with_trade(tmp_path) -> None:
     players = _make_players()
+    max_trade_exchanges = 1
+    max_auction_actions = 200
     run_files = init_run_files(tmp_path, "run-replay")
     runner = LlmRunner(
         seed=101,
@@ -152,6 +158,8 @@ def test_replay_matches_event_stream_with_trade(tmp_path) -> None:
         event_delay_s=0,
         max_turns=6,
         ts_step_ms=1,
+        max_trade_exchanges=max_trade_exchanges,
+        max_auction_actions=max_auction_actions,
     )
     asyncio.run(runner.run())
 
@@ -168,6 +176,8 @@ def test_replay_matches_event_stream_with_trade(tmp_path) -> None:
         max_turns=6,
         start_ts_ms=0,
         ts_step_ms=1,
+        max_trade_exchanges=max_trade_exchanges,
+        max_auction_actions=max_auction_actions,
     )
 
     assert canonical_event_lines(events) == canonical_event_lines(replayed)
