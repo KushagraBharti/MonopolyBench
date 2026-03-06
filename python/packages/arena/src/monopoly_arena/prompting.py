@@ -9,6 +9,7 @@ from typing import Any
 from monopoly_engine.board import (
     GROUP_INDEXES,
     HOUSE_COST_BY_GROUP,
+    OWNABLE_KINDS,
     PROPERTY_RENT_TABLES,
     RAILROAD_RENTS,
     SPACE_INDEX_BY_KEY,
@@ -51,8 +52,7 @@ class PromptMemory:
         private_thought_limit: int = 10,
     ) -> None:
         self._space_key_by_index = space_key_by_index or SPACE_KEY_BY_INDEX_LOOKUP
-        self._public_chat: deque[dict[str, Any]] = deque(maxlen=public_chat_limit)
-        self._recent_actions: deque[dict[str, Any]] = deque(maxlen=recent_actions_limit)
+        self._public_timeline: deque[dict[str, Any]] = deque(maxlen=max(public_chat_limit, recent_actions_limit))
         self._private_thoughts: dict[str, deque[dict[str, Any]]] = defaultdict(
             lambda: deque(maxlen=private_thought_limit)
         )
@@ -62,11 +62,13 @@ class PromptMemory:
         payload = event.get("payload", {})
         turn_index = event.get("turn_index")
         if event_type == "LLM_PUBLIC_MESSAGE":
-            self._public_chat.append(
+            self._public_timeline.append(
                 {
                     "turn_index": turn_index,
-                    "from_player_id": payload.get("player_id"),
+                    "type": "LLM_PUBLIC_MESSAGE",
+                    "player_id": payload.get("player_id"),
                     "message": payload.get("message"),
+                    "decision_id": payload.get("decision_id"),
                 }
             )
             return
@@ -83,12 +85,11 @@ class PromptMemory:
 
         summary = _summarize_action_event(event, self._space_key_by_index)
         if summary is not None:
-            self._recent_actions.append(summary)
+            self._public_timeline.append(summary)
 
     def snapshot_for_player(self, player_id: str) -> dict[str, Any]:
         return {
-            "public_chat_last_20": list(self._public_chat),
-            "recent_actions_last_20": list(self._recent_actions),
+            "public_timeline_last_20": list(self._public_timeline),
             "your_private_thoughts_last_10": list(self._private_thoughts.get(player_id, [])),
         }
 
@@ -199,8 +200,8 @@ def build_full_state(
             "cash": player.get("cash"),
             "position": space_key_for_index(position_index, space_key_by_index),
             "in_jail": bool(player.get("in_jail")),
-            "has_get_out_of_jail_card": int(player.get("get_out_of_jail_cards", 0)) > 0,
             "holdings": build_holdings(str(player.get("player_id"))),
+            "get_out_of_jail_cards": int(player.get("get_out_of_jail_cards", 0)),
         }
 
     you_view = build_player_view(you_player)
@@ -212,38 +213,26 @@ def build_full_state(
     if len(others) != 3:
         raise ValueError("Expected exactly 3 other players for LLM prompts.")
 
-    board_view = []
-    for space in board:
-        space_index = int(space.get("index", 0))
-        board_view.append(
-            {
-                "space_index": space_index,
-                "space_key": space_key_for_index(space_index, space_key_by_index),
-                "kind": space.get("kind"),
-                "group": space.get("group"),
-                "price": space.get("price"),
-                "owner_id": space.get("owner_id"),
-                "mortgaged": bool(space.get("mortgaged", False)),
-                "houses": int(space.get("houses", 0)),
-                "hotel": bool(space.get("hotel", False)),
-            }
-        )
+    unowned_space_keys = [
+        space_key_for_index(int(space.get("index", 0)), space_key_by_index)
+        for space in board
+        if space.get("kind") in OWNABLE_KINDS and space.get("owner_id") is None
+    ]
 
     return {
-        "schema_version": PROMPT_SCHEMA_VERSION,
+        "title": "game_state",
         "metadata": {
-            "run_id": snapshot.get("run_id"),
             "turn_index": snapshot.get("turn_index"),
             "phase": snapshot.get("phase"),
             "active_player_id": snapshot.get("active_player_id"),
             "you_player_id": you_player.get("player_id"),
         },
-        "board": board_view,
         "you": you_view,
         "others": others,
         "bank": {
             "houses_remaining": snapshot.get("bank", {}).get("houses_remaining"),
             "hotels_remaining": snapshot.get("bank", {}).get("hotels_remaining"),
+            "unowned_space_keys": unowned_space_keys,
         },
         "memory": memory.snapshot_for_player(str(you_player.get("player_id"))),
     }

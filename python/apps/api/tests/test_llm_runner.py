@@ -376,14 +376,26 @@ def test_prompt_payload_shape(tmp_path) -> None:
     assert {"schema_version", "game_state", "action_state"}.issubset(payload.keys())
 
     game_state = payload["game_state"]
-    assert len(game_state["board"]) == 40
+    assert game_state["title"] == "game_state"
+    assert "board" not in game_state
+    assert "schema_version" not in game_state
+    assert "run_id" not in game_state["metadata"]
+    assert {"turn_index", "phase", "active_player_id", "you_player_id"} <= set(game_state["metadata"].keys())
     assert "space_name" not in json.dumps(game_state)
     assert len(game_state["others"]) == 3
     assert isinstance(game_state["you"]["position"], str)
+    assert isinstance(game_state["you"]["get_out_of_jail_cards"], int)
+    assert "has_get_out_of_jail_card" not in game_state["you"]
     for player in [game_state["you"], *game_state["others"]]:
+        assert isinstance(player["get_out_of_jail_cards"], int)
+        assert "has_get_out_of_jail_card" not in player
         for holding in player["holdings"]["owned"]:
             assert "space_key" in holding
             assert "name" not in holding
+    bank = game_state["bank"]
+    assert {"houses_remaining", "hotels_remaining", "unowned_space_keys"} <= set(bank.keys())
+    assert isinstance(bank["unowned_space_keys"], list)
+    assert game_state["memory"].get("public_timeline_last_20") is not None
 
     action_state = payload["action_state"]
     decision = action_state["decision"]
