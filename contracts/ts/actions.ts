@@ -52,7 +52,7 @@ export interface BaseAction {
   schema_version: SchemaVersion;
   decision_id: string;
   action: ActionName;
-  args: Record<string, unknown>;
+  args: object;
   public_message?: string;
   private_thought?: string;
 }

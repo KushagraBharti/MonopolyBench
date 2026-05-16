@@ -1203,6 +1203,6 @@ def validate_decision_action(decision: dict[str, Any], action: dict[str, Any]) -
     if not isinstance(public_message, str):
         errors.append("Missing required public_message")
     private_thought = action.get("private_thought")
-    if not isinstance(private_thought, str):
+    if decision.get("micro_prompt_condition") != "no_private_thought" and not isinstance(private_thought, str):
         errors.append("Missing required private_thought")
     return errors

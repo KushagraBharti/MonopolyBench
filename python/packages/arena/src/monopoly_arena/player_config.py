@@ -162,6 +162,28 @@ def build_player_configs(
     ]
 
 
+def build_single_player_config(
+    *,
+    player_id: str,
+    name: str,
+    openrouter_model_id: str | None = None,
+    system_prompt: str | None = None,
+    reasoning: dict[str, Any] | None = None,
+) -> PlayerConfig:
+    default_model_id = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-120b")
+    default_system_prompt = DEFAULT_SYSTEM_PROMPT
+    normalized_reasoning = normalize_reasoning(reasoning)
+    model_id = openrouter_model_id or default_model_id
+    return PlayerConfig(
+        player_id=player_id,
+        name=name,
+        openrouter_model_id=model_id,
+        model_display_name=derive_model_display_name(model_id),
+        system_prompt=system_prompt or default_system_prompt,
+        reasoning=normalized_reasoning,
+    )
+
+
 def _validate_player_entries(entries: list[dict[str, Any]], *, source: str) -> None:
     if len(entries) != EXPECTED_PLAYER_COUNT:
         raise ValueError(f"{source} must define exactly {EXPECTED_PLAYER_COUNT} players.")
@@ -205,3 +227,7 @@ def _normalize_reasoning(reasoning: Any) -> dict[str, Any] | None:
             f"{', '.join(sorted(ALLOWED_REASONING_EFFORT))}."
         )
     return dict(reasoning)
+
+
+def normalize_reasoning(reasoning: Any) -> dict[str, Any] | None:
+    return _normalize_reasoning(reasoning)

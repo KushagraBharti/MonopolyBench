@@ -112,10 +112,22 @@ class RunFiles:
 
 
 def init_run_files(runs_dir: Path, run_id: str) -> RunFiles:
+    run_files = build_run_files(runs_dir, run_id)
+    run_files.snapshots_dir.mkdir(parents=True, exist_ok=True)
+    return run_files
+
+
+def build_run_files(
+    runs_dir: Path,
+    run_id: str,
+    *,
+    quality_base_dir: Path | None = None,
+) -> RunFiles:
     run_dir = runs_dir / run_id
     snapshots_dir = run_dir / "state"
     prompts_dir = run_dir / "prompts"
-    quality_dir = runs_dir.parent / "quality_check" / run_id
+    quality_root = quality_base_dir if quality_base_dir is not None else runs_dir.parent / "quality_check"
+    quality_dir = quality_root / run_id
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     return RunFiles(
         run_id=run_id,

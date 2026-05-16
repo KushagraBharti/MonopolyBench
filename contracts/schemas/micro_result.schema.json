@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "micro_result.schema.json",
+  "title": "MicroResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "suite_id",
+    "scenario_id",
+    "category",
+    "model",
+    "prompt_condition",
+    "outcome",
+    "score"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "v1" },
+    "run_id": { "type": "string" },
+    "suite_id": { "type": "string" },
+    "scenario_id": { "type": "string" },
+    "category": { "type": "string" },
+    "model": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["openrouter_model_id", "model_display_name"],
+      "properties": {
+        "openrouter_model_id": { "type": "string" },
+        "model_display_name": { "type": "string" },
+        "reasoning": { "type": ["object", "null"], "additionalProperties": true }
+      }
+    },
+    "prompt_condition": { "type": "string" },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "retry_used", "fallback_used", "fallback_reason", "latency_ms"],
+      "properties": {
+        "action": { "$ref": "action.schema.json" },
+        "retry_used": { "type": "boolean" },
+        "fallback_used": { "type": "boolean" },
+        "fallback_reason": { "type": ["string", "null"] },
+        "latency_ms": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "label", "breakdown"],
+      "properties": {
+        "total": { "type": "number", "minimum": 0 },
+        "label": {
+          "type": "string",
+          "enum": ["preferred", "acceptable", "bad", "invalid"]
+        },
+        "breakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["criterion_id", "points", "max_points", "passed", "message"],
+            "properties": {
+              "criterion_id": { "type": "string" },
+              "points": { "type": "number", "minimum": 0 },
+              "max_points": { "type": "number", "exclusiveMinimum": 0 },
+              "passed": { "type": "boolean" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

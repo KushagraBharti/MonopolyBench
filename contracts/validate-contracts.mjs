@@ -16,7 +16,10 @@ const schemaFiles = [
   "event.schema.json",
   "action.schema.json",
   "decision.schema.json",
-  "board.schema.json"
+  "board.schema.json",
+  "micro_scenario.schema.json",
+  "micro_suite.schema.json",
+  "micro_result.schema.json"
 ];
 
 async function resolveDependency(moduleId) {
@@ -209,6 +212,39 @@ try {
 } catch (error) {
   failed = true;
   console.error(`FAIL: event.example.jsonl -> ${error.message}`);
+}
+
+async function validateMicroDirectory(directory, schemaId, label) {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) {
+      continue;
+    }
+    const filePath = path.join(directory, entry.name);
+    const result = await validateJsonFile(ajv, filePath, schemaId);
+    if (result.ok) {
+      console.log(`OK: ${label}/${entry.name}`);
+    } else {
+      failed = true;
+      console.error(`FAIL: ${label}/${entry.name} -> ${result.error}`);
+    }
+  }
+}
+
+try {
+  await validateMicroDirectory(
+    path.join(contractsDir, "micro", "scenarios"),
+    "micro_scenario.schema.json",
+    "micro/scenarios"
+  );
+  await validateMicroDirectory(
+    path.join(contractsDir, "micro", "suites"),
+    "micro_suite.schema.json",
+    "micro/suites"
+  );
+} catch (error) {
+  failed = true;
+  console.error(`FAIL: micro fixtures -> ${error.message}`);
 }
 
 if (failed) {

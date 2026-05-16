@@ -6,9 +6,22 @@ from fastapi import WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from monopoly_api.micro import (
+    MicroBatchRequest,
+    MicroRunRequest,
+    get_micro_batch,
+    get_micro_batch_leaderboard,
+    get_micro_run,
+    get_micro_scenario_detail,
+    get_micro_suite,
+    list_micro_suites,
+    list_micro_scenario_summaries,
+    run_micro_batch,
+    run_micro_scenario,
+)
 from monopoly_api.run_manager import RunManager
 from monopoly_api.settings import load_settings
-from monopoly_arena import build_player_configs
+from monopoly_arena import OpenRouterClient, build_player_configs
 from monopoly_arena.player_config import EXPECTED_PLAYER_COUNT
 
 app = FastAPI(title="Monopoly LLM Benchmark API")
@@ -122,6 +135,86 @@ def runs_decision_detail(run_id: str, decision_id: str) -> dict:
     if bundle is None:
         raise HTTPException(status_code=404, detail="Decision not found")
     return bundle
+
+
+@app.get("/micro/scenarios")
+def micro_scenarios() -> dict:
+    return {"scenarios": list_micro_scenario_summaries()}
+
+
+@app.get("/micro/suites")
+def micro_suites() -> dict:
+    return {"suites": list_micro_suites()}
+
+
+@app.get("/micro/suites/{suite_id}")
+def micro_suite_detail(suite_id: str) -> dict:
+    try:
+        return get_micro_suite(suite_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro suite not found") from exc
+
+
+@app.get("/micro/scenarios/{scenario_id}")
+def micro_scenario_detail(scenario_id: str) -> dict:
+    try:
+        return get_micro_scenario_detail(scenario_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro scenario not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/micro/run")
+async def micro_run(body: MicroRunRequest) -> dict:
+    try:
+        return await run_micro_scenario(
+            settings=settings,
+            request=body,
+            openrouter_factory=OpenRouterClient,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro scenario not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/micro/runs/{run_id}")
+def micro_run_detail(run_id: str) -> dict:
+    try:
+        return get_micro_run(run_id, runs_dir=settings.runs_dir)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro run not found") from exc
+
+
+@app.post("/micro/batches")
+async def micro_batch(body: MicroBatchRequest) -> dict:
+    try:
+        return await run_micro_batch(
+            settings=settings,
+            request=body,
+            openrouter_factory=OpenRouterClient,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro suite or scenario not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/micro/batches/{batch_id}")
+def micro_batch_detail(batch_id: str) -> dict:
+    try:
+        return get_micro_batch(batch_id, runs_dir=settings.runs_dir)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro batch not found") from exc
+
+
+@app.get("/micro/batches/{batch_id}/leaderboard")
+def micro_batch_leaderboard(batch_id: str) -> dict:
+    try:
+        return get_micro_batch_leaderboard(batch_id, runs_dir=settings.runs_dir)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Micro batch not found") from exc
 
 
 @app.websocket("/ws")

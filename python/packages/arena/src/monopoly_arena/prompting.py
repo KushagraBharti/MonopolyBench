@@ -129,13 +129,13 @@ class PromptMemory:
                         return pending
         candidate_player_ids = _candidate_player_ids_for_event(event)
         for player_id in candidate_player_ids:
-            queue = self._pending_messages_by_player.get(player_id)
-            if not queue:
+            pending_queue = self._pending_messages_by_player.get(player_id)
+            if not pending_queue:
                 continue
-            for pending in list(queue):
+            for pending in list(pending_queue):
                 action_name = pending.get("action_name")
                 if _is_primary_event_for_action(action_name, event_type):
-                    queue.remove(pending)
+                    pending_queue.remove(pending)
                     return pending
         return None
 
@@ -560,30 +560,36 @@ def build_full_state(
     }
 
 
-def _augment_args_schema(args_schema: dict[str, Any] | None) -> dict[str, Any]:
+def _augment_args_schema(args_schema: dict[str, Any] | None, *, include_private_thought: bool = True) -> dict[str, Any]:
     schema = copy.deepcopy(args_schema or {"type": "object", "additionalProperties": False})
     schema.setdefault("type", "object")
     schema.setdefault("additionalProperties", False)
     properties = schema.setdefault("properties", {})
     if isinstance(properties, dict):
         properties.setdefault("public_message", {"type": "string"})
-        properties.setdefault("private_thought", {"type": "string"})
+        if include_private_thought:
+            properties.setdefault("private_thought", {"type": "string"})
+        else:
+            properties.pop("private_thought", None)
     required = schema.setdefault("required", [])
     if isinstance(required, list):
         if "public_message" not in required:
             required.append("public_message")
-        if "private_thought" not in required:
+        if include_private_thought and "private_thought" not in required:
             required.append("private_thought")
+        if not include_private_thought and "private_thought" in required:
+            required.remove("private_thought")
     return schema
 
 
 def build_compact_decision(decision: dict[str, Any]) -> dict[str, Any]:
     legal_actions = []
+    include_private_thought = decision.get("micro_prompt_condition") != "no_private_thought"
     for entry in decision.get("legal_actions", []):
         action_name = entry.get("action")
         if not action_name:
             continue
-        args_schema = _augment_args_schema(entry.get("args_schema") or {})
+        args_schema = _augment_args_schema(entry.get("args_schema") or {}, include_private_thought=include_private_thought)
         legal_actions.append(
             {
                 "action": action_name,
@@ -666,6 +672,9 @@ def build_action_state(
         for entry in decision.get("legal_actions", [])
         if entry.get("action")
     ]
+    prompt_condition = decision.get("micro_prompt_condition")
+    if isinstance(prompt_condition, str):
+        action_state["prompt_condition"] = prompt_condition
     return action_state
 
 
@@ -1181,10 +1190,22 @@ def build_prompt_bundle(
     if retry_errors:
         decision_focus = _with_retry_notes(decision_focus, retry_errors, retry_outcome=retry_outcome)
     action_state = build_action_state(decision, decision_focus)
-    payload = {
+    payload: dict[str, Any] = {
         "game_state": full_state,
         "action_state": action_state,
     }
+    prompt_condition = decision.get("micro_prompt_condition")
+    if prompt_condition in {"minimal", "compact_state"}:
+        payload["game_state"] = {
+            "title": "compact_game_state",
+            "metadata": full_state.get("metadata", {}),
+            "you": full_state.get("you", {}),
+            "bank": full_state.get("bank", {}),
+        }
+    elif prompt_condition == "full_state":
+        payload["full_protocol_state"] = state
+    elif prompt_condition == "no_private_thought":
+        payload["response_instruction"] = "Tool arguments require public_message but do not require private_thought for this prompt condition."
     if player.reasoning is not None:
         payload["llm"] = {"reasoning": player.reasoning}
     user_content = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))

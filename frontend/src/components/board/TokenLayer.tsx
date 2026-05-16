@@ -3,11 +3,17 @@ import { useGameStore } from '@/state/store';
 import { getCSSPosition } from '@/components/board/utils';
 import { getPlayerTokenSrc } from '@/domain/monopoly/colors';
 import { cn } from '@/components/ui/cn';
+import type { Player } from '@/net/contracts';
 
-export const TokenLayer = () => {
+type TokenLayerProps = {
+    players?: Player[];
+    activePlayerId?: string | null;
+};
+
+export const TokenLayer = ({ players: playersProp, activePlayerId }: TokenLayerProps) => {
     const snapshot = useGameStore((state) => state.snapshot);
-    const players = snapshot?.players || [];
-    const activeId = snapshot?.active_player_id;
+    const players = playersProp ?? snapshot?.players ?? [];
+    const activeId = activePlayerId ?? snapshot?.active_player_id ?? null;
 
     // Group players by position for stacking
     const positionCounts = new Map<number, number>();

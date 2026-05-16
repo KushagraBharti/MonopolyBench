@@ -51,7 +51,7 @@ try {
   Invoke-Step -Name "Python: typecheck (mypy)" -ScriptBlock {
     Push-Location python
     try {
-      uv run mypy .
+      uv run python -m mypy .
     } finally {
       Pop-Location
     }

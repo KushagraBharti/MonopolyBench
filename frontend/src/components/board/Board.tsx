@@ -1,27 +1,54 @@
 import { useMemo } from 'react';
-import type { Space } from '@/net/contracts';
+import type { ReactNode } from 'react';
+import type { Player, Space } from '@/net/contracts';
 import { Tile } from '@/components/board/Tile';
 import { cn } from '@/components/ui/cn';
 import { TokenLayer } from '@/components/board/TokenLayer';
 import { getGridPosition } from '@/components/board/utils';
 import { useGameStore, type StoreState } from '@/state/store';
 
+type BoardHighlightState = {
+    deedHighlight?: number | null;
+    eventHighlight?: number[] | null;
+    decisionHighlight?: number[] | null;
+};
+
 interface BoardProps {
     spaces: Space[];
     className?: string;
+    showTokens?: boolean;
+    players?: Player[];
+    activePlayerId?: string | null;
+    highlightState?: BoardHighlightState;
+    centerContent?: ReactNode;
 }
 
-export const Board = ({ spaces, className }: BoardProps) => {
+export const Board = ({
+    spaces,
+    className,
+    showTokens = true,
+    players,
+    activePlayerId,
+    highlightState,
+    centerContent,
+}: BoardProps) => {
     const { deedHighlight, eventHighlight, decisionHighlight } = useGameStore(
         (state: StoreState) => state.ui
     );
+    const snapshot = useGameStore((state: StoreState) => state.snapshot);
+
+    const resolvedDeedHighlight = highlightState?.deedHighlight ?? deedHighlight;
+    const resolvedEventHighlight = highlightState?.eventHighlight ?? eventHighlight;
+    const resolvedDecisionHighlight = highlightState?.decisionHighlight ?? decisionHighlight;
+    const resolvedPlayers = players ?? snapshot?.players ?? [];
+    const resolvedActivePlayerId = activePlayerId ?? snapshot?.active_player_id ?? null;
 
     const highlightSets = useMemo(() => {
         return {
-            event: new Set(eventHighlight ?? []),
-            decision: new Set(decisionHighlight ?? []),
+            event: new Set(resolvedEventHighlight ?? []),
+            decision: new Set(resolvedDecisionHighlight ?? []),
         };
-    }, [eventHighlight, decisionHighlight]);
+    }, [resolvedDecisionHighlight, resolvedEventHighlight]);
 
     // Ensure we have 40 spaces
     const safeSpaces = useMemo(() => {
@@ -61,7 +88,7 @@ export const Board = ({ spaces, className }: BoardProps) => {
                                 <Tile
                                     space={space}
                                     highlightSource={
-                                        deedHighlight === space.index
+                                        resolvedDeedHighlight === space.index
                                             ? 'deed'
                                             : highlightSets.decision.has(space.index)
                                                 ? 'decision'
@@ -81,18 +108,20 @@ export const Board = ({ spaces, className }: BoardProps) => {
                         <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(circle_at_center,#000_0.8px,transparent_0.8px)] bg-size-[14px_14px]" />
 
                         {/* Branding */}
-                        <div className="z-10 transform -rotate-6">
-                            <img
-                                src="/../logo2.png"
-                                alt="Monopoly Bench"
-                                className="w-auto h-64 md:h-150 drop-shadow-[3px_3px_0_rgba(0,0,0,0.08)]"
-                            />
-                        </div>
+                        {centerContent ?? (
+                            <div className="z-10 transform -rotate-6">
+                                <img
+                                    src="/../logo2.png"
+                                    alt="Monopoly Bench"
+                                    className="w-auto h-64 md:h-150 drop-shadow-[3px_3px_0_rgba(0,0,0,0.08)]"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* Token Overlay */}
-                <TokenLayer />
+                {showTokens ? <TokenLayer players={resolvedPlayers} activePlayerId={resolvedActivePlayerId} /> : null}
             </div>
         </div>
     );

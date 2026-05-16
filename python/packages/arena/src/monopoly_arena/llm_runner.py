@@ -13,7 +13,7 @@ from monopoly_telemetry import RunFiles, build_summary
 from .openrouter_client import OpenRouterClient, OpenRouterResult
 
 from .action_validation import validate_action_payload
-from .decision_resolver import SharedDecisionResolver
+from .decision_resolver import DecisionResolutionAttempt, DecisionResolutionOutcome, SharedDecisionResolver
 from .player_config import EXPECTED_PLAYER_COUNT, PlayerConfig
 from .prompting import (
     PromptBundle,
@@ -25,37 +25,8 @@ from .prompting import (
 DecisionCallback = Callable[[dict[str, Any]], Awaitable[None]]
 
 
-@dataclass(slots=True)
-class DecisionAttempt:
-    prompt_messages: list[dict[str, Any]]
-    prompt_payload: dict[str, Any] | None
-    prompt_payload_raw: str | None
-    raw_response: dict[str, Any] | None
-    assistant_content: str | None
-    parsed_tool_call: dict[str, Any] | None
-    parsed_tool_calls: list[dict[str, Any]] | None
-    validation_errors: list[str]
-    openrouter_request_id: str | None
-    openrouter_status_code: int | None
-    error_type: str | None
-    error_message: str | None
-    request_start_ms: int | None
-    response_end_ms: int | None
-    latency_ms: int | None
-    outcome: str | None = None
-    reason: str | None = None
-
-
-@dataclass(slots=True)
-class DecisionOutcome:
-    action: dict[str, Any]
-    decision_meta: dict[str, Any]
-    attempts: list[DecisionAttempt]
-    retry_used: bool
-    fallback_used: bool
-    fallback_reason: str | None
-    sequence_meta: dict[str, Any] | None = None
-    automated: bool = False
+DecisionAttempt = DecisionResolutionAttempt
+DecisionOutcome = DecisionResolutionOutcome
 
 
 @dataclass(slots=True)
