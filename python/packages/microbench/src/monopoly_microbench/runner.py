@@ -372,7 +372,7 @@ def generate_micro_run_id(*, scenario_id: str, model_id: str, prompt_condition: 
     safe = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "-" for ch in f"{scenario_id}-{model_id}-{prompt_condition}")
     if len(safe) > 64:
         digest = hashlib.sha1(safe.encode("utf-8")).hexdigest()[:10]
-        safe = f"{safe[:53]}-{digest}"
+        safe = f"{safe[:24]}-{digest}"
     return f"micro-{safe}-{int(time.time() * 1000)}"
 
 

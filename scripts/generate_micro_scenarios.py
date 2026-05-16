@@ -939,7 +939,7 @@ def main() -> None:
         "scenario_ids": scenario_ids,
         "categories": {category: {"target_count": count, "actual_count": count} for category, count in CATEGORY_COUNTS.items()},
         "scoring_version": "rubric-v1",
-        "prompt_conditions": ["default", "minimal", "pro_strategy_cheatsheet", "no_private_thought", "full_state", "compact_state"],
+        "prompt_conditions": ["live_game"],
     }
     (SUITES_DIR / f"{SUITE_ID}.json").write_text(json.dumps(suite, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
     write_research_backlog(scenarios)

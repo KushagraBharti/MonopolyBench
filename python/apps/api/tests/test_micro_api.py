@@ -214,6 +214,7 @@ def test_micro_batch_stream_runs_in_limited_waves(tmp_path, monkeypatch) -> None
         ),
     )
     monkeypatch.setattr(api_micro, "MICRO_BATCH_PARALLEL_LIMIT", 1)
+    monkeypatch.setattr(api_micro, "OpenRouterClient", StreamingOpenRouter)
     client = TestClient(api_main.app)
     with client.stream(
         "POST",

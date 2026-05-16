@@ -11,6 +11,8 @@ export type MicroScenarioCategory =
   | "JAIL"
   | "POST_TURN_STRATEGY";
 
+export type MicroPromptCondition = "live_game";
+
 export interface MicroScoreBreakdown {
   criterion_id: string;
   points: number;
@@ -65,7 +67,7 @@ export interface MicroSuite {
   scenario_ids: string[];
   categories: Record<MicroScenarioCategory, { target_count: number; actual_count?: number }>;
   scoring_version: string;
-  prompt_conditions: string[];
+  prompt_conditions: MicroPromptCondition[];
 }
 
 export interface MicroResult {
@@ -79,7 +81,7 @@ export interface MicroResult {
     model_display_name: string;
     reasoning?: Record<string, unknown> | null;
   };
-  prompt_condition: string;
+  prompt_condition: MicroPromptCondition;
   outcome: {
     action: Action;
     retry_used: boolean;
