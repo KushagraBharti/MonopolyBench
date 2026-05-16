@@ -38,8 +38,7 @@ const CATEGORY_ORDER: ScenarioCategory[] = [
 ]
 
 const reasoningOptions = ['low', 'medium', 'high'] as const
-const promptConditions = ['default', 'minimal', 'pro_strategy_cheatsheet', 'no_private_thought', 'full_state', 'compact_state'] as const
-const baselineOptions = ['', 'first_legal', 'random_legal', 'haliem_fixed_v1', 'pro_heuristic_v1'] as const
+const MICRO_PROMPT_CONDITION = 'live_game'
 
 const PageLink = ({ href, label, active }: { href: string; label: string; active: boolean }) => (
   <a
@@ -154,9 +153,6 @@ export const MicroSuitePage = () => {
   const [modelId, setModelId] = useState('openai/gpt-oss-120b')
   const [modelName, setModelName] = useState('Micro Agent')
   const [reasoningEffort, setReasoningEffort] = useState<(typeof reasoningOptions)[number]>('medium')
-  const [promptCondition, setPromptCondition] = useState<(typeof promptConditions)[number]>('default')
-  const [baseline, setBaseline] = useState<(typeof baselineOptions)[number]>('')
-  const [systemPrompt, setSystemPrompt] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -243,17 +239,19 @@ export const MicroSuitePage = () => {
   const handleRun = async () => {
     if (!scenario) return
     try {
+      const modelValue = modelId.trim()
+      if (!modelValue) {
+        throw new Error('Model ID is required.')
+      }
       setRunning(true)
       setError(null)
       setLoadingMessage('Running selected micro scenario...')
       const { run_id } = await runMicroScenario({
         scenario_id: scenario.scenario_id,
-        openrouter_model_id: baseline ? null : modelId || null,
+        openrouter_model_id: modelValue,
         name: modelName || null,
-        system_prompt: systemPrompt.trim() ? systemPrompt : null,
         reasoning: { effort: reasoningEffort },
-        prompt_condition: promptCondition,
-        baseline: baseline || null,
+        prompt_condition: MICRO_PROMPT_CONDITION,
       })
       const detail = await fetchMicroRun(run_id)
       setRun(detail)
@@ -267,6 +265,10 @@ export const MicroSuitePage = () => {
 
   const handleBatchRun = async (scope: 'category' | 'suite') => {
     try {
+      const modelValue = modelId.trim()
+      if (!modelValue) {
+        throw new Error('Model ID is required.')
+      }
       setBatchRunning(true)
       setError(null)
       const scenarioIds =
@@ -275,9 +277,8 @@ export const MicroSuitePage = () => {
           : null
       const payload = await runMicroBatch({
         suite_id: 'micro-v1',
-        openrouter_model_ids: baseline ? [] : [modelId],
-        baseline: baseline || null,
-        prompt_condition: promptCondition,
+        openrouter_model_ids: [modelValue],
+        prompt_condition: MICRO_PROMPT_CONDITION,
         reasoning: { effort: reasoningEffort },
         scenario_ids: scenarioIds,
       })
@@ -321,7 +322,7 @@ export const MicroSuitePage = () => {
 
           <div className="flex-1 overflow-y-auto brutal-scroll p-3 space-y-3">
             <NeoCard className="p-3 bg-white">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Runner</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Model Config</div>
               <div className="mt-2 space-y-2">
                 <label className="block">
                   <span className="text-[9px] font-bold uppercase text-gray-500">Model Id</span>
@@ -353,44 +354,9 @@ export const MicroSuitePage = () => {
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  <span className="text-[9px] font-bold uppercase text-gray-500">Prompt Condition</span>
-                  <select
-                    value={promptCondition}
-                    onChange={(event) => setPromptCondition(event.target.value as (typeof promptConditions)[number])}
-                    className="mt-1 w-full border-2 border-black bg-white px-2.5 py-2 text-[12px] font-semibold shadow-neo-sm outline-none"
-                  >
-                    {promptConditions.map((condition) => (
-                      <option key={condition} value={condition}>
-                        {condition}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-[9px] font-bold uppercase text-gray-500">Baseline</span>
-                  <select
-                    value={baseline}
-                    onChange={(event) => setBaseline(event.target.value as (typeof baselineOptions)[number])}
-                    className="mt-1 w-full border-2 border-black bg-white px-2.5 py-2 text-[12px] font-semibold shadow-neo-sm outline-none"
-                  >
-                    {baselineOptions.map((option) => (
-                      <option key={option || 'live'} value={option}>
-                        {option || 'OpenRouter model'}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-[9px] font-bold uppercase text-gray-500">System Prompt Override</span>
-                  <textarea
-                    value={systemPrompt}
-                    onChange={(event) => setSystemPrompt(event.target.value)}
-                    rows={4}
-                    className="mt-1 w-full border-2 border-black bg-white px-2.5 py-2 text-[11px] leading-relaxed shadow-neo-sm outline-none"
-                    placeholder="Optional. Leave blank to reuse the benchmark default."
-                  />
-                </label>
+                <div className="rounded-[4px] border border-black/10 bg-neo-bg/70 px-3 py-2 text-[11px] font-semibold text-gray-600">
+                  Prompt mode is fixed to live_game, matching the normal Monopoly LLM prompt path.
+                </div>
                 <NeoButton
                   type="button"
                   className="w-full justify-center text-[11px]"
@@ -498,8 +464,7 @@ export const MicroSuitePage = () => {
               </div>
               <div className="flex items-center gap-2">
                 {scenarioLoading && <NeoBadge variant="warning">Loading</NeoBadge>}
-                {run?.summary.result.fallback_used ? <NeoBadge variant="error">Fallback</NeoBadge> : null}
-                {run && !run.summary.result.fallback_used ? <NeoBadge variant="success">Resolved</NeoBadge> : null}
+                {run ? <NeoBadge variant="success">Resolved</NeoBadge> : null}
               </div>
             </div>
 
@@ -637,12 +602,9 @@ export const MicroSuitePage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div>
                   <NeoBadge variant={run.summary.result.retry_used ? 'warning' : 'success'}>
                     {run.summary.result.retry_used ? 'Retry Used' : 'First Pass'}
-                  </NeoBadge>
-                  <NeoBadge variant={run.summary.result.fallback_used ? 'error' : 'success'}>
-                    {run.summary.result.fallback_used ? 'Fallback' : 'Validated'}
                   </NeoBadge>
                 </div>
 
@@ -723,7 +685,6 @@ export const MicroSuitePage = () => {
                     </div>
                     <div className="mt-1 grid grid-cols-4 gap-1 text-[9px] uppercase text-gray-500">
                       <span>{row.scenario_count} cases</span>
-                      <span>fb {row.fallback_rate}</span>
                       <span>retry {row.retry_rate}</span>
                       <span>bad {row.invalid_rate}</span>
                     </div>
@@ -739,7 +700,7 @@ export const MicroSuitePage = () => {
               </div>
             ) : (
               <div className="mt-3 rounded-[3px] border border-dashed border-black/20 bg-neo-bg/60 p-3 text-[11px] text-gray-500 leading-relaxed">
-                Run a category or suite batch to compare model or baseline scores by category.
+                Run a category or suite batch to compare model scores by category.
               </div>
             )}
           </NeoCard>

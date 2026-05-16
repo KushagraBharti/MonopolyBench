@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -69,7 +70,38 @@ class RunFiles:
     ) -> None:
         prefix = _prompt_file_prefix(decision_id, attempt_index=attempt_index)
         self.prompts_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self._write_prompt_artifact_files(
+                prefix=prefix,
+                system_prompt=system_prompt,
+                user_payload=user_payload,
+                tools=tools,
+                response=response,
+                parsed=parsed,
+            )
+        except OSError:
+            compact_prefix = _compact_prompt_file_prefix(decision_id, attempt_index=attempt_index)
+            if compact_prefix == prefix:
+                raise
+            self._write_prompt_artifact_files(
+                prefix=compact_prefix,
+                system_prompt=system_prompt,
+                user_payload=user_payload,
+                tools=tools,
+                response=response,
+                parsed=parsed,
+            )
 
+    def _write_prompt_artifact_files(
+        self,
+        *,
+        prefix: str,
+        system_prompt: str | None,
+        user_payload: dict[str, Any] | None,
+        tools: list[dict[str, Any]] | None,
+        response: dict[str, Any] | None,
+        parsed: dict[str, Any] | None,
+    ) -> None:
         if system_prompt is not None:
             (self.prompts_dir / f"{prefix}_system.txt").write_text(system_prompt, encoding="utf-8")
         if user_payload is not None:
@@ -145,6 +177,16 @@ def build_run_files(
 def _prompt_file_prefix(decision_id: str, *, attempt_index: int) -> str:
     safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", decision_id.strip())
     safe = safe.strip("._-") or "decision"
+    if attempt_index <= 0:
+        return f"decision_{safe}"
+    return f"decision_{safe}_retry{attempt_index}"
+
+
+def _compact_prompt_file_prefix(decision_id: str, *, attempt_index: int) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", decision_id.strip())
+    safe = safe.strip("._-") or "decision"
+    digest = hashlib.sha1(safe.encode("utf-8")).hexdigest()[:10]
+    safe = f"{safe[:23]}-{digest}"
     if attempt_index <= 0:
         return f"decision_{safe}"
     return f"decision_{safe}_retry{attempt_index}"

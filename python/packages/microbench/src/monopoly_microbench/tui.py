@@ -23,8 +23,8 @@ CATEGORIES = [
     "JAIL",
     "POST_TURN_STRATEGY",
 ]
-BASELINES = ["first_legal", "random_legal", "haliem_fixed_v1", "pro_heuristic_v1"]
-PROMPT_CONDITIONS = ["default", "minimal", "pro_strategy_cheatsheet", "no_private_thought", "full_state", "compact_state"]
+PROMPT_CONDITION = "live_game"
+DEFAULT_MODEL_ID = "openai/gpt-oss-120b"
 
 
 def main() -> None:
@@ -32,8 +32,8 @@ def main() -> None:
     state: dict[str, Any] = {
         "category": "ALL",
         "search": "",
-        "prompt_condition": "default",
-        "baseline": "pro_heuristic_v1",
+        "prompt_condition": PROMPT_CONDITION,
+        "model_id": DEFAULT_MODEL_ID,
         "last_results": [],
         "last_batch": None,
     }
@@ -72,7 +72,7 @@ def _print_header(console: Console, state: dict[str, Any]) -> None:
         Panel(
             f"micro-v1: {len(suite['scenario_ids'])} scenarios | "
             f"category={state['category']} | search={state['search'] or '-'} | "
-            f"baseline={state['baseline']} | prompt={state['prompt_condition']}",
+            f"model={state['model_id']} | prompt={PROMPT_CONDITION}",
             title="MonopolyBench Micro Decision Suite",
         )
     )
@@ -177,9 +177,9 @@ def _print_rubric(console: Console, scenario: dict[str, Any]) -> None:
 
 
 def _run_panel(console: Console, state: dict[str, Any], *, mode: str) -> None:
-    baseline = Prompt.ask("Baseline", choices=BASELINES, default=str(state["baseline"]))
-    prompt_condition = Prompt.ask("Prompt condition", choices=PROMPT_CONDITIONS, default=str(state["prompt_condition"]))
-    state["baseline"] = baseline
+    model_id = Prompt.ask("Model ID", default=str(state["model_id"]))
+    prompt_condition = PROMPT_CONDITION
+    state["model_id"] = model_id
     state["prompt_condition"] = prompt_condition
     if mode == "r":
         filtered = _filtered_scenarios(state)
@@ -188,7 +188,15 @@ def _run_panel(console: Console, state: dict[str, Any], *, mode: str) -> None:
             Prompt.ask("Press enter", default="")
             return
         scenario_id = filtered[0]["scenario_id"]
-        result = asyncio.run(run_scenario(MicroRunConfig(scenario_id=scenario_id, baseline=baseline, prompt_condition=prompt_condition)))
+        result = asyncio.run(
+            run_scenario(
+                MicroRunConfig(
+                    scenario_id=scenario_id,
+                    openrouter_model_id=model_id,
+                    prompt_condition=prompt_condition,
+                )
+            )
+        )
         state["last_results"] = [result]
         _show_result(console, result)
         return
@@ -203,8 +211,7 @@ def _run_panel(console: Console, state: dict[str, Any], *, mode: str) -> None:
     batch = asyncio.run(
         run_batch(
             suite_id="micro-v1",
-            model_ids=[],
-            baseline=baseline,
+            model_ids=[model_id],
             prompt_condition=prompt_condition,
             scenario_ids=scenario_ids,
         )
@@ -220,7 +227,7 @@ def _show_result(console: Console, result: dict[str, Any]) -> None:
     console.print(f"Action: {action['action']} {action.get('args', {})}")
     console.print(f"Public: {action.get('public_message', '')}")
     console.print(f"Private: {action.get('private_thought', '')}")
-    console.print(f"Retry: {result['outcome']['retry_used']} | Fallback: {result['outcome']['fallback_used']}")
+    console.print(f"Retry: {result['outcome']['retry_used']}")
     _print_score(console, result["score"])
     Prompt.ask("Press enter to return", default="")
 
@@ -241,14 +248,13 @@ def _show_leaderboard(console: Console, state: dict[str, Any]) -> None:
     batch = state.get("last_batch")
     leaderboard = batch["leaderboard"] if batch else build_leaderboard(state.get("last_results", []))
     table = Table(title="Leaderboard")
-    for column in ("Model", "Scenarios", "Avg", "Fallback", "Retry", "Invalid", "Latency"):
+    for column in ("Model", "Scenarios", "Avg", "Retry", "Invalid", "Latency"):
         table.add_column(column)
     for row in leaderboard.get("rows", []):
         table.add_row(
             row["model"],
             str(row["scenario_count"]),
             str(row["average_score"]),
-            str(row["fallback_rate"]),
             str(row["retry_rate"]),
             str(row["invalid_rate"]),
             str(row["average_latency_ms"]),

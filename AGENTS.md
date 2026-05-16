@@ -269,7 +269,7 @@ yarn dev
 cd python
 uv sync --all-packages
 cd apps/api
-uv run uvicorn monopoly_api.main:app --reload
+uv run python -m uvicorn monopoly_api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ### Headless runs

@@ -24,18 +24,15 @@ def main() -> None:
     run_parser.add_argument("--model", default=None)
     run_parser.add_argument("--name", default=None)
     run_parser.add_argument("--reasoning", default=None)
-    run_parser.add_argument("--prompt-condition", default="default")
-    run_parser.add_argument("--baseline", default=None)
+    run_parser.add_argument("--prompt-condition", choices=["live_game"], default="live_game")
     suite_parser = sub.add_parser("run-suite")
     suite_parser.add_argument("--suite", default="micro-v1")
     suite_parser.add_argument("--model", default=None)
-    suite_parser.add_argument("--prompt-condition", default="default")
-    suite_parser.add_argument("--baseline", default=None)
+    suite_parser.add_argument("--prompt-condition", choices=["live_game"], default="live_game")
     compare_parser = sub.add_parser("compare")
     compare_parser.add_argument("--suite", default="micro-v1")
     compare_parser.add_argument("--models", required=True)
-    compare_parser.add_argument("--prompt-condition", default="default")
-    compare_parser.add_argument("--baseline", default=None)
+    compare_parser.add_argument("--prompt-condition", choices=["live_game"], default="live_game")
     compare_parser.add_argument("--scenario", action="append", dest="scenario_ids")
     score_parser = sub.add_parser("score")
     score_parser.add_argument("--run-id", required=True)
@@ -61,7 +58,6 @@ def main() -> None:
                     name=args.name,
                     reasoning={"effort": args.reasoning} if args.reasoning else None,
                     prompt_condition=args.prompt_condition,
-                    baseline=args.baseline,
                 )
             )
         )
@@ -71,7 +67,6 @@ def main() -> None:
             run_suite(
                 args.suite,
                 model_id=args.model,
-                baseline=args.baseline,
                 prompt_condition=args.prompt_condition,
             )
         )
@@ -82,8 +77,7 @@ def main() -> None:
         result = asyncio.run(
             run_batch(
                 suite_id=args.suite,
-                model_ids=[] if args.baseline else list(model_ids),
-                baseline=args.baseline,
+                model_ids=list(model_ids),
                 prompt_condition=args.prompt_condition,
                 scenario_ids=args.scenario_ids,
             )
@@ -120,7 +114,6 @@ def _print_result(console: Console, result: dict) -> None:
     console.print(f"Action: {action['action']} {json.dumps(action.get('args', {}), ensure_ascii=True)}")
     console.print(f"Score: {result['score']['total']} {result['score']['label']}")
     console.print(f"Retry: {'yes' if result['outcome']['retry_used'] else 'no'}")
-    console.print(f"Fallback: {'yes' if result['outcome']['fallback_used'] else 'no'}")
     console.print(f"Artifacts: runs/micro/{result['run_id']}")
 
 

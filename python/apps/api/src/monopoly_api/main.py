@@ -4,6 +4,7 @@ import time
 from fastapi import FastAPI, WebSocket, HTTPException, Query
 from fastapi import WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from monopoly_api.micro import (
@@ -18,6 +19,8 @@ from monopoly_api.micro import (
     list_micro_scenario_summaries,
     run_micro_batch,
     run_micro_scenario,
+    stream_micro_batch,
+    stream_micro_scenario,
 )
 from monopoly_api.run_manager import RunManager
 from monopoly_api.settings import load_settings
@@ -179,6 +182,15 @@ async def micro_run(body: MicroRunRequest) -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.post("/micro/run/stream")
+async def micro_run_stream(body: MicroRunRequest) -> StreamingResponse:
+    return StreamingResponse(
+        stream_micro_scenario(settings=settings, request=body),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.get("/micro/runs/{run_id}")
 def micro_run_detail(run_id: str) -> dict:
     try:
@@ -199,6 +211,15 @@ async def micro_batch(body: MicroBatchRequest) -> dict:
         raise HTTPException(status_code=404, detail="Micro suite or scenario not found") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/micro/batches/stream")
+async def micro_batch_stream(body: MicroBatchRequest) -> StreamingResponse:
+    return StreamingResponse(
+        stream_micro_batch(settings=settings, request=body),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/micro/batches/{batch_id}")

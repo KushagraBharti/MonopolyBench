@@ -121,7 +121,6 @@ export type MicroBatchDetail = {
     batch_id: string
     suite_id: string
     model_ids: string[]
-    baseline?: string | null
     prompt_condition: string
     scenario_ids: string[]
   }
@@ -167,12 +166,10 @@ export const runMicroScenario = async (
     scenario_id: string
     openrouter_model_id?: string | null
     name?: string | null
-    system_prompt?: string | null
     reasoning?: {
       effort?: string
     } | null
     prompt_condition?: string
-    baseline?: string | null
   },
   apiBase = getApiBaseUrl()
 ): Promise<{ run_id: string; result?: MicroResult }> => {
@@ -183,6 +180,199 @@ export const runMicroScenario = async (
       body: JSON.stringify(payload),
     })
   )
+}
+
+type MicroStreamEvent =
+  | { event: 'status'; data: { state: string } }
+  | { event: 'llm_delta'; data: { type: string; text?: string; scenario_id?: string; model?: string | null } }
+  | { event: 'result'; data: { run_id: string; result?: MicroResult } }
+  | { event: 'error'; data: { message?: string } }
+
+type MicroBatchStreamEvent =
+  | {
+      event: 'status'
+      data: {
+        state: string
+        batch_id?: string
+        scenario_count?: number
+        task_count?: number
+        parallel_limit?: number
+        wave_index?: number
+        wave_size?: number
+        wave_scenario_ids?: string[]
+        completed_count?: number
+      }
+    }
+  | { event: 'llm_delta'; data: { type: string; text?: string; scenario_id: string; model?: string | null } }
+  | { event: 'scenario_started'; data: { scenario_id: string; model?: string | null } }
+  | {
+      event: 'scenario_result'
+      data: {
+        scenario_id: string
+        model: string
+        run_id: string
+        action: MicroAction
+        score: MicroResult['score']
+        retry_used: boolean
+        fallback_used: boolean
+        latency_ms?: number | null
+      }
+    }
+  | { event: 'batch_result'; data: { batch_id: string; leaderboard: MicroLeaderboard } }
+  | { event: 'scenario_error'; data: { scenario_id?: string; model?: string | null; message?: string } }
+  | { event: 'error'; data: { message?: string; batch_id?: string } }
+
+export const runMicroScenarioStream = async (
+  payload: {
+    scenario_id: string
+    openrouter_model_id?: string | null
+    name?: string | null
+    reasoning?: {
+      effort?: string
+    } | null
+    prompt_condition?: string
+  },
+  handlers: {
+    onDelta?: (event: Extract<MicroStreamEvent, { event: 'llm_delta' }>['data']) => void
+    onStatus?: (event: Extract<MicroStreamEvent, { event: 'status' }>['data']) => void
+    signal?: AbortSignal
+  } = {},
+  apiBase = getApiBaseUrl()
+): Promise<{ run_id: string; result?: MicroResult }> => {
+  const response = await fetch(`${apiBase}/micro/run/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+    body: JSON.stringify(payload),
+    signal: handlers.signal,
+  })
+  if (!response.ok || !response.body) {
+    return expectOk<{ run_id: string; result?: MicroResult }>(response)
+  }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let result: { run_id: string; result?: MicroResult } | null = null
+
+  const dispatch = (block: string) => {
+    const lines = block.split(/\r?\n/)
+    const eventName = lines.find((line) => line.startsWith('event:'))?.slice('event:'.length).trim()
+    const dataText = lines
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice('data:'.length).trim())
+      .join('\n')
+    if (!eventName || !dataText) return
+    const parsed = JSON.parse(dataText) as MicroStreamEvent['data']
+    if (eventName === 'llm_delta') {
+      handlers.onDelta?.(parsed as Extract<MicroStreamEvent, { event: 'llm_delta' }>['data'])
+    } else if (eventName === 'status') {
+      handlers.onStatus?.(parsed as Extract<MicroStreamEvent, { event: 'status' }>['data'])
+    } else if (eventName === 'result') {
+      result = parsed as { run_id: string; result?: MicroResult }
+    } else if (eventName === 'error') {
+      const error = parsed as { message?: string }
+      throw new Error(error.message || 'Micro stream failed.')
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const blocks = buffer.split(/\r?\n\r?\n/)
+    buffer = blocks.pop() ?? ''
+    for (const block of blocks) {
+      dispatch(block)
+    }
+  }
+  buffer += decoder.decode()
+  if (buffer.trim()) {
+    dispatch(buffer)
+  }
+  if (!result) {
+    throw new Error('Micro stream ended without a result.')
+  }
+  return result
+}
+
+export const runMicroBatchStream = async (
+  payload: {
+    suite_id?: string
+    openrouter_model_ids?: string[]
+    prompt_condition?: string
+    reasoning?: {
+      effort?: string
+    } | null
+    scenario_ids?: string[] | null
+  },
+  handlers: {
+    onDelta?: (event: Extract<MicroBatchStreamEvent, { event: 'llm_delta' }>['data']) => void
+    onStatus?: (event: Extract<MicroBatchStreamEvent, { event: 'status' }>['data']) => void
+    onScenarioStarted?: (event: Extract<MicroBatchStreamEvent, { event: 'scenario_started' }>['data']) => void
+    onScenarioResult?: (event: Extract<MicroBatchStreamEvent, { event: 'scenario_result' }>['data']) => void
+    onScenarioError?: (event: Extract<MicroBatchStreamEvent, { event: 'scenario_error' }>['data']) => void
+    signal?: AbortSignal
+  } = {},
+  apiBase = getApiBaseUrl()
+): Promise<{ batch_id: string; leaderboard: MicroLeaderboard }> => {
+  const response = await fetch(`${apiBase}/micro/batches/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+    body: JSON.stringify(payload),
+    signal: handlers.signal,
+  })
+  if (!response.ok || !response.body) {
+    return expectOk<{ batch_id: string; leaderboard: MicroLeaderboard }>(response)
+  }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let result: { batch_id: string; leaderboard: MicroLeaderboard } | null = null
+
+  const dispatch = (block: string) => {
+    const lines = block.split(/\r?\n/)
+    const eventName = lines.find((line) => line.startsWith('event:'))?.slice('event:'.length).trim()
+    const dataText = lines
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice('data:'.length).trim())
+      .join('\n')
+    if (!eventName || !dataText) return
+    const parsed = JSON.parse(dataText) as MicroBatchStreamEvent['data']
+    if (eventName === 'llm_delta') {
+      handlers.onDelta?.(parsed as Extract<MicroBatchStreamEvent, { event: 'llm_delta' }>['data'])
+    } else if (eventName === 'status') {
+      handlers.onStatus?.(parsed as Extract<MicroBatchStreamEvent, { event: 'status' }>['data'])
+    } else if (eventName === 'scenario_started') {
+      handlers.onScenarioStarted?.(parsed as Extract<MicroBatchStreamEvent, { event: 'scenario_started' }>['data'])
+    } else if (eventName === 'scenario_result') {
+      handlers.onScenarioResult?.(parsed as Extract<MicroBatchStreamEvent, { event: 'scenario_result' }>['data'])
+    } else if (eventName === 'scenario_error') {
+      handlers.onScenarioError?.(parsed as Extract<MicroBatchStreamEvent, { event: 'scenario_error' }>['data'])
+    } else if (eventName === 'batch_result') {
+      result = parsed as { batch_id: string; leaderboard: MicroLeaderboard }
+    } else if (eventName === 'error') {
+      const error = parsed as { message?: string }
+      throw new Error(error.message || 'Micro batch stream failed.')
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const blocks = buffer.split(/\r?\n\r?\n/)
+    buffer = blocks.pop() ?? ''
+    for (const block of blocks) {
+      dispatch(block)
+    }
+  }
+  buffer += decoder.decode()
+  if (buffer.trim()) {
+    dispatch(buffer)
+  }
+  if (!result) {
+    throw new Error('Micro batch stream ended without a result.')
+  }
+  return result
 }
 
 export const fetchMicroRun = async (runId: string, apiBase = getApiBaseUrl()): Promise<MicroRunDetail> => {
@@ -197,7 +387,6 @@ export const runMicroBatch = async (
     reasoning?: {
       effort?: string
     } | null
-    baseline?: string | null
     scenario_ids?: string[] | null
   },
   apiBase = getApiBaseUrl()

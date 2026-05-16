@@ -839,12 +839,15 @@ class SharedDecisionResolver:
     ) -> None:
         if self._run_files is None:
             return
-        self._run_files.write_quality_artifacts(
-            decision_id=decision_id,
-            attempt_index=attempt_index,
-            request_text=request_text,
-            response_text=response_text,
-        )
+        try:
+            self._run_files.write_quality_artifacts(
+                decision_id=decision_id,
+                attempt_index=attempt_index,
+                request_text=request_text,
+                response_text=response_text,
+            )
+        except OSError:
+            return
 
 
 def _now_ms() -> int:

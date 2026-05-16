@@ -673,7 +673,7 @@ def build_action_state(
         if entry.get("action")
     ]
     prompt_condition = decision.get("micro_prompt_condition")
-    if isinstance(prompt_condition, str):
+    if isinstance(prompt_condition, str) and prompt_condition != "live_game":
         action_state["prompt_condition"] = prompt_condition
     return action_state
 

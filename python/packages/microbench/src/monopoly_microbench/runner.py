@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import hashlib
 import json
 import time
 from dataclasses import dataclass
@@ -14,7 +15,6 @@ from monopoly_arena.prompting import PromptMemory, build_space_key_by_index
 from monopoly_telemetry.writer_jsonl import append_jsonl
 
 from .artifacts import batch_dir, compact_result_for_jsonl, micro_run_files
-from .baselines import baseline_action
 from .catalog import get_suite, load_scenario
 from .paths import default_runs_dir
 from .scorer import score_action
@@ -25,10 +25,8 @@ class MicroRunConfig:
     scenario_id: str
     openrouter_model_id: str | None = None
     name: str | None = None
-    system_prompt: str | None = None
     reasoning: dict[str, Any] | None = None
-    prompt_condition: str = "default"
-    baseline: str | None = None
+    prompt_condition: str = "live_game"
     run_id: str | None = None
 
 
@@ -49,12 +47,12 @@ async def run_scenario(
         player_id=focal_player_id,
         name=config.name or str(focal_name),
         openrouter_model_id=config.openrouter_model_id,
-        system_prompt=_system_prompt_for_condition(config.system_prompt, config.prompt_condition),
+        system_prompt=_system_prompt_for_condition(config.prompt_condition),
         reasoning=config.reasoning,
     )
     run_id = config.run_id or generate_micro_run_id(
         scenario_id=scenario["scenario_id"],
-        model_id=config.baseline or player_config.openrouter_model_id,
+        model_id=player_config.openrouter_model_id,
         prompt_condition=config.prompt_condition,
     )
     run_files = micro_run_files(runs_dir or default_runs_dir(), run_id)
@@ -62,7 +60,8 @@ async def run_scenario(
     scenario_for_run["run_id"] = run_id
     scenario_for_run["prompt_condition"] = config.prompt_condition
     scenario_for_run["decision_point"]["run_id"] = run_id
-    scenario_for_run["decision_point"]["micro_prompt_condition"] = config.prompt_condition
+    if config.prompt_condition != "live_game":
+        scenario_for_run["decision_point"]["micro_prompt_condition"] = config.prompt_condition
     scenario_for_run["decision_point"]["state"]["run_id"] = run_id
     decision = scenario_for_run["decision_point"]
     run_files.run_dir.mkdir(parents=True, exist_ok=True)
@@ -74,29 +73,26 @@ async def run_scenario(
     )
     run_files.write_snapshot(decision["state"])
 
-    if config.baseline:
-        action = baseline_action(scenario_for_run, config.baseline)
-        outcome = _baseline_outcome(action)
-        latency_ms: int | None = 0
-    else:
-        resolver = SharedDecisionResolver(
-            openrouter=openrouter_factory(),
-            run_files=run_files,
-            prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()),
-            space_key_by_index=build_space_key_by_index(),
-        )
+    resolver = SharedDecisionResolver(
+        openrouter=openrouter_factory(),
+        run_files=run_files,
+        prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()),
+        space_key_by_index=build_space_key_by_index(),
+    )
 
-        async def log_writer(entry: dict[str, Any]) -> None:
-            run_files.write_decision(entry)
+    async def log_writer(entry: dict[str, Any]) -> None:
+        run_files.write_decision(entry)
 
-        outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
-        close = getattr(resolver._openrouter, "aclose", None)
-        if close is not None:
-            maybe = close()
-            if asyncio.iscoroutine(maybe):
-                await maybe
-        action = outcome.action
-        latency_ms = _latency_from_attempts(outcome.attempts)
+    outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
+    close = getattr(resolver._openrouter, "aclose", None)
+    if close is not None:
+        maybe = close()
+        if asyncio.iscoroutine(maybe):
+            await maybe
+    if outcome.fallback_used:
+        raise RuntimeError(f"Micro model run failed without a valid action: {outcome.fallback_reason or 'fallback_used'}")
+    action = outcome.action
+    latency_ms = _latency_from_attempts(outcome.attempts)
 
     run_files.write_action(
         {
@@ -116,8 +112,8 @@ async def run_scenario(
         "scenario_id": scenario["scenario_id"],
         "category": scenario["category"],
         "model": {
-            "openrouter_model_id": config.baseline or player_config.openrouter_model_id,
-            "model_display_name": config.baseline or player_config.model_display_name,
+            "openrouter_model_id": player_config.openrouter_model_id,
+            "model_display_name": player_config.model_display_name,
             "reasoning": player_config.reasoning,
         },
         "prompt_condition": config.prompt_condition,
@@ -150,8 +146,8 @@ async def run_scenario(
         "player": {
             "player_id": player_config.player_id,
             "name": player_config.name,
-            "openrouter_model_id": config.baseline or player_config.openrouter_model_id,
-            "model_display_name": config.baseline or player_config.model_display_name,
+            "openrouter_model_id": player_config.openrouter_model_id,
+            "model_display_name": player_config.model_display_name,
             "reasoning": player_config.reasoning,
         },
         "result": {
@@ -171,8 +167,7 @@ async def run_suite(
     suite_id: str,
     *,
     model_id: str | None = None,
-    baseline: str | None = None,
-    prompt_condition: str = "default",
+    prompt_condition: str = "live_game",
     reasoning: dict[str, Any] | None = None,
     runs_dir: Path | None = None,
     openrouter_factory: Callable[[], Any] = OpenRouterClient,
@@ -185,7 +180,6 @@ async def run_suite(
                 MicroRunConfig(
                     scenario_id=scenario_id,
                     openrouter_model_id=model_id,
-                    baseline=baseline,
                     prompt_condition=prompt_condition,
                     reasoning=reasoning,
                 ),
@@ -200,8 +194,7 @@ async def run_batch(
     *,
     suite_id: str,
     model_ids: list[str],
-    baseline: str | None = None,
-    prompt_condition: str = "default",
+    prompt_condition: str = "live_game",
     reasoning: dict[str, Any] | None = None,
     scenario_ids: list[str] | None = None,
     runs_dir: Path | None = None,
@@ -216,32 +209,33 @@ async def run_batch(
         "batch_id": batch_id,
         "suite_id": suite_id,
         "model_ids": model_ids,
-        "baseline": baseline,
         "prompt_condition": prompt_condition,
         "scenario_ids": selected,
     }
     (out_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=True), encoding="utf-8")
     failures_path = out_dir / "failures.jsonl"
     result_items: list[dict[str, Any]] = []
-    model_targets = model_ids or ([baseline] if baseline else [])
+    model_targets = model_ids
+    if not model_targets:
+        raise ValueError("At least one OpenRouter model id is required.")
     for model in model_targets:
         for scenario_id in selected:
             try:
                 result = await run_scenario(
                     MicroRunConfig(
                         scenario_id=scenario_id,
-                        openrouter_model_id=None if baseline else model,
-                        baseline=baseline,
+                        openrouter_model_id=model,
                         prompt_condition=prompt_condition,
                         reasoning=reasoning,
                     ),
                     runs_dir=root,
                     openrouter_factory=openrouter_factory,
                 )
-                result_items.append(result)
-                append_jsonl(out_dir / "results.jsonl", compact_result_for_jsonl(result))
-            except Exception as exc:  # pragma: no cover - failure artifact path
+            except Exception as exc:
                 append_jsonl(failures_path, {"scenario_id": scenario_id, "model": model, "error": str(exc)})
+                raise
+            result_items.append(result)
+            append_jsonl(out_dir / "results.jsonl", compact_result_for_jsonl(result))
     leaderboard = build_leaderboard(result_items)
     (out_dir / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2, ensure_ascii=True), encoding="utf-8")
     (out_dir / "category_breakdown.json").write_text(
@@ -374,22 +368,14 @@ def build_leaderboard(results: list[dict[str, Any]]) -> dict[str, Any]:
     return {"rows": rows, "category_breakdown": category_breakdown}
 
 
-def generate_micro_run_id(*, scenario_id: str, model_id: str, prompt_condition: str = "default") -> str:
+def generate_micro_run_id(*, scenario_id: str, model_id: str, prompt_condition: str = "live_game") -> str:
     safe = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "-" for ch in f"{scenario_id}-{model_id}-{prompt_condition}")
+    if len(safe) > 64:
+        digest = hashlib.sha1(safe.encode("utf-8")).hexdigest()[:10]
+        safe = f"{safe[:53]}-{digest}"
     return f"micro-{safe}-{int(time.time() * 1000)}"
 
 
-def _baseline_outcome(action: dict[str, Any]) -> Any:
-    class Outcome:
-        retry_used = False
-        fallback_used = False
-        fallback_reason = None
-        attempts: list[Any] = []
-
-        def __init__(self, action_payload: dict[str, Any]) -> None:
-            self.action = action_payload
-
-    return Outcome(action)
 
 
 def _latency_from_attempts(attempts: list[Any]) -> int | None:
@@ -420,20 +406,7 @@ def _artifact_paths(run_dir: Path) -> dict[str, Any]:
     }
 
 
-def _system_prompt_for_condition(system_prompt: str | None, prompt_condition: str) -> str | None:
-    if system_prompt:
-        return system_prompt
-    if prompt_condition == "pro_strategy_cheatsheet":
-        return (
-            "You are playing Monopoly to win. Prefer monopoly creation, orange/red development, cash discipline, "
-            "three-house breakpoints, defensive blocking, and late-game jail safety. Use exactly one legal tool."
-        )
-    if prompt_condition == "minimal":
-        return "Choose exactly one legal Monopoly action from the provided tools."
-    if prompt_condition == "no_private_thought":
-        return "Choose exactly one legal Monopoly action. Include a concise public_message; private_thought is disabled for this run."
-    if prompt_condition == "full_state":
-        return "Choose exactly one legal Monopoly action using the full structured state and the decision focus."
-    if prompt_condition == "compact_state":
-        return "Choose exactly one legal Monopoly action using the compact state and decision focus."
+def _system_prompt_for_condition(prompt_condition: str) -> str | None:
+    if prompt_condition != "live_game":
+        raise ValueError("Micro prompt condition must be live_game.")
     return None

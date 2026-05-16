@@ -6,12 +6,63 @@ import copy
 import hashlib
 import json
 
-from monopoly_arena import build_single_player_config
-from monopoly_arena.decision_resolver import validate_decision_action
-from monopoly_arena.prompting import PromptMemory, build_compact_decision, build_prompt_bundle, build_space_key_by_index
+from monopoly_arena import OpenRouterResult, build_single_player_config
+from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT
+from monopoly_arena.prompting import PromptMemory, build_prompt_bundle, build_space_key_by_index
 from monopoly_microbench.catalog import get_suite, list_scenarios, validate_all, validate_scenario
 from monopoly_microbench.runner import MicroRunConfig, get_run, run_batch, run_scenario, score_run
 from monopoly_microbench.scorer import score_action
+
+
+class ScriptedOpenRouter:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    async def create_chat_completion(self, **kwargs: object) -> OpenRouterResult:
+        self.calls.append(dict(kwargs))
+        return _tool_call_result("buy_property", {"private_thought": "scripted"})
+
+    async def aclose(self) -> None:
+        return None
+
+
+def _tool_call_result(name: str, args: dict[str, object]) -> OpenRouterResult:
+    payload_args = {
+        **args,
+        "public_message": args.get("public_message", ""),
+        "private_thought": args.get("private_thought", "scripted"),
+    }
+    response_json = {
+        "id": "resp-1",
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call-1",
+                            "type": "function",
+                            "function": {
+                                "name": name,
+                                "arguments": json.dumps(payload_args, separators=(",", ":"), ensure_ascii=True),
+                            },
+                        }
+                    ],
+                }
+            }
+        ],
+    }
+    return OpenRouterResult(
+        ok=True,
+        status_code=200,
+        response_json=response_json,
+        error=None,
+        error_type=None,
+        request_id="req-1",
+        request_payload_raw=None,
+        response_text=json.dumps(response_json, separators=(",", ":"), ensure_ascii=True),
+    )
 
 
 def test_catalog_validates_full_micro_v1() -> None:
@@ -101,14 +152,15 @@ def test_catalog_rejects_invalid_legal_action_arg_schema() -> None:
         raise AssertionError("Expected invalid legal action args_schema to fail validation.")
 
 
-def test_baseline_run_writes_isolated_result(tmp_path) -> None:
+def test_model_run_writes_isolated_result(tmp_path) -> None:
     result = asyncio.run(
         run_scenario(
             MicroRunConfig(
                 scenario_id="buy-or-auction-vermont-light-blue-tempo-01",
-                baseline="pro_heuristic_v1",
+                openrouter_model_id="test/model",
             ),
             runs_dir=tmp_path / "runs",
+            openrouter_factory=ScriptedOpenRouter,
         )
     )
     run_id = result["run_id"]
@@ -121,64 +173,52 @@ def test_score_run_recomputes_existing_result(tmp_path) -> None:
     result = asyncio.run(
         run_scenario(
             MicroRunConfig(
-                scenario_id="auction-illinois-min-raise-red-completion-01",
-                baseline="pro_heuristic_v1",
+                scenario_id="buy-or-auction-vermont-light-blue-tempo-01",
+                openrouter_model_id="test/model",
             ),
             runs_dir=tmp_path / "runs",
+            openrouter_factory=ScriptedOpenRouter,
         )
     )
     recomputed = score_run(result["run_id"], runs_dir=tmp_path / "runs")
     assert recomputed["score"] == result["score"]
 
 
-def test_prompt_conditions_change_payload_and_private_thought_contract() -> None:
+def test_live_game_prompt_matches_normal_game_prompt() -> None:
     scenario = next(
         item for item in list_scenarios() if item["scenario_id"] == "buy-or-auction-vermont-light-blue-tempo-01"
     )
-    decision = copy.deepcopy(scenario["decision_point"])
-    decision["micro_prompt_condition"] = "no_private_thought"
-    compact = build_compact_decision(decision)
-    for legal_action in compact["legal_actions"]:
-        required = legal_action["args_schema"].get("required", [])
-        properties = legal_action["args_schema"].get("properties", {})
-        assert "private_thought" not in required
-        assert "private_thought" not in properties
-
-    action = copy.deepcopy(scenario["reference_policy"]["action"])
-    action.pop("private_thought", None)
-    assert validate_decision_action(decision, action) == []
-
-    player = build_single_player_config(player_id=decision["player_id"], name="Alpha", openrouter_model_id="test/model")
+    player = build_single_player_config(player_id=scenario["decision_point"]["player_id"], name="Alpha", openrouter_model_id="test/model")
     memory = PromptMemory(space_key_by_index=build_space_key_by_index())
-    full_decision = copy.deepcopy(scenario["decision_point"])
-    full_decision["micro_prompt_condition"] = "full_state"
-    full_bundle = build_prompt_bundle(
-        full_decision,
+    normal_decision = copy.deepcopy(scenario["decision_point"])
+    live_game_configured_decision = copy.deepcopy(scenario["decision_point"])
+    live_game_configured_decision["micro_prompt_condition"] = "live_game"
+    normal_bundle = build_prompt_bundle(
+        normal_decision,
         player,
         memory=memory,
         space_key_by_index=build_space_key_by_index(),
     )
-    assert "full_protocol_state" in full_bundle.user_payload
-
-    compact_decision = copy.deepcopy(scenario["decision_point"])
-    compact_decision["micro_prompt_condition"] = "compact_state"
-    compact_bundle = build_prompt_bundle(
-        compact_decision,
+    configured_live_game_bundle = build_prompt_bundle(
+        live_game_configured_decision,
         player,
         memory=memory,
         space_key_by_index=build_space_key_by_index(),
     )
-    assert compact_bundle.user_payload["game_state"]["title"] == "compact_game_state"
+    assert configured_live_game_bundle.system_prompt == DEFAULT_SYSTEM_PROMPT
+    assert normal_bundle.user_payload == configured_live_game_bundle.user_payload
+    assert "prompt_condition" not in configured_live_game_bundle.user_payload["action_state"]
+    assert "full_protocol_state" not in configured_live_game_bundle.user_payload
 
 
 def test_batch_runner_writes_leaderboard(tmp_path) -> None:
     batch = asyncio.run(
         run_batch(
             suite_id="micro-v1",
-            model_ids=[],
-            baseline="first_legal",
-            scenario_ids=["buy-or-auction-vermont-light-blue-tempo-01", "auction-illinois-min-raise-red-completion-01"],
+            model_ids=["test/model"],
+            scenario_ids=["buy-or-auction-vermont-light-blue-tempo-01"],
             runs_dir=tmp_path / "runs",
+            openrouter_factory=ScriptedOpenRouter,
         )
     )
     assert batch["leaderboard"]["rows"]

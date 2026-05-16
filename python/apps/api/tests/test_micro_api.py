@@ -5,6 +5,7 @@ import json
 from fastapi.testclient import TestClient
 
 from monopoly_api import main as api_main
+from monopoly_api import micro as api_micro
 from monopoly_api.settings import Settings
 from monopoly_arena import OpenRouterResult
 
@@ -20,6 +21,20 @@ class ScriptedOpenRouter:
         if not self.queued_results:
             raise AssertionError("No scripted OpenRouter results queued.")
         return self.queued_results.pop(0)
+
+    async def aclose(self) -> None:
+        return None
+
+
+class StreamingOpenRouter:
+    def __init__(self, *_: object, stream_callback: object | None = None, **__: object) -> None:
+        self._stream_callback = stream_callback
+
+    async def create_chat_completion(self, **_: object) -> OpenRouterResult:
+        if callable(self._stream_callback):
+            await self._stream_callback({"type": "reasoning_delta", "text": "reason"})
+            await self._stream_callback({"type": "tool_arguments_delta", "text": '{"action":"buy_property"}'})
+        return _tool_call_result("buy_property", {"private_thought": "reason"})
 
     async def aclose(self) -> None:
         return None
@@ -92,15 +107,16 @@ def test_micro_run_endpoint_writes_isolated_artifacts(tmp_path, monkeypatch) -> 
             players_config_path=tmp_path / "players.json",
         ),
     )
+    monkeypatch.setattr(api_main, "OpenRouterClient", StreamingOpenRouter)
     client = TestClient(api_main.app)
     run_response = client.post(
         "/micro/run",
         json={
             "scenario_id": "buy-or-auction-vermont-light-blue-tempo-01",
-            "baseline": "pro_heuristic_v1",
+            "openrouter_model_id": "openai/gpt-oss-120b",
             "name": "Alpha",
             "reasoning": {"effort": "medium"},
-            "prompt_condition": "compact_state",
+            "prompt_condition": "live_game",
         },
     )
     assert run_response.status_code == 200
@@ -112,7 +128,7 @@ def test_micro_run_endpoint_writes_isolated_artifacts(tmp_path, monkeypatch) -> 
 
     assert payload["summary"]["mode"] == "micro"
     assert payload["summary"]["scenario_id"] == "buy-or-auction-vermont-light-blue-tempo-01"
-    assert payload["summary"]["prompt_condition"] == "compact_state"
+    assert payload["summary"]["prompt_condition"] == "live_game"
     assert payload["decision_bundle"]["final_action"]["action"] == "buy_property"
     assert payload["result"]["score"]["label"] in {"preferred", "acceptable", "bad", "invalid"}
     assert payload["artifact_paths"]["result"].endswith("result.json")
@@ -121,7 +137,7 @@ def test_micro_run_endpoint_writes_isolated_artifacts(tmp_path, monkeypatch) -> 
     assert (tmp_path / "quality_check" / "micro" / run_id).exists()
 
 
-def test_micro_suites_and_baseline_batch(tmp_path, monkeypatch) -> None:
+def test_micro_suites_and_model_batch(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
         api_main,
         "settings",
@@ -132,6 +148,7 @@ def test_micro_suites_and_baseline_batch(tmp_path, monkeypatch) -> None:
             players_config_path=tmp_path / "players.json",
         ),
     )
+    monkeypatch.setattr(api_main, "OpenRouterClient", StreamingOpenRouter)
     client = TestClient(api_main.app)
     suites = client.get("/micro/suites")
     assert suites.status_code == 200
@@ -141,11 +158,10 @@ def test_micro_suites_and_baseline_batch(tmp_path, monkeypatch) -> None:
         "/micro/batches",
         json={
             "suite_id": "micro-v1",
-            "baseline": "first_legal",
-            "prompt_condition": "minimal",
+            "openrouter_model_ids": ["openai/gpt-oss-120b"],
+            "prompt_condition": "live_game",
             "scenario_ids": [
                 "buy-or-auction-vermont-light-blue-tempo-01",
-                "auction-illinois-min-raise-red-completion-01",
             ],
         },
     )
@@ -154,6 +170,102 @@ def test_micro_suites_and_baseline_batch(tmp_path, monkeypatch) -> None:
     leaderboard = client.get(f"/micro/batches/{batch_id}/leaderboard")
     assert leaderboard.status_code == 200
     assert leaderboard.json()["rows"]
+
+
+def test_micro_stream_endpoint_emits_llm_deltas_and_result(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        api_main,
+        "settings",
+        Settings(
+            runs_dir=tmp_path / "runs",
+            api_host="127.0.0.1",
+            api_port=8000,
+            players_config_path=tmp_path / "players.json",
+        ),
+    )
+    monkeypatch.setattr(api_micro, "OpenRouterClient", StreamingOpenRouter)
+    client = TestClient(api_main.app)
+    with client.stream(
+        "POST",
+        "/micro/run/stream",
+        json={
+            "scenario_id": "buy-or-auction-vermont-light-blue-tempo-01",
+            "openrouter_model_id": "openai/gpt-oss-120b",
+            "name": "Alpha",
+        },
+    ) as response:
+        assert response.status_code == 200
+        text = "".join(response.iter_text())
+    assert "event: status" in text
+    assert "reasoning_delta" in text
+    assert "tool_arguments_delta" in text
+    assert "event: result" in text
+
+
+def test_micro_batch_stream_runs_in_limited_waves(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        api_main,
+        "settings",
+        Settings(
+            runs_dir=tmp_path / "runs",
+            api_host="127.0.0.1",
+            api_port=8000,
+            players_config_path=tmp_path / "players.json",
+        ),
+    )
+    monkeypatch.setattr(api_micro, "MICRO_BATCH_PARALLEL_LIMIT", 1)
+    client = TestClient(api_main.app)
+    with client.stream(
+        "POST",
+        "/micro/batches/stream",
+        json={
+            "suite_id": "micro-v1",
+            "openrouter_model_ids": ["openai/gpt-oss-120b"],
+            "prompt_condition": "live_game",
+            "scenario_ids": [
+                "buy-or-auction-vermont-light-blue-tempo-01",
+            ],
+        },
+    ) as response:
+        assert response.status_code == 200
+        text = "".join(response.iter_text())
+    assert '"parallel_limit":1' in text
+    assert '"wave_scenario_ids":["buy-or-auction-vermont-light-blue-tempo-01"]' in text
+    assert text.count('"state":"wave_started"') == 1
+    assert text.count("event: scenario_result") == 1
+    assert "event: batch_result" in text
+
+
+def test_micro_batch_stream_emits_per_scenario_llm_deltas(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        api_main,
+        "settings",
+        Settings(
+            runs_dir=tmp_path / "runs",
+            api_host="127.0.0.1",
+            api_port=8000,
+            players_config_path=tmp_path / "players.json",
+        ),
+    )
+    monkeypatch.setattr(api_micro, "OpenRouterClient", StreamingOpenRouter)
+    client = TestClient(api_main.app)
+    with client.stream(
+        "POST",
+        "/micro/batches/stream",
+        json={
+            "suite_id": "micro-v1",
+            "openrouter_model_ids": ["openai/gpt-oss-120b"],
+            "prompt_condition": "live_game",
+            "scenario_ids": ["buy-or-auction-vermont-light-blue-tempo-01"],
+        },
+    ) as response:
+        assert response.status_code == 200
+        text = "".join(response.iter_text())
+    assert "event: scenario_started" in text
+    assert "event: llm_delta" in text
+    assert '"scenario_id":"buy-or-auction-vermont-light-blue-tempo-01"' in text
+    assert "reasoning_delta" in text
+    assert text.index("event: llm_delta") < text.index("event: scenario_result")
 
 
 def test_micro_run_returns_not_found_for_unknown_scenario() -> None:

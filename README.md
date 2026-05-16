@@ -148,7 +148,7 @@ This will ensure that everything is running perfectly.
 ### 4) Run the backend
 ```bash
 cd apps/api
-uv run uvicorn monopoly_api.main:app --reload
+uv run python -m uvicorn monopoly_api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Health check: open `http://127.0.0.1:8000/health` and expect `{"ok": true}`.
