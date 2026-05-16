@@ -30,7 +30,7 @@ def _make_players() -> list[PlayerConfig]:
     ]
 
 
-def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _extract_payload(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     for message in messages:
         if message.get("role") != "user":
             continue
@@ -38,6 +38,33 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
             payload = json.loads(message.get("content", "{}"))
         except json.JSONDecodeError:
             continue
+        if "action_state" in payload and "game_state" in payload:
+            action_state = payload.get("action_state", {})
+            game_state = payload.get("game_state", {})
+            legal_actions = [
+                {"action": tool.get("function", {}).get("name")}
+                for tool in tools or []
+                if tool.get("function", {}).get("name")
+            ]
+            normalized = dict(payload)
+            normalized["decision"] = {
+                "decision_id": json.dumps(
+                    {
+                        "turn_index": game_state.get("metadata", {}).get("turn_index")
+                        if isinstance(game_state, dict)
+                        else None,
+                        "decision_type": action_state.get("decision_type"),
+                        "actor_player_id": action_state.get("actor_player_id"),
+                    },
+                    sort_keys=True,
+                ),
+                "decision_type": action_state.get("decision_type"),
+                "player_id": action_state.get("actor_player_id"),
+                "legal_actions": legal_actions,
+            }
+            normalized["decision_focus"] = action_state
+            normalized["full_state"] = game_state
+            return normalized
         if "decision" in payload and "full_state" in payload:
             return payload
     return None
@@ -150,8 +177,14 @@ class ScriptedOpenRouter:
         self._decision_attempts: dict[str, int] = {}
         self._policy = policy
 
-    async def create_chat_completion(self, *, messages: list[dict[str, Any]], **_: Any) -> OpenRouterResult:
-        payload = _extract_payload(messages)
+    async def create_chat_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        **_: Any,
+    ) -> OpenRouterResult:
+        payload = _extract_payload(messages, tools)
         if payload is None:
             return _tool_call_response("start_auction", {})
         decision = payload["decision"]

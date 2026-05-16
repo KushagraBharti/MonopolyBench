@@ -1,32 +1,30 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, AsyncIterable, Awaitable, Callable
+from datetime import datetime, timezone
+from typing import Any, Awaitable, Callable
 
-from monopoly_engine import Engine
-from monopoly_engine.board import normalize_space_key
-from monopoly_telemetry import RunFiles, build_summary
-
-from .openrouter_client import OpenRouterClient, OpenRouterResult
+from monopoly_telemetry import RunFiles
 
 from .action_validation import validate_action_payload
-from .decision_resolver import SharedDecisionResolver
-from .player_config import EXPECTED_PLAYER_COUNT, PlayerConfig
+from .openrouter_client import OpenRouterResult
+from .player_config import PlayerConfig
 from .prompting import (
     PromptBundle,
     PromptMemory,
-    build_space_key_by_index,
+    build_compact_decision,
+    build_openrouter_tools,
+    build_prompt_bundle,
 )
 
 
-DecisionCallback = Callable[[dict[str, Any]], Awaitable[None]]
+DecisionLogWriter = Callable[[dict[str, Any]], Awaitable[None]]
 
 
 @dataclass(slots=True)
-class DecisionAttempt:
+class DecisionResolutionAttempt:
     prompt_messages: list[dict[str, Any]]
     prompt_payload: dict[str, Any] | None
     prompt_payload_raw: str | None
@@ -45,10 +43,10 @@ class DecisionAttempt:
 
 
 @dataclass(slots=True)
-class DecisionOutcome:
+class DecisionResolutionOutcome:
     action: dict[str, Any]
     decision_meta: dict[str, Any]
-    attempts: list[DecisionAttempt]
+    attempts: list[DecisionResolutionAttempt]
     retry_used: bool
     fallback_used: bool
     fallback_reason: str | None
@@ -56,224 +54,436 @@ class DecisionOutcome:
     automated: bool = False
 
 
-@dataclass(slots=True)
-class PendingResolution:
-    decision: dict[str, Any]
-    outcome: DecisionOutcome
-
-
-class LlmRunner:
+class SharedDecisionResolver:
     def __init__(
         self,
         *,
-        seed: int,
-        players: list[PlayerConfig],
-        run_id: str,
-        openrouter: OpenRouterClient,
-        run_files: RunFiles | None = None,
-        max_turns: int = 200,
-        event_delay_s: float = 0.25,
-        start_ts_ms: int = 0,
-        ts_step_ms: int = 250,
-        max_trade_exchanges: int = 20,
-        max_auction_actions: int = 200,
+        openrouter: Any,
+        run_files: RunFiles | None,
+        prompt_memory: PromptMemory,
+        space_key_by_index: dict[int, str],
     ) -> None:
-        self.run_id = run_id
-        if len(players) != EXPECTED_PLAYER_COUNT:
-            raise ValueError(f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.")
-        self._player_configs = {player.player_id: player for player in players}
         self._openrouter = openrouter
         self._run_files = run_files
-        self._engine = Engine(
-            seed=seed,
-            players=[{"player_id": p.player_id, "name": p.name} for p in players],
-            run_id=run_id,
-            max_turns=max_turns,
-            start_ts_ms=start_ts_ms,
-            ts_step_ms=ts_step_ms,
-            max_trade_exchanges=max_trade_exchanges,
-            max_auction_actions=max_auction_actions,
-        )
-        self._event_delay_s = event_delay_s
-        self._max_trade_exchanges = max_trade_exchanges
-        self._max_auction_actions = max_auction_actions
-        self._space_key_by_index = build_space_key_by_index()
-        self._prompt_memory = PromptMemory(space_key_by_index=self._space_key_by_index)
-        self._decision_resolver = SharedDecisionResolver(
-            openrouter=self._openrouter,
-            run_files=self._run_files,
-            prompt_memory=self._prompt_memory,
+        self._prompt_memory = prompt_memory
+        self._space_key_by_index = space_key_by_index
+
+    async def resolve_decision(
+        self,
+        *,
+        decision: dict[str, Any],
+        player_config: PlayerConfig,
+        log_writer: DecisionLogWriter | None,
+    ) -> DecisionResolutionOutcome:
+        attempts: list[DecisionResolutionAttempt] = []
+        artifact_attempts: list[dict[str, Any]] = []
+
+        async def emit(entry: dict[str, Any]) -> None:
+            if log_writer is not None:
+                await log_writer(entry)
+
+        prompt_bundle = build_prompt_bundle(
+            decision,
+            player_config,
+            memory=self._prompt_memory,
             space_key_by_index=self._space_key_by_index,
         )
-        self._paused = False
-        self._resume_event = asyncio.Event()
-        self._resume_event.set()
-        self._pending_resolution: PendingResolution | None = None
-        self._advance_lock = asyncio.Lock()
-        self._applied_decision_ids: set[str] = set()
+        tools = build_openrouter_tools(build_compact_decision(decision))
 
-    def request_stop(self, reason: str = "STOPPED") -> None:
-        self._engine.request_stop(reason)
-        self.resume()
-
-    def pause(self) -> None:
-        self._paused = True
-        self._resume_event.clear()
-
-    def resume(self) -> None:
-        self._paused = False
-        self._resume_event.set()
-
-    def is_paused(self) -> bool:
-        return self._paused
-
-    def has_pending_resolution(self) -> bool:
-        return self._pending_resolution is not None
-
-    def get_snapshot(self) -> dict[str, Any]:
-        return self._engine.get_snapshot()
-
-    async def run(
-        self,
-        on_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
-        on_snapshot: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
-        on_summary: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
-        on_decision: DecisionCallback | None = None,
-    ) -> None:
-        event_handler = on_event
-        snapshot_handler = on_snapshot
-        summary_handler = on_summary
-        if self._run_files is not None:
-            run_files = self._run_files
-            if event_handler is None:
-                async def _write_event(event: dict[str, Any]) -> None:
-                    run_files.write_event(event)
-
-                event_handler = _write_event
-            if snapshot_handler is None:
-                async def _write_snapshot(snapshot: dict[str, Any]) -> None:
-                    run_files.write_snapshot(snapshot)
-
-                snapshot_handler = _write_snapshot
-            if summary_handler is None:
-                async def _write_summary(summary: dict[str, Any]) -> None:
-                    run_files.write_summary(summary)
-
-                summary_handler = _write_summary
-        try:
-            async for event in self._event_stream(on_decision=on_decision):
-                if event_handler is not None:
-                    await event_handler(event)
-                if snapshot_handler is not None and event["type"] in {
-                    "LLM_DECISION_REQUESTED",
-                    "TURN_ENDED",
-                    "GAME_ENDED",
-                }:
-                    await snapshot_handler(self.get_snapshot())
-            if self._event_delay_s > 0:
-                await asyncio.sleep(self._event_delay_s)
-            if summary_handler is not None:
-                summary: dict[str, Any]
-                if self._run_files is not None:
-                    summary = build_summary(self._run_files)
-                else:
-                    summary = self._engine.build_summary()
-                summary["run_config"] = {
-                    "max_trade_exchanges": self._max_trade_exchanges,
-                    "max_auction_actions": self._max_auction_actions,
+        def response_payload(result: OpenRouterResult | None) -> dict[str, Any]:
+            if result is None:
+                return {
+                    "ok": False,
+                    "status_code": None,
+                    "request_id": None,
+                    "error_type": "no_request",
+                    "error": "No OpenRouter request was made",
                 }
-                await summary_handler(summary)
-        finally:
-            await self._close_openrouter()
+            if result.response_json is not None:
+                return result.response_json
+            return {
+                "ok": False,
+                "status_code": result.status_code,
+                "request_id": result.request_id,
+                "error_type": result.error_type,
+                "error": result.error,
+            }
 
-    async def _event_stream(
-        self,
-        on_decision: DecisionCallback | None = None,
-    ) -> AsyncIterable[dict[str, Any]]:
-        async def write_decision(entry: dict[str, Any]) -> None:
-            if on_decision is not None:
-                await on_decision(entry)
-            elif self._run_files is not None:
-                self._run_files.write_decision(entry)
-
-        while True:
-            await self._await_resume()
-            async with self._advance_lock:
-                _, events, decision, _ = self._engine.advance_until_decision(max_steps=1)
-            if not events and decision is None:
-                break
-            for event in events:
-                await self._await_resume()
-                self._prompt_memory.update(event)
-                yield event
-            if decision is not None:
-                await self._await_resume()
-                outcome = await self._resolve_decision(decision, write_decision)
-                self._pending_resolution = PendingResolution(decision=decision, outcome=outcome)
-                await self._await_resume()
-                pending = self._pending_resolution
-                self._pending_resolution = None
-                if pending is None:
+        def write_artifacts(outcome: DecisionResolutionOutcome) -> None:
+            if self._run_files is None:
+                return
+            for item in artifact_attempts:
+                attempt_index = int(item.get("attempt_index", 0))
+                prompt_item = item.get("prompt_bundle")
+                if not isinstance(prompt_item, PromptBundle):
                     continue
-                decision = pending.decision
-                outcome = self._validate_outcome_after_pause(decision, pending.outcome)
-                async with self._advance_lock:
-                    decision_id = decision["decision_id"]
-                    if decision_id in self._applied_decision_ids:
-                        raise RuntimeError(f"Decision {decision_id} already applied.")
-                    _, action_events, _, _ = self._engine.apply_action(
-                        outcome.action,
-                        decision_meta=outcome.decision_meta,
-                    )
-                    self._applied_decision_ids.add(decision_id)
-                if self._run_files is not None:
-                    self._run_files.write_action(
-                        {
-                            "decision_id": decision["decision_id"],
-                            "actor_player_id": decision["player_id"],
-                            "decision_type": decision["decision_type"],
-                            "turn_index": decision["turn_index"],
-                            "action": outcome.action,
-                        }
-                    )
-                player_config = self._player_configs[decision["player_id"]]
-                resolved_entry = self._build_decision_log_entry(
-                    decision=decision,
-                    player_config=player_config,
-                    phase="decision_resolved",
-                    action=outcome.action,
-                    attempts=outcome.attempts,
-                    retry_used=outcome.retry_used,
-                    fallback_used=outcome.fallback_used,
-                    fallback_reason=outcome.fallback_reason,
-                    action_events=action_events,
-                    applied=True,
-                    sequence_meta=outcome.sequence_meta,
-                    automated=outcome.automated,
+                attempt_item = item.get("attempt")
+                tool_action = item.get("action")
+                validation_errors = item.get("errors")
+                if not isinstance(validation_errors, list):
+                    validation_errors = []
+                error_reason = item.get("error_reason")
+                parsed = {
+                    "schema_version": "v1",
+                    "decision_id": decision["decision_id"],
+                    "attempt_index": attempt_index,
+                    "parsed_tool_call": attempt_item.parsed_tool_call
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
+                    "parsed_tool_calls": attempt_item.parsed_tool_calls
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
+                    "validation_errors": validation_errors,
+                    "error_reason": error_reason,
+                    "tool_action": tool_action,
+                    "openrouter_request_id": attempt_item.openrouter_request_id
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
+                    "openrouter_status_code": attempt_item.openrouter_status_code
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
+                    "openrouter_error_type": attempt_item.error_type
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
+                    "final_action": outcome.action,
+                    "retry_used": outcome.retry_used,
+                    "fallback_used": outcome.fallback_used,
+                    "fallback_reason": outcome.fallback_reason,
+                    "sequence_meta": outcome.sequence_meta,
+                }
+                self._run_files.write_prompt_artifacts(
+                    decision_id=decision["decision_id"],
+                    attempt_index=attempt_index,
+                    system_prompt=prompt_item.system_prompt,
+                    user_payload=prompt_item.user_payload,
+                    tools=tools,
+                    response=response_payload(item.get("result")),
+                    parsed=parsed,
                 )
-                await write_decision(resolved_entry)
-                for event in action_events:
-                    await self._await_resume()
-                    self._prompt_memory.update(event)
-                    yield event
-                if self._engine.is_game_over():
-                    break
-                continue
-            if self._engine.is_game_over():
-                break
 
-    async def _resolve_decision(
-        self,
-        decision: dict[str, Any],
-        log_writer: DecisionCallback | None,
-    ) -> DecisionOutcome:
-        player_id = decision["player_id"]
-        player_config = self._player_configs[player_id]
-        return await self._decision_resolver.resolve_decision(
-            decision=decision,
-            player_config=player_config,
-            log_writer=log_writer,
+        if not tools:
+            fallback_action = self._fallback_action(decision)
+            outcome = self._build_decision_outcome(
+                action=fallback_action,
+                attempts=attempts,
+                retry_used=False,
+                fallback_used=True,
+                fallback_reason="unknown",
+            )
+            artifact_attempts.append(
+                {
+                    "attempt_index": 0,
+                    "prompt_bundle": prompt_bundle,
+                    "result": None,
+                    "attempt": None,
+                    "action": None,
+                    "errors": ["No tools generated"],
+                    "error_reason": "no_tools",
+                }
+            )
+            write_artifacts(outcome)
+            return outcome
+
+        request_start_ms = _now_ms()
+        await emit(
+            self.build_decision_log_entry(
+                decision=decision,
+                player_config=player_config,
+                phase="decision_started",
+                action=None,
+                attempts=[],
+                retry_used=False,
+                fallback_used=False,
+                fallback_reason=None,
+                request_start_ms=request_start_ms,
+                prompt_messages=prompt_bundle.messages,
+                prompt_payload=prompt_bundle.user_payload,
+                prompt_payload_raw=prompt_bundle.user_content,
+            )
         )
+        tool_choice = "required"
+        parallel_tool_calls = False
+        create_kwargs: dict[str, Any] = {
+            "model": player_config.openrouter_model_id,
+            "messages": prompt_bundle.messages,
+            "tools": tools,
+            "tool_choice": tool_choice,
+            "parallel_tool_calls": parallel_tool_calls,
+        }
+        if player_config.reasoning is not None:
+            create_kwargs["reasoning"] = player_config.reasoning
+        result = await self._openrouter.create_chat_completion(**create_kwargs)
+        response_end_ms = _now_ms()
+        request_payload_raw = result.request_payload_raw or self._build_request_payload_raw(
+            model=player_config.openrouter_model_id,
+            messages=prompt_bundle.messages,
+            tools=tools,
+            tool_choice=tool_choice,
+            parallel_tool_calls=parallel_tool_calls,
+            reasoning=player_config.reasoning,
+        )
+        self._write_quality_artifacts(
+            decision_id=decision["decision_id"],
+            attempt_index=0,
+            request_text=request_payload_raw,
+            response_text=result.response_text,
+        )
+        attempt = self._attempt_from_response(
+            prompt_bundle,
+            result,
+            request_start_ms,
+            response_end_ms,
+            include_prompt=False,
+        )
+        attempts.append(attempt)
+        action, errors, error_reason, sequence_meta = self._build_action_from_attempt(decision, attempt)
+        outcome_sequence_meta = sequence_meta
+        artifact_attempts.append(
+            {
+                "attempt_index": 0,
+                "prompt_bundle": prompt_bundle,
+                "result": result,
+                "attempt": attempt,
+                "action": action,
+                "errors": list(attempt.validation_errors),
+                "error_reason": error_reason,
+            }
+        )
+
+        if not result.ok and result.error_type != "invalid_json":
+            outcome = self._build_decision_outcome(
+                action=self._fallback_action(decision),
+                attempts=attempts,
+                retry_used=False,
+                fallback_used=True,
+                fallback_reason=_map_openrouter_error(result.error_type),
+                sequence_meta=outcome_sequence_meta,
+            )
+            write_artifacts(outcome)
+            return outcome
+
+        if errors:
+            retry_bundle = build_prompt_bundle(
+                decision,
+                player_config,
+                memory=self._prompt_memory,
+                space_key_by_index=self._space_key_by_index,
+                retry_errors=errors,
+            )
+            retry_start_ms = _now_ms()
+            retry_kwargs = {
+                "model": player_config.openrouter_model_id,
+                "messages": retry_bundle.messages,
+                "tools": tools,
+                "tool_choice": tool_choice,
+                "parallel_tool_calls": parallel_tool_calls,
+            }
+            if player_config.reasoning is not None:
+                retry_kwargs["reasoning"] = player_config.reasoning
+            retry_result = await self._openrouter.create_chat_completion(**retry_kwargs)
+            retry_end_ms = _now_ms()
+            retry_request_payload_raw = retry_result.request_payload_raw or self._build_request_payload_raw(
+                model=player_config.openrouter_model_id,
+                messages=retry_bundle.messages,
+                tools=tools,
+                tool_choice=tool_choice,
+                parallel_tool_calls=parallel_tool_calls,
+                reasoning=player_config.reasoning,
+            )
+            self._write_quality_artifacts(
+                decision_id=decision["decision_id"],
+                attempt_index=1,
+                request_text=retry_request_payload_raw,
+                response_text=retry_result.response_text,
+            )
+            retry_attempt = self._attempt_from_response(
+                retry_bundle,
+                retry_result,
+                retry_start_ms,
+                retry_end_ms,
+                include_prompt=True,
+            )
+            attempts.append(retry_attempt)
+            retry_action, retry_errors, retry_error_reason, retry_sequence_meta = self._build_action_from_attempt(
+                decision,
+                retry_attempt,
+            )
+            outcome_sequence_meta = retry_sequence_meta
+            artifact_attempts.append(
+                {
+                    "attempt_index": 1,
+                    "prompt_bundle": retry_bundle,
+                    "result": retry_result,
+                    "attempt": retry_attempt,
+                    "action": retry_action,
+                    "errors": list(retry_attempt.validation_errors),
+                    "error_reason": retry_error_reason,
+                }
+            )
+            if not retry_result.ok and retry_result.error_type != "invalid_json":
+                outcome = self._build_decision_outcome(
+                    action=self._fallback_action(decision),
+                    attempts=attempts,
+                    retry_used=True,
+                    fallback_used=True,
+                    fallback_reason=_map_openrouter_error(retry_result.error_type),
+                    sequence_meta=outcome_sequence_meta,
+                )
+                write_artifacts(outcome)
+                return outcome
+            if retry_errors:
+                outcome = self._build_decision_outcome(
+                    action=self._fallback_action(decision),
+                    attempts=attempts,
+                    retry_used=True,
+                    fallback_used=True,
+                    fallback_reason=retry_error_reason or "invalid_action",
+                    sequence_meta=outcome_sequence_meta,
+                )
+                write_artifacts(outcome)
+                return outcome
+            outcome = self._build_decision_outcome(
+                action=retry_action or self._fallback_action(decision),
+                attempts=attempts,
+                retry_used=True,
+                fallback_used=False,
+                fallback_reason=None,
+                sequence_meta=outcome_sequence_meta,
+            )
+            write_artifacts(outcome)
+            return outcome
+
+        outcome = self._build_decision_outcome(
+            action=action or self._fallback_action(decision),
+            attempts=attempts,
+            retry_used=False,
+            fallback_used=False,
+            fallback_reason=None,
+            sequence_meta=outcome_sequence_meta,
+        )
+        write_artifacts(outcome)
+        return outcome
+
+    def ensure_valid_outcome(
+        self,
+        *,
+        decision: dict[str, Any],
+        outcome: DecisionResolutionOutcome,
+    ) -> DecisionResolutionOutcome:
+        errors = validate_decision_action(decision, outcome.action)
+        if not errors:
+            return outcome
+        return self._build_decision_outcome(
+            action=self._fallback_action(decision),
+            attempts=outcome.attempts,
+            retry_used=outcome.retry_used,
+            fallback_used=True,
+            fallback_reason="invalid_action_after_pause",
+            sequence_meta=outcome.sequence_meta,
+            automated=outcome.automated,
+        )
+
+    def build_decision_log_entry(
+        self,
+        *,
+        decision: dict[str, Any],
+        player_config: PlayerConfig,
+        phase: str,
+        action: dict[str, Any] | None,
+        attempts: list[DecisionResolutionAttempt],
+        retry_used: bool,
+        fallback_used: bool,
+        fallback_reason: str | None,
+        request_start_ms: int | None = None,
+        prompt_messages: list[dict[str, Any]] | None = None,
+        prompt_payload: dict[str, Any] | None = None,
+        prompt_payload_raw: str | None = None,
+        action_events: list[dict[str, Any]] | None = None,
+        applied: bool | None = None,
+        sequence_meta: dict[str, Any] | None = None,
+        automated: bool = False,
+    ) -> dict[str, Any]:
+        entry: dict[str, Any] = {
+            "phase": phase,
+            "run_id": decision["run_id"],
+            "turn_index": decision["turn_index"],
+            "decision_id": decision["decision_id"],
+            "decision_type": decision["decision_type"],
+            "player_id": decision["player_id"],
+            "player_name": player_config.name,
+            "openrouter_model_id": player_config.openrouter_model_id,
+            "model_display_name": player_config.model_display_name,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if player_config.reasoning is not None:
+            entry["reasoning"] = player_config.reasoning
+        if phase == "decision_started":
+            entry["request_start_ms"] = request_start_ms
+            entry["prompt_messages"] = prompt_messages or []
+            entry["prompt_payload"] = prompt_payload
+            entry["prompt_payload_raw"] = prompt_payload_raw
+            if sequence_meta is not None:
+                entry["sequence_meta"] = sequence_meta
+            if automated:
+                entry["automated"] = True
+            return entry
+
+        entry["attempts"] = [
+            {
+                "prompt_messages": attempt.prompt_messages,
+                "prompt_payload": attempt.prompt_payload,
+                "prompt_payload_raw": attempt.prompt_payload_raw,
+                "raw_response": attempt.raw_response,
+                "assistant_content": attempt.assistant_content,
+                "parsed_tool_call": attempt.parsed_tool_call,
+                "parsed_tool_calls": attempt.parsed_tool_calls,
+                "validation_errors": attempt.validation_errors,
+                "openrouter_request_id": attempt.openrouter_request_id,
+                "openrouter_status_code": attempt.openrouter_status_code,
+                "error_type": attempt.error_type,
+                "error_message": attempt.error_message,
+                "request_start_ms": attempt.request_start_ms,
+                "response_end_ms": attempt.response_end_ms,
+                "latency_ms": attempt.latency_ms,
+            }
+            for attempt in attempts
+        ]
+        entry["retry_used"] = retry_used
+        entry["fallback_used"] = fallback_used
+        entry["fallback_reason"] = fallback_reason
+        entry["final_action"] = action
+        if sequence_meta is not None:
+            entry["sequence_meta"] = sequence_meta
+        if automated:
+            entry["automated"] = True
+        if fallback_used:
+            entry["fallback_action"] = action
+        if applied is not None:
+            entry["applied"] = applied
+        if action_events is not None:
+            event_ids = [event.get("event_id") for event in action_events]
+            event_types = [event.get("type") for event in action_events]
+            seqs: list[int] = []
+            for event in action_events:
+                seq = event.get("seq")
+                if isinstance(seq, int):
+                    seqs.append(seq)
+            entry["emitted_event_ids"] = event_ids
+            entry["emitted_event_types"] = event_types
+            if seqs:
+                entry["emitted_event_seq_start"] = min(seqs)
+                entry["emitted_event_seq_end"] = max(seqs)
+        decision_start_ms = request_start_ms
+        if decision_start_ms is None and attempts:
+            decision_start_ms = attempts[0].request_start_ms
+        decision_end_ms = attempts[-1].response_end_ms if attempts else None
+        if decision_start_ms is not None:
+            entry["request_start_ms"] = decision_start_ms
+        if decision_end_ms is not None:
+            entry["response_end_ms"] = decision_end_ms
+        if decision_start_ms is not None and decision_end_ms is not None:
+            entry["latency_ms"] = max(decision_end_ms - decision_start_ms, 0)
+        return entry
 
     def _attempt_from_response(
         self,
@@ -283,7 +493,7 @@ class LlmRunner:
         response_end_ms: int | None,
         *,
         include_prompt: bool,
-    ) -> DecisionAttempt:
+    ) -> DecisionResolutionAttempt:
         response_json = result.response_json if result.ok else None
         assistant_content = None
         tool_calls = None
@@ -291,9 +501,7 @@ class LlmRunner:
         if response_json is None:
             errors.append(result.error or "OpenRouter error")
         else:
-            assistant_content = (
-                response_json.get("choices", [{}])[0].get("message", {}).get("content")
-            )
+            assistant_content = response_json.get("choices", [{}])[0].get("message", {}).get("content")
             tool_calls, parse_error = parse_tool_calls(response_json)
             if parse_error:
                 errors.append(parse_error)
@@ -308,7 +516,7 @@ class LlmRunner:
             prompt_payload = prompt.user_payload
             prompt_payload_raw = prompt.user_content
         first_tool_call = tool_calls[0] if tool_calls else None
-        return DecisionAttempt(
+        return DecisionResolutionAttempt(
             prompt_messages=prompt_messages,
             prompt_payload=prompt_payload,
             prompt_payload_raw=prompt_payload_raw,
@@ -329,7 +537,7 @@ class LlmRunner:
     def _build_action_from_attempt(
         self,
         decision: dict[str, Any],
-        attempt: DecisionAttempt,
+        attempt: DecisionResolutionAttempt,
     ) -> tuple[dict[str, Any] | None, list[str], str | None, dict[str, Any] | None]:
         parsed_tool_calls = attempt.parsed_tool_calls or []
         if not parsed_tool_calls:
@@ -337,12 +545,10 @@ class LlmRunner:
             if not attempt.validation_errors:
                 attempt.validation_errors.extend(errors)
             return None, errors, "invalid_tool_call", None
-
         if len(parsed_tool_calls) != 1:
             errors = [f"Expected exactly one tool call, got {len(parsed_tool_calls)}"]
             attempt.validation_errors.extend(errors)
             return None, errors, "invalid_tool_call", None
-
         action, conversion_error = tool_call_to_action(decision, parsed_tool_calls[0])
         if action is None:
             errors = [conversion_error or "Unable to map tool call to action"]
@@ -357,74 +563,24 @@ class LlmRunner:
     def _build_decision_outcome(
         self,
         *,
-        decision: dict[str, Any],
         action: dict[str, Any],
-        attempts: list[DecisionAttempt],
+        attempts: list[DecisionResolutionAttempt],
         retry_used: bool,
         fallback_used: bool,
         fallback_reason: str | None,
         sequence_meta: dict[str, Any] | None = None,
         automated: bool = False,
-    ) -> DecisionOutcome:
+    ) -> DecisionResolutionOutcome:
         decision_meta: dict[str, Any] = {"valid": True, "error": None}
         if fallback_used:
-            decision_meta = {
-                "valid": False,
-                "error": f"fallback:{fallback_reason or 'unknown'}",
-            }
-        return DecisionOutcome(
+            decision_meta = {"valid": False, "error": f"fallback:{fallback_reason or 'unknown'}"}
+        return DecisionResolutionOutcome(
             action=action,
             decision_meta=decision_meta,
             attempts=attempts,
             retry_used=retry_used,
             fallback_used=fallback_used,
             fallback_reason=fallback_reason,
-            sequence_meta=sequence_meta,
-            automated=automated,
-        )
-
-    def _validate_outcome_after_pause(
-        self,
-        decision: dict[str, Any],
-        outcome: DecisionOutcome,
-    ) -> DecisionOutcome:
-        return self._decision_resolver.ensure_valid_outcome(decision=decision, outcome=outcome)
-
-    def _build_decision_log_entry(
-        self,
-        *,
-        decision: dict[str, Any],
-        player_config: PlayerConfig,
-        phase: str,
-        action: dict[str, Any] | None,
-        attempts: list[DecisionAttempt],
-        retry_used: bool,
-        fallback_used: bool,
-        fallback_reason: str | None,
-        request_start_ms: int | None = None,
-        prompt_messages: list[dict[str, Any]] | None = None,
-        prompt_payload: dict[str, Any] | None = None,
-        prompt_payload_raw: str | None = None,
-        action_events: list[dict[str, Any]] | None = None,
-        applied: bool | None = None,
-        sequence_meta: dict[str, Any] | None = None,
-        automated: bool = False,
-    ) -> dict[str, Any]:
-        return self._decision_resolver.build_decision_log_entry(
-            decision=decision,
-            player_config=player_config,
-            phase=phase,
-            action=action,
-            attempts=attempts,
-            retry_used=retry_used,
-            fallback_used=fallback_used,
-            fallback_reason=fallback_reason,
-            request_start_ms=request_start_ms,
-            prompt_messages=prompt_messages,
-            prompt_payload=prompt_payload,
-            prompt_payload_raw=prompt_payload_raw,
-            action_events=action_events,
-            applied=applied,
             sequence_meta=sequence_meta,
             automated=automated,
         )
@@ -469,48 +625,58 @@ class LlmRunner:
             elif legal_actions:
                 action_name = legal_actions[0]
                 auction_args = {}
-            return with_messages({
-                "schema_version": "v1",
-                "decision_id": decision_id,
-                "action": action_name,
-                "args": auction_args,
-            })
+            return with_messages(
+                {
+                    "schema_version": "v1",
+                    "decision_id": decision_id,
+                    "action": action_name,
+                    "args": auction_args,
+                }
+            )
+
         if decision.get("decision_type") == "TRADE_RESPONSE_DECISION":
             if "reject_trade" in legal_actions:
-                return with_messages({
-                    "schema_version": "v1",
-                    "decision_id": decision_id,
-                    "action": "reject_trade",
-                    "args": {},
-                })
+                return with_messages(
+                    {
+                        "schema_version": "v1",
+                        "decision_id": decision_id,
+                        "action": "reject_trade",
+                        "args": {},
+                    }
+                )
             if "accept_trade" in legal_actions:
-                return with_messages({
-                    "schema_version": "v1",
-                    "decision_id": decision_id,
-                    "action": "accept_trade",
-                    "args": {},
-                })
+                return with_messages(
+                    {
+                        "schema_version": "v1",
+                        "decision_id": decision_id,
+                        "action": "accept_trade",
+                        "args": {},
+                    }
+                )
             if "counter_trade" in legal_actions:
-                return with_messages({
-                    "schema_version": "v1",
-                    "decision_id": decision_id,
-                    "action": "counter_trade",
-                    "args": {
-                        "offer": {"cash": 0, "properties": [], "get_out_of_jail_cards": 0},
-                        "request": {"cash": 0, "properties": [], "get_out_of_jail_cards": 0},
-                    },
-                })
-        if decision.get("decision_type") == "TRADE_PROPOSE_DECISION":
-            if "propose_trade" in legal_actions:
-                players = decision.get("state", {}).get("players", [])
-                actor_id = decision.get("player_id")
-                target_id = None
-                for entry in players:
-                    if entry.get("player_id") != actor_id and not entry.get("bankrupt"):
-                        target_id = entry.get("player_id")
-                        break
-                if target_id:
-                    return with_messages({
+                return with_messages(
+                    {
+                        "schema_version": "v1",
+                        "decision_id": decision_id,
+                        "action": "counter_trade",
+                        "args": {
+                            "offer": {"cash": 0, "properties": [], "get_out_of_jail_cards": 0},
+                            "request": {"cash": 0, "properties": [], "get_out_of_jail_cards": 0},
+                        },
+                    }
+                )
+
+        if decision.get("decision_type") == "TRADE_PROPOSE_DECISION" and "propose_trade" in legal_actions:
+            players = decision.get("state", {}).get("players", [])
+            actor_id = decision.get("player_id")
+            target_id = None
+            for entry in players:
+                if entry.get("player_id") != actor_id and not entry.get("bankrupt"):
+                    target_id = entry.get("player_id")
+                    break
+            if target_id:
+                return with_messages(
+                    {
                         "schema_version": "v1",
                         "decision_id": decision_id,
                         "action": "propose_trade",
@@ -519,7 +685,8 @@ class LlmRunner:
                             "offer": {"cash": 0, "properties": [], "get_out_of_jail_cards": 0},
                             "request": {"cash": 0, "properties": [], "get_out_of_jail_cards": 0},
                         },
-                    })
+                    }
+                )
 
         def build_plan_args(indices: list[int] | None) -> dict[str, Any] | None:
             if not indices:
@@ -528,10 +695,7 @@ class LlmRunner:
             if space_key is None:
                 return None
             board = decision.get("state", {}).get("board", [])
-            matching: dict[str, Any] = next(
-                (space for space in board if space.get("index") == indices[0]),
-                {},
-            )
+            matching: dict[str, Any] = next((space for space in board if space.get("index") == indices[0]), {})
             houses = int(matching.get("houses", 0))
             hotel = bool(matching.get("hotel", False))
             kind = "HOTEL" if hotel or houses >= 4 else "HOUSE"
@@ -544,10 +708,7 @@ class LlmRunner:
             if space_key is None:
                 return None
             board = decision.get("state", {}).get("board", [])
-            matching: dict[str, Any] = next(
-                (space for space in board if space.get("index") == indices[0]),
-                {},
-            )
+            matching: dict[str, Any] = next((space for space in board if space.get("index") == indices[0]), {})
             hotel = bool(matching.get("hotel", False))
             kind = "HOTEL" if hotel else "HOUSE"
             return {"sell_plan": [{"space_key": space_key, "kind": kind, "count": 1}]}
@@ -568,8 +729,7 @@ class LlmRunner:
             args = {}
         elif "mortgage_property" in legal_actions:
             space_key = first_space_key(
-                post_options.get("mortgageable_space_indices")
-                or liq_options.get("mortgageable_space_indices")
+                post_options.get("mortgageable_space_indices") or liq_options.get("mortgageable_space_indices")
             )
             if space_key:
                 action_name = "mortgage_property"
@@ -610,12 +770,14 @@ class LlmRunner:
         elif legal_actions:
             action_name = legal_actions[0]
             args = {}
-        return with_messages({
-            "schema_version": "v1",
-            "decision_id": decision_id,
-            "action": action_name,
-            "args": args,
-        })
+        return with_messages(
+            {
+                "schema_version": "v1",
+                "decision_id": decision_id,
+                "action": action_name,
+                "args": args,
+            }
+        )
 
     def _build_request_payload_raw(
         self,
@@ -627,11 +789,7 @@ class LlmRunner:
         parallel_tool_calls: bool | None,
         reasoning: dict[str, Any] | None,
     ) -> str:
-        payload: dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "temperature": 0.0,
-        }
+        payload: dict[str, Any] = {"model": model, "messages": messages, "temperature": 0.0}
         if tools is not None:
             payload["tools"] = tools
         if tool_choice is not None:
@@ -658,19 +816,6 @@ class LlmRunner:
             request_text=request_text,
             response_text=response_text,
         )
-
-    async def _close_openrouter(self) -> None:
-        close = getattr(self._openrouter, "aclose", None)
-        if close is None:
-            return
-        result = close()
-        if asyncio.iscoroutine(result):
-            await result
-
-    async def _await_resume(self) -> None:
-        if self._resume_event.is_set():
-            return
-        await self._resume_event.wait()
 
 
 def _now_ms() -> int:
@@ -704,24 +849,14 @@ def parse_tool_calls(response_json: dict[str, Any]) -> tuple[list[dict[str, Any]
             name = func.get("name")
             if not isinstance(name, str) or not name.strip():
                 return None, f"Tool call #{idx} missing function.name"
-            parsed_calls.append(
-                {
-                    "name": name,
-                    "arguments": func.get("arguments"),
-                }
-            )
+            parsed_calls.append({"name": name, "arguments": func.get("arguments")})
         return parsed_calls, None
     function_call = message.get("function_call")
     if function_call:
         name = function_call.get("name")
         if not isinstance(name, str) or not name.strip():
             return None, "function_call missing name"
-        return [
-            {
-                "name": name,
-                "arguments": function_call.get("arguments"),
-            }
-        ], None
+        return [{"name": name, "arguments": function_call.get("arguments")}], None
     return None, "No tool call found"
 
 
@@ -800,7 +935,7 @@ def _normalize_kind(value: Any) -> Any:
 
 def _normalize_space_key_value(value: Any) -> Any:
     if isinstance(value, str):
-        return normalize_space_key(value)
+        return value.strip().replace(" ", "_").replace("-", "_").upper()
     return value
 
 
@@ -871,9 +1006,7 @@ def _canonicalize_trade_bundle(
         return None, errors
     properties = bundle.get("properties")
     if isinstance(properties, list):
-        bundle["properties"] = [
-            _normalize_space_key_value(item) if isinstance(item, str) else item for item in properties
-        ]
+        bundle["properties"] = [_normalize_space_key_value(item) if isinstance(item, str) else item for item in properties]
     return bundle, []
 
 
@@ -914,8 +1047,6 @@ def _canonicalize_action_args(
 ) -> tuple[dict[str, Any], list[str]]:
     if not isinstance(args_payload, dict):
         return {}, []
-
-    # Zero-arg actions ignore extra fields after message extraction.
     if action_name in {
         "ROLL_DICE",
         "buy_property",
@@ -930,55 +1061,31 @@ def _canonicalize_action_args(
         "declare_bankruptcy",
     }:
         return {}, []
-
     if action_name == "bid_auction":
-        args, errors = _canonicalize_object_keys(
-            args_payload,
-            allowed_keys={"bid_amount"},
-            context=action_name,
-        )
-        return args, errors
-
+        return _canonicalize_object_keys(args_payload, allowed_keys={"bid_amount"}, context=action_name)
     if action_name in {"mortgage_property", "unmortgage_property"}:
-        args, errors = _canonicalize_object_keys(
-            args_payload,
-            allowed_keys={"space_key"},
-            context=action_name,
-        )
+        args, errors = _canonicalize_object_keys(args_payload, allowed_keys={"space_key"}, context=action_name)
         if errors:
             return {}, errors
         if "space_key" in args:
             args["space_key"] = _normalize_space_key_value(args["space_key"])
         return args, []
-
     if action_name in {"build_houses_or_hotel", "sell_houses_or_hotel"}:
         plan_key = "build_plan" if action_name == "build_houses_or_hotel" else "sell_plan"
-        args, errors = _canonicalize_object_keys(
-            args_payload,
-            allowed_keys={plan_key},
-            context=action_name,
-        )
+        args, errors = _canonicalize_object_keys(args_payload, allowed_keys={plan_key}, context=action_name)
         if errors:
             return {}, errors
         if plan_key in args:
-            normalized_entries, entry_errors = _canonicalize_plan_entries(
-                args.get(plan_key),
-                context=f"{action_name}.{plan_key}",
-            )
+            normalized_entries, entry_errors = _canonicalize_plan_entries(args.get(plan_key), context=f"{action_name}.{plan_key}")
             if entry_errors:
                 return {}, entry_errors
             args[plan_key] = normalized_entries
         return args, []
-
     if action_name in {"propose_trade", "counter_trade"}:
         top_level = {"offer", "request"}
         if action_name == "propose_trade":
             top_level.add("to_player_id")
-        args, errors = _canonicalize_object_keys(
-            args_payload,
-            allowed_keys=top_level,
-            context=action_name,
-        )
+        args, errors = _canonicalize_object_keys(args_payload, allowed_keys=top_level, context=action_name)
         if errors:
             return {}, errors
         if "offer" in args:
@@ -987,23 +1094,13 @@ def _canonicalize_action_args(
                 return {}, offer_errors
             args["offer"] = offer
         if "request" in args:
-            request, request_errors = _canonicalize_trade_bundle(
-                args.get("request"),
-                context=f"{action_name}.request",
-            )
+            request, request_errors = _canonicalize_trade_bundle(args.get("request"), context=f"{action_name}.request")
             if request_errors:
                 return {}, request_errors
             args["request"] = request
         return args, []
-
     if action_name == "NOOP":
-        args, errors = _canonicalize_object_keys(
-            args_payload,
-            allowed_keys={"reason"},
-            context=action_name,
-        )
-        return args, errors
-
+        return _canonicalize_object_keys(args_payload, allowed_keys={"reason"}, context=action_name)
     return dict(args_payload), []
 
 
@@ -1012,7 +1109,6 @@ def validate_decision_action(decision: dict[str, Any], action: dict[str, Any]) -
     schema_ok, schema_errors = validate_action_payload(action)
     if not schema_ok:
         errors.extend(schema_errors)
-
     legal_actions = decision.get("legal_actions", [])
     allowed = {entry.get("action") for entry in legal_actions}
     if action.get("action") not in allowed:
@@ -1023,5 +1119,4 @@ def validate_decision_action(decision: dict[str, Any], action: dict[str, Any]) -
     private_thought = action.get("private_thought")
     if not isinstance(private_thought, str):
         errors.append("Missing required private_thought")
-
     return errors

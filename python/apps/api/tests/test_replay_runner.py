@@ -75,7 +75,7 @@ def _tool_calls_response(calls: list[tuple[str, dict[str, Any]]]) -> OpenRouterR
     )
 
 
-def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _extract_payload(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     for message in messages:
         if message.get("role") != "user":
             continue
@@ -85,10 +85,21 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
             continue
         if "action_state" in payload and "game_state" in payload:
             action_state = payload.get("action_state", {})
+            game_state = payload.get("game_state", {})
+            legal_actions = [
+                {"action": tool.get("function", {}).get("name")}
+                for tool in tools or []
+                if tool.get("function", {}).get("name")
+            ]
             normalized = dict(payload)
-            normalized["decision"] = action_state.get("decision", {})
-            normalized["decision_focus"] = action_state.get("decision_focus", {})
-            normalized["full_state"] = payload.get("game_state")
+            normalized["decision"] = {
+                "turn_index": game_state.get("metadata", {}).get("turn_index") if isinstance(game_state, dict) else None,
+                "decision_type": action_state.get("decision_type"),
+                "player_id": action_state.get("actor_player_id"),
+                "legal_actions": legal_actions,
+            }
+            normalized["decision_focus"] = action_state
+            normalized["full_state"] = game_state
             return normalized
         if "decision" in payload and "full_state" in payload:
             return payload
@@ -103,8 +114,14 @@ class TradeOpenRouter:
         self._policy = policy
         self._trade_proposed_turns: set[int] = set()
 
-    async def create_chat_completion(self, *, messages: list[dict[str, Any]], **_: Any) -> OpenRouterResult:
-        payload = _extract_payload(messages)
+    async def create_chat_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        **_: Any,
+    ) -> OpenRouterResult:
+        payload = _extract_payload(messages, tools)
         if payload is None:
             return _tool_call_response("end_turn", {})
         decision = payload["decision"]

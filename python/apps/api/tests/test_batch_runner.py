@@ -8,7 +8,7 @@ from monopoly_arena.batch_run import run_batch
 from monopoly_arena.paths import default_players_config_path
 
 
-def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _extract_payload(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     for message in messages:
         if message.get("role") != "user":
             continue
@@ -18,9 +18,18 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
             continue
         if "action_state" in payload and "game_state" in payload:
             action_state = payload.get("action_state", {})
+            legal_actions = [
+                {"action": tool.get("function", {}).get("name")}
+                for tool in tools or []
+                if tool.get("function", {}).get("name")
+            ]
             normalized = dict(payload)
-            normalized["decision"] = action_state.get("decision", {})
-            normalized["decision_focus"] = action_state.get("decision_focus", {})
+            normalized["decision"] = {
+                "decision_type": action_state.get("decision_type"),
+                "player_id": action_state.get("actor_player_id"),
+                "legal_actions": legal_actions,
+            }
+            normalized["decision_focus"] = action_state
             normalized["full_state"] = payload.get("game_state")
             return normalized
         if "decision" in payload and "full_state" in payload:
@@ -29,8 +38,8 @@ def _extract_payload(messages: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 class DeterministicOpenRouter:
-    async def create_chat_completion(self, *, messages: list[dict[str, Any]], **_: Any):
-        payload = _extract_payload(messages)
+    async def create_chat_completion(self, *, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **_: Any):
+        payload = _extract_payload(messages, tools)
         decision = payload["decision"] if payload else {}
         legal = {entry.get("action") for entry in decision.get("legal_actions", [])}
         if "buy_property" in legal:

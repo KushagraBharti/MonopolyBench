@@ -53,6 +53,8 @@ class PromptMemory:
     ) -> None:
         self._space_key_by_index = space_key_by_index or SPACE_KEY_BY_INDEX_LOOKUP
         self._public_timeline: deque[dict[str, Any]] = deque(maxlen=max(public_chat_limit, recent_actions_limit))
+        self._pending_messages_by_decision: dict[str, dict[str, Any]] = {}
+        self._pending_messages_by_player: dict[str, deque[dict[str, Any]]] = defaultdict(deque)
         self._private_thoughts: dict[str, deque[dict[str, Any]]] = defaultdict(
             lambda: deque(maxlen=private_thought_limit)
         )
@@ -61,16 +63,20 @@ class PromptMemory:
         event_type = event.get("type")
         payload = event.get("payload", {})
         turn_index = event.get("turn_index")
-        if event_type == "LLM_PUBLIC_MESSAGE":
-            self._public_timeline.append(
-                {
+        if event_type == "LLM_DECISION_RESPONSE":
+            decision_id = payload.get("decision_id")
+            player_id = payload.get("player_id")
+            action_name = payload.get("action_name")
+            if isinstance(decision_id, str) and isinstance(player_id, str) and isinstance(action_name, str):
+                self._pending_messages_by_decision[decision_id] = {
                     "turn_index": turn_index,
-                    "type": "LLM_PUBLIC_MESSAGE",
-                    "player_id": payload.get("player_id"),
-                    "message": payload.get("message"),
-                    "decision_id": payload.get("decision_id"),
+                    "player_id": player_id,
+                    "action_name": action_name,
+                    "message": None,
                 }
-            )
+            return
+        if event_type == "LLM_PUBLIC_MESSAGE":
+            self._track_public_message(turn_index, payload)
             return
         if event_type == "LLM_PRIVATE_THOUGHT":
             player_id = payload.get("player_id")
@@ -83,9 +89,10 @@ class PromptMemory:
                 )
             return
 
-        summary = _summarize_action_event(event, self._space_key_by_index)
+        pending = self._claim_pending_message(event)
+        summary = _summarize_action_event(event, self._space_key_by_index, pending=pending)
         if summary is not None:
-            self._public_timeline.append(summary)
+            self._append_or_merge_summary(summary)
 
     def snapshot_for_player(self, player_id: str) -> dict[str, Any]:
         return {
@@ -93,59 +100,376 @@ class PromptMemory:
             "your_private_thoughts_last_10": list(self._private_thoughts.get(player_id, [])),
         }
 
+    def _track_public_message(self, turn_index: int | None, payload: dict[str, Any]) -> None:
+        decision_id = payload.get("decision_id")
+        player_id = payload.get("player_id")
+        if not isinstance(player_id, str):
+            return
+        pending = None
+        if isinstance(decision_id, str):
+            pending = self._pending_messages_by_decision.pop(decision_id, None)
+        if pending is None:
+            pending = {
+                "turn_index": turn_index,
+                "player_id": player_id,
+                "action_name": None,
+                "message": None,
+            }
+        message = payload.get("message")
+        pending["message"] = message if isinstance(message, str) and message.strip() else None
+        self._pending_messages_by_player[player_id].append(pending)
+
+    def _claim_pending_message(self, event: dict[str, Any]) -> dict[str, Any] | None:
+        event_type = event.get("type")
+        if event_type == "TURN_ENDED":
+            for queue in self._pending_messages_by_player.values():
+                for pending in list(queue):
+                    if pending.get("action_name") == "end_turn":
+                        queue.remove(pending)
+                        return pending
+        candidate_player_ids = _candidate_player_ids_for_event(event)
+        for player_id in candidate_player_ids:
+            queue = self._pending_messages_by_player.get(player_id)
+            if not queue:
+                continue
+            for pending in list(queue):
+                action_name = pending.get("action_name")
+                if _is_primary_event_for_action(action_name, event_type):
+                    queue.remove(pending)
+                    return pending
+        return None
+
+    def _append_or_merge_summary(self, summary: dict[str, Any]) -> None:
+        if self._public_timeline and _can_merge_timeline_items(self._public_timeline[-1], summary):
+            previous = self._public_timeline[-1]
+            previous["action"] = _merge_action_text(str(previous["action"]), str(summary["action"]))
+            if previous.get("message") is None and summary.get("message") is not None:
+                previous["message"] = summary["message"]
+            return
+        self._public_timeline.append(summary)
+
+
+PRIMARY_EVENT_BY_ACTION = {
+    "buy_property": {"PROPERTY_PURCHASED"},
+    "start_auction": {"AUCTION_STARTED"},
+    "bid_auction": {"AUCTION_BID_PLACED"},
+    "drop_out": {"AUCTION_PLAYER_DROPPED"},
+    "propose_trade": {"TRADE_PROPOSED"},
+    "accept_trade": {"TRADE_ACCEPTED"},
+    "reject_trade": {"TRADE_REJECTED"},
+    "counter_trade": {"TRADE_COUNTERED"},
+    "mortgage_property": {"PROPERTY_MORTGAGED"},
+    "unmortgage_property": {"PROPERTY_UNMORTGAGED"},
+    "build_houses_or_hotel": {"HOUSE_BUILT", "HOTEL_BUILT"},
+    "sell_houses_or_hotel": {"HOUSE_SOLD", "HOTEL_SOLD"},
+    "declare_bankruptcy": {"CASH_CHANGED"},
+    "pay_jail_fine": {"CASH_CHANGED"},
+    "use_get_out_of_jail_card": {"DICE_ROLLED"},
+    "roll_for_doubles": {"DICE_ROLLED"},
+    "end_turn": {"TURN_ENDED"},
+}
+
+
+def _is_primary_event_for_action(action_name: Any, event_type: Any) -> bool:
+    if not isinstance(action_name, str) or not isinstance(event_type, str):
+        return False
+    return event_type in PRIMARY_EVENT_BY_ACTION.get(action_name, set())
+
+
+def _candidate_player_ids_for_event(event: dict[str, Any]) -> list[str]:
+    payload = event.get("payload", {})
+    actor = event.get("actor", {})
+    player_ids = [
+        payload.get("player_id"),
+        payload.get("from_player_id"),
+        payload.get("bidder_player_id"),
+        payload.get("initiator_player_id"),
+        payload.get("counterparty_player_id"),
+        actor.get("player_id") if isinstance(actor, dict) else None,
+    ]
+    return [player_id for player_id in player_ids if isinstance(player_id, str)]
+
+
+def _format_money(amount: Any) -> str:
+    if isinstance(amount, int):
+        return f"${amount}"
+    return "$?"
+
+
+def _format_signed_money(delta: Any) -> str:
+    if isinstance(delta, int):
+        prefix = "+" if delta >= 0 else "-"
+        return f"{prefix}${abs(delta)}"
+    return "$?"
+
+
+def _message_from_pending(pending: dict[str, Any] | None) -> str | None:
+    if not pending:
+        return None
+    message = pending.get("message")
+    return message if isinstance(message, str) and message.strip() else None
+
+
+def _timeline_item(
+    *,
+    turn_index: Any,
+    player_id: Any,
+    event_type: str,
+    action: str,
+    pending: dict[str, Any] | None,
+) -> dict[str, Any]:
+    return {
+        "turn_index": turn_index,
+        "player_id": player_id,
+        "event_type": event_type,
+        "action": action,
+        "message": _message_from_pending(pending),
+    }
+
+
+def _space_key_from_payload(payload: dict[str, Any], space_key_by_index: dict[int, str]) -> str | None:
+    space_key = payload.get("property_space")
+    if isinstance(space_key, str):
+        return space_key
+    space_index = payload.get("space_index")
+    return space_key_for_index(int(space_index), space_key_by_index) if space_index is not None else None
+
+
+def _trade_bundle_text(bundle: Any) -> str:
+    if not isinstance(bundle, dict):
+        return "nothing"
+    parts: list[str] = []
+    cash = bundle.get("cash", 0)
+    if isinstance(cash, int) and cash:
+        parts.append(_format_money(cash))
+    properties = bundle.get("properties", [])
+    if isinstance(properties, list) and properties:
+        parts.append(", ".join(str(item) for item in properties))
+    jail_cards = bundle.get("get_out_of_jail_cards", 0)
+    if isinstance(jail_cards, int) and jail_cards:
+        label = "Get Out of Jail Free card" if jail_cards == 1 else "Get Out of Jail Free cards"
+        parts.append(f"{jail_cards} {label}")
+    return " + ".join(parts) if parts else "nothing"
+
+
+def _trade_action_text(verb: str, payload: dict[str, Any]) -> str:
+    initiator = payload.get("initiator_player_id")
+    counterparty = payload.get("counterparty_player_id")
+    offer = _trade_bundle_text(payload.get("offer"))
+    request = _trade_bundle_text(payload.get("request"))
+    if verb == "accepted":
+        return f"accepted trade with {initiator}: {initiator} gives {offer}; {counterparty} gives {request}"
+    if verb == "rejected":
+        return f"rejected trade with {initiator}: {initiator} offered {offer} for {request}"
+    if verb == "countered":
+        return f"countered trade with {counterparty}: offer {offer}; request {request}"
+    return f"proposed trade to {counterparty}: offer {offer}; request {request}"
+
+
+def _building_action_fragment(event_type: str, count: Any, space_key: str | None) -> str:
+    safe_count = count if isinstance(count, int) else "?"
+    building = "hotel" if "HOTEL" in event_type else "house"
+    if safe_count != 1:
+        building += "s"
+    verb = "built" if event_type in {"HOUSE_BUILT", "HOTEL_BUILT"} else "sold"
+    return f"{verb} {safe_count} {building} on {space_key}"
+
+
+def _can_merge_timeline_items(previous: dict[str, Any], current: dict[str, Any]) -> bool:
+    mergeable = {
+        ("BUILDINGS_BUILT", "BUILDINGS_BUILT"),
+        ("BUILDINGS_SOLD", "BUILDINGS_SOLD"),
+    }
+    return (
+        (previous.get("event_type"), current.get("event_type")) in mergeable
+        and previous.get("turn_index") == current.get("turn_index")
+        and previous.get("player_id") == current.get("player_id")
+    )
+
+
+def _merge_action_text(previous: str, current: str) -> str:
+    if " and " in previous:
+        return f"{previous}, and {current}"
+    return f"{previous} and {current}"
+
 
 def _summarize_action_event(
     event: dict[str, Any],
     space_key_by_index: dict[int, str],
+    *,
+    pending: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     event_type = event.get("type")
     payload = event.get("payload", {})
     turn_index = event.get("turn_index")
     if event_type == "PROPERTY_PURCHASED":
-        space_index = payload.get("space_index")
-        space_key = space_key_for_index(int(space_index), space_key_by_index) if space_index is not None else None
-        return {
-            "turn_index": turn_index,
-            "type": "PROPERTY_PURCHASED",
-            "player_id": payload.get("player_id"),
-            "space_key": space_key,
-            "amount": payload.get("price"),
-        }
+        space_key = _space_key_from_payload(payload, space_key_by_index)
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="PROPERTY_PURCHASED",
+            action=f"bought {space_key} for {_format_money(payload.get('price'))}",
+            pending=pending,
+        )
     if event_type == "RENT_PAID":
-        space_index = payload.get("space_index")
-        space_key = space_key_for_index(int(space_index), space_key_by_index) if space_index is not None else None
-        return {
-            "turn_index": turn_index,
-            "type": "RENT_PAID",
-            "from_player_id": payload.get("from_player_id"),
-            "to_player_id": payload.get("to_player_id"),
-            "space_key": space_key,
-            "amount": payload.get("amount"),
-        }
+        space_key = _space_key_from_payload(payload, space_key_by_index)
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("from_player_id"),
+            event_type="RENT_PAID",
+            action=(
+                f"paid {_format_money(payload.get('amount'))} rent to "
+                f"{payload.get('to_player_id')} on {space_key}"
+            ),
+            pending=pending,
+        )
     if event_type == "SENT_TO_JAIL":
-        return {
-            "turn_index": turn_index,
-            "type": "SENT_TO_JAIL",
-            "player_id": payload.get("player_id"),
-            "reason": payload.get("reason"),
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="SENT_TO_JAIL",
+            action=f"was sent to jail ({payload.get('reason')})",
+            pending=pending,
+        )
+    if event_type == "DICE_ROLLED":
+        if pending is None:
+            return None
+        d1 = payload.get("d1")
+        d2 = payload.get("d2")
+        roll = f"{d1}+{d2}"
+        suffix = " and rolled doubles" if payload.get("is_double") else ""
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id") or event.get("actor", {}).get("player_id"),
+            event_type="DICE_ROLLED",
+            action=f"rolled {roll}{suffix}",
+            pending=pending,
+        )
+    if event_type == "AUCTION_STARTED":
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("initiator_player_id"),
+            event_type="AUCTION_STARTED",
+            action=f"started auction for {payload.get('property_space')}",
+            pending=pending,
+        )
+    if event_type == "AUCTION_BID_PLACED":
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("bidder_player_id"),
+            event_type="AUCTION_BID_PLACED",
+            action=f"bid {_format_money(payload.get('bid_amount'))} on {payload.get('property_space')}",
+            pending=pending,
+        )
+    if event_type == "AUCTION_PLAYER_DROPPED":
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="AUCTION_PLAYER_DROPPED",
+            action=f"dropped out of auction for {payload.get('property_space')}",
+            pending=pending,
+        )
+    if event_type == "AUCTION_ENDED":
+        winner_id = payload.get("winner_player_id")
+        if winner_id is None:
+            action = f"auction for {payload.get('property_space')} ended with no winner ({payload.get('reason')})"
+        else:
+            action = (
+                f"auction for {payload.get('property_space')} ended: "
+                f"{winner_id} won for {_format_money(payload.get('winning_bid'))}"
+            )
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=winner_id,
+            event_type="AUCTION_ENDED",
+            action=action,
+            pending=pending,
+        )
+    if event_type in {"TRADE_PROPOSED", "TRADE_COUNTERED", "TRADE_ACCEPTED", "TRADE_REJECTED"}:
+        verb_by_event = {
+            "TRADE_PROPOSED": "proposed",
+            "TRADE_COUNTERED": "countered",
+            "TRADE_ACCEPTED": "accepted",
+            "TRADE_REJECTED": "rejected",
         }
+        player_id = payload.get("initiator_player_id")
+        if event_type in {"TRADE_ACCEPTED", "TRADE_REJECTED", "TRADE_COUNTERED"} and pending:
+            player_id = pending.get("player_id")
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=player_id,
+            event_type=event_type,
+            action=_trade_action_text(verb_by_event[event_type], payload),
+            pending=pending,
+        )
+    if event_type == "TRADE_EXPIRED":
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("counterparty_player_id"),
+            event_type="TRADE_EXPIRED",
+            action=f"trade expired ({payload.get('reason')})",
+            pending=pending,
+        )
+    if event_type == "PROPERTY_MORTGAGED":
+        space_key = _space_key_from_payload(payload, space_key_by_index)
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="PROPERTY_MORTGAGED",
+            action=f"mortgaged {space_key} for {_format_money(payload.get('amount'))}",
+            pending=pending,
+        )
+    if event_type == "PROPERTY_UNMORTGAGED":
+        space_key = _space_key_from_payload(payload, space_key_by_index)
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="PROPERTY_UNMORTGAGED",
+            action=f"unmortgaged {space_key} for {_format_money(payload.get('amount'))}",
+            pending=pending,
+        )
+    if event_type in {"HOUSE_BUILT", "HOTEL_BUILT", "HOUSE_SOLD", "HOTEL_SOLD"}:
+        space_key = _space_key_from_payload(payload, space_key_by_index)
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="BUILDINGS_BUILT" if event_type in {"HOUSE_BUILT", "HOTEL_BUILT"} else "BUILDINGS_SOLD",
+            action=_building_action_fragment(event_type, payload.get("count"), space_key),
+            pending=pending,
+        )
+    if event_type == "TURN_ENDED":
+        if pending is None or _message_from_pending(pending) is None:
+            return None
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=pending.get("player_id"),
+            event_type="TURN_ENDED",
+            action="ended turn",
+            pending=pending,
+        )
     if event_type == "CASH_CHANGED":
         reason = payload.get("reason")
-        if reason not in {
-            "PASS_GO",
-            "TAX_INCOME",
-            "TAX_LUXURY",
-            "BANKRUPTCY",
-            "BANKRUPTCY_ASSETS_TO_BANK",
-        }:
+        if reason == "JAIL_FINE":
+            action = f"paid {_format_money(abs(payload.get('delta', JAIL_FINE)))} to leave jail"
+        elif reason == "PASS_GO":
+            action = f"collected {_format_money(payload.get('delta'))} for passing GO"
+        elif reason == "TAX_INCOME":
+            action = "paid $200 income tax"
+        elif reason == "TAX_LUXURY":
+            action = "paid $100 luxury tax"
+        elif reason == "BANKRUPTCY":
+            action = "declared bankruptcy"
+        elif reason == "BANKRUPTCY_ASSETS_TO_BANK":
+            action = "returned assets to the bank after bankruptcy"
+        else:
             return None
-        return {
-            "turn_index": turn_index,
-            "type": "CASH_CHANGED",
-            "player_id": payload.get("player_id"),
-            "delta": payload.get("delta"),
-            "reason": reason,
-        }
+        return _timeline_item(
+            turn_index=turn_index,
+            player_id=payload.get("player_id"),
+            event_type="CASH_CHANGED",
+            action=action,
+            pending=pending,
+        )
     return None
 
 
@@ -223,8 +547,6 @@ def build_full_state(
         "title": "game_state",
         "metadata": {
             "turn_index": snapshot.get("turn_index"),
-            "phase": snapshot.get("phase"),
-            "active_player_id": snapshot.get("active_player_id"),
             "you_player_id": you_player.get("player_id"),
         },
         "you": you_view,
@@ -320,6 +642,31 @@ def _describe_action(action_name: str) -> str:
         "NOOP": "Take no action.",
     }
     return descriptions.get(action_name, f"Take the {action_name} action.")
+
+
+def build_action_state(
+    decision: dict[str, Any],
+    decision_focus: dict[str, Any],
+) -> dict[str, Any]:
+    action_state: dict[str, Any] = {
+        "title": "action_state",
+        "decision_type": decision.get("decision_type"),
+        "actor_player_id": decision.get("player_id"),
+    }
+    scenario = decision_focus.get("scenario")
+    if isinstance(scenario, dict):
+        action_state["scenario"] = scenario
+    else:
+        for key, value in decision_focus.items():
+            if key in {"schema_version", "decision_id", "decision_type", "actor_player_id", "legal_tools"}:
+                continue
+            action_state[key] = value
+    action_state["available_actions"] = [
+        entry.get("action")
+        for entry in decision.get("legal_actions", [])
+        if entry.get("action")
+    ]
+    return action_state
 
 
 def build_decision_focus(
@@ -821,17 +1168,11 @@ def build_prompt_bundle(
         memory=memory,
         space_key_by_index=space_key_by_index,
     )
-    compact_decision = build_compact_decision(decision)
     decision_focus = build_decision_focus(decision, space_key_by_index=space_key_by_index)
     if retry_errors:
         decision_focus = _with_retry_notes(decision_focus, retry_errors)
-    action_state = {
-        "schema_version": PROMPT_SCHEMA_VERSION,
-        "decision": compact_decision,
-        "decision_focus": decision_focus,
-    }
+    action_state = build_action_state(decision, decision_focus)
     payload = {
-        "schema_version": PROMPT_SCHEMA_VERSION,
         "game_state": full_state,
         "action_state": action_state,
     }
