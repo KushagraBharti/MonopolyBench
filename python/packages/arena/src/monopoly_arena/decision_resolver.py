@@ -21,6 +21,7 @@ from .prompting import (
 
 
 DecisionLogWriter = Callable[[dict[str, Any]], Awaitable[None]]
+RulesValidator = Callable[[dict[str, Any], dict[str, Any]], list[str]]
 
 
 @dataclass(slots=True)
@@ -40,6 +41,8 @@ class DecisionResolutionAttempt:
     request_start_ms: int | None
     response_end_ms: int | None
     latency_ms: int | None
+    outcome: str | None = None
+    reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -62,11 +65,13 @@ class SharedDecisionResolver:
         run_files: RunFiles | None,
         prompt_memory: PromptMemory,
         space_key_by_index: dict[int, str],
+        rules_validator: RulesValidator | None = None,
     ) -> None:
         self._openrouter = openrouter
         self._run_files = run_files
         self._prompt_memory = prompt_memory
         self._space_key_by_index = space_key_by_index
+        self._rules_validator = rules_validator
 
     async def resolve_decision(
         self,
@@ -135,6 +140,12 @@ class SharedDecisionResolver:
                     else None,
                     "validation_errors": validation_errors,
                     "error_reason": error_reason,
+                    "outcome": attempt_item.outcome
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
+                    "reason": attempt_item.reason
+                    if isinstance(attempt_item, DecisionResolutionAttempt)
+                    else None,
                     "tool_action": tool_action,
                     "openrouter_request_id": attempt_item.openrouter_request_id
                     if isinstance(attempt_item, DecisionResolutionAttempt)
@@ -269,6 +280,7 @@ class SharedDecisionResolver:
                 memory=self._prompt_memory,
                 space_key_by_index=self._space_key_by_index,
                 retry_errors=errors,
+                retry_outcome=error_reason,
             )
             retry_start_ms = _now_ms()
             retry_kwargs = {
@@ -337,7 +349,7 @@ class SharedDecisionResolver:
                     attempts=attempts,
                     retry_used=True,
                     fallback_used=True,
-                    fallback_reason=retry_error_reason or "invalid_action",
+                    fallback_reason=_fallback_reason_after_retry(retry_error_reason),
                     sequence_meta=outcome_sequence_meta,
                 )
                 write_artifacts(outcome)
@@ -371,6 +383,8 @@ class SharedDecisionResolver:
         outcome: DecisionResolutionOutcome,
     ) -> DecisionResolutionOutcome:
         errors = validate_decision_action(decision, outcome.action)
+        if not errors and self._rules_validator is not None:
+            errors = self._rules_validator(decision, outcome.action)
         if not errors:
             return outcome
         return self._build_decision_outcome(
@@ -378,7 +392,7 @@ class SharedDecisionResolver:
             attempts=outcome.attempts,
             retry_used=outcome.retry_used,
             fallback_used=True,
-            fallback_reason="invalid_action_after_pause",
+            fallback_reason="illogical_after_pause",
             sequence_meta=outcome.sequence_meta,
             automated=outcome.automated,
         )
@@ -438,6 +452,8 @@ class SharedDecisionResolver:
                 "parsed_tool_call": attempt.parsed_tool_call,
                 "parsed_tool_calls": attempt.parsed_tool_calls,
                 "validation_errors": attempt.validation_errors,
+                "outcome": attempt.outcome,
+                "reason": attempt.reason,
                 "openrouter_request_id": attempt.openrouter_request_id,
                 "openrouter_status_code": attempt.openrouter_status_code,
                 "error_type": attempt.error_type,
@@ -537,27 +553,40 @@ class SharedDecisionResolver:
     def _build_action_from_attempt(
         self,
         decision: dict[str, Any],
-        attempt: DecisionResolutionAttempt,
+        attempt: Any,
+        *,
+        check_rules: bool = True,
     ) -> tuple[dict[str, Any] | None, list[str], str | None, dict[str, Any] | None]:
         parsed_tool_calls = attempt.parsed_tool_calls or []
         if not parsed_tool_calls:
             errors = attempt.validation_errors or ["Missing tool call"]
             if not attempt.validation_errors:
                 attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", None
+            _mark_attempt(attempt, "malformed", "missing_tool_call")
+            return None, errors, "malformed", None
         if len(parsed_tool_calls) != 1:
             errors = [f"Expected exactly one tool call, got {len(parsed_tool_calls)}"]
             attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", None
+            _mark_attempt(attempt, "malformed", "multiple_tool_calls")
+            return None, errors, "malformed", None
         action, conversion_error = tool_call_to_action(decision, parsed_tool_calls[0])
         if action is None:
             errors = [conversion_error or "Unable to map tool call to action"]
             attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", None
+            _mark_attempt(attempt, "malformed", _malformed_reason_from_errors(errors))
+            return None, errors, "malformed", None
         errors = validate_decision_action(decision, action)
         if errors:
             attempt.validation_errors.extend(errors)
-            return action, errors, "invalid_action", None
+            _mark_attempt(attempt, "malformed", _malformed_reason_from_errors(errors))
+            return action, errors, "malformed", None
+        if check_rules and self._rules_validator is not None:
+            rule_errors = self._rules_validator(decision, action)
+            if rule_errors:
+                attempt.validation_errors.extend(rule_errors)
+                _mark_attempt(attempt, "illogical", _illogical_reason_from_errors(rule_errors))
+                return action, rule_errors, "illogical", None
+        _mark_attempt(attempt, "valid", None)
         return action, [], None, {"parsed_tool_calls_count": len(parsed_tool_calls)}
 
     def _build_decision_outcome(
@@ -834,6 +863,63 @@ def _map_openrouter_error(error_type: str | None) -> str:
     if error_type is None:
         return "unknown"
     return mapping.get(error_type, "unknown")
+
+
+def _mark_attempt(
+    attempt: Any,
+    outcome: str,
+    reason: str | None,
+) -> None:
+    attempt.outcome = outcome
+    attempt.reason = reason
+
+
+def _fallback_reason_after_retry(reason: str | None) -> str:
+    if reason == "malformed":
+        return "malformed_after_retry"
+    if reason == "illogical":
+        return "illogical_after_retry"
+    return reason or "invalid_action_after_retry"
+
+
+def _malformed_reason_from_errors(errors: list[str]) -> str:
+    text = " ".join(errors).lower()
+    if "exactly one tool call" in text:
+        return "multiple_tool_calls"
+    if "no tool call" in text or "missing tool call" in text:
+        return "missing_tool_call"
+    if "not legal" in text or "unknown tool" in text:
+        return "unknown_tool"
+    if "not valid json" in text:
+        return "bad_json_arguments"
+    if "missing required public_message" in text or "missing required private_thought" in text:
+        return "missing_required_message"
+    if "missing required" in text:
+        return "missing_required_arg"
+    return "protocol_invalid"
+
+
+def _illogical_reason_from_errors(errors: list[str]) -> str:
+    text = " ".join(errors).lower()
+    if "bid below minimum" in text:
+        return "bid_below_minimum"
+    if "insufficient cash for bid" in text:
+        return "bid_exceeds_cash"
+    if "not current bidder" in text:
+        return "not_current_bidder"
+    if "cannot mortgage" in text or "property already mortgaged" in text:
+        return "invalid_mortgage"
+    if "cannot unmortgage" in text or "property not mortgaged" in text:
+        return "invalid_unmortgage"
+    if "cannot build" in text or "uneven building" in text or "build" in text:
+        return "invalid_build"
+    if "cannot sell" in text or "not enough houses" in text or "no hotel" in text or "sell" in text:
+        return "invalid_sell"
+    if "trade" in text:
+        return "invalid_trade"
+    if "jail" in text:
+        return "invalid_jail_action"
+    return "rules_invalid"
 
 
 def parse_tool_calls(response_json: dict[str, Any]) -> tuple[list[dict[str, Any]] | None, str | None]:

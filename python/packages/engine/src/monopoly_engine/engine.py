@@ -151,9 +151,9 @@ class Engine:
             raise ValueError("No pending decision to apply.")
 
         decision = self._pending_decision
-        error = self._validate_action(action, decision)
-        if error:
-            raise ValueError(error)
+        errors = self.validate_action_for_decision(action, decision)
+        if errors:
+            raise ValueError(errors[0])
         self._applied_decision_ids.add(decision["decision_id"])
 
         pending_turn = self._pending_turn
@@ -3105,6 +3105,17 @@ class Engine:
                 return player
         return None
 
+    def validate_action_for_decision(
+        self,
+        action: dict[str, Any],
+        decision: DecisionPoint | None = None,
+    ) -> list[str]:
+        target_decision = decision or self._pending_decision
+        if target_decision is None:
+            return ["No pending decision to validate."]
+        error = self._validate_action(action, target_decision)
+        return [error] if error else []
+
     def _next_active_player_id(self, current_id: str) -> str:
         if not self.state.players:
             return ""
@@ -3139,26 +3150,56 @@ class Engine:
         allowed = {entry["action"] for entry in decision.get("legal_actions", [])}
         if action.get("action") not in allowed:
             return "Action not legal for decision"
-        if action.get("action") in {"buy_property", "start_auction"}:
+        action_name = action.get("action")
+        player = self._find_player(str(decision.get("player_id")))
+        if player is None:
+            return "Unknown player for decision"
+        if action_name in {"buy_property", "start_auction"}:
             pending_turn = self._pending_turn
             if pending_turn is None:
                 return "Missing pending turn"
             space_index = pending_turn.get("space_index")
             if space_index is None:
                 return "Missing pending space_index"
-        if action.get("action") in {"mortgage_property", "unmortgage_property"}:
+            if action_name == "buy_property":
+                space = self.state.board[int(space_index)]
+                if space.owner_id is not None:
+                    return "Property is already owned."
+                price = space.price or 0
+                if player.cash < price:
+                    return "Insufficient cash to buy property."
+            if action_name == "start_auction":
+                space = self.state.board[int(space_index)]
+                if space.owner_id is not None:
+                    return "Property is already owned."
+        if action_name in {"mortgage_property", "unmortgage_property"}:
             args = action.get("args")
             if not isinstance(args, dict) or "space_key" not in args:
                 return "Missing space_key"
-        if action.get("action") == "build_houses_or_hotel":
+            try:
+                if action_name == "mortgage_property":
+                    self._validate_mortgage_action(player, action)
+                else:
+                    self._validate_unmortgage_action(player, action)
+            except ValueError as exc:
+                return str(exc)
+        if action_name == "build_houses_or_hotel":
             args = action.get("args")
             if not isinstance(args, dict) or "build_plan" not in args:
                 return "Missing build_plan"
-        if action.get("action") == "sell_houses_or_hotel":
+            try:
+                self._validate_build_plan(player, self._parse_plan(action, "build_plan"))
+            except ValueError as exc:
+                return str(exc)
+        if action_name == "sell_houses_or_hotel":
             args = action.get("args")
             if not isinstance(args, dict) or "sell_plan" not in args:
                 return "Missing sell_plan"
-        if action.get("action") == "bid_auction":
+            try:
+                self._validate_sell_plan(player, self._parse_plan(action, "sell_plan"))
+            except ValueError as exc:
+                return str(exc)
+        if action_name == "bid_auction":
             args = action.get("args")
             if not isinstance(args, dict) or "bid_amount" not in args:
                 return "Missing bid_amount"
@@ -3171,12 +3212,6 @@ class Engine:
             min_next_bid = self.state.auction.current_high_bid + 1
             if bid_amount < min_next_bid:
                 return "Bid below minimum"
-            player_id = decision.get("player_id")
-            if not isinstance(player_id, str):
-                return "Unknown bidder"
-            player = self._find_player(player_id)
-            if player is None:
-                return "Unknown bidder"
             if player.cash < bid_amount:
                 return "Insufficient cash for bid"
             current_bidder = None
@@ -3184,12 +3219,18 @@ class Engine:
                 idx = self.state.auction.current_bidder_index
                 if 0 <= idx < len(self.state.auction.active_bidders_player_ids):
                     current_bidder = self.state.auction.active_bidders_player_ids[idx]
-            if current_bidder and current_bidder != player_id:
+            if current_bidder and current_bidder != player.player_id:
                 return "Not current bidder"
-        if action.get("action") == "drop_out":
+        if action_name == "drop_out":
             if self.state.auction is None:
                 return "No active auction"
-        if action.get("action") == "propose_trade":
+        if action_name == "pay_jail_fine":
+            if player.cash < JAIL_FINE:
+                return "Insufficient cash to pay jail fine."
+        if action_name == "use_get_out_of_jail_card":
+            if player.get_out_of_jail_cards <= 0:
+                return "No get out of jail cards available."
+        if action_name == "propose_trade":
             if self.state.trade is not None:
                 return "Trade already active"
             args = action.get("args")
@@ -3197,7 +3238,11 @@ class Engine:
                 return "Missing trade args"
             if "to_player_id" not in args or "offer" not in args or "request" not in args:
                 return "Missing trade fields"
-        if action.get("action") == "counter_trade":
+            try:
+                self._validate_trade_proposal(player, action)
+            except ValueError as exc:
+                return str(exc)
+        if action_name == "counter_trade":
             if self.state.trade is None:
                 return "No active trade"
             args = action.get("args")
@@ -3205,10 +3250,79 @@ class Engine:
                 return "Missing trade args"
             if "offer" not in args or "request" not in args:
                 return "Missing trade fields"
-        if action.get("action") in {"accept_trade", "reject_trade"}:
+            try:
+                self._validate_trade_counter(player, self.state.trade, action)
+            except ValueError as exc:
+                return str(exc)
+        if action_name in {"accept_trade", "reject_trade"}:
             if self.state.trade is None:
                 return "No active trade"
+            if action_name == "accept_trade":
+                try:
+                    self._validate_trade_acceptance(self.state.trade)
+                except ValueError as exc:
+                    return str(exc)
         return None
+
+    def _validate_mortgage_action(self, player: PlayerState, action: dict[str, Any]) -> None:
+        args = action.get("args", {})
+        space_index = self._space_index_from_key(args.get("space_key"))
+        if space_index is None:
+            raise ValueError("Unknown space_key for mortgage.")
+        space = self.state.board[space_index]
+        if space.owner_id != player.player_id:
+            raise ValueError("Cannot mortgage unowned property.")
+        if space.mortgaged:
+            raise ValueError("Property already mortgaged.")
+        if space.houses > 0 or space.hotel:
+            raise ValueError("Cannot mortgage property with buildings.")
+        if space.group and self._group_has_buildings(space.group):
+            raise ValueError("Cannot mortgage while group has buildings.")
+
+    def _validate_unmortgage_action(self, player: PlayerState, action: dict[str, Any]) -> None:
+        args = action.get("args", {})
+        space_index = self._space_index_from_key(args.get("space_key"))
+        if space_index is None:
+            raise ValueError("Unknown space_key for unmortgage.")
+        space = self.state.board[space_index]
+        if space.owner_id != player.player_id:
+            raise ValueError("Cannot unmortgage unowned property.")
+        if not space.mortgaged:
+            raise ValueError("Property not mortgaged.")
+        cost = self._unmortgage_cost(space)
+        if player.cash < cost:
+            raise ValueError("Insufficient cash to unmortgage.")
+
+    def _validate_trade_proposal(self, player: PlayerState, action: dict[str, Any]) -> None:
+        args = action.get("args", {})
+        to_player_id = args.get("to_player_id")
+        if not isinstance(to_player_id, str):
+            raise ValueError("Missing trade counterparty.")
+        if to_player_id == player.player_id:
+            raise ValueError("Cannot trade with self.")
+        counterparty = self._find_player(to_player_id)
+        if counterparty is None or counterparty.bankrupt:
+            raise ValueError("Invalid trade counterparty.")
+        offer_bundle = self._parse_trade_bundle(args.get("offer"), field_name="offer")
+        request_bundle = self._parse_trade_bundle(args.get("request"), field_name="request")
+        self._validate_trade_bundle(offer_bundle, player, allow_cash_overdraft=False)
+        self._validate_trade_bundle(request_bundle, counterparty, allow_cash_overdraft=True)
+
+    def _validate_trade_counter(
+        self,
+        player: PlayerState,
+        trade: TradeThread,
+        action: dict[str, Any],
+    ) -> None:
+        args = action.get("args", {})
+        offer_bundle = self._parse_trade_bundle(args.get("offer"), field_name="offer")
+        request_bundle = self._parse_trade_bundle(args.get("request"), field_name="request")
+        counterparty_id = self._trade_other_player_id(trade, player.player_id)
+        counterparty = self._find_player(counterparty_id)
+        if counterparty is None:
+            raise ValueError("Missing trade counterparty.")
+        self._validate_trade_bundle(offer_bundle, player, allow_cash_overdraft=False)
+        self._validate_trade_bundle(request_bundle, counterparty, allow_cash_overdraft=True)
 
     def _build_event(
         self,

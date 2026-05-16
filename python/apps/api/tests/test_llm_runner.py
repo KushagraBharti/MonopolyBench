@@ -391,14 +391,66 @@ def test_invalid_twice_fallback(tmp_path) -> None:
     resolved = next(entry for entry in entries if entry["decision_id"] == decision_id and entry["phase"] == "decision_resolved")
     assert resolved["retry_used"] is True
     assert resolved["fallback_used"] is True
-    assert resolved["fallback_reason"] == "invalid_tool_call"
+    assert resolved["fallback_reason"] == "malformed_after_retry"
     assert resolved["applied"] is True
+    assert resolved["attempts"][0]["outcome"] == "malformed"
+    assert resolved["attempts"][1]["outcome"] == "malformed"
     assert "LLM_DECISION_RESPONSE" in resolved["emitted_event_types"]
 
     response_events = [event for event in events if event["type"] == "LLM_DECISION_RESPONSE"]
     assert response_events
     assert response_events[0]["payload"]["valid"] is False
     assert response_events[0]["payload"]["error"].startswith("fallback:")
+
+
+def test_illogical_then_valid_action_is_retried(tmp_path) -> None:
+    players = _make_players()
+    run_files = init_run_files(tmp_path, "run-illogical-retry")
+    auction_attempts = {"count": 0}
+
+    def policy(decision: dict[str, Any], decision_focus: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        decision_type = decision.get("decision_type")
+        if decision_type == "BUY_OR_AUCTION_DECISION":
+            return "start_auction", {}
+        if decision_type == "AUCTION_BID_DECISION":
+            auction_attempts["count"] += 1
+            if auction_attempts["count"] == 1:
+                return "bid_auction", {"bid_amount": 0}
+            return "drop_out", {}
+        return _choose_buy_if_legal(decision, decision_focus)
+
+    runner = LlmRunner(
+        seed=123,
+        players=players,
+        run_id="run-illogical-retry",
+        openrouter=PolicyOpenRouter(policy),
+        run_files=run_files,
+        event_delay_s=0,
+        max_turns=4,
+    )
+
+    async def on_event(_event: dict[str, Any]) -> None:
+        return None
+
+    asyncio.run(runner.run(on_event=on_event))
+
+    entries = [
+        json.loads(line)
+        for line in run_files.decisions_path.read_text(encoding="utf-8").strip().splitlines()
+        if line.strip()
+    ]
+    resolved = next(
+        entry
+        for entry in entries
+        if entry["phase"] == "decision_resolved" and entry["decision_type"] == "AUCTION_BID_DECISION"
+    )
+    assert resolved["retry_used"] is True
+    assert resolved["fallback_used"] is False
+    assert resolved["attempts"][0]["outcome"] == "illogical"
+    assert resolved["attempts"][0]["reason"] == "bid_below_minimum"
+    assert resolved["attempts"][1]["outcome"] == "valid"
+    retry_prompt = resolved["attempts"][1]["prompt_payload"]["action_state"]["scenario"]["notes"]
+    assert any("Previous action was not legal in the current game state" in note for note in retry_prompt)
 
 
 def test_prompt_payload_shape(tmp_path) -> None:
@@ -686,6 +738,7 @@ def test_post_turn_decision_focus_shape() -> None:
     assert "cash" not in json.dumps(focus)
     assert "position" not in json.dumps(focus)
     assert "jail_turns" not in json.dumps(focus)
+    assert focus["scenario"]["note"].startswith("Choose exactly one post-turn action now.")
     options = focus["scenario"]["options"]
     assert isinstance(options["mortgageable_space_keys"], list)
     action_names = set(focus["available_actions"])
@@ -725,12 +778,15 @@ def test_liquidation_decision_focus_shape() -> None:
         space_key_by_index=space_key_by_index,
     )
     focus = prompt.user_payload["action_state"]
+    focus_without_note = json.loads(json.dumps(focus))
+    focus_without_note["scenario"].pop("note", None)
 
     assert focus["decision_type"] == "LIQUIDATION_DECISION"
-    assert "cash" not in json.dumps(focus)
-    assert "position" not in json.dumps(focus)
-    assert "jail_turns" not in json.dumps(focus)
+    assert "cash" not in json.dumps(focus_without_note)
+    assert "position" not in json.dumps(focus_without_note)
+    assert "jail_turns" not in json.dumps(focus_without_note)
     scenario = focus["scenario"]
+    assert scenario["note"].startswith("Choose exactly one liquidation action now.")
     assert scenario["owed_amount"] == 340
     assert scenario["owed_to_player_id"] == "p2"
     assert scenario["shortfall"] == 250
@@ -872,8 +928,18 @@ def test_trade_response_decision_focus_shape() -> None:
     assert scenario["exchange_index"] == 0
     assert isinstance(scenario["history"], list)
     assert len(scenario["history"]) == 0
-    assert scenario["current_offer"]["offer"]["cash"] == 0
-    assert scenario["current_offer"]["request"]["cash"] == 0
+    assert scenario["current_offer"]["from_player_id"] == "p1"
+    assert "to_player_id" not in scenario["current_offer"]
+    assert scenario["current_offer"]["if_you_accept"]["you_give"] == {
+        "cash": 0,
+        "properties": [],
+        "get_out_of_jail_cards": 0,
+    }
+    assert scenario["current_offer"]["if_you_accept"]["you_receive"] == {
+        "cash": 0,
+        "properties": ["MEDITERRANEAN_AVENUE"],
+        "get_out_of_jail_cards": 0,
+    }
     action_names = set(focus["available_actions"])
     assert "accept_trade" in action_names
     assert "reject_trade" in action_names

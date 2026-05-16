@@ -143,7 +143,9 @@ def test_post_turn_multi_call_is_rejected() -> None:
 
     assert action is None
     assert sequence_meta is None
-    assert error_reason == "invalid_tool_call"
+    assert error_reason == "malformed"
+    assert attempt.outcome == "malformed"
+    assert attempt.reason == "multiple_tool_calls"
     assert errors == ["Expected exactly one tool call, got 2"]
 
 

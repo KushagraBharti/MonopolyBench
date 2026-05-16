@@ -10,8 +10,7 @@ export type DecisionType =
   | "AUCTION_BID_DECISION"
   | "TRADE_PROPOSE_DECISION"
   | "TRADE_RESPONSE_DECISION"
-  | "END_TURN"
-  | "TRADE_RESPONSE";
+  | "END_TURN";
 
 export interface UiHints {
   highlight_space_indices?: number[];

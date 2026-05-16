@@ -42,6 +42,8 @@ class DecisionAttempt:
     request_start_ms: int | None
     response_end_ms: int | None
     latency_ms: int | None
+    outcome: str | None = None
+    reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -104,6 +106,7 @@ class LlmRunner:
             run_files=self._run_files,
             prompt_memory=self._prompt_memory,
             space_key_by_index=self._space_key_by_index,
+            rules_validator=self._rules_validator,
         )
         self._paused = False
         self._resume_event = asyncio.Event()
@@ -275,6 +278,9 @@ class LlmRunner:
             log_writer=log_writer,
         )
 
+    def _rules_validator(self, decision: dict[str, Any], action: dict[str, Any]) -> list[str]:
+        return self._engine.validate_action_for_decision(action, decision)
+
     def _attempt_from_response(
         self,
         prompt: PromptBundle,
@@ -331,28 +337,11 @@ class LlmRunner:
         decision: dict[str, Any],
         attempt: DecisionAttempt,
     ) -> tuple[dict[str, Any] | None, list[str], str | None, dict[str, Any] | None]:
-        parsed_tool_calls = attempt.parsed_tool_calls or []
-        if not parsed_tool_calls:
-            errors = attempt.validation_errors or ["Missing tool call"]
-            if not attempt.validation_errors:
-                attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", None
-
-        if len(parsed_tool_calls) != 1:
-            errors = [f"Expected exactly one tool call, got {len(parsed_tool_calls)}"]
-            attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", None
-
-        action, conversion_error = tool_call_to_action(decision, parsed_tool_calls[0])
-        if action is None:
-            errors = [conversion_error or "Unable to map tool call to action"]
-            attempt.validation_errors.extend(errors)
-            return None, errors, "invalid_tool_call", None
-        errors = validate_decision_action(decision, action)
-        if errors:
-            attempt.validation_errors.extend(errors)
-            return action, errors, "invalid_action", None
-        return action, [], None, {"parsed_tool_calls_count": len(parsed_tool_calls)}
+        return self._decision_resolver._build_action_from_attempt(  # noqa: SLF001
+            decision,
+            attempt,
+            check_rules=False,
+        )
 
     def _build_decision_outcome(
         self,

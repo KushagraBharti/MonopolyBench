@@ -690,8 +690,6 @@ def build_decision_focus(
         return build_trade_propose_decision_focus(decision)
     if decision_type == "TRADE_RESPONSE_DECISION":
         return build_trade_response_decision_focus(decision)
-    if decision_type == "TRADE_RESPONSE":
-        return build_trade_negotiation_focus(decision)
     return {
         "schema_version": PROMPT_SCHEMA_VERSION,
         "focus_type": "UNKNOWN_DECISION_FOCUS",
@@ -871,7 +869,11 @@ def build_post_turn_action_decision_focus(
         "decision_type": decision.get("decision_type"),
         "actor_player_id": decision.get("player_id"),
         "scenario": {
-            "note": "Choose ONE optional strategic action, or end your turn.",
+            "note": (
+                "Choose exactly one post-turn action now. The engine will apply it, update the game state, "
+                "and ask you again if more post-turn actions remain legal. Choose end_turn only when you "
+                "are done taking optional actions."
+            ),
             "options": {
                 "can_trade_with": list(options.get("can_trade_with", [])),
                 "max_trade_exchanges": options.get("max_trade_exchanges"),
@@ -905,6 +907,11 @@ def build_liquidation_decision_focus(
     liquidation = decision.get("liquidation", {})
     options = liquidation.get("options", {}) if isinstance(liquidation, dict) else {}
     scenario: dict[str, Any] = {
+        "note": (
+            "Choose exactly one liquidation action now. The engine will apply it, update your cash/assets, "
+            "and ask you again if you still cannot pay. Declare bankruptcy only when you cannot or should "
+            "not raise enough cash."
+        ),
         "owed_amount": liquidation.get("owed_amount"),
         "reason": liquidation.get("reason"),
         "shortfall": liquidation.get("shortfall"),
@@ -1054,9 +1061,23 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
             }
         )
     current_offer_payload = trade.get("current_offer", {})
+    current_offer_from = current_offer_payload.get("from_player_id")
+    if not isinstance(current_offer_from, str):
+        current_offer_from = initiator
+    raw_offer = current_offer_payload.get("offer")
+    raw_request = current_offer_payload.get("request")
+    if actor_id == current_offer_from:
+        you_give = raw_offer
+        you_receive = raw_request
+    else:
+        you_give = raw_request
+        you_receive = raw_offer
     current_offer: dict[str, Any] = {
-        "offer": current_offer_payload.get("offer"),
-        "request": current_offer_payload.get("request"),
+        "from_player_id": current_offer_from,
+        "if_you_accept": {
+            "you_give": you_give,
+            "you_receive": you_receive,
+        },
     }
     tools: list[dict[str, Any]] = []
     for entry in decision.get("legal_actions", []):
@@ -1098,19 +1119,6 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
         },
         "legal_tools": tools,
     }
-
-
-def build_trade_negotiation_focus(decision: dict[str, Any]) -> dict[str, Any]:
-    focus: dict[str, Any] = {
-        "schema_version": PROMPT_SCHEMA_VERSION,
-        "focus_type": "TRADE_NEGOTIATION_FOCUS",
-    }
-    trade = decision.get("trade", {})
-    for field in ("counterparty_player_id", "offer_summary", "request_summary"):
-        if field in trade:
-            focus[field] = trade.get(field)
-    return focus
-
 
 def build_build_decision_focus(decision: dict[str, Any]) -> dict[str, Any]:
     focus: dict[str, Any] = {
@@ -1159,6 +1167,7 @@ def build_prompt_bundle(
     memory: PromptMemory,
     space_key_by_index: dict[int, str],
     retry_errors: list[str] | None = None,
+    retry_outcome: str | None = None,
 ) -> PromptBundle:
     system_prompt = build_system_prompt(player)
     state = decision.get("state", {})
@@ -1170,7 +1179,7 @@ def build_prompt_bundle(
     )
     decision_focus = build_decision_focus(decision, space_key_by_index=space_key_by_index)
     if retry_errors:
-        decision_focus = _with_retry_notes(decision_focus, retry_errors)
+        decision_focus = _with_retry_notes(decision_focus, retry_errors, retry_outcome=retry_outcome)
     action_state = build_action_state(decision, decision_focus)
     payload = {
         "game_state": full_state,
@@ -1191,7 +1200,12 @@ def build_prompt_bundle(
     )
 
 
-def _with_retry_notes(decision_focus: dict[str, Any], errors: list[str]) -> dict[str, Any]:
+def _with_retry_notes(
+    decision_focus: dict[str, Any],
+    errors: list[str],
+    *,
+    retry_outcome: str | None,
+) -> dict[str, Any]:
     focus = copy.deepcopy(decision_focus)
     target = focus.get("scenario")
     if isinstance(target, dict):
@@ -1204,6 +1218,14 @@ def _with_retry_notes(decision_focus: dict[str, Any], errors: list[str]) -> dict
         if not isinstance(notes, list):
             notes = []
             focus["notes"] = notes
-    notes.append(f"Previous validation errors: {', '.join(errors)}")
-    notes.append("Respond with a valid tool call only. No freeform text.")
+    joined_errors = ", ".join(errors)
+    if retry_outcome == "malformed":
+        notes.append(f"Previous response was malformed: {joined_errors}.")
+        notes.append("Respond with exactly one valid tool call using one of the available actions.")
+    elif retry_outcome == "illogical":
+        notes.append(f"Previous action was not legal in the current game state: {joined_errors}.")
+        notes.append("Choose exactly one action that is legal in the current game state.")
+    else:
+        notes.append(f"Previous validation errors: {joined_errors}.")
+        notes.append("Respond with a valid tool call only. No freeform text.")
     return focus
