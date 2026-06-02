@@ -1,0 +1,386 @@
+{
+  "messages": [
+    {
+      "content": "You are an autonomous player in a game of Monopoly competing against other AI players.\n\nYour goal is to win the game by maximizing long-term advantage and being the last non-bankrupt player. You play as a psychological bully: you aim to destabilize opponents by applying constant social pressure, provoking mistakes, and forcing rushed or emotional decisions. You are not “random”—your aggression is targeted and strategic.\n\nYou will receive the following inputs:\n\n1. System Prompt (this message): authoritative instructions.\n2. Full State: the complete, authoritative game state. Read and rely only on this.\n3. Decision + Decision Focus: the current scenario and the list of legal actions.\n4. Chat & Personal Log: recent public chat/events and your own prior private thoughts.\n\n### Action Rules\n\n* Make exactly one tool call per decision.\n* Use only tools listed as legal for that decision.\n* Never invent tools, arguments, or targets.\n* Obey the provided argument schema exactly.\n* If a tool requires no arguments, pass none.\n\n### Messages\n\nEach action must include:\n\n* Public Message: intimidation, trash talk, mock confidence, strategic needling, “calling out” weak plays, daring others to do things they shouldn’t. You can also feign certainty (“this is over”) to discourage resistance.\n* Private Thoughts: cold analysis. Identify which opponents respond to pressure, who is cautious, who is reactive, and who can be baited into overpaying or misplaying auctions/trades. Keep notes short: “p2 overreacts to insults → bait into bidding war.”\n\n### Strategy Guidance\n\n* Apply pressure to the most fragile opponent (cash-poor, close to bankruptcy, or psychologically reactive).\n* Use public chat to shape the table: frame others as threats to create alliances against them.\n* Never let your public persona reveal your private uncertainty.\n* If you misplay, do not admit it—reframe it as intentional to maintain dominance.\n* Be consistent: aggressive voice, but actions stay legal and optimal.\n* Keep private reasoning concise and practical (you’re optimizing token spend too).\n\nYour role is not to explain rules or debug the system.\nYour role is to **play Monopoly and win**.\n\nWhen a decision is presented, think carefully and make one legal tool call that best advances your chances of winning.",
+      "role": "system"
+    },
+    {
+      "content": {
+        "decision": {
+          "decision_id": "mock-25273-a49d65fc-dec-000004",
+          "decision_type": "POST_TURN_ACTION_DECISION",
+          "legal_actions": [
+            {
+              "action": "end_turn",
+              "args_schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "private_thought": {
+                    "type": "string"
+                  },
+                  "public_message": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            {
+              "action": "propose_trade",
+              "args_schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "offer": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cash": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "get_out_of_jail_cards": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "properties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "cash",
+                      "properties",
+                      "get_out_of_jail_cards"
+                    ],
+                    "type": "object"
+                  },
+                  "private_thought": {
+                    "type": "string"
+                  },
+                  "public_message": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cash": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "get_out_of_jail_cards": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "properties": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "cash",
+                      "properties",
+                      "get_out_of_jail_cards"
+                    ],
+                    "type": "object"
+                  },
+                  "to_player_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "to_player_id",
+                  "offer",
+                  "request"
+                ],
+                "type": "object"
+              }
+            }
+          ],
+          "player_id": "Gemini 3",
+          "schema_version": "v1"
+        },
+        "decision_focus": {
+          "actor_player_id": "Gemini 3",
+          "decision_id": "mock-25273-a49d65fc-dec-000004",
+          "decision_type": "POST_TURN_ACTION_DECISION",
+          "legal_tools": [
+            {
+              "args": {},
+              "requires": [
+                "public_message",
+                "private_thought"
+              ],
+              "tool_name": "end_turn"
+            },
+            {
+              "requires": [
+                "to_player_id",
+                "offer",
+                "request",
+                "public_message",
+                "private_thought"
+              ],
+              "tool_name": "propose_trade"
+            }
+          ],
+          "scenario": {
+            "note": "Choose ONE optional strategic action, or end your turn.",
+            "options": {
+              "buildable_space_keys": [],
+              "can_trade_with": [
+                "GPT-5.2",
+                "Claude Sonnet 4.5",
+                "Grok 4.1"
+              ],
+              "mortgageable_space_keys": [],
+              "sellable_building_space_keys": [],
+              "unmortgageable_space_keys": []
+            }
+          },
+          "schema_version": "v1"
+        },
+        "full_state": {
+          "bank": {
+            "hotels_remaining": 12,
+            "houses_remaining": 32
+          },
+          "memory": {
+            "public_chat_last_20": [
+              {
+                "from_player_id": "GPT-5.2",
+                "message": "I’ll take Connecticut—cheap enough to justify it. Not planning to sink money into Light Blue anytime soon though, so don’t read too much into it.",
+                "turn_index": 0
+              },
+              {
+                "from_player_id": "GPT-5.2",
+                "message": "Quiet turn for me. If anyone’s trying to “balance the board” with early swaps later, I’m open—but I’m not chasing sets right now.",
+                "turn_index": 0
+              },
+              {
+                "from_player_id": "Claude Sonnet 4.5",
+                "message": "St. Charles Place is mine. First piece of the Pink monopoly—and I will complete it. Everyone else is just renting space on my board.",
+                "turn_index": 1
+              },
+              {
+                "from_player_id": "Claude Sonnet 4.5",
+                "message": "The Pink monopoly begins. St. Charles is locked. States and Virginia will follow—one way or another. The rest of you are just deciding how expensive that lesson will be.",
+                "turn_index": 1
+              }
+            ],
+            "recent_actions_last_20": [
+              {
+                "amount": 120,
+                "player_id": "GPT-5.2",
+                "space_key": "CONNECTICUT_AVENUE",
+                "turn_index": 0,
+                "type": "PROPERTY_PURCHASED"
+              },
+              {
+                "amount": 140,
+                "player_id": "Claude Sonnet 4.5",
+                "space_key": "ST_CHARLES_PLACE",
+                "turn_index": 1,
+                "type": "PROPERTY_PURCHASED"
+              },
+              {
+                "delta": -200,
+                "player_id": "Gemini 3",
+                "reason": "TAX_INCOME",
+                "turn_index": 2,
+                "type": "CASH_CHANGED"
+              }
+            ],
+            "your_private_thoughts_last_10": []
+          },
+          "metadata": {
+            "active_player_id": "Gemini 3",
+            "phase": "RESOLVING_MOVE",
+            "run_id": "mock-25273-a49d65fc",
+            "turn_index": 2,
+            "you_player_id": "Gemini 3"
+          },
+          "others": [
+            {
+              "cash": 1380,
+              "has_get_out_of_jail_card": false,
+              "holdings": {
+                "mortgaged": [],
+                "owned": [
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "CONNECTICUT_AVENUE"
+                  }
+                ]
+              },
+              "in_jail": false,
+              "name": "GPT-5.2",
+              "player_id": "GPT-5.2",
+              "position": "CONNECTICUT_AVENUE"
+            },
+            {
+              "cash": 1360,
+              "has_get_out_of_jail_card": false,
+              "holdings": {
+                "mortgaged": [],
+                "owned": [
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "ST_CHARLES_PLACE"
+                  }
+                ]
+              },
+              "in_jail": false,
+              "name": "Claude Sonnet 4.5",
+              "player_id": "Claude Sonnet 4.5",
+              "position": "ST_CHARLES_PLACE"
+            },
+            {
+              "cash": 1500,
+              "has_get_out_of_jail_card": false,
+              "holdings": {
+                "mortgaged": [],
+                "owned": []
+              },
+              "in_jail": false,
+              "name": "Grok 4.1",
+              "player_id": "Grok 4.1",
+              "position": "GO"
+            }
+          ],
+          "schema_version": "v1",
+          "you": {
+            "cash": 1300,
+            "has_get_out_of_jail_card": false,
+            "holdings": {
+              "mortgaged": [],
+              "owned": []
+            },
+            "in_jail": false,
+            "name": "Gemini 3",
+            "player_id": "Gemini 3",
+            "position": "INCOME_TAX"
+          }
+        },
+        "llm": {
+          "reasoning": {
+            "effort": "low"
+          }
+        },
+        "schema_version": "v1"
+      },
+      "content_raw": "{\"schema_version\":\"v1\",\"full_state\":{\"schema_version\":\"v1\",\"metadata\":{\"run_id\":\"mock-25273-a49d65fc\",\"turn_index\":2,\"phase\":\"RESOLVING_MOVE\",\"active_player_id\":\"Gemini 3\",\"you_player_id\":\"Gemini 3\"},\"you\":{\"player_id\":\"Gemini 3\",\"name\":\"Gemini 3\",\"cash\":1300,\"position\":\"INCOME_TAX\",\"in_jail\":false,\"has_get_out_of_jail_card\":false,\"holdings\":{\"owned\":[],\"mortgaged\":[]}},\"others\":[{\"player_id\":\"GPT-5.2\",\"name\":\"GPT-5.2\",\"cash\":1380,\"position\":\"CONNECTICUT_AVENUE\",\"in_jail\":false,\"has_get_out_of_jail_card\":false,\"holdings\":{\"owned\":[{\"space_key\":\"CONNECTICUT_AVENUE\",\"houses\":0,\"hotel\":false,\"mortgaged\":false}],\"mortgaged\":[]}},{\"player_id\":\"Claude Sonnet 4.5\",\"name\":\"Claude Sonnet 4.5\",\"cash\":1360,\"position\":\"ST_CHARLES_PLACE\",\"in_jail\":false,\"has_get_out_of_jail_card\":false,\"holdings\":{\"owned\":[{\"space_key\":\"ST_CHARLES_PLACE\",\"houses\":0,\"hotel\":false,\"mortgaged\":false}],\"mortgaged\":[]}},{\"player_id\":\"Grok 4.1\",\"name\":\"Grok 4.1\",\"cash\":1500,\"position\":\"GO\",\"in_jail\":false,\"has_get_out_of_jail_card\":false,\"holdings\":{\"owned\":[],\"mortgaged\":[]}}],\"bank\":{\"houses_remaining\":32,\"hotels_remaining\":12},\"memory\":{\"public_chat_last_20\":[{\"turn_index\":0,\"from_player_id\":\"GPT-5.2\",\"message\":\"I\\u2019ll take Connecticut\\u2014cheap enough to justify it. Not planning to sink money into Light Blue anytime soon though, so don\\u2019t read too much into it.\"},{\"turn_index\":0,\"from_player_id\":\"GPT-5.2\",\"message\":\"Quiet turn for me. If anyone\\u2019s trying to \\u201cbalance the board\\u201d with early swaps later, I\\u2019m open\\u2014but I\\u2019m not chasing sets right now.\"},{\"turn_index\":1,\"from_player_id\":\"Claude Sonnet 4.5\",\"message\":\"St. Charles Place is mine. First piece of the Pink monopoly\\u2014and I will complete it. Everyone else is just renting space on my board.\"},{\"turn_index\":1,\"from_player_id\":\"Claude Sonnet 4.5\",\"message\":\"The Pink monopoly begins. St. Charles is locked. States and Virginia will follow\\u2014one way or another. The rest of you are just deciding how expensive that lesson will be.\"}],\"recent_actions_last_20\":[{\"turn_index\":0,\"type\":\"PROPERTY_PURCHASED\",\"player_id\":\"GPT-5.2\",\"space_key\":\"CONNECTICUT_AVENUE\",\"amount\":120},{\"turn_index\":1,\"type\":\"PROPERTY_PURCHASED\",\"player_id\":\"Claude Sonnet 4.5\",\"space_key\":\"ST_CHARLES_PLACE\",\"amount\":140},{\"turn_index\":2,\"type\":\"CASH_CHANGED\",\"player_id\":\"Gemini 3\",\"delta\":-200,\"reason\":\"TAX_INCOME\"}],\"your_private_thoughts_last_10\":[]}},\"decision\":{\"schema_version\":\"v1\",\"decision_id\":\"mock-25273-a49d65fc-dec-000004\",\"decision_type\":\"POST_TURN_ACTION_DECISION\",\"player_id\":\"Gemini 3\",\"legal_actions\":[{\"action\":\"end_turn\",\"args_schema\":{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"public_message\":{\"type\":\"string\"},\"private_thought\":{\"type\":\"string\"}}}},{\"action\":\"propose_trade\",\"args_schema\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"to_player_id\",\"offer\",\"request\"],\"properties\":{\"offer\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"cash\",\"properties\",\"get_out_of_jail_cards\"],\"properties\":{\"cash\":{\"type\":\"integer\",\"minimum\":0},\"properties\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"get_out_of_jail_cards\":{\"type\":\"integer\",\"minimum\":0}}},\"request\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"cash\",\"properties\",\"get_out_of_jail_cards\"],\"properties\":{\"cash\":{\"type\":\"integer\",\"minimum\":0},\"properties\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"get_out_of_jail_cards\":{\"type\":\"integer\",\"minimum\":0}}},\"to_player_id\":{\"type\":\"string\"},\"public_message\":{\"type\":\"string\"},\"private_thought\":{\"type\":\"string\"}}}}]},\"decision_focus\":{\"schema_version\":\"v1\",\"decision_id\":\"mock-25273-a49d65fc-dec-000004\",\"decision_type\":\"POST_TURN_ACTION_DECISION\",\"actor_player_id\":\"Gemini 3\",\"scenario\":{\"note\":\"Choose ONE optional strategic action, or end your turn.\",\"options\":{\"can_trade_with\":[\"GPT-5.2\",\"Claude Sonnet 4.5\",\"Grok 4.1\"],\"mortgageable_space_keys\":[],\"unmortgageable_space_keys\":[],\"buildable_space_keys\":[],\"sellable_building_space_keys\":[]}},\"legal_tools\":[{\"tool_name\":\"end_turn\",\"requires\":[\"public_message\",\"private_thought\"],\"args\":{}},{\"tool_name\":\"propose_trade\",\"requires\":[\"to_player_id\",\"offer\",\"request\",\"public_message\",\"private_thought\"]}]},\"llm\":{\"reasoning\":{\"effort\":\"low\"}}}",
+      "role": "user"
+    }
+  ],
+  "model": "google/gemini-3-pro-preview",
+  "reasoning": {
+    "effort": "low"
+  },
+  "temperature": 0.0,
+  "tool_choice": "required",
+  "tools": [
+    {
+      "function": {
+        "description": "End your turn.",
+        "name": "end_turn",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "private_thought": {
+              "type": "string"
+            },
+            "public_message": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "function"
+    },
+    {
+      "function": {
+        "description": "Propose a trade to another player.",
+        "name": "propose_trade",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "offer": {
+              "additionalProperties": false,
+              "properties": {
+                "cash": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "get_out_of_jail_cards": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "properties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "cash",
+                "properties",
+                "get_out_of_jail_cards"
+              ],
+              "type": "object"
+            },
+            "private_thought": {
+              "type": "string"
+            },
+            "public_message": {
+              "type": "string"
+            },
+            "request": {
+              "additionalProperties": false,
+              "properties": {
+                "cash": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "get_out_of_jail_cards": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "properties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "cash",
+                "properties",
+                "get_out_of_jail_cards"
+              ],
+              "type": "object"
+            },
+            "to_player_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "to_player_id",
+            "offer",
+            "request"
+          ],
+          "type": "object"
+        }
+      },
+      "type": "function"
+    }
+  ]
+}
