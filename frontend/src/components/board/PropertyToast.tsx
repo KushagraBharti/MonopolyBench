@@ -52,7 +52,7 @@ export const PropertyToast = ({
                 >
                     <div className="bg-white border-[1.5px] border-black/80 shadow-[4px_4px_0_0_rgba(0,0,0,0.8)] p-2 w-52 rounded-[3px]">
                         <div
-                            className="w-full h-6 mb-2 border border-black/40 rounded-[2px] flex items-center justify-center font-black uppercase text-[9px] tracking-tight text-white"
+                            className="w-full h-6 mb-2 border border-black/40 rounded-[2px] flex items-center justify-center font-black uppercase text-[9px] tracking-normal text-white"
                             style={{ backgroundColor: groupColor }}
                         >
                             {space.kind === 'PROPERTY' ? 'Title Deed' : space.name}

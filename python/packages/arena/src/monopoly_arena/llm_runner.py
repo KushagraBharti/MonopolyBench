@@ -58,6 +58,7 @@ class LlmRunner:
         ts_step_ms: int = 250,
         max_trade_exchanges: int = 20,
         max_auction_actions: int = 200,
+        seat_assignment_metadata: dict[str, Any] | None = None,
     ) -> None:
         self.run_id = run_id
         if len(players) != EXPECTED_PLAYER_COUNT:
@@ -83,6 +84,7 @@ class LlmRunner:
         self._event_delay_s = event_delay_s
         self._max_trade_exchanges = max_trade_exchanges
         self._max_auction_actions = max_auction_actions
+        self._seat_assignment_metadata = seat_assignment_metadata or {}
         self._space_key_by_index = build_space_key_by_index()
         self._prompt_memory = PromptMemory(space_key_by_index=self._space_key_by_index)
         self._decision_resolver = SharedDecisionResolver(
@@ -177,12 +179,39 @@ class LlmRunner:
                 await summary_handler(summary)
                 if self._run_files is not None:
                     write_usage_artifacts(self._run_files)
+                    await self._write_pricing_snapshot_artifact()
                     write_scorecard_artifacts(self._run_files)
                     write_replay_verification_artifacts(self._run_files)
                     write_trace_failure_artifacts(self._run_files)
                     self._run_files.write_artifact_manifest()
         finally:
             await self._close_openrouter()
+
+    async def _write_pricing_snapshot_artifact(self) -> None:
+        if self._run_files is None:
+            return
+        method = getattr(self._openrouter, "get_models", None)
+        payload: dict[str, Any]
+        if method is None:
+            payload = {
+                "schema_version": "v1",
+                "source": "openrouter_get_models",
+                "status": "unavailable",
+                "reason": "client_has_no_get_models",
+            }
+        else:
+            result = await method()
+            payload = {
+                "schema_version": "v1",
+                "source": "openrouter_get_models",
+                "status": "ok" if getattr(result, "ok", False) else "error",
+                "status_code": getattr(result, "status_code", None),
+                "request_id": getattr(result, "request_id", None),
+                "error": getattr(result, "error", None),
+                "error_type": getattr(result, "error_type", None),
+                "data": getattr(result, "response_json", None),
+            }
+        self._run_files.write_json_artifact(self._run_files.pricing_snapshot_path, payload)
 
     async def _event_stream(
         self,
@@ -283,7 +312,11 @@ class LlmRunner:
         seat_assignment = _seat_assignment_payload(
             run_id=self.run_id,
             players=self._players,
-            mode="configured_order",
+            mode=str(self._seat_assignment_metadata.get("permutation_mode") or "configured_order"),
+            permutation_id=self._seat_assignment_metadata.get("permutation_id"),
+            permutation_seed_material=self._seat_assignment_metadata.get("permutation_seed_material"),
+            batch_id=self._seat_assignment_metadata.get("batch_id"),
+            batch_run_index=self._seat_assignment_metadata.get("batch_run_index"),
         )
         run_config = {
             "schema_version": "v1",
@@ -1077,6 +1110,10 @@ def _seat_assignment_payload(
     run_id: str,
     players: list[PlayerConfig],
     mode: str,
+    permutation_id: Any = None,
+    permutation_seed_material: Any = None,
+    batch_id: Any = None,
+    batch_run_index: Any = None,
 ) -> dict[str, Any]:
     assignments = [
         {
@@ -1089,13 +1126,25 @@ def _seat_assignment_payload(
         }
         for index, player in enumerate(players)
     ]
-    digest_source = json.dumps(assignments, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return {
+    digest_payload = {
+        "assignments": assignments,
+        "mode": mode,
+        "permutation_id": permutation_id,
+        "permutation_seed_material": permutation_seed_material,
+    }
+    digest_source = json.dumps(digest_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    payload: dict[str, Any] = {
         "schema_version": "v1",
         "seat_assignment_version": "seat_assignment_v1",
         "run_id": run_id,
         "permutation_mode": mode,
-        "permutation_id": f"{mode}:0",
+        "permutation_id": str(permutation_id or f"{mode}:0"),
+        "permutation_seed_material": permutation_seed_material,
         "permutation_digest": hashlib.sha1(digest_source.encode("utf-8")).hexdigest(),
         "assignments": assignments,
     }
+    if batch_id is not None:
+        payload["batch_id"] = str(batch_id)
+    if batch_run_index is not None:
+        payload["batch_run_index"] = int(batch_run_index)
+    return payload

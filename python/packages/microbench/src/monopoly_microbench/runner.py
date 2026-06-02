@@ -12,6 +12,7 @@ from typing import Any, Awaitable, Callable
 from monopoly_arena import OpenRouterClient, build_single_player_config
 from monopoly_arena.decision_resolver import SharedDecisionResolver
 from monopoly_arena.prompting import PromptMemory, build_space_key_by_index
+from monopoly_telemetry import write_usage_artifacts
 from monopoly_telemetry.writer_jsonl import append_jsonl
 
 from .artifacts import batch_dir, compact_result_for_jsonl, micro_run_files
@@ -160,6 +161,17 @@ async def run_scenario(
         },
     }
     run_files.write_summary(summary)
+    write_usage_artifacts(run_files)
+    run_files.write_json_artifact(
+        run_files.pricing_snapshot_path,
+        {
+            "schema_version": "v1",
+            "source": "openrouter_get_models",
+            "status": "unavailable",
+            "reason": "micro_run_resolver_closed_before_metadata_snapshot",
+        },
+    )
+    run_files.write_artifact_manifest()
     return result
 
 

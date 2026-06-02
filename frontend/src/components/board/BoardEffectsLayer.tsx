@@ -358,7 +358,7 @@ export const BoardEffectsLayer = () => {
                         transition={{ type: 'spring', stiffness: 140, damping: 18 }}
                         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/95 text-white border-2 border-neo-red rounded-[3px] p-4 shadow-[6px_6px_0_0_rgba(0,0,0,0.6)] z-[70]"
                     >
-                        <div className="text-[16px] font-black uppercase text-neo-red tracking-tight text-center">Sent to Jail</div>
+                        <div className="text-[16px] font-black uppercase text-neo-red tracking-normal text-center">Sent to Jail</div>
                         <div className="text-center font-mono text-[10px] mt-1.5 text-white/70">
                             {activeItem.event.payload.reason || 'Jail'}
                         </div>

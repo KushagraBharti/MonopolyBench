@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from '@/net/ws'
-import type { LegalAction, MicroResult, MicroScenario, MicroSuite } from '@/net/contracts'
+import type { LegalAction, MicroResearchMetadata, MicroResult, MicroScenario, MicroSuite } from '@/net/contracts'
 
 export type MicroAction = {
   schema_version: 'v1'
@@ -21,6 +21,7 @@ export type MicroScenarioSummary = {
   focal_player_id: string
   decision_type: string
   scoring_mode: MicroScenario['evaluation']['scoring_mode']
+  research_metadata?: MicroResearchMetadata
 }
 
 export type MicroDecisionAttempt = {

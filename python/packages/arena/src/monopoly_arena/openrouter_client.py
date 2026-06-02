@@ -281,12 +281,105 @@ class OpenRouterClient:
             response_text=None,
         )
 
+    async def get_models(self) -> OpenRouterResult:
+        return await self._get_json(path="/models", auth_required=False)
+
+    async def get_credits(self) -> OpenRouterResult:
+        return await self._get_json(path="/credits", auth_required=True)
+
+    async def get_generation(self, generation_id: str) -> OpenRouterResult:
+        return await self._get_json(
+            path="/generation",
+            auth_required=True,
+            params={"id": generation_id},
+        )
+
+    async def _get_json(
+        self,
+        *,
+        path: str,
+        auth_required: bool,
+        params: dict[str, str] | None = None,
+    ) -> OpenRouterResult:
+        if auth_required and not self._api_key:
+            return OpenRouterResult(
+                ok=False,
+                status_code=None,
+                response_json=None,
+                error="OPENROUTER_API_KEY not set",
+                error_type="no_api_key",
+                request_id=None,
+                request_payload_raw=None,
+                response_text=None,
+            )
+        headers = {**self._extra_headers}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        url = f"{self._base_url}{path}"
+        try:
+            response = await self._client.get(url, headers=headers, params=params)
+        except (httpx.TimeoutException, httpx.RequestError) as exc:
+            return OpenRouterResult(
+                ok=False,
+                status_code=None,
+                response_json=None,
+                error=str(exc),
+                error_type="network_error",
+                request_id=None,
+                request_payload_raw=None,
+                response_text=None,
+            )
+        response_text = response.text
+        request_id = response.headers.get("x-request-id") or response.headers.get("openrouter-request-id")
+        if response.status_code >= 400:
+            return OpenRouterResult(
+                ok=False,
+                status_code=response.status_code,
+                response_json=None,
+                error=response_text.strip() or f"HTTP {response.status_code}",
+                error_type=_http_error_type(response.status_code),
+                request_id=request_id,
+                request_payload_raw=None,
+                response_text=response_text,
+            )
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            return OpenRouterResult(
+                ok=False,
+                status_code=response.status_code,
+                response_json=None,
+                error="Invalid JSON response from OpenRouter",
+                error_type="invalid_json",
+                request_id=request_id,
+                request_payload_raw=None,
+                response_text=response_text,
+            )
+        return OpenRouterResult(
+            ok=True,
+            status_code=response.status_code,
+            response_json=data,
+            error=None,
+            error_type=None,
+            request_id=request_id,
+            request_payload_raw=None,
+            response_text=response_text,
+        )
+
     async def _emit_stream_event(self, event: dict[str, Any]) -> None:
         if self._stream_callback is not None:
             await self._stream_callback(event)
 
     async def aclose(self) -> None:
         await self._client.aclose()
+
+
+def _http_error_type(status_code: int) -> str:
+    if status_code == 429:
+        return "http_429"
+    if 500 <= status_code < 600:
+        return "http_5xx"
+    return "http_4xx"
 
 
 class _StreamingCompletionAccumulator:

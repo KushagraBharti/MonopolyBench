@@ -17,6 +17,8 @@ const schemaFiles = [
   "action.schema.json",
   "decision.schema.json",
   "board.schema.json",
+  "benchmark_artifact.schema.json",
+  "failure_finding.schema.json",
   "micro_scenario.schema.json",
   "micro_suite.schema.json",
   "micro_result.schema.json"
@@ -166,7 +168,14 @@ const jsonExamples = [
   { file: "decision.liquidation.example.json", schema: "decision.schema.json" },
   { file: "action.example.json", schema: "action.schema.json" },
   { file: "action.bid_auction.example.json", schema: "action.schema.json" },
-  { file: "action.drop_out.example.json", schema: "action.schema.json" }
+  { file: "action.drop_out.example.json", schema: "action.schema.json" },
+  { file: "artifact_manifest.example.json", schema: "benchmark_artifact.schema.json#/$defs/artifactManifest" },
+  { file: "batch_config.example.json", schema: "benchmark_artifact.schema.json#/$defs/batchConfig" },
+  { file: "model_card.example.json", schema: "benchmark_artifact.schema.json#/$defs/modelCard" },
+  { file: "replay_step.example.json", schema: "benchmark_artifact.schema.json#/$defs/replayStep" },
+  { file: "review_label.example.json", schema: "benchmark_artifact.schema.json#/$defs/reviewLabel" },
+  { file: "trace_finding.example.json", schema: "benchmark_artifact.schema.json#/$defs/traceFinding" },
+  { file: "failure_finding.example.json", schema: "failure_finding.schema.json" }
 ];
 
 for (const example of jsonExamples) {

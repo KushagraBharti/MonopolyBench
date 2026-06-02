@@ -52,7 +52,7 @@ const PageLink = ({ href, label, active }: { href: string; label: string; active
   <a
     href={href}
     className={cn(
-      'rounded-[2px] border-[1.5px] border-black px-3 py-1 text-[10px] font-black uppercase transition-all duration-100',
+      'inline-flex min-h-8 items-center rounded-[2px] border-[1.5px] border-black px-3 py-1 text-[10px] font-black uppercase transition-all duration-100',
       active ? 'bg-black text-white shadow-none' : 'bg-white text-black shadow-neo-sm hover:-translate-y-px hover:shadow-neo'
     )}
   >
@@ -92,7 +92,7 @@ const ScenarioCheckbox = ({
     aria-pressed={checked}
     aria-label={label}
     className={cn(
-      'grid size-5 shrink-0 place-items-center rounded-[3px] border-2 border-black bg-white text-[13px] font-black leading-none transition-all duration-100',
+      'grid size-8 shrink-0 place-items-center rounded-[3px] border-2 border-black bg-white text-[14px] font-black leading-none transition-all duration-100',
       checked && 'bg-black text-white',
       disabled ? 'cursor-not-allowed opacity-45' : 'hover:-translate-y-px hover:shadow-neo-sm'
     )}
@@ -606,7 +606,7 @@ export const MicroDashboardPage = () => {
       <div className="relative mx-auto flex min-h-screen w-full max-w-[96rem] flex-col px-3 py-3 sm:px-5 lg:px-7">
         <header className="flex flex-col gap-3 rounded-[8px] border-2 border-black bg-white/95 px-4 py-3 shadow-neo md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="text-xl font-black uppercase tracking-tight">
+            <div className="text-xl font-black uppercase tracking-normal">
               Monopoly<span className="ml-0.5 text-neo-pink">Bench</span>
             </div>
             <div className="mt-1 text-[10px] font-black uppercase tracking-[0.24em] text-gray-500">
@@ -621,13 +621,13 @@ export const MicroDashboardPage = () => {
         </header>
 
         <main className="flex flex-1 flex-col gap-5 py-5">
-          <section className="mx-auto w-full max-w-[70rem] rounded-[18px] border-2 border-black bg-white/96 p-4 shadow-neo-lg sm:p-5 lg:p-6">
+          <section className="mx-auto w-full max-w-[70rem] rounded-[8px] border-2 border-black bg-white/96 p-4 shadow-neo-lg sm:p-5 lg:p-6">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">Run Config</div>
-                    <h1 className="mt-1 text-2xl font-black uppercase leading-tight tracking-tight sm:text-3xl">
+                    <h1 className="mt-1 text-2xl font-black uppercase leading-tight tracking-normal sm:text-3xl">
                       {targetLabel}
                     </h1>
                   </div>
@@ -751,8 +751,8 @@ export const MicroDashboardPage = () => {
               const allSelected = categoryScenarios.length > 0 && selectedCount === categoryScenarios.length
               const isExpanded = expandedCategories.has(category)
               return (
-                <article key={category} className="min-h-[18rem] rounded-[18px] border-2 border-black bg-white/96 p-3 shadow-neo">
-                  <div className={cn('rounded-[10px] border-2 border-black p-3', categoryTone(category))}>
+                <article key={category} className="min-h-[18rem] rounded-[8px] border-2 border-black bg-white/96 p-3 shadow-neo">
+                  <div className={cn('rounded-[8px] border-2 border-black p-3', categoryTone(category))}>
                     <div className="flex min-w-0 items-center gap-3">
                       <ScenarioCheckbox
                         checked={allSelected}
@@ -763,9 +763,9 @@ export const MicroDashboardPage = () => {
                       <button
                         type="button"
                         onClick={() => toggleCategoryOpen(category)}
-                        className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+                        className="flex min-h-8 min-w-0 flex-1 items-center justify-between gap-2 text-left"
                       >
-                        <span className="truncate text-sm font-black uppercase tracking-tight">{formatLabel(category)}</span>
+                        <span className="truncate text-sm font-black uppercase tracking-normal">{formatLabel(category)}</span>
                         <span className="text-xl font-black leading-none">{isExpanded ? '↑' : '↓'}</span>
                       </button>
                     </div>
@@ -786,7 +786,7 @@ export const MicroDashboardPage = () => {
                           <div
                             key={scenario.scenario_id}
                             className={cn(
-                              'w-full rounded-[8px] border border-black/15 px-3 py-2 text-left transition-all duration-100',
+                              'w-full rounded-[6px] border border-black/15 px-3 py-2 text-left transition-all duration-100',
                               checked ? 'bg-black text-white shadow-neo-sm' : 'bg-white hover:-translate-y-px hover:shadow-neo-sm'
                             )}
                           >
@@ -795,7 +795,7 @@ export const MicroDashboardPage = () => {
                                 type="button"
                                 onClick={() => toggleScenario(scenario.scenario_id)}
                                 className={cn(
-                                  'mt-0.5 grid size-4 shrink-0 place-items-center rounded-[2px] border-[1.5px] text-[10px] font-black',
+                                  'mt-0.5 grid size-8 shrink-0 place-items-center rounded-[2px] border-[1.5px] text-[12px] font-black',
                                   checked ? 'border-white bg-white text-black' : 'border-black bg-white text-black'
                                 )}
                                 aria-label={`Toggle ${scenario.title}`}
@@ -814,6 +814,11 @@ export const MicroDashboardPage = () => {
                                 <span className={cn('mt-1 block font-mono text-[9px]', checked ? 'text-white/55' : 'text-gray-400')}>
                                   {scenario.difficulty} / {scenario.scoring_mode}
                                 </span>
+                                {scenario.research_metadata ? (
+                                  <span className={cn('mt-1 block font-mono text-[9px]', checked ? 'text-white/55' : 'text-gray-400')}>
+                                    {scenario.research_metadata.target_capability.replace(/_/g, ' ')}
+                                  </span>
+                                ) : null}
                               </button>
                             </div>
                             {checked ? (
@@ -870,7 +875,7 @@ export const MicroDashboardPage = () => {
                       ) : null}
                     </div>
                   ) : (
-                    <div className="mt-3 flex min-h-[12rem] flex-col justify-between rounded-[10px] border border-dashed border-black/20 bg-neo-bg/70 p-3">
+                    <div className="mt-3 flex min-h-[12rem] flex-col justify-between rounded-[8px] border border-dashed border-black/20 bg-neo-bg/70 p-3">
                       <div className="text-[12px] font-semibold text-gray-600">
                         {loading ? 'Loading scenarios...' : selectedCount ? `${selectedCount} selected in this category.` : 'Collapsed'}
                       </div>
@@ -889,7 +894,7 @@ export const MicroDashboardPage = () => {
           </section>
 
           <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="rounded-[12px] border-2 border-black bg-white/96 p-4 shadow-neo">
+            <div className="rounded-[8px] border-2 border-black bg-white/96 p-4 shadow-neo">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-500">Latest Output</div>
@@ -965,7 +970,7 @@ export const MicroDashboardPage = () => {
               )}
             </div>
 
-            <aside className="rounded-[12px] border-2 border-black bg-white/96 p-4 shadow-neo">
+            <aside className="rounded-[8px] border-2 border-black bg-white/96 p-4 shadow-neo">
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-500">Selected Categories</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {selectedCategoryLabels.length ? (

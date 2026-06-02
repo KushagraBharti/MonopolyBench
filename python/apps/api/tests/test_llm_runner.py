@@ -237,6 +237,48 @@ class CaptureOpenRouter:
         return _tool_call_response(tool_name, args)
 
 
+class GenerationBackfillOpenRouter:
+    def __init__(self) -> None:
+        self.generation_ids: list[str] = []
+
+    async def create_chat_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        **_: Any,
+    ) -> OpenRouterResult:
+        payload = _extract_payload(messages, tools)
+        if payload is None:
+            return _tool_call_response("start_auction", {})
+        tool_name, args = _choose_buy_if_legal(payload["decision"], payload["decision_focus"])
+        return _tool_call_response(tool_name, args)
+
+    async def get_generation(self, generation_id: str) -> OpenRouterResult:
+        self.generation_ids.append(generation_id)
+        return OpenRouterResult(
+            ok=True,
+            status_code=200,
+            response_json={
+                "data": {
+                    "id": generation_id,
+                    "total_cost": 0.0015,
+                    "tokens_prompt": 10,
+                    "tokens_completion": 25,
+                    "native_tokens_prompt": 11,
+                    "native_tokens_completion": 26,
+                    "native_tokens_reasoning": 5,
+                    "native_tokens_cached": 3,
+                    "finish_reason": "stop",
+                    "provider_name": "TestProvider",
+                }
+            },
+            error=None,
+            error_type=None,
+            request_id="generation-req-1",
+        )
+
+
 def _choose_buy_if_legal(
     decision: dict[str, Any],
     decision_focus: dict[str, Any],
@@ -393,6 +435,45 @@ def test_static_run_artifacts_are_written_without_system_prompt_text(tmp_path) -
     assert seat_assignment["assignments"][0]["seat_index"] == 0
     assert seat_assignment["assignments"][0]["turn_order"] == 0
     assert "You are an autonomous player" not in serialized
+
+
+def test_generation_endpoint_backfills_usage_artifacts(tmp_path) -> None:
+    players = _make_players()
+    run_files = init_run_files(tmp_path, "run-generation-backfill")
+    fake = GenerationBackfillOpenRouter()
+    runner = LlmRunner(
+        seed=123,
+        players=players,
+        run_id="run-generation-backfill",
+        openrouter=fake,
+        run_files=run_files,
+        event_delay_s=0,
+        max_turns=8,
+    )
+
+    asyncio.run(runner.run())
+
+    assert fake.generation_ids
+    attempt_rows = [
+        json.loads(line)
+        for line in run_files.usage_attempts_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert attempt_rows
+    first = attempt_rows[0]
+    assert first["accounting_status"] == "actual_openrouter_usage"
+    assert first["accounting_source"] == "chat_completion_usage_with_generation_backfill"
+    assert first["prompt_tokens"] == 10
+    assert first["completion_tokens"] == 25
+    assert first["total_tokens"] == 35
+    assert first["native_prompt_tokens"] == 11
+    assert first["native_completion_tokens"] == 26
+    assert first["native_total_tokens"] == 37
+    assert first["reasoning_tokens"] == 5
+    assert first["cached_tokens"] == 3
+    assert first["cost"] == 0.0015
+    cost_report = json.loads(run_files.cost_report_path.read_text(encoding="utf-8"))
+    assert cost_report["total_actual_cost"] > 0
 
 
 def test_invalid_twice_fallback(tmp_path) -> None:

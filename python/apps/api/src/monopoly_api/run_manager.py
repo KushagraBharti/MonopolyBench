@@ -10,7 +10,15 @@ from typing import Any, Callable
 
 from fastapi import WebSocket
 
-from monopoly_telemetry import RunFiles, build_run_files, init_run_files
+from monopoly_telemetry import (
+    RunFiles,
+    append_jsonl,
+    append_review_label,
+    build_review_summary,
+    build_run_files,
+    init_run_files,
+    read_review_labels,
+)
 
 from monopoly_api.mock_runner import build_idle_snapshot
 from monopoly_arena import LlmRunner, OpenRouterClient, PlayerConfig
@@ -256,6 +264,307 @@ class RunManager:
         index = self._resolve_decision_index(run_id, run_files)
         return index.get_bundle(decision_id)
 
+    def list_run_artifacts(self, run_id: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        artifacts = []
+        for name, path in _run_artifact_paths(run_files).items():
+            artifacts.append(
+                {
+                    "name": name,
+                    "path": str(path),
+                    "exists": path.exists(),
+                    "kind": "jsonl" if path.suffix == ".jsonl" else "json",
+                }
+            )
+        return {"run_id": run_id, "artifacts": artifacts}
+
+    def get_run_artifact(self, run_id: str, artifact_name: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        paths = _run_artifact_paths(run_files)
+        path = paths.get(artifact_name)
+        if path is None or not path.exists() or not path.is_file():
+            return None
+        if path.suffix == ".jsonl":
+            return {
+                "run_id": run_id,
+                "artifact": artifact_name,
+                "kind": "jsonl",
+                "rows": _read_jsonl(path),
+            }
+        return {
+            "run_id": run_id,
+            "artifact": artifact_name,
+            "kind": "json",
+            "content": _read_json(path),
+        }
+
+    def list_run_snapshots(self, run_id: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        snapshots = []
+        if run_files.snapshots_dir.exists():
+            for path in sorted(run_files.snapshots_dir.glob("*.json")):
+                if _is_safe_snapshot_name(path.name):
+                    snapshots.append({"name": path.name, "path": str(path)})
+        return {"run_id": run_id, "snapshots": snapshots}
+
+    def get_run_snapshot(self, run_id: str, snapshot_name: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None or not _is_safe_snapshot_name(snapshot_name):
+            return None
+        path = run_files.snapshots_dir / snapshot_name
+        if not path.exists() or not path.is_file():
+            return None
+        return {
+            "run_id": run_id,
+            "snapshot": snapshot_name,
+            "content": _read_json(path),
+        }
+
+    def get_review_queue(self, run_id: str) -> dict[str, Any] | None:
+        artifact = self.get_run_artifact(run_id, "review_queue")
+        if artifact is None:
+            return None
+        return {"run_id": run_id, "queue": artifact.get("rows", [])}
+
+    def add_review_queue_item(self, run_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        current_queue = _read_jsonl(run_files.review_queue_path)
+        queue_item = {
+            "schema_version": "v1",
+            "review_label_version": "review_label_v1",
+            "queue_item_id": str(payload.get("queue_item_id") or f"review-{len(current_queue):06d}"),
+            "run_id": run_id,
+            "decision_id": payload.get("decision_id"),
+            "turn_index": payload.get("turn_index"),
+            "player_id": payload.get("player_id"),
+            "model_id": payload.get("model_id"),
+            "finding_ids": payload.get("finding_ids") if isinstance(payload.get("finding_ids"), list) else [],
+            "failure_ids": payload.get("failure_ids") if isinstance(payload.get("failure_ids"), list) else [],
+            "severity": str(payload.get("severity") or "medium"),
+            "reason_for_review": str(payload.get("reason_for_review") or "user_selected_decision"),
+            "suggested_labels": (
+                payload.get("suggested_labels")
+                if isinstance(payload.get("suggested_labels"), list)
+                else ["user_selected_decision"]
+            ),
+            "status": "unreviewed",
+            "reviewer_id": str(payload.get("reviewer_id") or "local_reviewer"),
+            "review_mode": "human_only",
+            "artifact_paths": {
+                "events": "events.jsonl",
+                "decisions": "decisions.jsonl",
+                "replay": "replay.jsonl",
+                "trace_findings": "trace_findings.jsonl",
+                "failure_findings": "failure_findings.jsonl",
+            },
+        }
+        append_jsonl(run_files.review_queue_path, queue_item)
+        return {"run_id": run_id, "queue_item": queue_item}
+
+    def get_review_labels(self, run_id: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        return {"run_id": run_id, "labels": read_review_labels(run_files)}
+
+    def add_review_label(self, run_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        label = append_review_label(run_files, payload)
+        return {"run_id": run_id, "label": label, "summary": build_review_summary(run_files)}
+
+    def get_review_summary(self, run_id: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        summary = build_review_summary(run_files)
+        if not run_files.review_summary_path.exists():
+            run_files.write_json_artifact(run_files.review_summary_path, summary)
+        return summary
+
+    def list_runs(self) -> dict[str, Any]:
+        runs = []
+        if self._runs_dir.exists():
+            for path in sorted(self._runs_dir.iterdir()):
+                if not path.is_dir() or path.name in {"batches", "micro", "micro_batches"} or not _is_safe_run_id(path.name):
+                    continue
+                summary = _read_json(path / "summary.json")
+                run_config = _read_json(path / "run_config.json")
+                scorecard = _read_json(path / "scorecard.json")
+                runs.append(
+                    {
+                        "run_id": path.name,
+                        "run_dir": str(path),
+                        "mode": run_config.get("mode"),
+                        "seed": run_config.get("seed"),
+                        "winner_player_id": summary.get("winner_player_id"),
+                        "turn_count": summary.get("turn_count"),
+                        "reason": summary.get("reason"),
+                        "summary_exists": bool(summary),
+                        "scorecard_exists": bool(scorecard),
+                        "replay_report_exists": (path / "replay_report.json").exists(),
+                    }
+                )
+        return {"runs": runs}
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
+        run_files = self._resolve_run_files(run_id)
+        if run_files is None:
+            return None
+        return {
+            "run_id": run_id,
+            "run_dir": str(run_files.run_dir),
+            "summary": _read_json(run_files.summary_path),
+            "run_config": _read_json(run_files.run_config_path),
+            "players": _read_json(run_files.players_path),
+            "seat_assignment": _read_json(run_files.seat_assignment_path),
+            "scorecard": _read_json(run_files.scorecard_path),
+            "usage": _read_json(run_files.usage_path),
+            "replay_report": _read_json(run_files.replay_report_path),
+            "trace_summary": _read_json(run_files.trace_summary_path),
+            "failure_summary": _read_json(run_files.failure_summary_path),
+        }
+
+    def get_model(self, model_id: str) -> dict[str, Any] | None:
+        if "/" in model_id:
+            target_model_id = model_id
+        else:
+            target_model_id = model_id.replace("__", "/")
+        runs: list[dict[str, Any]] = []
+        total_games = 0
+        wins = 0
+        final_net_worth_values: list[float] = []
+        total_cost = 0.0
+        total_tokens = 0
+        for run in self.list_runs()["runs"]:
+            run_id = str(run.get("run_id") or "")
+            run_files = self._resolve_run_files(run_id)
+            if run_files is None:
+                continue
+            scorecard = _read_json(run_files.scorecard_path)
+            usage = _read_json(run_files.usage_path)
+            matched_players = [
+                player
+                for player in _list(scorecard.get("players"))
+                if isinstance(player, dict) and str(player.get("openrouter_model_id") or "") == target_model_id
+            ]
+            if not matched_players:
+                continue
+            for player in matched_players:
+                total_games += 1
+                wins += 1 if player.get("winner") else 0
+                if isinstance(player.get("final_net_worth_estimate"), (int, float)):
+                    final_net_worth_values.append(float(player["final_net_worth_estimate"]))
+            by_model = _dict(usage.get("by_model"))
+            usage_row = _dict(by_model.get(target_model_id))
+            if isinstance(usage_row.get("cost"), (int, float)):
+                total_cost += float(usage_row["cost"])
+            if isinstance(usage_row.get("total_tokens"), (int, float)):
+                total_tokens += int(usage_row["total_tokens"])
+            runs.append({"run_id": run_id, "players": matched_players})
+        if not runs:
+            return None
+        return {
+            "model_id": target_model_id,
+            "game_count": total_games,
+            "win_count": wins,
+            "win_rate": wins / total_games if total_games else None,
+            "average_final_net_worth": (
+                sum(final_net_worth_values) / len(final_net_worth_values)
+                if final_net_worth_values
+                else None
+            ),
+            "total_cost": round(total_cost, 10),
+            "total_tokens": total_tokens,
+            "runs": runs,
+        }
+
+    def list_batches(self) -> dict[str, Any]:
+        batch_root = self._runs_dir / "batches"
+        batches = []
+        if batch_root.exists():
+            for path in sorted(batch_root.iterdir()):
+                if not path.is_dir() or not _is_safe_run_id(path.name):
+                    continue
+                manifest = _read_json(path / "batch_manifest.json") if (path / "batch_manifest.json").exists() else {}
+                batches.append(
+                    {
+                        "batch_id": path.name,
+                        "batch_dir": str(path),
+                        "run_count": manifest.get("run_count"),
+                        "manifest_exists": bool(manifest),
+                    }
+                )
+        return {"batches": batches}
+
+    def get_batch(self, batch_id: str) -> dict[str, Any] | None:
+        batch_dir = self._resolve_batch_dir(batch_id)
+        if batch_dir is None:
+            return None
+        return {
+            "batch_id": batch_id,
+            "batch_dir": str(batch_dir),
+            "manifest": _read_json(batch_dir / "batch_manifest.json"),
+            "config": _read_json(batch_dir / "batch_config.json"),
+            "leaderboard": _read_json(batch_dir / "leaderboard.json"),
+        }
+
+    def list_batch_artifacts(self, batch_id: str) -> dict[str, Any] | None:
+        batch_dir = self._resolve_batch_dir(batch_id)
+        if batch_dir is None:
+            return None
+        artifacts = []
+        for name, path in _batch_artifact_paths(batch_dir).items():
+            artifacts.append(
+                {
+                    "name": name,
+                    "path": str(path),
+                    "exists": path.exists(),
+                    "kind": "jsonl" if path.suffix == ".jsonl" else "json",
+                }
+            )
+        model_cards_dir = batch_dir / "model_cards"
+        model_cards = []
+        if model_cards_dir.exists():
+            for path in sorted(model_cards_dir.glob("*.json")):
+                model_cards.append({"card_id": path.stem, "json_path": str(path), "markdown_path": str(path.with_suffix(".md"))})
+        return {"batch_id": batch_id, "artifacts": artifacts, "model_cards": model_cards}
+
+    def get_batch_artifact(self, batch_id: str, artifact_name: str) -> dict[str, Any] | None:
+        batch_dir = self._resolve_batch_dir(batch_id)
+        if batch_dir is None:
+            return None
+        path = _batch_artifact_paths(batch_dir).get(artifact_name)
+        if path is None or not path.exists() or not path.is_file():
+            return None
+        if path.suffix == ".jsonl":
+            return {"batch_id": batch_id, "artifact": artifact_name, "kind": "jsonl", "rows": _read_jsonl(path)}
+        return {"batch_id": batch_id, "artifact": artifact_name, "kind": "json", "content": _read_json(path)}
+
+    def get_batch_model_card(self, batch_id: str, card_id: str) -> dict[str, Any] | None:
+        batch_dir = self._resolve_batch_dir(batch_id)
+        if batch_dir is None or not _is_safe_run_id(card_id):
+            return None
+        json_path = batch_dir / "model_cards" / f"{card_id}.json"
+        markdown_path = batch_dir / "model_cards" / f"{card_id}.md"
+        if not json_path.exists() or not json_path.is_file():
+            return None
+        return {
+            "batch_id": batch_id,
+            "card_id": card_id,
+            "json": _read_json(json_path),
+            "markdown": markdown_path.read_text(encoding="utf-8") if markdown_path.exists() else None,
+        }
+
     def _is_running(self) -> bool:
         return self._runner_task is not None and not self._runner_task.done()
 
@@ -274,6 +583,125 @@ class RunManager:
             return self._decision_index
         return DecisionIndex(run_files)
 
+    def _resolve_batch_dir(self, batch_id: str) -> Path | None:
+        if not _is_safe_run_id(batch_id):
+            return None
+        batch_dir = self._runs_dir / "batches" / batch_id
+        if not batch_dir.exists() or not batch_dir.is_dir():
+            return None
+        return batch_dir
+
 
 def _is_safe_run_id(run_id: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", run_id))
+
+
+def _is_safe_snapshot_name(name: str) -> bool:
+    return bool(re.fullmatch(r"turn_[0-9]{4}(?:_[A-Za-z0-9_-]+_[0-9]{4})?\.json", name))
+
+
+def _run_artifact_paths(run_files: RunFiles) -> dict[str, Path]:
+    return {
+        "summary": run_files.summary_path,
+        "run_config": run_files.run_config_path,
+        "players": run_files.players_path,
+        "seat_assignment": run_files.seat_assignment_path,
+        "artifact_manifest": run_files.artifact_manifest_path,
+        "pricing_snapshot": run_files.pricing_snapshot_path,
+        "scorecard": run_files.scorecard_path,
+        "scorecard_players": run_files.scorecard_players_path,
+        "scorecard_decisions": run_files.scorecard_decisions_path,
+        "scorecard_events": run_files.scorecard_events_path,
+        "usage": run_files.usage_path,
+        "usage_decisions": run_files.usage_decisions_path,
+        "usage_attempts": run_files.usage_attempts_path,
+        "cost_report": run_files.cost_report_path,
+        "replay_report": run_files.replay_report_path,
+        "replay_diff": run_files.replay_diff_path,
+        "event_hashes": run_files.event_hashes_path,
+        "replay_steps": run_files.replay_steps_path,
+        "replay_flags": run_files.replay_flags_path,
+        "replay_navigation": run_files.replay_navigation_path,
+        "timeline": run_files.timeline_path,
+        "decision_index": run_files.decision_index_path,
+        "turn_index": run_files.turn_index_path,
+        "player_timelines": run_files.player_timelines_path,
+        "negotiation_threads": run_files.negotiation_threads_path,
+        "auction_threads": run_files.auction_threads_path,
+        "asset_flow": run_files.asset_flow_path,
+        "cash_flow": run_files.cash_flow_path,
+        "behavioral_flags": run_files.behavioral_flags_path,
+        "trace_findings": run_files.trace_findings_path,
+        "trace_summary": run_files.trace_summary_path,
+        "failure_findings": run_files.failure_findings_path,
+        "failure_summary": run_files.failure_summary_path,
+        "review_queue": run_files.review_queue_path,
+        "review_labels": run_files.review_labels_path,
+        "review_summary": run_files.review_summary_path,
+    }
+
+
+def _batch_artifact_paths(batch_dir: Path) -> dict[str, Path]:
+    return {
+        "batch_config": batch_dir / "batch_config.json",
+        "batch_manifest": batch_dir / "batch_manifest.json",
+        "model_config": batch_dir / "model_config.json",
+        "model_pricing_snapshot": batch_dir / "model_pricing_snapshot.json",
+        "seed_manifest": batch_dir / "seed_manifest.json",
+        "seat_manifest": batch_dir / "seat_manifest.json",
+        "run_index": batch_dir / "run_index.json",
+        "run_index_jsonl": batch_dir / "run_index.jsonl",
+        "results": batch_dir / "results.jsonl",
+        "leaderboard": batch_dir / "leaderboard.json",
+        "scorecard_summary": batch_dir / "scorecard_summary.json",
+        "category_breakdown": batch_dir / "category_breakdown.json",
+        "statistical_summary": batch_dir / "statistical_summary.json",
+        "replay_report": batch_dir / "replay_report.json",
+        "trace_summary": batch_dir / "trace_summary.json",
+        "failure_summary": batch_dir / "failure_summary.json",
+        "cost_report": batch_dir / "cost_report.json",
+        "token_report": batch_dir / "token_report.json",
+        "usage_summary": batch_dir / "usage_summary.json",
+        "budget_report": batch_dir / "budget_report.json",
+        "model_failure_breakdown": batch_dir / "model_failure_breakdown.json",
+        "failure_leaderboard": batch_dir / "failure_leaderboard.json",
+        "top_findings": batch_dir / "top_findings.jsonl",
+        "model_trace_breakdown": batch_dir / "model_trace_breakdown.json",
+        "failure_trace_breakdown": batch_dir / "failure_trace_breakdown.json",
+        "review_queue": batch_dir / "review_queue.jsonl",
+        "artifact_manifest": batch_dir / "artifact_manifest.json",
+    }
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return rows
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            rows.append(parsed)
+    return rows

@@ -129,7 +129,7 @@ export const Tile = memo(({ space, className, highlightSource = null }: TileProp
         {space.index === 0 && (
           <div className="w-full h-full bg-[#d4edda] relative flex items-center justify-center">
             <span className="absolute top-1 left-1 text-[7px] font-black transform -rotate-45 opacity-50 leading-tight">COLLECT<br />$200</span>
-            <span className="text-3xl font-black text-neo-black tracking-tighter drop-shadow-[1px_1px_0_rgba(255,255,255,0.4)] transform -rotate-45 relative z-10">GO</span>
+            <span className="text-3xl font-black text-neo-black tracking-normal drop-shadow-[1px_1px_0_rgba(255,255,255,0.4)] transform -rotate-45 relative z-10">GO</span>
             <div className="absolute bottom-0 right-0 w-7 h-7 border-l-[1.5px] border-t-[1.5px] border-black bg-neo-green/90">
               <svg viewBox="0 0 24 24" stroke="currentColor" className="w-full h-full p-1 text-white" strokeWidth="3"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
             </div>
@@ -144,8 +144,8 @@ export const Tile = memo(({ space, className, highlightSource = null }: TileProp
                 <div className="w-px h-full bg-black/60"></div>
               </div>
               <div className="absolute inset-0 flex items-center justify-center z-10">
-                <div className="bg-neo-orange border border-black/80 px-1 py-0.5 rotate-[-15deg]">
-                  <span className="text-[7px] font-black">IN JAIL</span>
+                <div className="max-w-full bg-neo-orange border border-black/80 px-1 py-0.5 rotate-[-15deg]">
+                  <span className="block text-center text-[6px] font-black leading-none">IN<br />JAIL</span>
                 </div>
               </div>
             </div>
@@ -160,7 +160,7 @@ export const Tile = memo(({ space, className, highlightSource = null }: TileProp
             <div className="mt-1">
               <FreeParkingIcon />
             </div>
-            <span className="text-[8px] font-bold uppercase mt-0.5 tracking-tight opacity-80">Parking</span>
+            <span className="text-[8px] font-bold uppercase mt-0.5 tracking-normal opacity-80">Parking</span>
           </div>
         )}
         {space.index === 30 && (
@@ -204,7 +204,7 @@ export const Tile = memo(({ space, className, highlightSource = null }: TileProp
       )}
 
       <div className="flex-1 flex flex-col items-center p-0.5 text-center w-full relative z-0">
-        <span className="text-[7.5px] font-bold uppercase leading-tight tracking-tight line-clamp-3 mb-0.5 min-h-[2em]">
+        <span className="text-[7.5px] font-bold uppercase leading-tight tracking-normal line-clamp-3 mb-0.5 min-h-[2em]">
           {name}
         </span>
 

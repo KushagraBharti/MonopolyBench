@@ -62,7 +62,7 @@ export const PlayerPanel = () => {
               </div>
 
               <div className="flex flex-col items-end leading-none">
-                <span className={cn("font-mono font-bold text-[11px] tracking-tight", player.bankrupt ? 'line-through opacity-50' : '')}>
+                <span className={cn("font-mono font-bold text-[11px] tracking-normal", player.bankrupt ? 'line-through opacity-50' : '')}>
                   ${player.cash}
                 </span>
                 <div className="flex gap-1 mt-0.5">

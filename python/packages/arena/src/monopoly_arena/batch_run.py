@@ -2,48 +2,27 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
+import importlib
 import json
 from pathlib import Path
 from typing import Any, Callable
 
-from monopoly_telemetry import build_summary, init_run_files
+from monopoly_telemetry import init_run_files
 
+from .batch_artifacts import (
+    DEFAULT_SEAT_MODE,
+    batch_paths,
+    build_batch_run_specs,
+    build_run_entry,
+    normalized_batch_config,
+    should_stop_for_budget,
+    write_batch_dynamic_artifacts,
+    write_batch_static_artifacts,
+)
 from .llm_runner import LlmRunner
 from .openrouter_client import OpenRouterClient
 from .paths import default_players_config_path, resolve_repo_path, resolve_repo_root
-from .player_config import PlayerConfig, build_player_configs
-
-
-def _generate_run_id(
-    batch_id: str,
-    index: int,
-    seed: int,
-    players: list[PlayerConfig],
-    *,
-    max_trade_exchanges: int,
-    max_auction_actions: int,
-) -> str:
-    players_blob = [
-        {
-            "player_id": player.player_id,
-            "name": player.name,
-            "openrouter_model_id": player.openrouter_model_id,
-            "system_prompt": player.system_prompt,
-        }
-        for player in players
-    ]
-    seed_blob = json.dumps(
-        {
-            "seed": seed,
-            "players": players_blob,
-            "max_trade_exchanges": max_trade_exchanges,
-            "max_auction_actions": max_auction_actions,
-        },
-        sort_keys=True,
-    )
-    digest = hashlib.sha1(seed_blob.encode("utf-8")).hexdigest()[:8]
-    return f"{batch_id}-{index:03d}-{seed}-{digest}"
+from .player_config import build_player_configs
 
 
 async def run_batch(
@@ -53,9 +32,25 @@ async def run_batch(
     openrouter_factory: Callable[[], Any] | None = None,
 ) -> Path:
     batch_id = str(config.get("batch_id") or config.get("output_dir") or "batch")
+    batch_type = str(config.get("batch_type") or "full_game")
+    if batch_type == "micro_suite":
+        return await _run_micro_suite_batch(
+            config,
+            batch_id=batch_id,
+            runs_dir=runs_dir,
+            openrouter_factory=openrouter_factory,
+        )
+    if batch_type == "mixed":
+        return await _run_mixed_batch(
+            config,
+            batch_id=batch_id,
+            runs_dir=runs_dir,
+            openrouter_factory=openrouter_factory,
+        )
     seeds = [int(seed) for seed in config.get("seeds", []) if isinstance(seed, (int, float))]
     matches = int(config.get("matches", len(seeds) if seeds else 0))
     players_path = config.get("players")
+    max_turns = int(config.get("max_turns", 200))
     max_trade_exchanges = int(config.get("max_trade_exchanges", 20))
     max_auction_actions = int(config.get("max_auction_actions", 200))
     players_file = (
@@ -70,33 +65,83 @@ async def run_batch(
         raise ValueError("Batch config must include a non-empty seeds list.")
 
     runs_root = resolve_repo_path(str(runs_dir)) if runs_dir else resolve_repo_root() / "runs"
-    batch_dir = runs_root / batch_id
-    batch_dir.mkdir(parents=True, exist_ok=True)
-    index_path = batch_dir / "index.jsonl"
-
     players = build_player_configs(requested_players=None, config_path=players_file)
     factory = openrouter_factory or OpenRouterClient
+    seat_mode = str(config.get("seat_permutation") or DEFAULT_SEAT_MODE)
+    batch_seed = int(config.get("batch_seed") or seeds[0])
+    normalized_config = normalized_batch_config(
+        {
+            **config,
+            "matches": matches,
+            "seeds": seeds,
+            "players": str(players_file),
+            "seat_permutation": seat_mode,
+            "batch_seed": batch_seed,
+            "max_turns": max_turns,
+        },
+        batch_id=batch_id,
+        runs_root=runs_root,
+    )
+    paths = batch_paths(runs_root, batch_id)
+    specs = build_batch_run_specs(
+        batch_id=batch_id,
+        seeds=seeds,
+        matches=matches,
+        players=players,
+        seat_mode=seat_mode,
+        batch_seed=batch_seed,
+        max_turns=max_turns,
+        max_trade_exchanges=max_trade_exchanges,
+        max_auction_actions=max_auction_actions,
+    )
+    metadata_client = factory()
+    pricing_snapshot = await _openrouter_metadata_snapshot(metadata_client, method_name="get_models")
+    credits_before = await _openrouter_metadata_snapshot(metadata_client, method_name="get_credits")
+    await _maybe_close(metadata_client)
+    write_batch_static_artifacts(
+        paths=paths,
+        config=normalized_config,
+        players=players,
+        specs=specs,
+        pricing_snapshot=pricing_snapshot,
+        credits_before=credits_before,
+    )
 
-    for match_index in range(matches):
-        seed = seeds[match_index % len(seeds)]
-        run_id = _generate_run_id(
-            batch_id,
-            match_index,
-            seed,
-            players,
-            max_trade_exchanges=max_trade_exchanges,
-            max_auction_actions=max_auction_actions,
-        )
-        run_files = init_run_files(runs_root, run_id)
+    run_entries: list[dict[str, Any]] = _read_existing_run_entries(paths["run_index"]) if normalized_config["resume"] else []
+    seen_run_ids = {str(entry.get("run_id")) for entry in run_entries}
+    budget_stop_reason = should_stop_for_budget(normalized_config, run_entries)
+
+    for spec in specs:
+        if budget_stop_reason:
+            break
+        if spec.run_id in seen_run_ids:
+            continue
+        run_files = init_run_files(runs_root, spec.run_id)
+        if normalized_config["resume"] and run_files.summary_path.exists():
+            entry = build_run_entry(spec=spec, run_dir=run_files.run_dir, status="completed")
+            run_entries.append(entry)
+            seen_run_ids.add(spec.run_id)
+            budget_stop_reason = should_stop_for_budget(normalized_config, run_entries)
+            write_batch_dynamic_artifacts(
+                paths=paths,
+                config=normalized_config,
+                run_entries=run_entries,
+                credits_before=credits_before,
+                credits_after={},
+                budget_stop_reason=budget_stop_reason,
+            )
+            continue
         runner = LlmRunner(
-            seed=seed,
-            players=players,
-            run_id=run_id,
+            seed=spec.seed,
+            players=spec.players,
+            run_id=spec.run_id,
             openrouter=factory(),
             run_files=run_files,
+            max_turns=max_turns,
             event_delay_s=0,
             max_trade_exchanges=max_trade_exchanges,
             max_auction_actions=max_auction_actions,
+            seat_assignment_metadata=spec.seat_metadata,
         )
 
         run_files.write_snapshot(runner.get_snapshot())
@@ -113,29 +158,518 @@ async def run_batch(
         async def on_decision(entry: dict[str, Any]) -> None:
             run_files.write_decision(entry)
 
-        await runner.run(
-            on_event=on_event,
-            on_snapshot=on_snapshot,
-            on_summary=on_summary,
-            on_decision=on_decision,
+        try:
+            await runner.run(
+                on_event=on_event,
+                on_snapshot=on_snapshot,
+                on_summary=on_summary,
+                on_decision=on_decision,
+            )
+            entry = build_run_entry(spec=spec, run_dir=run_files.run_dir, status="completed")
+        except Exception as exc:
+            entry = build_run_entry(spec=spec, run_dir=run_files.run_dir, status="failed", error=str(exc))
+            if not normalized_config["continue_on_failure"]:
+                run_entries.append(entry)
+                write_batch_dynamic_artifacts(
+                    paths=paths,
+                    config=normalized_config,
+                    run_entries=run_entries,
+                    credits_before=credits_before,
+                    credits_after={},
+                    budget_stop_reason=budget_stop_reason,
+                )
+                raise
+        run_entries.append(entry)
+        seen_run_ids.add(spec.run_id)
+        budget_stop_reason = should_stop_for_budget(normalized_config, run_entries)
+        write_batch_dynamic_artifacts(
+            paths=paths,
+            config=normalized_config,
+            run_entries=run_entries,
+            credits_before=credits_before,
+            credits_after={},
+            budget_stop_reason=budget_stop_reason,
         )
 
-        summary = build_summary(run_files)
-        index_entry = {
-            "run_id": run_id,
-            "seed": seed,
-            "run_dir": str(run_files.run_dir),
-            "summary": {
-                "winner_player_id": summary.get("winner_player_id"),
-                "turn_count": summary.get("turn_count"),
-                "reason": summary.get("reason"),
-            },
-        }
-        with index_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(index_entry, separators=(",", ":"), ensure_ascii=True))
-            handle.write("\n")
+    credits_client = factory()
+    credits_after = await _openrouter_metadata_snapshot(credits_client, method_name="get_credits")
+    await _maybe_close(credits_client)
+    write_batch_dynamic_artifacts(
+        paths=paths,
+        config=normalized_config,
+        run_entries=run_entries,
+        credits_before=credits_before,
+        credits_after=credits_after,
+        budget_stop_reason=budget_stop_reason,
+    )
 
-    return index_path
+    return paths["run_index_jsonl"]
+
+
+async def _run_mixed_batch(
+    config: dict[str, Any],
+    *,
+    batch_id: str,
+    runs_dir: Path | None,
+    openrouter_factory: Callable[[], Any] | None,
+) -> Path:
+    runs_root = resolve_repo_path(str(runs_dir)) if runs_dir else resolve_repo_root() / "runs"
+    parent_dir = runs_root / "batches" / batch_id
+    parent_dir.mkdir(parents=True, exist_ok=True)
+    component_entries: list[dict[str, Any]] = []
+    if config.get("seeds"):
+        full_config = {
+            **config,
+            "batch_type": "full_game",
+            "batch_id": str(config.get("full_game_batch_id") or f"{batch_id}-full-game"),
+        }
+        full_index = await run_batch(full_config, runs_dir=runs_root, openrouter_factory=openrouter_factory)
+        component_entries.append({"component_type": "full_game", "run_index_jsonl": str(full_index)})
+    micro_config = {
+        **config,
+        "batch_type": "micro_suite",
+        "batch_id": str(config.get("micro_batch_id") or f"{batch_id}-micro-suite"),
+    }
+    micro_index = await _run_micro_suite_batch(
+        micro_config,
+        batch_id=micro_config["batch_id"],
+        runs_dir=runs_root,
+        openrouter_factory=openrouter_factory,
+    )
+    component_entries.append({"component_type": "micro_suite", "run_index_jsonl": str(micro_index)})
+    parent_index = parent_dir / "run_index.jsonl"
+    _write_jsonl(parent_index, component_entries)
+    _write_json(
+        parent_dir / "batch_config.json",
+        {
+            "schema_version": "v1",
+            "batch_protocol_version": "batch_protocol_v1",
+            "batch_id": batch_id,
+            "batch_type": "mixed",
+            "components": component_entries,
+            "prompt_pipeline": {
+                "status": "unchanged",
+                "note": "Mixed batch orchestration does not change prompt construction, content, tools, or retry behavior.",
+            },
+        },
+    )
+    return parent_index
+
+
+async def _run_micro_suite_batch(
+    config: dict[str, Any],
+    *,
+    batch_id: str,
+    runs_dir: Path | None,
+    openrouter_factory: Callable[[], Any] | None,
+) -> Path:
+    runs_root = resolve_repo_path(str(runs_dir)) if runs_dir else resolve_repo_root() / "runs"
+    paths = batch_paths(runs_root, batch_id)
+    batch_dir = paths["batch_dir"]
+    batch_dir.mkdir(parents=True, exist_ok=True)
+    suite_id = str(config.get("micro_suite_id") or config.get("suite_id") or "micro-v1")
+    prompt_condition = str(config.get("prompt_condition") or "live_game")
+    scenario_ids = [
+        str(value)
+        for value in config.get("scenario_ids", [])
+        if isinstance(value, str)
+    ] or None
+    model_ids = _micro_model_ids(config)
+    if not model_ids:
+        players_path = config.get("players")
+        players_file = resolve_repo_path(str(players_path)) if players_path else default_players_config_path()
+        model_ids = [player.openrouter_model_id for player in build_player_configs(requested_players=None, config_path=players_file)]
+    if not model_ids:
+        raise ValueError("Micro-suite batch requires at least one model id.")
+
+    micro_runner = importlib.import_module("monopoly_microbench.runner")
+    micro_catalog = importlib.import_module("monopoly_microbench.catalog")
+    run_scenario = getattr(micro_runner, "run_scenario")
+    micro_config_cls = getattr(micro_runner, "MicroRunConfig")
+    suite = micro_catalog.get_suite(suite_id)
+    selected_scenarios = scenario_ids or list(suite["scenario_ids"])
+    normalized_config = {
+        **normalized_batch_config(
+            {
+                **config,
+                "batch_type": "micro_suite",
+                "matches": len(model_ids) * len(selected_scenarios),
+                "seeds": [],
+                "players": config.get("players"),
+            },
+            batch_id=batch_id,
+            runs_root=runs_root,
+        ),
+        "micro_suite_id": suite_id,
+        "scenario_ids": selected_scenarios,
+        "model_ids": model_ids,
+        "prompt_condition": prompt_condition,
+    }
+    _write_json(paths["batch_config"], normalized_config)
+    _write_json(paths["model_config"], {"schema_version": "v1", "models": [{"openrouter_model_id": model_id} for model_id in model_ids]})
+
+    metadata_client = (openrouter_factory or OpenRouterClient)()
+    pricing_snapshot = await _openrouter_metadata_snapshot(metadata_client, method_name="get_models")
+    credits_before = await _openrouter_metadata_snapshot(metadata_client, method_name="get_credits")
+    await _maybe_close(metadata_client)
+    _write_json(paths["model_pricing_snapshot"], pricing_snapshot)
+
+    result_entries: list[dict[str, Any]] = []
+    budget_stop_reason: str | None = None
+    factory = openrouter_factory or OpenRouterClient
+    continue_on_failure = bool(config.get("continue_on_failure", False))
+    for model_id in model_ids:
+        for scenario_id in selected_scenarios:
+            if budget_stop_reason:
+                break
+            run_id = f"{batch_id}-{_safe_micro_id(model_id)}-{scenario_id}"
+            try:
+                result = await run_scenario(
+                    micro_config_cls(
+                        scenario_id=scenario_id,
+                        openrouter_model_id=model_id,
+                        prompt_condition=prompt_condition,
+                        run_id=run_id,
+                    ),
+                    runs_dir=runs_root,
+                    openrouter_factory=factory,
+                )
+                status = "completed"
+                error = None
+            except Exception as exc:
+                if not continue_on_failure:
+                    raise
+                result = {}
+                status = "failed"
+                error = str(exc)
+            entry = {
+                "schema_version": "v1",
+                "batch_protocol_version": "batch_protocol_v1",
+                "batch_type": "micro_suite",
+                "batch_id": batch_id,
+                "run_index": len(result_entries),
+                "run_id": run_id,
+                "status": status,
+                "error": error,
+                "run_dir": str(runs_root / "micro" / run_id),
+                "suite_id": suite_id,
+                "scenario_id": scenario_id,
+                "model_id": model_id,
+                "prompt_condition": prompt_condition,
+                "result": result,
+            }
+            result_entries.append(entry)
+            budget_stop_reason = _micro_should_stop_for_budget(normalized_config, result_entries)
+            _write_micro_batch_dynamic(paths, normalized_config, result_entries, credits_before, {}, budget_stop_reason)
+        if budget_stop_reason:
+            break
+    credits_client = factory()
+    credits_after = await _openrouter_metadata_snapshot(credits_client, method_name="get_credits")
+    await _maybe_close(credits_client)
+    _write_micro_batch_dynamic(paths, normalized_config, result_entries, credits_before, credits_after, budget_stop_reason)
+    return paths["run_index_jsonl"]
+
+
+async def _openrouter_metadata_snapshot(client: Any, *, method_name: str) -> dict[str, Any]:
+    method = getattr(client, method_name, None)
+    if method is None:
+        return {
+            "schema_version": "v1",
+            "source": f"openrouter_{method_name}",
+            "status": "unavailable",
+            "reason": f"client_has_no_{method_name}",
+        }
+    result = await method()
+    return {
+        "schema_version": "v1",
+        "source": f"openrouter_{method_name}",
+        "status": "ok" if getattr(result, "ok", False) else "error",
+        "status_code": getattr(result, "status_code", None),
+        "request_id": getattr(result, "request_id", None),
+        "error": getattr(result, "error", None),
+        "error_type": getattr(result, "error_type", None),
+        "data": getattr(result, "response_json", None),
+    }
+
+
+async def _maybe_close(client: Any) -> None:
+    close = getattr(client, "aclose", None)
+    if close is not None:
+        await close()
+
+
+def _read_existing_run_entries(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    rows = parsed.get("runs") if isinstance(parsed, dict) else []
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _micro_model_ids(config: dict[str, Any]) -> list[str]:
+    values = config.get("model_ids") or config.get("models") or []
+    model_ids: list[str] = []
+    if isinstance(values, list):
+        for value in values:
+            if isinstance(value, str):
+                model_ids.append(value)
+            elif isinstance(value, dict):
+                model_id = value.get("openrouter_model_id") or value.get("model_id") or value.get("id")
+                if isinstance(model_id, str):
+                    model_ids.append(model_id)
+    return model_ids
+
+
+def _micro_should_stop_for_budget(config: dict[str, Any], entries: list[dict[str, Any]]) -> str | None:
+    if str(config.get("budget_policy") or "stop_immediately") != "stop_immediately":
+        return None
+    token_budget = config.get("token_budget")
+    if isinstance(token_budget, (int, float)):
+        actual_tokens = 0
+        for entry in entries:
+            usage_path = Path(str(entry.get("run_dir"))) / "usage.json"
+            usage = _read_json(usage_path)
+            totals = usage.get("totals") if isinstance(usage.get("totals"), dict) else {}
+            total_tokens = totals.get("total_tokens") if isinstance(totals, dict) else None
+            if isinstance(total_tokens, (int, float)):
+                actual_tokens += int(total_tokens)
+        if actual_tokens >= int(token_budget):
+            return f"actual_tokens_{actual_tokens}_meets_or_exceeds_budget_{int(token_budget)}"
+    return None
+
+
+def _write_micro_batch_dynamic(
+    paths: dict[str, Path],
+    config: dict[str, Any],
+    entries: list[dict[str, Any]],
+    credits_before: dict[str, Any],
+    credits_after: dict[str, Any],
+    budget_stop_reason: str | None,
+) -> None:
+    _write_json(paths["run_index"], {"schema_version": "v1", "runs": entries})
+    _write_jsonl(paths["run_index_jsonl"], entries)
+    _write_jsonl(paths["results"], entries)
+    leaderboard = _micro_leaderboard(entries)
+    _write_json(paths["leaderboard"], leaderboard)
+    _write_json(paths["category_breakdown"], _micro_category_breakdown(entries))
+    _write_json(paths["scorecard_summary"], {"schema_version": "v1", "batch_type": "micro_suite", "leaderboard": leaderboard})
+    _write_json(paths["statistical_summary"], _micro_statistical_summary(entries))
+    _write_json(paths["usage_summary"], _micro_usage_summary(entries))
+    _write_json(paths["token_report"], _micro_token_report(entries))
+    _write_json(paths["cost_report"], _micro_cost_report(entries))
+    _write_json(
+        paths["budget_report"],
+        {
+            "schema_version": "v1",
+            "budget_report_version": "micro_batch_budget_report_v1",
+            "budget_policy": config.get("budget_policy"),
+            "token_budget": config.get("token_budget"),
+            "actual_tokens": _micro_total_tokens(entries),
+            "cost_budget": config.get("cost_budget"),
+            "actual_cost": _micro_total_cost(entries),
+            "stop_reason": budget_stop_reason,
+            "credits_before": credits_before,
+            "credits_after": credits_after,
+            "source": "openrouter_actuals_only",
+            "local_tokenizer_estimates_used": False,
+        },
+    )
+    _write_json(paths["batch_manifest"], _micro_batch_manifest(config, entries, paths))
+    _write_json(paths["artifact_manifest"], _simple_artifact_manifest(paths))
+
+
+def _micro_leaderboard(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    by_model: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        model_id = str(entry.get("model_id") or "unknown")
+        row = by_model.setdefault(model_id, {"model_id": model_id, "scenario_count": 0, "completed_count": 0, "scores": []})
+        row["scenario_count"] += 1
+        if entry.get("status") == "completed":
+            row["completed_count"] += 1
+        result = _dict(entry.get("result"))
+        score = _dict(result.get("score"))
+        total = score.get("total")
+        if isinstance(total, (int, float)):
+            row["scores"].append(float(total))
+    rows: list[dict[str, Any]] = []
+    for row in by_model.values():
+        scores = row.pop("scores")
+        row["average_score"] = sum(scores) / len(scores) if scores else None
+        row["completion_rate"] = row["completed_count"] / row["scenario_count"] if row["scenario_count"] else 0
+        rows.append(row)
+    rows.sort(key=lambda row: (row.get("average_score") or 0, row.get("completion_rate") or 0), reverse=True)
+    return {
+        "schema_version": "v1",
+        "leaderboard_version": "micro_suite_leaderboard_v1",
+        "rankings": rows,
+    }
+
+
+def _micro_category_breakdown(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    by_category: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        result = _dict(entry.get("result"))
+        category = str(result.get("category") or "unknown")
+        score = _dict(result.get("score"))
+        total = score.get("total")
+        row = by_category.setdefault(category, {"category": category, "count": 0, "scores": []})
+        row["count"] += 1
+        if isinstance(total, (int, float)):
+            row["scores"].append(float(total))
+    rows = []
+    for row in by_category.values():
+        scores = row.pop("scores")
+        row["average_score"] = sum(scores) / len(scores) if scores else None
+        rows.append(row)
+    return {"schema_version": "v1", "category_breakdown_version": "micro_suite_category_breakdown_v1", "categories": rows}
+
+
+def _micro_statistical_summary(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    scores: list[float] = []
+    for entry in entries:
+        result = _dict(entry.get("result"))
+        score = _dict(result.get("score"))
+        total = score.get("total")
+        if isinstance(total, (int, float)):
+            scores.append(float(total))
+    return {
+        "schema_version": "v1",
+        "statistical_summary_version": "micro_suite_statistical_summary_v1",
+        "scenario_count": len(entries),
+        "completed_count": sum(1 for entry in entries if entry.get("status") == "completed"),
+        "score": {
+            "count": len(scores),
+            "mean": sum(scores) / len(scores) if scores else None,
+            "min": min(scores) if scores else None,
+            "max": max(scores) if scores else None,
+        },
+    }
+
+
+def _micro_usage_summary(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        "usage_accounting_version": "micro_batch_usage_summary_v1",
+        "source": "openrouter_actuals_only",
+        "local_tokenizer_estimates_used": False,
+        "total_tokens": _micro_total_tokens(entries),
+        "total_cost": _micro_total_cost(entries),
+    }
+
+
+def _micro_token_report(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        "usage_accounting_version": "micro_batch_token_report_v1",
+        "source": "openrouter_actuals_only",
+        "local_tokenizer_estimates_used": False,
+        "totals": {"total_tokens": _micro_total_tokens(entries)},
+    }
+
+
+def _micro_cost_report(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        "usage_accounting_version": "micro_batch_cost_report_v1",
+        "source": "openrouter_actuals_only",
+        "local_tokenizer_estimates_used": False,
+        "total_actual_cost": _micro_total_cost(entries),
+    }
+
+
+def _micro_total_tokens(entries: list[dict[str, Any]]) -> int:
+    total = 0
+    for entry in entries:
+        usage = _read_json(Path(str(entry.get("run_dir"))) / "usage.json")
+        totals = usage.get("totals") if isinstance(usage.get("totals"), dict) else {}
+        value = totals.get("total_tokens") if isinstance(totals, dict) else None
+        if isinstance(value, (int, float)):
+            total += int(value)
+    return total
+
+
+def _micro_total_cost(entries: list[dict[str, Any]]) -> float:
+    total = 0.0
+    for entry in entries:
+        usage = _read_json(Path(str(entry.get("run_dir"))) / "usage.json")
+        totals = usage.get("totals") if isinstance(usage.get("totals"), dict) else {}
+        value = totals.get("cost") if isinstance(totals, dict) else None
+        if isinstance(value, (int, float)):
+            total += float(value)
+    return round(total, 10)
+
+
+def _micro_batch_manifest(config: dict[str, Any], entries: list[dict[str, Any]], paths: dict[str, Path]) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        "batch_manifest_version": "micro_suite_batch_manifest_v1",
+        "batch_id": config.get("batch_id"),
+        "batch_type": "micro_suite",
+        "batch_dir": str(paths["batch_dir"]),
+        "run_count": len(entries),
+        "runs": [
+            {
+                "run_index": entry.get("run_index"),
+                "run_id": entry.get("run_id"),
+                "run_dir": entry.get("run_dir"),
+                "status": entry.get("status"),
+                "scenario_id": entry.get("scenario_id"),
+                "model_id": entry.get("model_id"),
+            }
+            for entry in entries
+        ],
+    }
+
+
+def _simple_artifact_manifest(paths: dict[str, Path]) -> dict[str, Any]:
+    batch_dir = paths["batch_dir"]
+    artifacts = []
+    for label, path in sorted(paths.items()):
+        if label == "batch_dir":
+            continue
+        artifacts.append({"label": label, "path": str(path), "exists": path.exists()})
+    return {
+        "schema_version": "v1",
+        "manifest_version": "batch_artifact_manifest_v1",
+        "batch_dir": str(batch_dir),
+        "artifacts": artifacts,
+    }
+
+
+def _safe_micro_id(value: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in value) or "model"
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
+
+
+def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join(json.dumps(row, separators=(",", ":"), ensure_ascii=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
 
 
 def _load_config(path: Path) -> dict[str, Any]:

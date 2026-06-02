@@ -61,6 +61,7 @@ def list_scenario_summaries(*, suite_id: str | None = None) -> list[dict[str, An
                 "focal_player_id": scenario["focal_player_id"],
                 "decision_type": decision["decision_type"],
                 "scoring_mode": scenario["evaluation"]["scoring_mode"],
+                "research_metadata": scenario.get("research_metadata"),
             }
         )
     return summaries

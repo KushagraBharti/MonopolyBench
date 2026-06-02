@@ -37,7 +37,8 @@ export const getApiBaseUrl = (): string => {
   }
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
   const hostname = window.location.hostname || '127.0.0.1'
-  const port = DEV_PORTS.has(window.location.port) || !window.location.port ? '8000' : window.location.port
+  const isViteDevPort = /^51\d{2}$/.test(window.location.port)
+  const port = DEV_PORTS.has(window.location.port) || isViteDevPort || !window.location.port ? '8000' : window.location.port
   return `${protocol}://${hostname}:${port}`
 }
 

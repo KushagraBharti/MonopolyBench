@@ -124,7 +124,7 @@ export const Inspector = () => {
         {/* Header Bar */}
         <div className="h-11 bg-black text-white flex justify-between items-center px-4 select-none shrink-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-[14px] font-black uppercase tracking-tight">System Inspector</h2>
+            <h2 className="text-[14px] font-black uppercase tracking-normal">System Inspector</h2>
             <div className="hidden md:block h-5 w-px bg-white/20" />
             <div className="hidden md:flex font-mono text-[9px] text-gray-500 gap-3">
               <span>RUN: {snapshot?.run_id?.slice(0, 8) ?? 'N/A'}</span>

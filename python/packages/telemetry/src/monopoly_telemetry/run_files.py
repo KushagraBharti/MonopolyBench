@@ -33,17 +33,31 @@ class RunFiles:
     usage_path: Path
     usage_decisions_path: Path
     usage_attempts_path: Path
+    pricing_snapshot_path: Path
     cost_report_path: Path
     replay_report_path: Path
     replay_steps_path: Path
     replay_flags_path: Path
     replay_navigation_path: Path
+    replay_diff_path: Path
+    event_hashes_path: Path
     trace_findings_path: Path
     trace_summary_path: Path
+    timeline_path: Path
+    decision_index_path: Path
+    turn_index_path: Path
+    player_timelines_path: Path
+    negotiation_threads_path: Path
+    auction_threads_path: Path
+    asset_flow_path: Path
+    cash_flow_path: Path
+    behavioral_flags_path: Path
     failure_findings_path: Path
     failure_summary_path: Path
     review_queue_path: Path
     reviews_dir: Path
+    review_labels_path: Path
+    review_summary_path: Path
     model_cards_dir: Path
 
     def write_event(self, event: dict[str, Any]) -> None:
@@ -225,17 +239,31 @@ def build_run_files(
         usage_path=run_dir / "usage.json",
         usage_decisions_path=run_dir / "usage_decisions.jsonl",
         usage_attempts_path=run_dir / "usage_attempts.jsonl",
+        pricing_snapshot_path=run_dir / "pricing_snapshot.json",
         cost_report_path=run_dir / "cost_report.json",
         replay_report_path=run_dir / "replay_report.json",
         replay_steps_path=run_dir / "replay_steps.jsonl",
         replay_flags_path=run_dir / "replay_flags.jsonl",
         replay_navigation_path=run_dir / "replay_navigation.json",
+        replay_diff_path=run_dir / "replay_diff.json",
+        event_hashes_path=run_dir / "event_hashes.json",
         trace_findings_path=run_dir / "trace_findings.jsonl",
         trace_summary_path=run_dir / "trace_summary.json",
+        timeline_path=run_dir / "timeline.json",
+        decision_index_path=run_dir / "decision_index.json",
+        turn_index_path=run_dir / "turn_index.json",
+        player_timelines_path=run_dir / "player_timelines.json",
+        negotiation_threads_path=run_dir / "negotiation_threads.jsonl",
+        auction_threads_path=run_dir / "auction_threads.jsonl",
+        asset_flow_path=run_dir / "asset_flow.jsonl",
+        cash_flow_path=run_dir / "cash_flow.jsonl",
+        behavioral_flags_path=run_dir / "behavioral_flags.jsonl",
         failure_findings_path=run_dir / "failure_findings.jsonl",
         failure_summary_path=run_dir / "failure_summary.json",
         review_queue_path=run_dir / "review_queue.jsonl",
         reviews_dir=run_dir / "reviews",
+        review_labels_path=run_dir / "reviews" / "review_labels.jsonl",
+        review_summary_path=run_dir / "reviews" / "review_summary.json",
         model_cards_dir=run_dir / "model_cards",
     )
 
@@ -273,16 +301,30 @@ def _known_artifact_paths(run_files: RunFiles) -> list[tuple[str, Path]]:
         ("usage", run_files.usage_path),
         ("usage_decisions", run_files.usage_decisions_path),
         ("usage_attempts", run_files.usage_attempts_path),
+        ("pricing_snapshot", run_files.pricing_snapshot_path),
         ("cost_report", run_files.cost_report_path),
         ("replay_report", run_files.replay_report_path),
         ("replay_steps", run_files.replay_steps_path),
         ("replay_flags", run_files.replay_flags_path),
         ("replay_navigation", run_files.replay_navigation_path),
+        ("replay_diff", run_files.replay_diff_path),
+        ("event_hashes", run_files.event_hashes_path),
         ("trace_findings", run_files.trace_findings_path),
         ("trace_summary", run_files.trace_summary_path),
+        ("timeline", run_files.timeline_path),
+        ("decision_index", run_files.decision_index_path),
+        ("turn_index", run_files.turn_index_path),
+        ("player_timelines", run_files.player_timelines_path),
+        ("negotiation_threads", run_files.negotiation_threads_path),
+        ("auction_threads", run_files.auction_threads_path),
+        ("asset_flow", run_files.asset_flow_path),
+        ("cash_flow", run_files.cash_flow_path),
+        ("behavioral_flags", run_files.behavioral_flags_path),
         ("failure_findings", run_files.failure_findings_path),
         ("failure_summary", run_files.failure_summary_path),
         ("review_queue", run_files.review_queue_path),
+        ("review_labels", run_files.review_labels_path),
+        ("review_summary", run_files.review_summary_path),
         ("artifact_manifest", run_files.artifact_manifest_path),
     ]
 

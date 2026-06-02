@@ -296,12 +296,20 @@ def test_write_trace_failure_artifacts_from_logs(tmp_path) -> None:
         if line.strip()
     ]
     failure_summary = json.loads(run_files.failure_summary_path.read_text(encoding="utf-8"))
-    review_queue_text = run_files.review_queue_path.read_text(encoding="utf-8")
+    review_queue = [
+        json.loads(line)
+        for line in run_files.review_queue_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
     assert result["trace_summary"]["total_findings"] >= 2
     assert any(finding["finding_type"] == "large_rent_payment" for finding in trace_findings)
     assert any(finding["finding_type"] == "fallback_used" for finding in failure_findings)
     assert any(finding["finding_type"] == "missing_tool_call" for finding in failure_findings)
     assert failure_summary["by_type"]["fallback_used"] >= 1
-    assert review_queue_text == ""
+    assert review_queue
+    assert any(item["reason_for_review"] == "fallback_used" for item in review_queue)
+    assert run_files.timeline_path.exists()
+    assert run_files.decision_index_path.exists()
+    assert run_files.cash_flow_path.exists()
 

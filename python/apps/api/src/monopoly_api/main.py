@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 from fastapi import FastAPI, WebSocket, HTTPException, Query
 from fastapi import WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from monopoly_api.micro import (
     MicroBatchRequest,
@@ -38,6 +39,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):51\d{2}$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,6 +63,31 @@ class StartRunRequest(BaseModel):
     players: list[PlayerSpec] | None = None
     max_trade_exchanges: int | None = None
     max_auction_actions: int | None = None
+
+
+class ReviewLabelRequest(BaseModel):
+    queue_item_id: str | None = None
+    reviewer_id: str | None = None
+    selected_labels: list[str] = Field(default_factory=list)
+    confidence: float | None = None
+    notes: str | None = None
+    adjudication_status: str | None = None
+    gold_label: bool = False
+    evidence_references: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ReviewQueueItemRequest(BaseModel):
+    queue_item_id: str | None = None
+    decision_id: str | None = None
+    turn_index: int | None = None
+    player_id: str | None = None
+    model_id: str | None = None
+    finding_ids: list[str] = Field(default_factory=list)
+    failure_ids: list[str] = Field(default_factory=list)
+    severity: str | None = None
+    reason_for_review: str | None = None
+    suggested_labels: list[str] = Field(default_factory=list)
+    reviewer_id: str | None = None
 
 
 @app.post("/run/start")
@@ -124,6 +151,27 @@ def run_decision(decision_id: str) -> dict:
     return bundle
 
 
+@app.get("/runs")
+def runs_list() -> dict:
+    return run_manager.list_runs()
+
+
+@app.get("/runs/{run_id}")
+def runs_detail(run_id: str) -> dict:
+    run = run_manager.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
+
+
+@app.get("/models/{model_id:path}")
+def model_detail(model_id: str) -> dict:
+    model = run_manager.get_model(model_id)
+    if model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return model
+
+
 @app.get("/runs/{run_id}/decisions")
 def runs_decisions(run_id: str, limit: int | None = Query(None, ge=1, le=1000)) -> dict:
     decisions = run_manager.get_decisions_for_run(run_id, limit=limit)
@@ -138,6 +186,115 @@ def runs_decision_detail(run_id: str, decision_id: str) -> dict:
     if bundle is None:
         raise HTTPException(status_code=404, detail="Decision not found")
     return bundle
+
+
+@app.get("/runs/{run_id}/artifacts")
+def runs_artifacts(run_id: str) -> dict:
+    artifacts = run_manager.list_run_artifacts(run_id)
+    if artifacts is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return artifacts
+
+
+@app.get("/runs/{run_id}/artifacts/{artifact_name}")
+def runs_artifact(run_id: str, artifact_name: str) -> dict:
+    artifact = run_manager.get_run_artifact(run_id, artifact_name)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return artifact
+
+
+@app.get("/runs/{run_id}/snapshots")
+def runs_snapshots(run_id: str) -> dict:
+    snapshots = run_manager.list_run_snapshots(run_id)
+    if snapshots is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return snapshots
+
+
+@app.get("/runs/{run_id}/snapshots/{snapshot_name}")
+def runs_snapshot(run_id: str, snapshot_name: str) -> dict:
+    snapshot = run_manager.get_run_snapshot(run_id, snapshot_name)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    return snapshot
+
+
+@app.get("/runs/{run_id}/review/queue")
+def runs_review_queue(run_id: str) -> dict:
+    queue = run_manager.get_review_queue(run_id)
+    if queue is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return queue
+
+
+@app.post("/runs/{run_id}/review/queue")
+def runs_review_queue_create(run_id: str, body: ReviewQueueItemRequest) -> dict:
+    queue_item = run_manager.add_review_queue_item(run_id, body.model_dump())
+    if queue_item is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return queue_item
+
+
+@app.get("/runs/{run_id}/review/labels")
+def runs_review_labels(run_id: str) -> dict:
+    labels = run_manager.get_review_labels(run_id)
+    if labels is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return labels
+
+
+@app.post("/runs/{run_id}/review/labels")
+def runs_review_label_create(run_id: str, body: ReviewLabelRequest) -> dict:
+    label = run_manager.add_review_label(run_id, body.model_dump())
+    if label is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return label
+
+
+@app.get("/runs/{run_id}/review/summary")
+def runs_review_summary(run_id: str) -> dict:
+    summary = run_manager.get_review_summary(run_id)
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return summary
+
+
+@app.get("/batches")
+def batches_list() -> dict:
+    return run_manager.list_batches()
+
+
+@app.get("/batches/{batch_id}")
+def batch_detail(batch_id: str) -> dict:
+    batch = run_manager.get_batch(batch_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    return batch
+
+
+@app.get("/batches/{batch_id}/artifacts")
+def batch_artifacts(batch_id: str) -> dict:
+    artifacts = run_manager.list_batch_artifacts(batch_id)
+    if artifacts is None:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    return artifacts
+
+
+@app.get("/batches/{batch_id}/artifacts/{artifact_name}")
+def batch_artifact(batch_id: str, artifact_name: str) -> dict:
+    artifact = run_manager.get_batch_artifact(batch_id, artifact_name)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return artifact
+
+
+@app.get("/batches/{batch_id}/model_cards/{card_id}")
+def batch_model_card(batch_id: str, card_id: str) -> dict:
+    card = run_manager.get_batch_model_card(batch_id, card_id)
+    if card is None:
+        raise HTTPException(status_code=404, detail="Model card not found")
+    return card
 
 
 @app.get("/micro/scenarios")

@@ -118,20 +118,34 @@ export const LiveBenchPage = () => {
     runState === 'RUNNING' ? 'RUNNING' : runState === 'PAUSED' ? 'PAUSED' : runState === 'COMPLETE' ? 'COMPLETE' : 'IDLE';
 
   return (
-    <div className="h-screen w-screen bg-neo-bg text-black font-sans overflow-hidden flex relative">
-      <aside className="w-137.5 h-full border-r-2 border-black bg-white flex flex-col z-30 shadow-[4px_0_16px_rgba(0,0,0,0.06)]">
+    <div className="relative flex min-h-screen w-full flex-col overflow-y-auto bg-neo-bg font-sans text-black lg:h-screen lg:flex-row lg:overflow-hidden">
+      <aside className="z-30 flex w-full flex-col border-b-2 border-black bg-white shadow-[4px_0_16px_rgba(0,0,0,0.06)] lg:h-full lg:w-[22rem] lg:border-b-0 lg:border-r-2 2xl:w-[24rem]">
         <header className="px-3 py-2.5 border-b-2 border-black bg-neo-bg/60 shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black uppercase tracking-tighter leading-none">
+          <div className="flex flex-col gap-2 2xl:flex-row 2xl:items-center 2xl:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h1 className="text-base font-black uppercase tracking-normal leading-none">
                 Monopoly<span className="text-neo-pink ml-0.5">Bench</span>
               </h1>
               <a
                 href="/micro/detail"
-                className="px-2 py-1 text-[9px] font-black uppercase border-[1.5px] border-black rounded-[2px] bg-white shadow-neo-sm hover:-translate-y-px hover:shadow-neo transition-all duration-100"
+                className="inline-flex min-h-8 items-center px-2.5 py-1 text-[9px] font-black uppercase border-[1.5px] border-black rounded-[2px] bg-white shadow-neo-sm hover:-translate-y-px hover:shadow-neo transition-all duration-100"
               >
                 Micro Suite
               </a>
+              <a
+                href="/batches"
+                className="inline-flex min-h-8 items-center px-2.5 py-1 text-[9px] font-black uppercase border-[1.5px] border-black rounded-[2px] bg-white shadow-neo-sm hover:-translate-y-px hover:shadow-neo transition-all duration-100"
+              >
+                Batches
+              </a>
+              {runStatus.runId ? (
+                <a
+                  href={`/runs/${encodeURIComponent(runStatus.runId)}/replay`}
+                  className="inline-flex min-h-8 items-center px-2.5 py-1 text-[9px] font-black uppercase border-[1.5px] border-black rounded-[2px] bg-white shadow-neo-sm hover:-translate-y-px hover:shadow-neo transition-all duration-100"
+                >
+                  Replay
+                </a>
+              ) : null}
             </div>
             <div className="flex items-center gap-1.5">
               <span className={cn(
@@ -172,7 +186,7 @@ export const LiveBenchPage = () => {
         </div>
       </aside>
 
-      <main className="flex-1 h-full relative flex items-center justify-center bg-neo-bg p-4 overflow-hidden">
+      <main className="relative flex min-h-[32rem] min-w-0 flex-1 items-center justify-start overflow-x-auto overflow-y-hidden bg-neo-bg p-3 brutal-scroll lg:h-full lg:justify-center lg:overflow-hidden lg:p-4">
         <div className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage: 'url(/background.png)',
@@ -181,11 +195,11 @@ export const LiveBenchPage = () => {
           }}
         />
 
-        <Board spaces={snapshot?.board || []} className="h-full max-h-[95vh] w-auto aspect-square relative z-10" />
+        <Board spaces={snapshot?.board || []} className="relative z-10 aspect-square w-full min-w-[34rem] max-w-[min(100%,calc(100vh-2rem))] lg:min-w-0" />
         <BoardEffectsLayer />
       </main>
 
-      <aside className="w-96 h-full border-l-2 border-black bg-white flex flex-col z-20 shadow-[-4px_0_16px_rgba(0,0,0,0.06)]">
+      <aside className="z-20 flex w-full flex-col border-t-2 border-black bg-white shadow-[-4px_0_16px_rgba(0,0,0,0.06)] lg:h-full lg:w-[21rem] lg:border-l-2 lg:border-t-0 2xl:w-[23rem]">
         <div className="px-3 py-2.5 border-b-2 border-black flex justify-between items-center bg-neo-bg/60">
           <div className="flex items-center gap-1">
             {(['dev', 'feed'] as const).map((tab) => (
@@ -194,7 +208,7 @@ export const LiveBenchPage = () => {
                 type="button"
                 onClick={() => setRightTab(tab)}
                 className={cn(
-                  "px-3 py-1 text-[10px] font-bold uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100 select-none",
+                  "min-h-8 px-3 py-1 text-[10px] font-bold uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100 select-none",
                   rightTab === tab
                     ? "bg-black text-white shadow-none"
                     : "bg-white text-black shadow-neo-sm hover:-translate-y-px hover:shadow-neo"

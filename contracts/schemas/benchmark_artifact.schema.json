@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "benchmark_artifact.schema.json",
+  "title": "BenchmarkArtifactContracts",
+  "type": "object",
+  "additionalProperties": true,
+  "$defs": {
+    "artifactIndexEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "exists", "kind"],
+      "properties": {
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "kind": { "type": "string", "enum": ["json", "jsonl"] }
+      }
+    },
+    "artifactIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "artifacts"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactIndexEntry" }
+        }
+      }
+    },
+    "artifactManifest": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "manifest_version", "artifacts"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "manifest_version": {
+          "type": "string",
+          "enum": ["artifact_manifest_v1", "batch_artifact_manifest_v1"]
+        },
+        "run_id": { "type": "string" },
+        "batch_dir": { "type": "string" },
+        "run_dir": { "type": "string" },
+        "created_at": { "type": "string" },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["label", "path", "relative_path", "exists"],
+            "properties": {
+              "label": { "type": "string" },
+              "path": { "type": "string" },
+              "relative_path": { "type": "string" },
+              "exists": { "type": "boolean" },
+              "bytes": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "scorecard": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "scorecard_version", "run", "players"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "scorecard_version": { "type": "string" },
+        "run": { "type": "object", "additionalProperties": true },
+        "players": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        }
+      }
+    },
+    "usageReport": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "usage_accounting_version", "source", "local_tokenizer_estimates_used"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "usage_accounting_version": { "type": "string" },
+        "source": { "type": "string" },
+        "local_tokenizer_estimates_used": { "type": "boolean", "const": false },
+        "totals": { "type": "object", "additionalProperties": true },
+        "by_model": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "replayReport": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "replay_report_version", "status"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "replay_report_version": { "type": "string" },
+        "run_id": { "type": "string" },
+        "status": { "type": "string" },
+        "original_event_count": { "type": "integer", "minimum": 0 },
+        "replayed_event_count": { "type": "integer", "minimum": 0 },
+        "original_event_hash": { "type": ["string", "null"] },
+        "replayed_event_hash": { "type": ["string", "null"] }
+      }
+    },
+    "replayStep": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "replay_step_version", "step_index", "event_type"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "replay_step_version": { "type": "string", "const": "replay_step_v1" },
+        "step_index": { "type": "integer", "minimum": 0 },
+        "event_seq": { "type": ["integer", "null"], "minimum": 0 },
+        "event_id": { "type": ["string", "null"] },
+        "turn_index": { "type": ["integer", "null"], "minimum": 0 },
+        "event_type": { "type": "string" },
+        "actor": { "type": ["object", "null"], "additionalProperties": true },
+        "payload": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "replayFlag": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "replay_flag_version", "flag_id", "flag_type"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "replay_flag_version": { "type": "string", "const": "replay_flag_v1" },
+        "flag_id": { "type": "string" },
+        "flag_type": { "type": "string" },
+        "step_index": { "type": "integer", "minimum": 0 },
+        "severity": { "type": "string" },
+        "label": { "type": "string" }
+      }
+    },
+    "traceFinding": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "finding_id",
+        "finding_type",
+        "severity",
+        "human_review_required",
+        "human_review_status"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "finding_id": { "type": "string" },
+        "finding_type": { "type": "string" },
+        "severity": { "type": "string" },
+        "run_id": { "type": "string" },
+        "decision_id": { "type": ["string", "null"] },
+        "event_id": { "type": ["string", "null"] },
+        "event_seq": { "type": ["integer", "null"], "minimum": 0 },
+        "turn_index": { "type": ["integer", "null"], "minimum": 0 },
+        "player_id": { "type": ["string", "null"] },
+        "model_id": { "type": ["string", "null"] },
+        "human_review_required": { "type": "boolean" },
+        "human_review_status": { "type": "string" },
+        "evidence": {},
+        "summary": { "type": ["string", "null"] }
+      }
+    },
+    "reviewQueueItem": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["queue_item_id", "reason_for_review", "status"],
+      "properties": {
+        "queue_item_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "batch_id": { "type": ["string", "null"] },
+        "decision_id": { "type": ["string", "null"] },
+        "turn_index": { "type": ["integer", "null"], "minimum": 0 },
+        "player_id": { "type": ["string", "null"] },
+        "model_id": { "type": ["string", "null"] },
+        "finding_ids": { "type": "array", "items": { "type": "string" } },
+        "failure_ids": { "type": "array", "items": { "type": "string" } },
+        "severity": { "type": "string" },
+        "reason_for_review": { "type": "string" },
+        "suggested_labels": { "type": "array", "items": { "type": "string" } },
+        "artifact_paths": { "type": "object", "additionalProperties": { "type": "string" } },
+        "status": { "type": "string" }
+      }
+    },
+    "reviewLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "label_version",
+        "label_id",
+        "run_id",
+        "reviewer_id",
+        "reviewed_at",
+        "selected_labels",
+        "adjudication_status",
+        "gold_label",
+        "evidence_references"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "label_version": { "type": "string", "const": "review_label_v1" },
+        "label_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "queue_item_id": { "type": ["string", "null"] },
+        "reviewer_id": { "type": "string" },
+        "reviewed_at": { "type": "string" },
+        "selected_labels": { "type": "array", "items": { "type": "string" } },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "notes": { "type": "string" },
+        "adjudication_status": { "type": "string" },
+        "gold_label": { "type": "boolean" },
+        "evidence_references": { "type": "array" }
+      }
+    },
+    "reviewSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "review_summary_version", "run_id", "label_count", "by_label", "by_reviewer"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "review_summary_version": { "type": "string", "const": "review_summary_v1" },
+        "run_id": { "type": "string" },
+        "label_count": { "type": "integer", "minimum": 0 },
+        "gold_label_count": { "type": "integer", "minimum": 0 },
+        "by_label": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "by_reviewer": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      }
+    },
+    "batchConfig": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "batch_protocol_version",
+        "batch_id",
+        "batch_type",
+        "seeds",
+        "matches",
+        "seat_permutation",
+        "batch_seed",
+        "max_turns",
+        "cost_budget",
+        "cost_budget_unit",
+        "budget_policy",
+        "concurrency",
+        "resume",
+        "continue_on_failure",
+        "prompt_pipeline"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "batch_protocol_version": { "type": "string", "const": "batch_protocol_v1" },
+        "batch_id": { "type": "string" },
+        "batch_type": { "type": "string" },
+        "seeds": { "type": "array", "items": { "type": "integer" }, "minItems": 1 },
+        "matches": { "type": "integer", "minimum": 1 },
+        "players": { "type": ["string", "null"] },
+        "seat_permutation": { "type": "string", "enum": ["latin_square", "full", "seeded_random", "configured_order"] },
+        "batch_seed": { "type": "integer" },
+        "max_turns": { "type": "integer", "minimum": 1 },
+        "cost_budget": { "type": "number", "minimum": 0 },
+        "cost_budget_unit": { "type": "string" },
+        "budget_policy": { "type": "string", "const": "stop_immediately" },
+        "token_budget": {},
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "resume": { "type": "boolean" },
+        "continue_on_failure": { "type": "boolean" },
+        "prompt_pipeline": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "const": "unchanged" }
+          }
+        }
+      }
+    },
+    "modelCard": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "model_card_version",
+        "model_id",
+        "benchmark_version",
+        "prompt_pipeline",
+        "usage",
+        "performance",
+        "behavior",
+        "failures"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "model_card_version": { "type": "string", "const": "model_card_v1" },
+        "model_id": { "type": "string" },
+        "benchmark_version": { "type": "string" },
+        "prompt_pipeline": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["status"],
+          "properties": {
+            "status": { "type": "string", "const": "unchanged" }
+          }
+        },
+        "usage": { "type": "object", "additionalProperties": true },
+        "performance": { "type": "object", "additionalProperties": true },
+        "behavior": { "type": "object", "additionalProperties": true },
+        "failures": { "type": "object", "additionalProperties": true }
+      }
+    }
+  }
+}

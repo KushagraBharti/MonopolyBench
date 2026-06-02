@@ -33,6 +33,27 @@ export interface MicroEvaluation {
   }>;
 }
 
+export interface MicroResearchMetadata {
+  schema_version: "micro_research_metadata_v1";
+  visibility: "research_only_never_prompt";
+  review_status: "draft" | "reviewed_first_pass" | "reviewed_final";
+  review_priority: "normal" | "medium" | "high";
+  target_capability: string;
+  target_behavior: string;
+  strategic_tension: string;
+  expected_failure_modes: string[];
+  taxonomy_tags: string[];
+  counterfactual_pair_id: string | null;
+  counterfactual_role: "baseline" | "contrast" | null;
+  paper_section: string;
+  notes_for_researchers: string;
+  source_claims: string[];
+  source_urls: string[];
+  created_by: string;
+  last_reviewed_at: string;
+  prompt_immutability_checked: true;
+}
+
 export interface MicroScenario {
   schema_version: "v1";
   scenario_id: string;
@@ -50,6 +71,7 @@ export interface MicroScenario {
     action: Record<string, unknown>;
     rationale: string;
   };
+  research_metadata?: MicroResearchMetadata;
   research_sources?: Array<{
     title: string;
     url: string;

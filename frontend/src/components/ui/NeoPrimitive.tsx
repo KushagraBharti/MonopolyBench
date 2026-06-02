@@ -40,9 +40,9 @@ export const NeoButton = forwardRef<HTMLButtonElement, ButtonProps>(
         };
 
         const sizes = {
-            sm: "px-3 py-1 text-sm",
-            md: "px-6 py-2 text-base",
-            lg: "px-8 py-4 text-xl",
+            sm: "min-h-9 px-3 py-1 text-sm",
+            md: "min-h-10 px-6 py-2 text-base",
+            lg: "min-h-12 px-8 py-4 text-xl",
         };
 
         return (
@@ -51,7 +51,7 @@ export const NeoButton = forwardRef<HTMLButtonElement, ButtonProps>(
                 className={cn(
                     variants[variant],
                     sizes[size],
-                    "font-bold uppercase tracking-wider transition-all duration-100 active:translate-y-0.5 active:shadow-none border-2 border-black shadow-neo rounded-[3px] select-none",
+                    "font-bold uppercase tracking-normal transition-all duration-100 active:translate-y-0.5 active:shadow-none border-2 border-black shadow-neo rounded-[3px] select-none disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-inherit",
                     variant === 'ghost' && "shadow-none active:translate-y-0",
                     className
                 )}

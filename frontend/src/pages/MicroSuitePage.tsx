@@ -44,7 +44,7 @@ const PageLink = ({ href, label, active }: { href: string; label: string; active
   <a
     href={href}
     className={cn(
-      'px-3 py-1 text-[10px] font-black uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100',
+      'inline-flex min-h-8 items-center px-3 py-1 text-[10px] font-black uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100',
       active ? 'bg-black text-white shadow-none' : 'bg-white text-black shadow-neo-sm hover:-translate-y-px hover:shadow-neo'
     )}
   >
@@ -58,7 +58,7 @@ const boardCenter = (
       Micro Decision Suite
     </span>
     <div className="rotate-[-4deg] border-2 border-black bg-white px-5 py-4 shadow-neo">
-      <div className="text-3xl font-black uppercase tracking-tight leading-none">One Move</div>
+      <div className="text-3xl font-black uppercase tracking-normal leading-none">One Move</div>
       <div className="mt-1 text-[11px] font-medium text-gray-600">
         Curated board states for auctions, trades, jail timing, and cash-management choices.
       </div>
@@ -212,7 +212,9 @@ export const MicroSuitePage = () => {
       return (
         item.title.toLowerCase().includes(query) ||
         item.description.toLowerCase().includes(query) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(query))
+        item.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+        item.research_metadata?.target_capability.toLowerCase().includes(query) ||
+        item.research_metadata?.expected_failure_modes.some((mode) => mode.toLowerCase().includes(query))
       )
     })
   }, [deferredSearch, scenarios, selectedCategory])
@@ -300,19 +302,19 @@ export const MicroSuitePage = () => {
           backgroundPosition: 'center',
         }}
       />
-      <div className="relative flex min-h-screen flex-col xl:flex-row">
-        <aside className="xl:w-[24rem] border-b-2 xl:border-b-0 xl:border-r-2 border-black bg-white/95 backdrop-blur flex flex-col">
+      <div className="relative grid min-h-screen grid-cols-1 xl:grid-cols-[22rem_minmax(0,1fr)_22rem] 2xl:grid-cols-[24rem_minmax(0,1fr)_23rem]">
+        <aside className="min-w-0 border-b-2 border-black bg-white/95 backdrop-blur flex flex-col xl:h-screen xl:border-b-0 xl:border-r-2">
           <header className="px-4 py-3 border-b-2 border-black bg-neo-bg/70">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-base font-black uppercase tracking-tighter leading-none">
+            <div className="flex flex-col gap-3">
+              <div className="min-w-0">
+                <div className="text-base font-black uppercase tracking-normal leading-none">
                   Monopoly<span className="text-neo-pink ml-0.5">Bench</span>
                 </div>
                 <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.24em] text-gray-500">
                   Micro Decision Suite
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <PageLink href="/" label="Live" active={false} />
                 <PageLink href="/micro" label="Dashboard" active={false} />
                 <PageLink href="/micro/detail" label="Detail" active />
@@ -397,14 +399,14 @@ export const MicroSuitePage = () => {
                 placeholder="Search scenarios"
                 className="mt-2 w-full border-2 border-black bg-neo-bg px-2.5 py-2 text-[12px] shadow-neo-sm outline-none"
               />
-              <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-2 flex flex-wrap gap-2">
                 {CATEGORY_ORDER.map((category) => (
                   <button
                     key={category}
                     type="button"
                     onClick={() => setSelectedCategory(category)}
                     className={cn(
-                      'px-2 py-1 text-[9px] font-black uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100',
+                      'min-h-8 px-2.5 py-1 text-[9px] font-black uppercase border-[1.5px] border-black rounded-[2px] transition-all duration-100',
                       selectedCategory === category
                         ? 'bg-black text-white shadow-none'
                         : 'bg-white text-black shadow-neo-sm hover:-translate-y-px hover:shadow-neo'
@@ -439,6 +441,11 @@ export const MicroSuitePage = () => {
                       </NeoBadge>
                     </div>
                     <div className="mt-1 text-[10px] leading-snug text-gray-600">{item.description}</div>
+                    {item.research_metadata ? (
+                      <div className="mt-1 text-[9px] font-mono uppercase text-gray-400">
+                        {item.research_metadata.target_capability.replace(/_/g, ' ')}
+                      </div>
+                    ) : null}
                   </button>
                 ))}
                 {!filteredScenarios.length && (
@@ -451,14 +458,14 @@ export const MicroSuitePage = () => {
           </div>
         </aside>
 
-        <main className="flex-1 p-4 xl:p-5">
+        <main className="min-w-0 overflow-x-auto p-4 xl:max-h-screen xl:overflow-y-auto xl:p-5 brutal-scroll">
           <div className="mx-auto flex max-w-[72rem] flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
                 <div className="text-[11px] font-black uppercase tracking-[0.24em] text-gray-500">
                   Fixture Snapshot
                 </div>
-                <div className="mt-1 text-2xl font-black uppercase tracking-tight">
+                <div className="mt-1 truncate text-2xl font-black uppercase tracking-normal">
                   {scenario?.title ?? 'Micro Scenario'}
                 </div>
               </div>
@@ -477,7 +484,7 @@ export const MicroSuitePage = () => {
                 decisionHighlight: highlightIndices,
                 eventHighlight: [],
               }}
-              className="w-full max-w-[52rem] self-center aspect-square"
+              className="w-full min-w-[34rem] max-w-[min(52rem,100%,calc(100vh-7rem))] self-center aspect-square lg:min-w-0"
               centerContent={boardCenter}
             />
 
@@ -487,7 +494,7 @@ export const MicroSuitePage = () => {
           </div>
         </main>
 
-        <aside className="xl:w-[23rem] border-t-2 xl:border-t-0 xl:border-l-2 border-black bg-white/95 backdrop-blur p-3 xl:p-4 space-y-3">
+        <aside className="min-w-0 border-t-2 border-black bg-white/95 backdrop-blur p-3 xl:h-screen xl:overflow-y-auto xl:border-l-2 xl:border-t-0 xl:p-4 space-y-3 brutal-scroll">
           <NeoCard className="p-3 bg-white">
             <div className="flex items-center justify-between gap-2">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Scenario Brief</div>
@@ -520,6 +527,25 @@ export const MicroSuitePage = () => {
                     <span className="font-mono">Single Decision</span>
                   </div>
                 </div>
+                {scenario.research_metadata ? (
+                  <div className="mt-3 rounded-[3px] border border-black/10 bg-white p-2.5 text-[11px]">
+                    <div className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">Research Metadata</div>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-gray-500 uppercase font-bold">Capability</span>
+                        <span className="font-mono text-right">{scenario.research_metadata.target_capability}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-gray-500 uppercase font-bold">Priority</span>
+                        <span className="font-mono">{scenario.research_metadata.review_priority}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-gray-500 uppercase font-bold">Visibility</span>
+                        <span className="font-mono text-right">{scenario.research_metadata.visibility}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </>
             ) : null}
           </NeoCard>

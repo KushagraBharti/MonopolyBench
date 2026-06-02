@@ -109,11 +109,11 @@ export const Board = ({
 
                         {/* Branding */}
                         {centerContent ?? (
-                            <div className="z-10 transform -rotate-6">
+                            <div className="z-10 flex h-full w-full max-w-full items-center justify-center">
                                 <img
                                     src="/../logo2.png"
                                     alt="Monopoly Bench"
-                                    className="w-auto h-64 md:h-150 drop-shadow-[3px_3px_0_rgba(0,0,0,0.08)]"
+                                    className="h-auto max-h-[72%] w-auto max-w-[82%] object-contain drop-shadow-[3px_3px_0_rgba(0,0,0,0.08)]"
                                 />
                             </div>
                         )}

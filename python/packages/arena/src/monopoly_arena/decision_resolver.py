@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
@@ -225,6 +225,7 @@ class SharedDecisionResolver:
             create_kwargs["reasoning"] = player_config.reasoning
         result = await self._openrouter.create_chat_completion(**create_kwargs)
         response_end_ms = _now_ms()
+        result = await self._with_generation_metadata(result)
         request_payload_raw = result.request_payload_raw or self._build_request_payload_raw(
             model=player_config.openrouter_model_id,
             messages=prompt_bundle.messages,
@@ -294,6 +295,7 @@ class SharedDecisionResolver:
                 retry_kwargs["reasoning"] = player_config.reasoning
             retry_result = await self._openrouter.create_chat_completion(**retry_kwargs)
             retry_end_ms = _now_ms()
+            retry_result = await self._with_generation_metadata(retry_result)
             retry_request_payload_raw = retry_result.request_payload_raw or self._build_request_payload_raw(
                 model=player_config.openrouter_model_id,
                 messages=retry_bundle.messages,
@@ -375,6 +377,22 @@ class SharedDecisionResolver:
         )
         write_artifacts(outcome)
         return outcome
+
+    async def _with_generation_metadata(self, result: OpenRouterResult) -> OpenRouterResult:
+        response_json = result.response_json
+        if not result.ok or not isinstance(response_json, dict):
+            return result
+        if not _needs_generation_lookup(response_json):
+            return result
+        generation_id = _generation_id(response_json)
+        if generation_id is None:
+            return result
+        get_generation = getattr(self._openrouter, "get_generation", None)
+        if get_generation is None:
+            return result
+        generation_result = await get_generation(generation_id)
+        next_response = _attach_generation_metadata(response_json, generation_result)
+        return replace(result, response_json=next_response)
 
     def ensure_valid_outcome(
         self,
@@ -1191,6 +1209,110 @@ def _canonicalize_action_args(
     if action_name == "NOOP":
         return _canonicalize_object_keys(args_payload, allowed_keys={"reason"}, context=action_name)
     return dict(args_payload), []
+
+
+def _needs_generation_lookup(response_json: dict[str, Any]) -> bool:
+    usage_value = response_json.get("usage")
+    usage = usage_value if isinstance(usage_value, dict) else {}
+    if not usage:
+        return True
+    if not isinstance(usage.get("cost"), (int, float)) and not isinstance(response_json.get("total_cost"), (int, float)):
+        return True
+    native_value = usage.get("native_tokens")
+    native = native_value if isinstance(native_value, dict) else {}
+    native_fields = (
+        usage.get("native_prompt_tokens"),
+        usage.get("native_completion_tokens"),
+        usage.get("native_total_tokens"),
+        native.get("prompt_tokens"),
+        native.get("completion_tokens"),
+        native.get("total_tokens"),
+    )
+    return not any(isinstance(value, (int, float)) for value in native_fields)
+
+
+def _generation_id(response_json: dict[str, Any]) -> str | None:
+    for key in ("id", "generation_id"):
+        value = response_json.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+    metadata = response_json.get("openrouter_metadata")
+    if isinstance(metadata, dict):
+        value = metadata.get("generation_id")
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def _attach_generation_metadata(
+    response_json: dict[str, Any],
+    generation_result: OpenRouterResult,
+) -> dict[str, Any]:
+    next_response = dict(response_json)
+    generation_data = _generation_data_from_result(generation_result)
+    generation_payload = {
+        "schema_version": "v1",
+        "source": "openrouter_generation_endpoint",
+        "status": "ok" if generation_result.ok else "error",
+        "status_code": generation_result.status_code,
+        "request_id": generation_result.request_id,
+        "error": generation_result.error,
+        "error_type": generation_result.error_type,
+        "data": generation_data,
+    }
+    next_response["openrouter_generation"] = generation_payload
+    if generation_result.ok and generation_data is not None:
+        _merge_generation_usage(next_response, generation_data)
+    return next_response
+
+
+def _generation_data_from_result(generation_result: OpenRouterResult) -> dict[str, Any] | None:
+    payload = generation_result.response_json
+    if not isinstance(payload, dict):
+        return None
+    data = payload.get("data")
+    return data if isinstance(data, dict) else payload
+
+
+def _merge_generation_usage(response_json: dict[str, Any], generation_data: dict[str, Any]) -> None:
+    usage_value = response_json.get("usage")
+    usage = dict(usage_value) if isinstance(usage_value, dict) else {}
+    _set_missing_number(usage, "prompt_tokens", generation_data.get("tokens_prompt"))
+    _set_missing_number(usage, "completion_tokens", generation_data.get("tokens_completion"))
+    if not isinstance(usage.get("total_tokens"), (int, float)):
+        total_tokens = generation_data.get("total_tokens")
+        if not isinstance(total_tokens, (int, float)):
+            prompt_tokens = usage.get("prompt_tokens")
+            completion_tokens = usage.get("completion_tokens")
+            if isinstance(prompt_tokens, (int, float)) and isinstance(completion_tokens, (int, float)):
+                total_tokens = int(prompt_tokens) + int(completion_tokens)
+        _set_missing_number(usage, "total_tokens", total_tokens)
+    _set_missing_number(usage, "cost", generation_data.get("total_cost") or generation_data.get("usage"))
+
+    native_value = usage.get("native_tokens")
+    native = dict(native_value) if isinstance(native_value, dict) else {}
+    _set_missing_number(native, "prompt_tokens", generation_data.get("native_tokens_prompt"))
+    _set_missing_number(native, "completion_tokens", generation_data.get("native_tokens_completion"))
+    if not isinstance(native.get("total_tokens"), (int, float)):
+        native_prompt = native.get("prompt_tokens")
+        native_completion = native.get("completion_tokens")
+        if isinstance(native_prompt, (int, float)) and isinstance(native_completion, (int, float)):
+            native["total_tokens"] = int(native_prompt) + int(native_completion)
+    _set_missing_number(usage, "reasoning_tokens", generation_data.get("native_tokens_reasoning"))
+    _set_missing_number(usage, "cached_tokens", generation_data.get("native_tokens_cached"))
+    if native:
+        usage["native_tokens"] = native
+    if usage:
+        response_json["usage"] = usage
+    _set_missing_number(response_json, "total_cost", generation_data.get("total_cost"))
+    _set_missing_number(response_json, "cost", generation_data.get("total_cost") or generation_data.get("usage"))
+
+
+def _set_missing_number(target: dict[str, Any], key: str, value: Any) -> None:
+    if isinstance(target.get(key), (int, float)):
+        return
+    if isinstance(value, (int, float)):
+        target[key] = value
 
 
 def validate_decision_action(decision: dict[str, Any], action: dict[str, Any]) -> list[str]:

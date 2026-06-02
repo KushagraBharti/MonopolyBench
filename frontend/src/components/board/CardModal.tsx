@@ -65,7 +65,7 @@ export const CardModal = ({ isOpen, deck, card, originOffset, onClose }: CardMod
                                 className="w-full flex justify-between items-center mb-2 border-b border-black/15 pb-1.5"
                                 style={{ color: primaryColor }}
                             >
-                                <span className="font-black uppercase tracking-tight text-[13px]">
+                                <span className="font-black uppercase tracking-normal text-[13px]">
                                     {isChance ? 'Chance' : 'Community Chest'}
                                 </span>
                                 <span className="text-xl leading-none opacity-80">

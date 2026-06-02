@@ -42,6 +42,8 @@ def write_replay_verification_artifacts(run_files: RunFiles) -> dict[str, Any]:
     _write_jsonl(run_files.replay_steps_path, _build_replay_steps(original_events))
     _write_jsonl(run_files.replay_flags_path, _build_replay_flags(original_events))
     run_files.write_json_artifact(run_files.replay_navigation_path, _build_replay_navigation(original_events))
+    run_files.write_json_artifact(run_files.event_hashes_path, _build_event_hashes(original_events, report))
+    run_files.write_json_artifact(run_files.replay_diff_path, _build_replay_diff(report))
     run_files.write_json_artifact(run_files.replay_report_path, report)
     return report
 
@@ -69,6 +71,8 @@ def build_replay_verification_report(run_files: RunFiles) -> dict[str, Any]:
         "first_mismatch_replay_event": None,
         "missing_actions": 0,
         "extra_actions": 0,
+        "missing_events": None,
+        "extra_events": None,
         "decision_id_mismatch": False,
         "error": None,
         "run_config_used": {
@@ -133,6 +137,15 @@ def build_replay_verification_report(run_files: RunFiles) -> dict[str, Any]:
     base_report["replay_event_count"] = len(replayed_events)
     base_report["replay_canonical_hash"] = _hash_lines(replay_lines)
     base_report["first_mismatch_index"] = first_mismatch
+    if len(original_lines) > len(replay_lines):
+        base_report["missing_events"] = len(original_lines) - len(replay_lines)
+        base_report["extra_events"] = 0
+    elif len(replay_lines) > len(original_lines):
+        base_report["missing_events"] = 0
+        base_report["extra_events"] = len(replay_lines) - len(original_lines)
+    else:
+        base_report["missing_events"] = 0
+        base_report["extra_events"] = 0
     if first_mismatch is not None:
         base_report["first_mismatch_original_event"] = (
             original_events[first_mismatch] if first_mismatch < len(original_events) else None
@@ -143,6 +156,51 @@ def build_replay_verification_report(run_files: RunFiles) -> dict[str, Any]:
     base_report["status"] = "passed" if first_mismatch is None else "failed"
     base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
     return base_report
+
+
+def _build_event_hashes(events: list[dict[str, Any]], report: dict[str, Any]) -> dict[str, Any]:
+    canonical_lines = canonical_event_lines(events)
+    return {
+        "schema_version": "v1",
+        "event_hashes_version": "event_hashes_v1",
+        "run_id": report.get("run_id"),
+        "canonicalization": "monopoly_engine.canonical_event_lines",
+        "event_count": len(events),
+        "stream_sha256": _hash_lines(canonical_lines),
+        "replay_stream_sha256": report.get("replay_canonical_hash"),
+        "events": [
+            {
+                "index": index,
+                "seq": events[index].get("seq") if index < len(events) else None,
+                "event_id": events[index].get("event_id") if index < len(events) else None,
+                "type": events[index].get("type") if index < len(events) else None,
+                "canonical_sha256": hashlib.sha256(line.encode("utf-8")).hexdigest(),
+            }
+            for index, line in enumerate(canonical_lines)
+        ],
+    }
+
+
+def _build_replay_diff(report: dict[str, Any]) -> dict[str, Any]:
+    status = report.get("status")
+    return {
+        "schema_version": "v1",
+        "replay_diff_version": "replay_diff_v1",
+        "run_id": report.get("run_id"),
+        "status": "no_diff" if status == "passed" else "diff_or_error",
+        "replay_status": status,
+        "first_mismatch_index": report.get("first_mismatch_index"),
+        "first_mismatch_original_event": report.get("first_mismatch_original_event"),
+        "first_mismatch_replay_event": report.get("first_mismatch_replay_event"),
+        "original_event_count": report.get("original_event_count"),
+        "replay_event_count": report.get("replay_event_count"),
+        "missing_events": report.get("missing_events"),
+        "extra_events": report.get("extra_events"),
+        "decision_id_mismatch": report.get("decision_id_mismatch"),
+        "error": report.get("error"),
+        "original_canonical_hash": report.get("original_canonical_hash"),
+        "replay_canonical_hash": report.get("replay_canonical_hash"),
+    }
 
 
 def _build_replay_steps(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -219,7 +277,7 @@ def _build_replay_navigation(events: list[dict[str, Any]]) -> dict[str, Any]:
             navigation["negotiations"].append(index)
         if event_type.startswith("AUCTION_"):
             navigation["auctions"].append(index)
-        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        payload = _dict(event.get("payload"))
         if event_type == "CASH_CHANGED" and str(payload.get("reason", "")).startswith("BANKRUPTCY"):
             navigation["bankruptcies"].append(index)
             navigation["failures"].append(index)
@@ -254,7 +312,7 @@ def _flag_severity(event_type: str) -> str:
 
 def _flag_summary(event: dict[str, Any]) -> str:
     event_type = str(event.get("type"))
-    payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+    payload = _dict(event.get("payload"))
     if event_type == "RENT_PAID":
         return f"{payload.get('from_player_id')} paid {payload.get('amount')} rent to {payload.get('to_player_id')}"
     if event_type == "AUCTION_ENDED":
@@ -267,14 +325,14 @@ def _flag_summary(event: dict[str, Any]) -> str:
 
 
 def _event_decision_id(event: dict[str, Any]) -> str | None:
-    payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+    payload = _dict(event.get("payload"))
     value = payload.get("decision_id")
     return value if isinstance(value, str) else None
 
 
 def _replay_players(run_config: dict[str, Any]) -> list[dict[str, Any]]:
     players: list[dict[str, Any]] = []
-    for entry in run_config.get("players", []):
+    for entry in _list(run_config.get("players")):
         if not isinstance(entry, dict):
             continue
         player_id = entry.get("player_id")
@@ -291,6 +349,14 @@ def _first_mismatch(original_lines: list[str], replay_lines: list[str]) -> int |
     if len(original_lines) != len(replay_lines):
         return min(len(original_lines), len(replay_lines))
     return None
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
 def _hash_lines(lines: list[str]) -> str:

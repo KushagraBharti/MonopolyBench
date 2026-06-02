@@ -46,7 +46,7 @@ const MiniTile = ({ tile, isSelected, onSelect }: MiniTileProps) => {
       />
 
       <div className="flex-1 flex flex-col justify-between items-center p-0.5 w-full">
-        <span className="uppercase font-bold text-[7px] leading-[0.95] tracking-tight break-words w-full line-clamp-2">
+        <span className="uppercase font-bold text-[7px] leading-[0.95] tracking-normal break-words w-full line-clamp-2">
           {label}
         </span>
 

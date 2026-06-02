@@ -5,6 +5,7 @@ from collections import defaultdict
 import copy
 import hashlib
 import json
+from typing import Any
 
 from monopoly_arena import OpenRouterResult, build_single_player_config
 from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT
@@ -120,6 +121,33 @@ def test_micro_v1_quality_diversity_bar() -> None:
     assert scenario_specific_rationales / len(scenarios) >= 0.80
 
 
+def test_micro_v1_research_metadata_is_complete_and_research_only() -> None:
+    capabilities: set[str] = set()
+    pair_roles = {None, "baseline", "contrast"}
+    for scenario in list_scenarios():
+        metadata = scenario.get("research_metadata")
+        assert metadata, scenario["scenario_id"]
+        assert metadata["schema_version"] == "micro_research_metadata_v1"
+        assert metadata["visibility"] == "research_only_never_prompt"
+        assert metadata["prompt_immutability_checked"] is True
+        assert metadata["review_status"] in {"reviewed_first_pass", "reviewed_final"}
+        assert metadata["review_priority"] in {"normal", "medium", "high"}
+        assert metadata["target_capability"]
+        assert metadata["target_behavior"]
+        assert metadata["strategic_tension"]
+        assert len(metadata["expected_failure_modes"]) >= 3
+        assert len(metadata["taxonomy_tags"]) >= 3
+        assert metadata["counterfactual_role"] in pair_roles
+        assert metadata["paper_section"].startswith("micro_decision_suite/")
+        assert "must never be included in model-facing prompts" in metadata["notes_for_researchers"]
+        assert metadata["source_claims"], scenario["scenario_id"]
+        assert metadata["source_urls"], scenario["scenario_id"]
+        assert "research_metadata" not in json.dumps(scenario["decision_point"], sort_keys=True)
+        capabilities.add(metadata["target_capability"])
+
+    assert len(capabilities) == 8
+
+
 def test_micro_v1_research_grade_state_and_coarse_rubric_diversity() -> None:
     by_category: dict[str, list[dict]] = defaultdict(list)
     for scenario in list_scenarios():
@@ -217,6 +245,40 @@ def test_live_game_prompt_matches_normal_game_prompt() -> None:
     assert normal_bundle.user_payload == configured_live_game_bundle.user_payload
     assert "prompt_condition" not in configured_live_game_bundle.user_payload["action_state"]
     assert "full_protocol_state" not in configured_live_game_bundle.user_payload
+
+
+def test_research_metadata_does_not_change_prompt_bundle() -> None:
+    scenario = next(
+        item for item in list_scenarios() if item["scenario_id"] == "buy-or-auction-vermont-light-blue-tempo-01"
+    )
+    player = build_single_player_config(
+        player_id=scenario["decision_point"]["player_id"],
+        name="Alpha",
+        openrouter_model_id="test/model",
+    )
+    normal_bundle = build_prompt_bundle(
+        copy.deepcopy(scenario["decision_point"]),
+        player,
+        memory=PromptMemory(space_key_by_index=build_space_key_by_index()),
+        space_key_by_index=build_space_key_by_index(),
+    )
+
+    metadata_mutated = copy.deepcopy(scenario)
+    metadata_mutated["research_metadata"]["target_capability"] = "needle_prompt_regression_capability"
+    metadata_mutated["research_metadata"]["expected_failure_modes"].append("needle_prompt_regression_failure")
+    metadata_mutated["research_metadata"]["notes_for_researchers"] = "needle_prompt_regression_notes"
+    metadata_bundle = build_prompt_bundle(
+        copy.deepcopy(metadata_mutated["decision_point"]),
+        player,
+        memory=PromptMemory(space_key_by_index=build_space_key_by_index()),
+        space_key_by_index=build_space_key_by_index(),
+    )
+
+    assert _prompt_bundle_contract(normal_bundle) == _prompt_bundle_contract(metadata_bundle)
+    serialized_bundle = json.dumps(_prompt_bundle_contract(metadata_bundle), sort_keys=True)
+    assert "research_metadata" not in serialized_bundle
+    assert "research_only_never_prompt" not in serialized_bundle
+    assert "needle_prompt_regression" not in serialized_bundle
 
 
 def test_batch_runner_writes_leaderboard(tmp_path) -> None:
@@ -334,3 +396,12 @@ def _strip_volatile_state_fields(payload: dict) -> dict:
 def _stable_hash(payload: dict) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _prompt_bundle_contract(bundle: Any) -> dict:
+    return {
+        "system_prompt": bundle.system_prompt,
+        "user_payload": bundle.user_payload,
+        "user_content": bundle.user_content,
+        "messages": bundle.messages,
+    }

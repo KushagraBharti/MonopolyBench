@@ -34,11 +34,12 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
     for decision in decisions:
         if decision.get("phase") != "decision_resolved":
             continue
-        attempts = decision.get("attempts") if isinstance(decision.get("attempts"), list) else []
-        for index, attempt in enumerate(attempts):
-            raw = attempt.get("raw_response") if isinstance(attempt, dict) else None
-            usage = raw.get("usage") if isinstance(raw, dict) and isinstance(raw.get("usage"), dict) else {}
-            normalized = _normalize_usage(usage, raw if isinstance(raw, dict) else {})
+        attempts = _list(decision.get("attempts"))
+        for index, attempt_value in enumerate(attempts):
+            attempt = _dict(attempt_value)
+            raw = _dict(attempt.get("raw_response"))
+            usage = _dict(raw.get("usage"))
+            normalized = _normalize_usage(usage, raw)
             rows.append(
                 {
                     "schema_version": "v1",
@@ -51,11 +52,12 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "player_id": decision.get("player_id"),
                     "openrouter_model_id": decision.get("openrouter_model_id"),
                     "model_display_name": decision.get("model_display_name"),
-                    "openrouter_request_id": attempt.get("openrouter_request_id") if isinstance(attempt, dict) else None,
-                    "openrouter_status_code": attempt.get("openrouter_status_code") if isinstance(attempt, dict) else None,
-                    "generation_id": raw.get("id") if isinstance(raw, dict) else None,
-                    "finish_reason": _finish_reason(raw if isinstance(raw, dict) else {}),
+                    "openrouter_request_id": attempt.get("openrouter_request_id"),
+                    "openrouter_status_code": attempt.get("openrouter_status_code"),
+                    "generation_id": raw.get("id"),
+                    "finish_reason": _finish_reason(raw),
                     "accounting_status": "actual_openrouter_usage" if normalized["usage_seen"] else "missing_openrouter_usage",
+                    "accounting_source": normalized["accounting_source"],
                     "prompt_tokens": normalized["prompt_tokens"],
                     "completion_tokens": normalized["completion_tokens"],
                     "total_tokens": normalized["total_tokens"],
@@ -67,11 +69,11 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "cache_read_tokens": normalized["cache_read_tokens"],
                     "cache_write_tokens": normalized["cache_write_tokens"],
                     "cost": normalized["cost"],
-                    "latency_ms": attempt.get("latency_ms") if isinstance(attempt, dict) else None,
+                    "latency_ms": attempt.get("latency_ms"),
                     "retry_used": bool(decision.get("retry_used")),
                     "fallback_used": bool(decision.get("fallback_used")),
                     "fallback_reason": decision.get("fallback_reason"),
-                    "error_type": attempt.get("error_type") if isinstance(attempt, dict) else None,
+                    "error_type": attempt.get("error_type"),
                 }
             )
     return rows
@@ -146,7 +148,7 @@ def _aggregate_usage(
 
 
 def _cost_report(usage_report: dict[str, Any]) -> dict[str, Any]:
-    totals = usage_report.get("totals", {})
+    totals = _dict(usage_report.get("totals"))
     return {
         "schema_version": "v1",
         "usage_accounting_version": USAGE_ACCOUNTING_VERSION,
@@ -156,41 +158,71 @@ def _cost_report(usage_report: dict[str, Any]) -> dict[str, Any]:
         "total_actual_cost": totals.get("cost"),
         "total_estimated_cost": None,
         "missing_usage_attempt_count": usage_report.get("missing_usage_attempt_count"),
-        "by_model": usage_report.get("by_model", {}),
-        "by_player": usage_report.get("by_player", {}),
+        "by_model": _dict(usage_report.get("by_model")),
+        "by_player": _dict(usage_report.get("by_player")),
     }
 
 
 def _normalize_usage(usage: dict[str, Any], raw: dict[str, Any]) -> dict[str, Any]:
-    native = usage.get("native_tokens") if isinstance(usage.get("native_tokens"), dict) else {}
-    prompt_details = usage.get("prompt_tokens_details") if isinstance(usage.get("prompt_tokens_details"), dict) else {}
-    completion_details = (
-        usage.get("completion_tokens_details")
-        if isinstance(usage.get("completion_tokens_details"), dict)
-        else {}
-    )
+    generation_data = _generation_data(raw)
+    native = _dict(usage.get("native_tokens"))
+    prompt_details = _dict(usage.get("prompt_tokens_details"))
+    completion_details = _dict(usage.get("completion_tokens_details"))
     cost = usage.get("cost")
     if not isinstance(cost, (int, float)):
         cost = raw.get("cost") if isinstance(raw.get("cost"), (int, float)) else raw.get("total_cost")
+    if not isinstance(cost, (int, float)) and isinstance(generation_data.get("total_cost"), (int, float)):
+        cost = generation_data["total_cost"]
+    prompt_tokens = usage.get("prompt_tokens")
+    completion_tokens = usage.get("completion_tokens")
+    total_tokens = usage.get("total_tokens")
+    if not isinstance(prompt_tokens, (int, float)):
+        prompt_tokens = generation_data.get("tokens_prompt")
+    if not isinstance(completion_tokens, (int, float)):
+        completion_tokens = generation_data.get("tokens_completion")
+    if not isinstance(total_tokens, (int, float)):
+        total_tokens = generation_data.get("total_tokens")
+    if (
+        not isinstance(total_tokens, (int, float))
+        and isinstance(prompt_tokens, (int, float))
+        and isinstance(completion_tokens, (int, float))
+    ):
+        total_tokens = int(prompt_tokens) + int(completion_tokens)
+    accounting_source = "missing"
+    if usage and generation_data:
+        accounting_source = "chat_completion_usage_with_generation_backfill"
+    elif usage:
+        accounting_source = "chat_completion_usage"
+    elif generation_data:
+        accounting_source = "generation_endpoint"
     return {
-        "usage_seen": bool(usage),
-        "prompt_tokens": _optional_int(usage.get("prompt_tokens")),
-        "completion_tokens": _optional_int(usage.get("completion_tokens")),
-        "total_tokens": _optional_int(usage.get("total_tokens")),
-        "native_prompt_tokens": _optional_int(native.get("prompt_tokens") or usage.get("native_prompt_tokens")),
-        "native_completion_tokens": _optional_int(
-            native.get("completion_tokens") or usage.get("native_completion_tokens")
+        "usage_seen": bool(usage) or bool(generation_data),
+        "accounting_source": accounting_source,
+        "prompt_tokens": _optional_int(prompt_tokens),
+        "completion_tokens": _optional_int(completion_tokens),
+        "total_tokens": _optional_int(total_tokens),
+        "native_prompt_tokens": _optional_int(
+            native.get("prompt_tokens") or usage.get("native_prompt_tokens") or generation_data.get("native_tokens_prompt")
         ),
-        "native_total_tokens": _optional_int(native.get("total_tokens") or usage.get("native_total_tokens")),
+        "native_completion_tokens": _optional_int(
+            native.get("completion_tokens")
+            or usage.get("native_completion_tokens")
+            or generation_data.get("native_tokens_completion")
+        ),
+        "native_total_tokens": _optional_int(
+            native.get("total_tokens") or usage.get("native_total_tokens") or _generation_native_total(generation_data)
+        ),
         "reasoning_tokens": _optional_int(
             completion_details.get("reasoning_tokens")
             or completion_details.get("reasoning")
             or usage.get("reasoning_tokens")
+            or generation_data.get("native_tokens_reasoning")
         ),
         "cached_tokens": _optional_int(
             prompt_details.get("cached_tokens")
             or prompt_details.get("cache_read_tokens")
             or usage.get("cached_tokens")
+            or generation_data.get("native_tokens_cached")
         ),
         "cache_read_tokens": _optional_int(prompt_details.get("cache_read_tokens") or usage.get("cache_read_tokens")),
         "cache_write_tokens": _optional_int(prompt_details.get("cache_write_tokens") or usage.get("cache_write_tokens")),
@@ -205,6 +237,22 @@ def _finish_reason(raw: dict[str, Any]) -> str | None:
     first = choices[0] if isinstance(choices[0], dict) else {}
     value = first.get("finish_reason")
     return value if isinstance(value, str) else None
+
+
+def _generation_data(raw: dict[str, Any]) -> dict[str, Any]:
+    metadata = raw.get("openrouter_generation")
+    if not isinstance(metadata, dict) or metadata.get("status") != "ok":
+        return {}
+    data = metadata.get("data")
+    return data if isinstance(data, dict) else {}
+
+
+def _generation_native_total(generation_data: dict[str, Any]) -> int | None:
+    prompt = generation_data.get("native_tokens_prompt")
+    completion = generation_data.get("native_tokens_completion")
+    if isinstance(prompt, (int, float)) and isinstance(completion, (int, float)):
+        return int(prompt) + int(completion)
+    return None
 
 
 def _accumulate_group(target: dict[str, dict[str, Any]], key: str, row: dict[str, Any]) -> None:
@@ -257,17 +305,33 @@ def _combined_status(rows: list[dict[str, Any]]) -> str:
 
 
 def _sum_optional(rows: list[dict[str, Any]], field: str) -> int | None:
-    values = [row.get(field) for row in rows if isinstance(row.get(field), int)]
+    values: list[int] = []
+    for row in rows:
+        value = row.get(field)
+        if isinstance(value, int):
+            values.append(value)
     return sum(values) if values else None
 
 
 def _sum_optional_float(rows: list[dict[str, Any]], field: str) -> float | None:
-    values = [float(row[field]) for row in rows if isinstance(row.get(field), (int, float))]
+    values: list[float] = []
+    for row in rows:
+        value = row.get(field)
+        if isinstance(value, (int, float)):
+            values.append(float(value))
     return round(sum(values), 10) if values else None
 
 
 def _optional_int(value: Any) -> int | None:
     return int(value) if isinstance(value, (int, float)) else None
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
