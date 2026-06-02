@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import time
 from dataclasses import dataclass
@@ -8,7 +9,13 @@ from typing import Any, AsyncIterable, Awaitable, Callable
 
 from monopoly_engine import Engine
 from monopoly_engine.board import normalize_space_key
-from monopoly_telemetry import RunFiles, build_summary
+from monopoly_telemetry import (
+    RunFiles,
+    build_summary,
+    write_scorecard_artifacts,
+    write_trace_failure_artifacts,
+    write_usage_artifacts,
+)
 
 from .openrouter_client import OpenRouterClient, OpenRouterResult
 
@@ -20,6 +27,7 @@ from .prompting import (
     PromptMemory,
     build_space_key_by_index,
 )
+from .replay_verification import write_replay_verification_artifacts
 
 
 DecisionCallback = Callable[[dict[str, Any]], Awaitable[None]]
@@ -54,6 +62,11 @@ class LlmRunner:
         self.run_id = run_id
         if len(players) != EXPECTED_PLAYER_COUNT:
             raise ValueError(f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.")
+        self._seed = seed
+        self._players = list(players)
+        self._max_turns = max_turns
+        self._start_ts_ms = start_ts_ms
+        self._ts_step_ms = ts_step_ms
         self._player_configs = {player.player_id: player for player in players}
         self._openrouter = openrouter
         self._run_files = run_files
@@ -85,6 +98,7 @@ class LlmRunner:
         self._pending_resolution: PendingResolution | None = None
         self._advance_lock = asyncio.Lock()
         self._applied_decision_ids: set[str] = set()
+        self._write_static_run_artifacts()
 
     def request_stop(self, reason: str = "STOPPED") -> None:
         self._engine.request_stop(reason)
@@ -153,10 +167,20 @@ class LlmRunner:
                 else:
                     summary = self._engine.build_summary()
                 summary["run_config"] = {
+                    "seed": self._seed,
+                    "max_turns": self._max_turns,
+                    "start_ts_ms": self._start_ts_ms,
+                    "ts_step_ms": self._ts_step_ms,
                     "max_trade_exchanges": self._max_trade_exchanges,
                     "max_auction_actions": self._max_auction_actions,
                 }
                 await summary_handler(summary)
+                if self._run_files is not None:
+                    write_usage_artifacts(self._run_files)
+                    write_scorecard_artifacts(self._run_files)
+                    write_replay_verification_artifacts(self._run_files)
+                    write_trace_failure_artifacts(self._run_files)
+                    self._run_files.write_artifact_manifest()
         finally:
             await self._close_openrouter()
 
@@ -251,6 +275,49 @@ class LlmRunner:
 
     def _rules_validator(self, decision: dict[str, Any], action: dict[str, Any]) -> list[str]:
         return self._engine.validate_action_for_decision(action, decision)
+
+    def _write_static_run_artifacts(self) -> None:
+        if self._run_files is None:
+            return
+        players_payload = _players_payload(self._players)
+        seat_assignment = _seat_assignment_payload(
+            run_id=self.run_id,
+            players=self._players,
+            mode="configured_order",
+        )
+        run_config = {
+            "schema_version": "v1",
+            "run_config_version": "run_config_v1",
+            "run_id": self.run_id,
+            "mode": "full_game",
+            "seed": self._seed,
+            "max_turns": self._max_turns,
+            "start_ts_ms": self._start_ts_ms,
+            "ts_step_ms": self._ts_step_ms,
+            "max_trade_exchanges": self._max_trade_exchanges,
+            "max_auction_actions": self._max_auction_actions,
+            "engine": {
+                "deterministic_rng_seed": self._seed,
+                "event_timestamps": {
+                    "start_ts_ms": self._start_ts_ms,
+                    "ts_step_ms": self._ts_step_ms,
+                },
+            },
+            "players": players_payload["players"],
+            "seat_assignment": seat_assignment["assignments"],
+            "replay": {
+                "enabled_by_default": True,
+                "source_actions": "actions.jsonl",
+                "canonical_events": "events.jsonl",
+            },
+            "prompt_pipeline": {
+                "status": "unchanged",
+                "note": "Run metadata only; no prompt-building fields are modified here.",
+            },
+        }
+        self._run_files.write_run_config(run_config)
+        self._run_files.write_players(players_payload)
+        self._run_files.write_seat_assignment(seat_assignment)
 
     def _attempt_from_response(
         self,
@@ -985,3 +1052,50 @@ def validate_decision_action(decision: dict[str, Any], action: dict[str, Any]) -
         errors.append("Missing required private_thought")
 
     return errors
+
+
+def _players_payload(players: list[PlayerConfig]) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        "players_version": "players_v1",
+        "players": [
+            {
+                "player_id": player.player_id,
+                "name": player.name,
+                "openrouter_model_id": player.openrouter_model_id,
+                "model_display_name": player.model_display_name,
+                "reasoning": player.reasoning,
+                "system_prompt_logged": False,
+            }
+            for player in players
+        ],
+    }
+
+
+def _seat_assignment_payload(
+    *,
+    run_id: str,
+    players: list[PlayerConfig],
+    mode: str,
+) -> dict[str, Any]:
+    assignments = [
+        {
+            "player_id": player.player_id,
+            "player_name": player.name,
+            "openrouter_model_id": player.openrouter_model_id,
+            "model_display_name": player.model_display_name,
+            "seat_index": index,
+            "turn_order": index,
+        }
+        for index, player in enumerate(players)
+    ]
+    digest_source = json.dumps(assignments, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return {
+        "schema_version": "v1",
+        "seat_assignment_version": "seat_assignment_v1",
+        "run_id": run_id,
+        "permutation_mode": mode,
+        "permutation_id": f"{mode}:0",
+        "permutation_digest": hashlib.sha1(digest_source.encode("utf-8")).hexdigest(),
+        "assignments": assignments,
+    }

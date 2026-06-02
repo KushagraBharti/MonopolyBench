@@ -357,6 +357,44 @@ def test_retry_then_valid_action(tmp_path) -> None:
     assert response_events[0]["payload"]["valid"] is True
 
 
+def test_static_run_artifacts_are_written_without_system_prompt_text(tmp_path) -> None:
+    players = _make_players()
+    run_files = init_run_files(tmp_path, "run-static-artifacts")
+    LlmRunner(
+        seed=321,
+        players=players,
+        run_id="run-static-artifacts",
+        openrouter=PolicyOpenRouter(_choose_buy_if_legal),
+        run_files=run_files,
+        event_delay_s=0,
+        max_turns=7,
+        start_ts_ms=0,
+        ts_step_ms=5,
+        max_trade_exchanges=3,
+        max_auction_actions=9,
+    )
+
+    run_config = json.loads(run_files.run_config_path.read_text(encoding="utf-8"))
+    players_payload = json.loads(run_files.players_path.read_text(encoding="utf-8"))
+    seat_assignment = json.loads(run_files.seat_assignment_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(
+        {"run_config": run_config, "players": players_payload, "seat_assignment": seat_assignment},
+        sort_keys=True,
+    )
+
+    assert run_config["seed"] == 321
+    assert run_config["max_turns"] == 7
+    assert run_config["ts_step_ms"] == 5
+    assert run_config["max_trade_exchanges"] == 3
+    assert run_config["max_auction_actions"] == 9
+    assert run_config["prompt_pipeline"]["status"] == "unchanged"
+    assert players_payload["players"][0]["player_id"] == "p1"
+    assert players_payload["players"][0]["system_prompt_logged"] is False
+    assert seat_assignment["assignments"][0]["seat_index"] == 0
+    assert seat_assignment["assignments"][0]["turn_order"] == 0
+    assert "You are an autonomous player" not in serialized
+
+
 def test_invalid_twice_fallback(tmp_path) -> None:
     players = _make_players()
     run_files = init_run_files(tmp_path, "run-fallback")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import re
 import hashlib
@@ -21,6 +22,29 @@ class RunFiles:
     prompts_dir: Path
     quality_dir: Path | None
     summary_path: Path
+    run_config_path: Path
+    players_path: Path
+    seat_assignment_path: Path
+    artifact_manifest_path: Path
+    scorecard_path: Path
+    scorecard_players_path: Path
+    scorecard_decisions_path: Path
+    scorecard_events_path: Path
+    usage_path: Path
+    usage_decisions_path: Path
+    usage_attempts_path: Path
+    cost_report_path: Path
+    replay_report_path: Path
+    replay_steps_path: Path
+    replay_flags_path: Path
+    replay_navigation_path: Path
+    trace_findings_path: Path
+    trace_summary_path: Path
+    failure_findings_path: Path
+    failure_summary_path: Path
+    review_queue_path: Path
+    reviews_dir: Path
+    model_cards_dir: Path
 
     def write_event(self, event: dict[str, Any]) -> None:
         append_jsonl(self.events_path, event)
@@ -50,6 +74,22 @@ class RunFiles:
             json.dumps(summary, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
+
+    def write_json_artifact(self, path: Path, payload: dict[str, Any] | list[Any]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, separators=(",", ":"), ensure_ascii=True),
+            encoding="utf-8",
+        )
+
+    def write_run_config(self, payload: dict[str, Any]) -> None:
+        self.write_json_artifact(self.run_config_path, payload)
+
+    def write_players(self, payload: dict[str, Any]) -> None:
+        self.write_json_artifact(self.players_path, payload)
+
+    def write_seat_assignment(self, payload: dict[str, Any]) -> None:
+        self.write_json_artifact(self.seat_assignment_path, payload)
 
     def write_decision(self, decision_entry: dict[str, Any]) -> None:
         append_jsonl(self.decisions_path, decision_entry)
@@ -142,6 +182,9 @@ class RunFiles:
         if response_text is not None:
             (self.quality_dir / f"{prefix}_response.txt").write_text(response_text, encoding="utf-8")
 
+    def write_artifact_manifest(self) -> None:
+        self.write_json_artifact(self.artifact_manifest_path, build_artifact_manifest(self))
+
 
 def init_run_files(runs_dir: Path, run_id: str) -> RunFiles:
     run_files = build_run_files(runs_dir, run_id)
@@ -171,7 +214,98 @@ def build_run_files(
         prompts_dir=prompts_dir,
         quality_dir=quality_dir,
         summary_path=run_dir / "summary.json",
+        run_config_path=run_dir / "run_config.json",
+        players_path=run_dir / "players.json",
+        seat_assignment_path=run_dir / "seat_assignment.json",
+        artifact_manifest_path=run_dir / "artifact_manifest.json",
+        scorecard_path=run_dir / "scorecard.json",
+        scorecard_players_path=run_dir / "scorecard_players.json",
+        scorecard_decisions_path=run_dir / "scorecard_decisions.jsonl",
+        scorecard_events_path=run_dir / "scorecard_events.jsonl",
+        usage_path=run_dir / "usage.json",
+        usage_decisions_path=run_dir / "usage_decisions.jsonl",
+        usage_attempts_path=run_dir / "usage_attempts.jsonl",
+        cost_report_path=run_dir / "cost_report.json",
+        replay_report_path=run_dir / "replay_report.json",
+        replay_steps_path=run_dir / "replay_steps.jsonl",
+        replay_flags_path=run_dir / "replay_flags.jsonl",
+        replay_navigation_path=run_dir / "replay_navigation.json",
+        trace_findings_path=run_dir / "trace_findings.jsonl",
+        trace_summary_path=run_dir / "trace_summary.json",
+        failure_findings_path=run_dir / "failure_findings.jsonl",
+        failure_summary_path=run_dir / "failure_summary.json",
+        review_queue_path=run_dir / "review_queue.jsonl",
+        reviews_dir=run_dir / "reviews",
+        model_cards_dir=run_dir / "model_cards",
     )
+
+
+def build_artifact_manifest(run_files: RunFiles) -> dict[str, Any]:
+    known_paths = _known_artifact_paths(run_files)
+    artifacts: list[dict[str, Any]] = []
+    for label, path in known_paths:
+        if path == run_files.artifact_manifest_path:
+            continue
+        artifacts.append(_artifact_entry(label, run_files.run_dir, path))
+    return {
+        "schema_version": "v1",
+        "manifest_version": "artifact_manifest_v1",
+        "run_id": run_files.run_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "run_dir": str(run_files.run_dir),
+        "artifacts": artifacts,
+    }
+
+
+def _known_artifact_paths(run_files: RunFiles) -> list[tuple[str, Path]]:
+    return [
+        ("events", run_files.events_path),
+        ("decisions", run_files.decisions_path),
+        ("actions", run_files.actions_path),
+        ("summary", run_files.summary_path),
+        ("run_config", run_files.run_config_path),
+        ("players", run_files.players_path),
+        ("seat_assignment", run_files.seat_assignment_path),
+        ("scorecard", run_files.scorecard_path),
+        ("scorecard_players", run_files.scorecard_players_path),
+        ("scorecard_decisions", run_files.scorecard_decisions_path),
+        ("scorecard_events", run_files.scorecard_events_path),
+        ("usage", run_files.usage_path),
+        ("usage_decisions", run_files.usage_decisions_path),
+        ("usage_attempts", run_files.usage_attempts_path),
+        ("cost_report", run_files.cost_report_path),
+        ("replay_report", run_files.replay_report_path),
+        ("replay_steps", run_files.replay_steps_path),
+        ("replay_flags", run_files.replay_flags_path),
+        ("replay_navigation", run_files.replay_navigation_path),
+        ("trace_findings", run_files.trace_findings_path),
+        ("trace_summary", run_files.trace_summary_path),
+        ("failure_findings", run_files.failure_findings_path),
+        ("failure_summary", run_files.failure_summary_path),
+        ("review_queue", run_files.review_queue_path),
+        ("artifact_manifest", run_files.artifact_manifest_path),
+    ]
+
+
+def _artifact_entry(label: str, run_dir: Path, path: Path) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "label": label,
+        "path": str(path),
+        "relative_path": _relative_path(run_dir, path),
+        "exists": path.exists(),
+    }
+    if path.exists() and path.is_file():
+        data = path.read_bytes()
+        entry["bytes"] = len(data)
+        entry["sha256"] = hashlib.sha256(data).hexdigest()
+    return entry
+
+
+def _relative_path(root: Path, path: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
 
 
 def _prompt_file_prefix(decision_id: str, *, attempt_index: int) -> str:

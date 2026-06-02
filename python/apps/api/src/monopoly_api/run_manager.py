@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from fastapi import WebSocket
 
-from monopoly_telemetry import RunFiles, init_run_files
+from monopoly_telemetry import RunFiles, build_run_files, init_run_files
 
 from monopoly_api.mock_runner import build_idle_snapshot
 from monopoly_arena import LlmRunner, OpenRouterClient, PlayerConfig
@@ -267,17 +267,7 @@ class RunManager:
         run_dir = self._runs_dir / run_id
         if not run_dir.exists() or not run_dir.is_dir():
             return None
-        return RunFiles(
-            run_id=run_id,
-            run_dir=run_dir,
-            events_path=run_dir / "events.jsonl",
-            decisions_path=run_dir / "decisions.jsonl",
-            actions_path=run_dir / "actions.jsonl",
-            snapshots_dir=run_dir / "state",
-            prompts_dir=run_dir / "prompts",
-            quality_dir=self._runs_dir.parent / "quality_check" / run_id,
-            summary_path=run_dir / "summary.json",
-        )
+        return build_run_files(self._runs_dir, run_id)
 
     def _resolve_decision_index(self, run_id: str, run_files: RunFiles) -> DecisionIndex:
         if self._decision_index is not None and self._run_id == run_id:

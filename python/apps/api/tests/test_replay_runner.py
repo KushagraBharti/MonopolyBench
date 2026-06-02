@@ -198,3 +198,14 @@ def test_replay_matches_event_stream_with_trade(tmp_path) -> None:
     )
 
     assert canonical_event_lines(events) == canonical_event_lines(replayed)
+    replay_report = json.loads(run_files.replay_report_path.read_text(encoding="utf-8"))
+    replay_steps = load_jsonl(run_files.replay_steps_path)
+    replay_flags = load_jsonl(run_files.replay_flags_path)
+    replay_navigation = json.loads(run_files.replay_navigation_path.read_text(encoding="utf-8"))
+
+    assert replay_report["status"] == "passed"
+    assert replay_report["original_canonical_hash"] == replay_report["replay_canonical_hash"]
+    assert replay_steps
+    assert replay_flags
+    assert replay_navigation["important_steps"]
+    assert replay_navigation["model_decisions"]
