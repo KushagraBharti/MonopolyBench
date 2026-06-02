@@ -24,5 +24,17 @@ def suites_dir() -> Path:
     return contracts_micro_dir() / "suites"
 
 
+def research_suites_dir() -> Path:
+    return contracts_micro_dir() / "research_suites"
+
+
+def counterfactual_pairs_dir() -> Path:
+    return contracts_micro_dir() / "counterfactual_pairs"
+
+
+def campaigns_dir() -> Path:
+    return contracts_micro_dir() / "campaigns"
+
+
 def default_runs_dir() -> Path:
     return Path(os.getenv("RUNS_DIR", str(repo_root() / "runs")))

@@ -1,0 +1,110 @@
+{
+  "schema_version": "v1",
+  "suite_id": "counterfactual-v1",
+  "suite_family": "counterfactual",
+  "benchmark_suite_version": "counterfactual_suite_v1",
+  "title": "Counterfactual V1",
+  "description": "Research-only overlay for paired scenario analysis. Pair metadata is post-hoc and never included in model-facing prompts.",
+  "source_suite_id": "micro-v1",
+  "scenario_ids": [
+    "build-preserve-cash-vs-boardwalk-17",
+    "build-dark-blue-hotel-fame-trap-20",
+    "buy-or-auction-park-place-no-boardwalk-16",
+    "buy-or-auction-boardwalk-fame-bias-low-cash-15",
+    "auction-reading-railroad-low-price-09",
+    "auction-bo-railroad-third-railroad-10",
+    "trade-propose-mutual-orange-vs-yellow-06",
+    "trade-propose-mutual-red-vs-green-07",
+    "post-turn-end-cash-danger-02",
+    "post-turn-end-avoid-overaction-03"
+  ],
+  "categories": [
+    {
+      "category_id": "famous_vs_non_famous_property",
+      "title": "Famous Vs Non-Famous Property",
+      "description": "Pairs prestige-property framing against less famous but economically related decisions.",
+      "target_behavior": "Keep action quality stable when fame is not economically decisive.",
+      "trap_behaviors": ["Change behavior because the famous property is salient.", "Overweight Boardwalk/dark blue status."],
+      "preferred_behaviors": ["Use liquidity and monopoly value rather than name salience."],
+      "scenario_ids": [
+        "build-preserve-cash-vs-boardwalk-17",
+        "build-dark-blue-hotel-fame-trap-20",
+        "buy-or-auction-park-place-no-boardwalk-16",
+        "buy-or-auction-boardwalk-fame-bias-low-cash-15"
+      ],
+      "counterfactual_pair_ids": ["cf-fame-dark-blue-build", "cf-fame-boardwalk-buy"],
+      "human_review_required": false,
+      "scoring_notes": "Pair stability compares action labels and normalized score deltas.",
+      "source_claims": ["Counterfactual probes should isolate intended framing differences."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Counterfactual_thinking"]
+    },
+    {
+      "category_id": "auction_anchor_shift",
+      "title": "Auction Anchor Shift",
+      "description": "Pairs railroad auction contexts to inspect whether bid behavior changes under anchor pressure.",
+      "target_behavior": "Stay within valuation bounds despite bid anchors or ownership framing.",
+      "trap_behaviors": ["Bid because the anchor implies value.", "Drop because the visible context looks less urgent."],
+      "preferred_behaviors": ["Use portfolio fit and cash to set bid limits."],
+      "scenario_ids": ["auction-reading-railroad-low-price-09", "auction-bo-railroad-third-railroad-10"],
+      "counterfactual_pair_ids": ["cf-anchor-railroad-auction"],
+      "human_review_required": false,
+      "scoring_notes": "First-pass pair uses related but not perfectly controlled railroad fixtures.",
+      "source_claims": ["Anchoring is commonly measured with paired numeric-decision conditions."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Anchoring_effect"]
+    },
+    {
+      "category_id": "trade_economics_frame",
+      "title": "Trade Economics Frame",
+      "description": "Pairs mutual trade proposals with different color-group framing.",
+      "target_behavior": "Evaluate reciprocal monopoly creation consistently across color-group framing.",
+      "trap_behaviors": ["Prefer a trade because one color group is more salient.", "Ignore opponent development asymmetry."],
+      "preferred_behaviors": ["Compare both sides' monopoly conversion and cash position."],
+      "scenario_ids": ["trade-propose-mutual-orange-vs-yellow-06", "trade-propose-mutual-red-vs-green-07"],
+      "counterfactual_pair_ids": ["cf-mutual-trade-color-frame"],
+      "human_review_required": true,
+      "scoring_notes": "Pair needs human review for economic equivalence until fully controlled fixtures are generated.",
+      "source_claims": ["Framing can alter trade and bargaining decisions."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Framing_effect_(psychology)"]
+    },
+    {
+      "category_id": "recent_shock_vs_neutral",
+      "title": "Recent Shock Vs Neutral",
+      "description": "Pairs post-turn cash danger and neutral end-turn choices to inspect recency sensitivity.",
+      "target_behavior": "React to actual risk rather than just the salience of recent danger.",
+      "trap_behaviors": ["Over-defend after a salient threat.", "Under-defend when the danger is less vivid."],
+      "preferred_behaviors": ["Use current cash, board position, and opponent threat."],
+      "scenario_ids": ["post-turn-end-cash-danger-02", "post-turn-end-avoid-overaction-03"],
+      "counterfactual_pair_ids": ["cf-recent-shock-cash-danger"],
+      "human_review_required": true,
+      "scoring_notes": "Requires future stronger controlled fixtures; current pair is a first-pass analysis hook.",
+      "source_claims": ["Availability bias can overweight recent or salient shocks."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Availability_heuristic"]
+    }
+  ],
+  "counterfactual_pair_ids": [
+    "cf-fame-dark-blue-build",
+    "cf-fame-boardwalk-buy",
+    "cf-anchor-railroad-auction",
+    "cf-mutual-trade-color-frame",
+    "cf-recent-shock-cash-danger"
+  ],
+  "campaign_ids": [],
+  "human_review_required": true,
+  "report_dimensions": [
+    "pair_id",
+    "baseline_scenario_id",
+    "contrast_scenario_id",
+    "controlled_difference",
+    "model",
+    "baseline_score",
+    "contrast_score",
+    "score_delta",
+    "action_changed",
+    "stability_metric",
+    "human_review_status"
+  ],
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "Counterfactual-v1 pair metadata is research-only and never changes prompt construction."
+  }
+}

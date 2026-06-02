@@ -3,6 +3,7 @@ import { LiveBenchPage } from '@/pages/LiveBenchPage'
 import { MicroDashboardPage } from '@/pages/MicroDashboardPage'
 import { MicroSuitePage } from '@/pages/MicroSuitePage'
 import { ModelDetailPage } from '@/pages/ModelDetailPage'
+import { ResearchArtifactsPage } from '@/pages/ResearchArtifactsPage'
 import { ReplayReviewPage } from '@/pages/ReplayReviewPage'
 import { RunsPage } from '@/pages/RunsPage'
 
@@ -20,6 +21,9 @@ function App() {
   }
   if (window.location.pathname === '/batches' || window.location.pathname.startsWith('/batches/')) {
     return <BatchDashboardPage />
+  }
+  if (window.location.pathname === '/research' || window.location.pathname.startsWith('/research/')) {
+    return <ResearchArtifactsPage />
   }
   if (window.location.pathname.startsWith('/micro/detail')) {
     return <MicroSuitePage />

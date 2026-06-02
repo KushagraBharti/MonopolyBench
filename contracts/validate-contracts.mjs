@@ -19,8 +19,10 @@ const schemaFiles = [
   "board.schema.json",
   "benchmark_artifact.schema.json",
   "failure_finding.schema.json",
+  "research_registry.schema.json",
   "micro_scenario.schema.json",
   "micro_suite.schema.json",
+  "micro_research.schema.json",
   "micro_result.schema.json"
 ];
 
@@ -175,7 +177,12 @@ const jsonExamples = [
   { file: "replay_step.example.json", schema: "benchmark_artifact.schema.json#/$defs/replayStep" },
   { file: "review_label.example.json", schema: "benchmark_artifact.schema.json#/$defs/reviewLabel" },
   { file: "trace_finding.example.json", schema: "benchmark_artifact.schema.json#/$defs/traceFinding" },
-  { file: "failure_finding.example.json", schema: "failure_finding.schema.json" }
+  { file: "failure_finding.example.json", schema: "failure_finding.schema.json" },
+  { file: "research_seed_registry.example.json", schema: "research_registry.schema.json#/$defs/seedRegistry" },
+  { file: "research_model_roster.example.json", schema: "research_registry.schema.json#/$defs/modelRosterRegistry" },
+  { file: "long_campaign_config.example.json", schema: "research_registry.schema.json#/$defs/campaignConfig" },
+  { file: "micro_expert_label_task.example.json", schema: "micro_research.schema.json#/$defs/expertLabelTask" },
+  { file: "micro_expert_label.example.json", schema: "micro_research.schema.json#/$defs/expertLabel" }
 ];
 
 for (const example of jsonExamples) {
@@ -223,6 +230,47 @@ try {
   console.error(`FAIL: event.example.jsonl -> ${error.message}`);
 }
 
+const researchFiles = [
+  { file: "monopoly_long_v1_seed_registry.json", schema: "research_registry.schema.json#/$defs/seedRegistry" },
+  { file: "monopoly_long_v1_model_rosters.json", schema: "research_registry.schema.json#/$defs/modelRosterRegistry" }
+];
+
+for (const researchFile of researchFiles) {
+  try {
+    const researchPath = path.join(contractsDir, "research", researchFile.file);
+    const result = await validateJsonFile(ajv, researchPath, researchFile.schema);
+    if (result.ok) {
+      console.log(`OK: research/${researchFile.file}`);
+    } else {
+      failed = true;
+      console.error(`FAIL: research/${researchFile.file} -> ${result.error}`);
+    }
+  } catch (error) {
+    failed = true;
+    console.error(`FAIL: research/${researchFile.file} -> ${error.message}`);
+  }
+}
+
+const campaignFiles = [
+  { file: "monopoly-long-v1-smoke.json", schema: "research_registry.schema.json#/$defs/campaignConfig" }
+];
+
+for (const campaignFile of campaignFiles) {
+  try {
+    const campaignPath = path.join(repoRoot, "campaigns", campaignFile.file);
+    const result = await validateJsonFile(ajv, campaignPath, campaignFile.schema);
+    if (result.ok) {
+      console.log(`OK: campaigns/${campaignFile.file}`);
+    } else {
+      failed = true;
+      console.error(`FAIL: campaigns/${campaignFile.file} -> ${result.error}`);
+    }
+  } catch (error) {
+    failed = true;
+    console.error(`FAIL: campaigns/${campaignFile.file} -> ${error.message}`);
+  }
+}
+
 async function validateMicroDirectory(directory, schemaId, label) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
   for (const entry of entries) {
@@ -250,6 +298,21 @@ try {
     path.join(contractsDir, "micro", "suites"),
     "micro_suite.schema.json",
     "micro/suites"
+  );
+  await validateMicroDirectory(
+    path.join(contractsDir, "micro", "research_suites"),
+    "micro_research.schema.json#/$defs/microResearchSuite",
+    "micro/research_suites"
+  );
+  await validateMicroDirectory(
+    path.join(contractsDir, "micro", "counterfactual_pairs"),
+    "micro_research.schema.json#/$defs/counterfactualPairRegistry",
+    "micro/counterfactual_pairs"
+  );
+  await validateMicroDirectory(
+    path.join(contractsDir, "micro", "campaigns"),
+    "micro_research.schema.json#/$defs/microCampaignRegistry",
+    "micro/campaigns"
   );
 } catch (error) {
   failed = true;

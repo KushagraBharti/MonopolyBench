@@ -1,0 +1,242 @@
+{
+  "schema_version": "v1",
+  "suite_id": "bias-v1",
+  "suite_family": "bias",
+  "benchmark_suite_version": "bias_suite_v1",
+  "title": "Bias V1",
+  "description": "Research-only overlay for framing, valuation, and behavioral-bias probes built on existing micro-v1 decision fixtures. The overlay is never included in model-facing prompts.",
+  "source_suite_id": "micro-v1",
+  "scenario_ids": [
+    "buy-or-auction-boardwalk-fame-bias-low-cash-15",
+    "build-dark-blue-hotel-fame-trap-20",
+    "trade-propose-dark-blue-fame-trap-16",
+    "auction-boardwalk-overbid-drop-05",
+    "auction-short-line-cash-leader-trap-18",
+    "auction-reading-railroad-low-price-09",
+    "auction-pacific-green-too-expensive-14",
+    "auction-states-avenue-positive-but-not-critical-19",
+    "build-preserve-cash-vs-boardwalk-17",
+    "liquidation-preserve-monopoly-survival-09",
+    "post-turn-avoid-unmortgage-cash-poor-15",
+    "buy-or-auction-north-carolina-green-caution-20",
+    "build-yellow-expensive-caution-10",
+    "trade-response-reject-face-value-positive-09",
+    "trade-propose-mutual-orange-vs-yellow-06",
+    "trade-propose-politically-risky-leader-message-15",
+    "trade-response-reject-leader-red-05",
+    "auction-indiana-leader-threat-12",
+    "post-turn-end-cash-danger-02",
+    "jail-late-roll-red-danger-06"
+  ],
+  "categories": [
+    {
+      "category_id": "fame_bias",
+      "title": "Fame Bias",
+      "description": "Tests whether famous/high-salience properties distort valuation relative to liquidity and strategic fit.",
+      "target_behavior": "Avoid overvaluing prestige properties when the economic position is weak.",
+      "trap_behaviors": ["Overbuy Boardwalk/dark blue assets because they are famous.", "Build expensive prestige assets while cash buffer is fragile."],
+      "preferred_behaviors": ["Respect cash buffer.", "Compare property fame against expected rent path and monopoly status."],
+      "scenario_ids": [
+        "buy-or-auction-boardwalk-fame-bias-low-cash-15",
+        "build-dark-blue-hotel-fame-trap-20",
+        "trade-propose-dark-blue-fame-trap-16",
+        "auction-boardwalk-overbid-drop-05"
+      ],
+      "counterfactual_pair_ids": ["cf-fame-dark-blue-build", "cf-fame-boardwalk-buy"],
+      "human_review_required": false,
+      "scoring_notes": "Deterministic rubric checks whether actions preserve cash or avoid prestige overpay.",
+      "source_claims": ["Behavioral-economics framing effects can change valuation even when expected value is unchanged."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Framing_effect_(psychology)"]
+    },
+    {
+      "category_id": "anchoring",
+      "title": "Anchoring",
+      "description": "Tests whether current bid level or salient board price causes over/under-bidding.",
+      "target_behavior": "Bid from marginal value and liquidity constraints rather than the visible anchor.",
+      "trap_behaviors": ["Chase a high anchor.", "Drop too early because the opening anchor is low-status."],
+      "preferred_behaviors": ["Stay within rubric valuation bands.", "Use cash position and portfolio fit as the bidding constraint."],
+      "scenario_ids": [
+        "auction-boardwalk-overbid-drop-05",
+        "auction-reading-railroad-low-price-09",
+        "auction-pacific-green-too-expensive-14",
+        "auction-states-avenue-positive-but-not-critical-19"
+      ],
+      "counterfactual_pair_ids": ["cf-anchor-railroad-auction"],
+      "human_review_required": false,
+      "scoring_notes": "Auction bid rubrics proxy anchoring resistance through bid caps and bid ranges.",
+      "source_claims": ["Anchoring changes numeric estimates after exposure to arbitrary or salient values."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Anchoring_effect"]
+    },
+    {
+      "category_id": "sunk_cost",
+      "title": "Sunk Cost",
+      "description": "Tests whether prior investment causes bad continuation decisions under debt or weak board position.",
+      "target_behavior": "Liquidate, mortgage, or stop investing when continuation value is low.",
+      "trap_behaviors": ["Keep throwing money into already expensive assets.", "Refuse survival liquidation because prior investment feels wasted."],
+      "preferred_behaviors": ["Separate sunk investment from current survival value.", "Choose the legal action that maximizes future option value."],
+      "scenario_ids": [
+        "build-preserve-cash-vs-boardwalk-17",
+        "liquidation-preserve-monopoly-survival-09",
+        "post-turn-avoid-unmortgage-cash-poor-15"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": false,
+      "scoring_notes": "Existing rubric rewards survival-oriented decisions when cash pressure dominates.",
+      "source_claims": ["Sunk-cost bias can cause escalation of commitment after prior investment."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Sunk_cost"]
+    },
+    {
+      "category_id": "endowment_effect",
+      "title": "Endowment Effect",
+      "description": "Tests whether owned properties are overprotected when trade value is favorable.",
+      "target_behavior": "Trade or mortgage owned assets when the exchange improves strategic position.",
+      "trap_behaviors": ["Overprotect an owned property because it is already held.", "Reject mutually beneficial trades from attachment."],
+      "preferred_behaviors": ["Evaluate owned assets by marginal portfolio value.", "Accept or propose trades that create better monopoly paths."],
+      "scenario_ids": [
+        "trade-response-reject-face-value-positive-09",
+        "trade-propose-mutual-orange-vs-yellow-06",
+        "trade-propose-dark-blue-fame-trap-16"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": false,
+      "scoring_notes": "Trade rubrics reward economically favorable exchanges and penalize attachment to low-fit assets.",
+      "source_claims": ["Endowment effect predicts higher valuation for owned goods than equivalent non-owned goods."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Endowment_effect"]
+    },
+    {
+      "category_id": "loss_aversion",
+      "title": "Loss Aversion",
+      "description": "Tests whether models avoid a small certain loss even when it protects against larger downside.",
+      "target_behavior": "Pay, mortgage, or trade when a controlled loss preserves survival or monopoly value.",
+      "trap_behaviors": ["Avoid paying now despite much larger rent exposure.", "Reject liquidation that prevents bankruptcy."],
+      "preferred_behaviors": ["Take controlled losses that improve survival odds.", "Prefer option-preserving cash discipline."],
+      "scenario_ids": [
+        "post-turn-end-cash-danger-02",
+        "jail-late-roll-red-danger-06",
+        "liquidation-preserve-monopoly-survival-09"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": false,
+      "scoring_notes": "Rubrics reward cash-buffer and survival choices over short-term loss avoidance.",
+      "source_claims": ["Loss aversion can cause overweighting of immediate losses relative to equivalent gains."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Loss_aversion"]
+    },
+    {
+      "category_id": "overconfidence",
+      "title": "Overconfidence",
+      "description": "Tests whether models overbid, overbuild, or continue risky lines because they assume future recovery.",
+      "target_behavior": "Respect downside risk and current liquidity rather than optimistic continuation assumptions.",
+      "trap_behaviors": ["Overbid with thin cash.", "Build into a dangerous board segment.", "Assume rent income will arrive before debt pressure."],
+      "preferred_behaviors": ["Cap bids.", "Preserve cash.", "Delay risk when board exposure is dangerous."],
+      "scenario_ids": [
+        "auction-short-line-cash-leader-trap-18",
+        "build-yellow-expensive-caution-10",
+        "buy-or-auction-north-carolina-green-caution-20"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": false,
+      "scoring_notes": "Cash-buffer and bid-cap rubrics act as overconfidence checks.",
+      "source_claims": ["Overconfidence can cause excessive risk-taking under uncertainty."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Overconfidence_effect"]
+    },
+    {
+      "category_id": "myopic_cash_preference",
+      "title": "Myopic Cash Preference",
+      "description": "Tests whether models hoard cash when an investment has strong strategic value.",
+      "target_behavior": "Spend cash when the Monopoly position justifies it and downside risk is manageable.",
+      "trap_behaviors": ["Decline cheap tempo acquisitions.", "Avoid high-value building because it reduces cash today."],
+      "preferred_behaviors": ["Buy/build when the return justifies the liquidity reduction.", "Balance cash buffer against monopoly conversion."],
+      "scenario_ids": [
+        "buy-or-auction-vermont-light-blue-tempo-01",
+        "build-light-blue-cheap-tempo-08",
+        "build-orange-third-house-st-james-01"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": false,
+      "scoring_notes": "Rubrics reward high-tempo buys/builds when cash remains adequate.",
+      "source_claims": ["Myopic loss/cash preference can overweight immediate liquidity relative to long-term value."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Myopic_loss_aversion"]
+    },
+    {
+      "category_id": "recency_availability_bias",
+      "title": "Recency And Availability Bias",
+      "description": "Tests whether recent rent danger or visible opponent threat causes excessive defensive play.",
+      "target_behavior": "Use current board probabilities and portfolio value rather than salient recent shocks.",
+      "trap_behaviors": ["Overreact to a recent rent hit.", "Avoid all investment after one visible threat."],
+      "preferred_behaviors": ["Preserve cash only when the actual current risk justifies it.", "Continue strategic investment when risk is manageable."],
+      "scenario_ids": [
+        "post-turn-end-cash-danger-02",
+        "jail-late-roll-red-danger-06",
+        "post-turn-build-orange-before-beta-04"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": false,
+      "scoring_notes": "First-pass proxy category; more controlled paired fixtures are still needed.",
+      "source_claims": ["Availability bias can overweight recent or salient events."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Availability_heuristic"]
+    },
+    {
+      "category_id": "fairness_bias",
+      "title": "Fairness Bias",
+      "description": "Tests whether models overvalue equal-looking or polite trades at the expense of strategic edge.",
+      "target_behavior": "Reject fair-looking trades that are strategically bad and accept asymmetric trades that improve win odds.",
+      "trap_behaviors": ["Accept face-value fairness when it empowers a leader.", "Reject advantageous asymmetry because it appears unfair."],
+      "preferred_behaviors": ["Evaluate trade consequences by monopoly creation, cash, and opponent strength."],
+      "scenario_ids": [
+        "trade-response-reject-face-value-positive-09",
+        "trade-response-reject-leader-red-05",
+        "trade-propose-mutual-orange-vs-yellow-06"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": true,
+      "scoring_notes": "Deterministic trade score is available, but fairness framing labels require human review.",
+      "source_claims": ["Fairness preferences can affect bargaining decisions even when payoff-maximizing choices differ."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Ultimatum_game"]
+    },
+    {
+      "category_id": "anti_leader_coalition_bias",
+      "title": "Coalition Or Anti-Leader Bias",
+      "description": "Tests whether anti-leader pressure causes strategically useful or excessive blocking behavior.",
+      "target_behavior": "Block leaders when it improves focal win odds without sacrificing too much value.",
+      "trap_behaviors": ["Overpay just to hurt the leader.", "Reject profitable actions because they also help a leader."],
+      "preferred_behaviors": ["Compare anti-leader value against focal net-worth and survival impact."],
+      "scenario_ids": [
+        "trade-propose-politically-risky-leader-message-15",
+        "trade-response-reject-leader-red-05",
+        "auction-indiana-leader-threat-12",
+        "auction-short-line-cash-leader-trap-18"
+      ],
+      "counterfactual_pair_ids": [],
+      "human_review_required": true,
+      "scoring_notes": "Model intent and coalition framing require human review; deterministic score captures only action quality.",
+      "source_claims": ["Coalition and leader-blocking dynamics are common in multi-agent games and bargaining settings."],
+      "source_urls": ["https://en.wikipedia.org/wiki/Coalition_formation"]
+    }
+  ],
+  "counterfactual_pair_ids": [
+    "cf-fame-dark-blue-build",
+    "cf-fame-boardwalk-buy",
+    "cf-anchor-railroad-auction"
+  ],
+  "campaign_ids": [],
+  "human_review_required": true,
+  "report_dimensions": [
+    "suite_id",
+    "category",
+    "bias_type",
+    "target_behavior",
+    "trap_behavior",
+    "difficulty",
+    "model",
+    "score",
+    "invalid_rate",
+    "retry_rate",
+    "fallback_rate",
+    "latency",
+    "human_review_status"
+  ],
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "Bias-v1 is a research-only overlay and is never injected into model-facing prompts."
+  }
+}

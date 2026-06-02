@@ -297,6 +297,35 @@ def batch_model_card(batch_id: str, card_id: str) -> dict:
     return card
 
 
+@app.get("/campaigns")
+def campaigns_list() -> dict:
+    return run_manager.list_campaigns()
+
+
+@app.get("/campaigns/{campaign_id}")
+def campaign_detail(campaign_id: str) -> dict:
+    campaign = run_manager.get_campaign(campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return campaign
+
+
+@app.get("/campaigns/{campaign_id}/artifacts")
+def campaign_artifacts(campaign_id: str) -> dict:
+    artifacts = run_manager.list_campaign_artifacts(campaign_id)
+    if artifacts is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return artifacts
+
+
+@app.get("/campaigns/{campaign_id}/artifacts/{artifact_name}")
+def campaign_artifact(campaign_id: str, artifact_name: str) -> dict:
+    artifact = run_manager.get_campaign_artifact(campaign_id, artifact_name)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return artifact
+
+
 @app.get("/micro/scenarios")
 def micro_scenarios() -> dict:
     return {"scenarios": list_micro_scenario_summaries()}
@@ -393,6 +422,35 @@ def micro_batch_leaderboard(batch_id: str) -> dict:
         return get_micro_batch_leaderboard(batch_id, runs_dir=settings.runs_dir)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Micro batch not found") from exc
+
+
+@app.get("/micro/research-reports")
+def micro_research_reports() -> dict:
+    return run_manager.list_micro_research_reports()
+
+
+@app.get("/micro/research-reports/{report_id}")
+def micro_research_report_detail(report_id: str) -> dict:
+    report = run_manager.get_micro_research_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Micro research report not found")
+    return report
+
+
+@app.get("/micro/research-reports/{report_id}/artifacts")
+def micro_research_report_artifacts(report_id: str) -> dict:
+    artifacts = run_manager.list_micro_research_artifacts(report_id)
+    if artifacts is None:
+        raise HTTPException(status_code=404, detail="Micro research report not found")
+    return artifacts
+
+
+@app.get("/micro/research-reports/{report_id}/artifacts/{artifact_name}")
+def micro_research_report_artifact(report_id: str, artifact_name: str) -> dict:
+    artifact = run_manager.get_micro_research_artifact(report_id, artifact_name)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return artifact
 
 
 @app.websocket("/ws")

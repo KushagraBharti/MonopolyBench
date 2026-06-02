@@ -1,0 +1,76 @@
+{
+  "schema_version": "v1",
+  "registry_version": "micro_counterfactual_pairs_v1",
+  "suite_id": "counterfactual-v1",
+  "pairs": [
+    {
+      "pair_id": "cf-fame-dark-blue-build",
+      "baseline_scenario_id": "build-preserve-cash-vs-boardwalk-17",
+      "contrast_scenario_id": "build-dark-blue-hotel-fame-trap-20",
+      "controlled_difference": "Prestige/fame salience around dark blue development versus a cash-preservation build decision.",
+      "invariant_claims": [
+        "Both scenarios test whether the model resists expensive development when cash risk matters.",
+        "Both scenarios use deterministic build/post-build rubrics rather than prompt text changes."
+      ],
+      "expected_stability_metric": "Stable models should avoid fame-driven overbuilding and keep score_delta near zero when the cash-risk rubric agrees.",
+      "scoring_notes": "First-pass related pair; future fully controlled fixture should equalize cash, opponent positions, and rent exposure.",
+      "human_review_required": false
+    },
+    {
+      "pair_id": "cf-fame-boardwalk-buy",
+      "baseline_scenario_id": "buy-or-auction-park-place-no-boardwalk-16",
+      "contrast_scenario_id": "buy-or-auction-boardwalk-fame-bias-low-cash-15",
+      "controlled_difference": "Dark-blue property fame and perceived prestige under low-cash acquisition pressure.",
+      "invariant_claims": [
+        "Both scenarios involve dark-blue acquisition judgment.",
+        "Both scenarios use legal buy/auction choices from the engine decision schema."
+      ],
+      "expected_stability_metric": "Stable models should not buy/overpay solely because the contrast property is more famous.",
+      "scoring_notes": "Human review should treat this as a fame-sensitivity pair, not a perfectly value-identical pair.",
+      "human_review_required": true
+    },
+    {
+      "pair_id": "cf-anchor-railroad-auction",
+      "baseline_scenario_id": "auction-reading-railroad-low-price-09",
+      "contrast_scenario_id": "auction-bo-railroad-third-railroad-10",
+      "controlled_difference": "Railroad auction valuation under different ownership/anchor context.",
+      "invariant_claims": [
+        "Both scenarios are railroad auction decisions.",
+        "Both scenarios score bid discipline with deterministic auction rubrics."
+      ],
+      "expected_stability_metric": "Stable models should remain within valuation bands rather than chase contextual anchors.",
+      "scoring_notes": "First-pass related pair; future fixture should hold railroad count and cash constant while varying anchor only.",
+      "human_review_required": false
+    },
+    {
+      "pair_id": "cf-mutual-trade-color-frame",
+      "baseline_scenario_id": "trade-propose-mutual-orange-vs-yellow-06",
+      "contrast_scenario_id": "trade-propose-mutual-red-vs-green-07",
+      "controlled_difference": "Color-group framing in reciprocal monopoly-creation trade proposals.",
+      "invariant_claims": [
+        "Both scenarios ask whether a mutual monopoly-creation trade is worth proposing.",
+        "Both scenarios use deterministic trade proposal rubrics."
+      ],
+      "expected_stability_metric": "Stable models should explain or act consistently when mutual-trade economics are comparable.",
+      "scoring_notes": "Requires human review because the current pair is strategically related but not value-identical.",
+      "human_review_required": true
+    },
+    {
+      "pair_id": "cf-recent-shock-cash-danger",
+      "baseline_scenario_id": "post-turn-end-avoid-overaction-03",
+      "contrast_scenario_id": "post-turn-end-cash-danger-02",
+      "controlled_difference": "Neutral post-turn restraint versus salient cash-danger framing.",
+      "invariant_claims": [
+        "Both scenarios are post-turn strategy decisions.",
+        "Both scenarios test whether the model overreacts or underreacts to cash pressure."
+      ],
+      "expected_stability_metric": "Stable models should change behavior only when the actual cash-risk state changes, not from salience alone.",
+      "scoring_notes": "First-pass pair; future fixture should make the economic state identical except recent-rent framing.",
+      "human_review_required": true
+    }
+  ],
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "Counterfactual pair metadata is post-hoc and never included in prompts."
+  }
+}

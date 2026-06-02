@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "micro_research.schema.json",
+  "title": "MicroResearchContracts",
+  "type": "object",
+  "additionalProperties": true,
+  "$defs": {
+    "promptPipelineMarker": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "const": "unchanged" },
+        "note": { "type": "string" }
+      }
+    },
+    "researchCategory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category_id",
+        "title",
+        "description",
+        "target_behavior",
+        "trap_behaviors",
+        "preferred_behaviors",
+        "scenario_ids",
+        "human_review_required",
+        "scoring_notes",
+        "source_claims",
+        "source_urls"
+      ],
+      "properties": {
+        "category_id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "target_behavior": { "type": "string", "minLength": 1 },
+        "trap_behaviors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "preferred_behaviors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "scenario_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "counterfactual_pair_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "human_review_required": { "type": "boolean" },
+        "scoring_notes": { "type": "string" },
+        "source_claims": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "source_urls": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "microResearchSuite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "suite_id",
+        "suite_family",
+        "benchmark_suite_version",
+        "title",
+        "description",
+        "source_suite_id",
+        "scenario_ids",
+        "categories",
+        "human_review_required",
+        "report_dimensions",
+        "prompt_pipeline"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "suite_id": { "type": "string", "minLength": 1 },
+        "suite_family": {
+          "type": "string",
+          "enum": ["bias", "safety", "counterfactual", "campaign"]
+        },
+        "benchmark_suite_version": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "source_suite_id": { "type": "string", "minLength": 1 },
+        "scenario_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/researchCategory" }
+        },
+        "counterfactual_pair_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "campaign_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "human_review_required": { "type": "boolean" },
+        "report_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "prompt_pipeline": { "$ref": "#/$defs/promptPipelineMarker" }
+      }
+    },
+    "counterfactualPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pair_id",
+        "baseline_scenario_id",
+        "contrast_scenario_id",
+        "controlled_difference",
+        "invariant_claims",
+        "expected_stability_metric",
+        "scoring_notes",
+        "human_review_required"
+      ],
+      "properties": {
+        "pair_id": { "type": "string", "minLength": 1 },
+        "baseline_scenario_id": { "type": "string", "minLength": 1 },
+        "contrast_scenario_id": { "type": "string", "minLength": 1 },
+        "controlled_difference": { "type": "string", "minLength": 1 },
+        "invariant_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "expected_stability_metric": { "type": "string", "minLength": 1 },
+        "scoring_notes": { "type": "string" },
+        "human_review_required": { "type": "boolean" }
+      }
+    },
+    "counterfactualPairRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "registry_version", "suite_id", "pairs", "prompt_pipeline"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "registry_version": { "type": "string", "const": "micro_counterfactual_pairs_v1" },
+        "suite_id": { "type": "string", "minLength": 1 },
+        "pairs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/counterfactualPair" }
+        },
+        "prompt_pipeline": { "$ref": "#/$defs/promptPipelineMarker" }
+      }
+    },
+    "microCampaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "campaign_id",
+        "title",
+        "description",
+        "category",
+        "step_scenario_ids",
+        "deterministic_opponent_policy",
+        "expected_strategic_path",
+        "per_step_rubrics",
+        "final_scoring_notes",
+        "replay_mode",
+        "human_review_required"
+      ],
+      "properties": {
+        "campaign_id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "step_scenario_ids": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "deterministic_opponent_policy": { "type": "string", "minLength": 1 },
+        "expected_strategic_path": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "per_step_rubrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "final_scoring_notes": { "type": "string" },
+        "replay_mode": {
+          "type": "string",
+          "enum": ["fixture_sequence", "engine_replay_required"]
+        },
+        "human_review_required": { "type": "boolean" }
+      }
+    },
+    "microCampaignRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "registry_version", "suite_id", "campaigns", "prompt_pipeline"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "registry_version": { "type": "string", "const": "micro_campaigns_v1" },
+        "suite_id": { "type": "string", "minLength": 1 },
+        "campaigns": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/microCampaign" }
+        },
+        "prompt_pipeline": { "$ref": "#/$defs/promptPipelineMarker" }
+      }
+    },
+    "expertLabelTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "task_id",
+        "task_type",
+        "suite_id",
+        "label_dimensions",
+        "status",
+        "human_review_only",
+        "prompt_pipeline"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "task_id": { "type": "string", "minLength": 1 },
+        "task_type": {
+          "type": "string",
+          "enum": ["scenario", "counterfactual_pair", "campaign", "safety_label"]
+        },
+        "suite_id": { "type": "string", "minLength": 1 },
+        "scenario_id": { "type": "string" },
+        "counterfactual_pair_id": { "type": "string" },
+        "campaign_id": { "type": "string" },
+        "label_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["queued", "completed"]
+        },
+        "human_review_only": { "type": "boolean", "const": true },
+        "prompt_pipeline": { "$ref": "#/$defs/promptPipelineMarker" }
+      }
+    },
+    "expertLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "label_id",
+        "task_id",
+        "reviewer_id",
+        "expertise_level",
+        "label_source",
+        "timestamp",
+        "judgment",
+        "rationale",
+        "confidence",
+        "ambiguity_flag",
+        "adjudication_status",
+        "human_review_only"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "v1" },
+        "label_id": { "type": "string", "minLength": 1 },
+        "task_id": { "type": "string", "minLength": 1 },
+        "reviewer_id": { "type": "string", "minLength": 1 },
+        "expertise_level": { "type": "string", "minLength": 1 },
+        "label_source": { "type": "string", "minLength": 1 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "scenario_id": { "type": "string" },
+        "counterfactual_pair_id": { "type": "string" },
+        "campaign_id": { "type": "string" },
+        "selected_action": { "type": ["object", "null"], "additionalProperties": true },
+        "judgment": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ambiguity_flag": { "type": "boolean" },
+        "adjudication_status": {
+          "type": "string",
+          "enum": ["single_label", "pending_adjudication", "adjudicated"]
+        },
+        "inter_rater_group_id": { "type": ["string", "null"] },
+        "human_review_only": { "type": "boolean", "const": true }
+      }
+    }
+  }
+}

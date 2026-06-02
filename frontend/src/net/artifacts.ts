@@ -148,3 +148,84 @@ export const fetchBatchArtifact = <T = unknown>(
 
 export const fetchBatchModelCard = (batchId: string, cardId: string): Promise<BatchModelCard> =>
   apiGet(`/batches/${encodeURIComponent(batchId)}/model_cards/${encodeURIComponent(cardId)}`);
+
+export type ResearchArtifactEntry = {
+  name: string;
+  path: string;
+  exists: boolean;
+  kind: 'json' | 'jsonl' | 'csv' | 'markdown' | 'text' | string;
+};
+
+export type CampaignListItem = {
+  campaign_id: string;
+  campaign_dir: string;
+  run_count?: number | null;
+  completed_run_count?: number | null;
+  execution_status?: string | null;
+  manifest_exists?: boolean;
+};
+
+export type CampaignDetail = {
+  campaign_id: string;
+  campaign_dir: string;
+  manifest: Record<string, unknown>;
+  config: Record<string, unknown>;
+  leaderboard: Record<string, unknown>;
+  statistics: Record<string, unknown>;
+  baseline_comparison: Record<string, unknown>;
+};
+
+export type MicroResearchReportListItem = {
+  report_id: string;
+  report_dir: string;
+  suite_id?: string | null;
+  suite_family?: string | null;
+  scenario_count?: number | null;
+  joined_result_count?: number | null;
+  human_label_count?: number | null;
+};
+
+export type MicroResearchReportDetail = {
+  report_id: string;
+  report_dir: string;
+  micro_report: Record<string, unknown>;
+  category_breakdown: Record<string, unknown>;
+  counterfactual_report: Record<string, unknown>;
+  safety_report: Record<string, unknown>;
+  campaign_report: Record<string, unknown>;
+  result_join: Record<string, unknown>;
+  label_summary: Record<string, unknown>;
+};
+
+export type ResearchArtifact<T = unknown> = {
+  artifact: string;
+  kind: string;
+  content?: T;
+  rows?: T[];
+  text?: string;
+};
+
+export const fetchCampaigns = (): Promise<{ campaigns: CampaignListItem[] }> => apiGet('/campaigns');
+
+export const fetchCampaign = (campaignId: string): Promise<CampaignDetail> =>
+  apiGet(`/campaigns/${encodeURIComponent(campaignId)}`);
+
+export const fetchCampaignArtifacts = (campaignId: string): Promise<{ campaign_id: string; artifacts: ResearchArtifactEntry[] }> =>
+  apiGet(`/campaigns/${encodeURIComponent(campaignId)}/artifacts`);
+
+export const fetchCampaignArtifact = <T = unknown>(campaignId: string, artifactName: string): Promise<ResearchArtifact<T>> =>
+  apiGet(`/campaigns/${encodeURIComponent(campaignId)}/artifacts/${encodeURIComponent(artifactName)}`);
+
+export const fetchMicroResearchReports = (): Promise<{ reports: MicroResearchReportListItem[] }> =>
+  apiGet('/micro/research-reports');
+
+export const fetchMicroResearchReport = (reportId: string): Promise<MicroResearchReportDetail> =>
+  apiGet(`/micro/research-reports/${encodeURIComponent(reportId)}`);
+
+export const fetchMicroResearchArtifacts = (
+  reportId: string
+): Promise<{ report_id: string; artifacts: ResearchArtifactEntry[] }> =>
+  apiGet(`/micro/research-reports/${encodeURIComponent(reportId)}/artifacts`);
+
+export const fetchMicroResearchArtifact = <T = unknown>(reportId: string, artifactName: string): Promise<ResearchArtifact<T>> =>
+  apiGet(`/micro/research-reports/${encodeURIComponent(reportId)}/artifacts/${encodeURIComponent(artifactName)}`);

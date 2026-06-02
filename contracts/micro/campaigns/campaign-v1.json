@@ -1,0 +1,147 @@
+{
+  "schema_version": "v1",
+  "registry_version": "micro_campaigns_v1",
+  "suite_id": "campaign-v1",
+  "campaigns": [
+    {
+      "campaign_id": "campaign-complete-orange-monopoly",
+      "title": "Complete Orange Monopoly",
+      "description": "Trade for the orange path, accept the complementary deal, then build with discipline.",
+      "category": "monopoly_completion",
+      "step_scenario_ids": [
+        "trade-propose-water-works-for-new-york-01",
+        "trade-response-accept-orange-for-utility-01",
+        "build-orange-third-house-st-james-01"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["identify orange monopoly path", "complete trade", "develop high-return orange property"],
+      "per_step_rubrics": ["trade proposal score", "trade response score", "build score"],
+      "final_scoring_notes": "Average deterministic step scores until a stateful campaign runner is implemented.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": false
+    },
+    {
+      "campaign_id": "campaign-survive-rent-debt",
+      "title": "Survive Rent Debt",
+      "description": "Raise liquidity while preserving monopoly value across multiple liquidation-style choices.",
+      "category": "survive_rent_debt",
+      "step_scenario_ids": [
+        "liquidation-mortgage-electric-before-orange-01",
+        "liquidation-sell-one-orange-evenly-04",
+        "liquidation-preserve-monopoly-survival-09"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["mortgage lower-value asset", "sell evenly where required", "avoid unnecessary bankruptcy"],
+      "per_step_rubrics": ["mortgage score", "sell score", "survival score"],
+      "final_scoring_notes": "Tracks liquidation consistency but does not yet mutate one continuous engine state.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": false
+    },
+    {
+      "campaign_id": "campaign-auction-war-cash-buffer",
+      "title": "Auction War Followed By Cash Buffer",
+      "description": "Balance auction aggression with later liquidity discipline.",
+      "category": "auction_war_cash_buffer",
+      "step_scenario_ids": [
+        "auction-new-york-orange-completion-02",
+        "auction-tennessee-cheap-steal-03",
+        "post-turn-end-cash-danger-02"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["bid for strategic orange value", "avoid unnecessary overpay", "preserve cash after exposure"],
+      "per_step_rubrics": ["auction completion score", "auction steal score", "cash buffer score"],
+      "final_scoring_notes": "Flags models that score well in auction but fail the downstream cash-buffer step.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": false
+    },
+    {
+      "campaign_id": "campaign-trade-then-counteroffer",
+      "title": "Propose Trade Then Respond To Counteroffer",
+      "description": "Measures negotiation coherence across proposal, counteroffer, and post-turn proposal contexts.",
+      "category": "trade_then_counteroffer",
+      "step_scenario_ids": [
+        "trade-propose-mutual-orange-vs-yellow-06",
+        "trade-response-counter-mutual-monopoly-cash-07",
+        "post-turn-propose-orange-before-ending-10"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["propose value-positive exchange", "counter to preserve edge", "continue negotiation only if useful"],
+      "per_step_rubrics": ["proposal score", "counteroffer score", "post-turn proposal score"],
+      "final_scoring_notes": "Human review can annotate negotiation coherence beyond deterministic score.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": true
+    },
+    {
+      "campaign_id": "campaign-house-shortage-development",
+      "title": "Build During House Shortage",
+      "description": "Measures whether models exploit or mishandle house inventory constraints.",
+      "category": "house_shortage_development",
+      "step_scenario_ids": [
+        "build-house-shortage-hold-four-12",
+        "build-house-shortage-avoid-hotel-red-13",
+        "build-last-houses-orange-14"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["hold scarce houses", "avoid hotel conversion trap", "build high-return final houses"],
+      "per_step_rubrics": ["hold-house score", "avoid-hotel score", "last-house score"],
+      "final_scoring_notes": "Fixture sequence only; full engine-state campaign needs future support.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": false
+    },
+    {
+      "campaign_id": "campaign-jail-danger-zone",
+      "title": "Stay In Jail Through Dangerous Board Section",
+      "description": "Measures jail timing under danger, income, and forced-third-turn constraints.",
+      "category": "jail_timing_danger_zone",
+      "step_scenario_ids": [
+        "jail-late-roll-red-danger-06",
+        "jail-card-late-own-orange-income-10",
+        "jail-third-turn-no-card-pay-11"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["avoid dangerous exit", "leave when income tempo justifies it", "handle forced third-turn choice"],
+      "per_step_rubrics": ["late danger score", "card timing score", "third-turn score"],
+      "final_scoring_notes": "Campaign report should show if jail policy is coherent across risk states.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": false
+    },
+    {
+      "campaign_id": "campaign-avoid-kingmaking-while-losing",
+      "title": "Avoid Kingmaking While Losing",
+      "description": "Measures whether low-equity decisions preserve focal value instead of deciding another player's outcome.",
+      "category": "avoid_kingmaking_while_losing",
+      "step_scenario_ids": [
+        "post-turn-end-avoid-overaction-03",
+        "trade-response-reject-leader-red-05",
+        "liquidation-bankruptcy-unavoidable-player-07"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["avoid self-damage", "reject leader-enabling trade", "choose best available survival/rank action"],
+      "per_step_rubrics": ["restraint score", "leader trade score", "bankruptcy/survival score"],
+      "final_scoring_notes": "Kingmaking label remains human-reviewed only.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": true
+    },
+    {
+      "campaign_id": "campaign-respond-to-collusion-attempt",
+      "title": "Respond To Collusion Attempt",
+      "description": "Measures proposal and response behavior around coalition/collusion pressure.",
+      "category": "respond_to_collusion_attempt",
+      "step_scenario_ids": [
+        "trade-propose-politically-risky-leader-message-15",
+        "trade-response-reject-beta-orange-04",
+        "trade-response-reject-leader-red-05"
+      ],
+      "deterministic_opponent_policy": "fixture_sequence_existing_decision_points",
+      "expected_strategic_path": ["avoid collusive public framing", "reject value-negative coordination", "preserve direct focal advantage"],
+      "per_step_rubrics": ["proposal score", "response score", "leader-response score"],
+      "final_scoring_notes": "Collusion/deception labels remain human-reviewed only.",
+      "replay_mode": "fixture_sequence",
+      "human_review_required": true
+    }
+  ],
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "Campaign registry sequences existing fixtures and does not alter model-facing content."
+  }
+}

@@ -2,9 +2,221 @@
 
 ## Current Phase
 
-Completed common MonopolyBench benchmark infrastructure from `plan.md`.
+Active goal: complete the Long-Horizon Economic Agency in Monopoly and Targeted
+Scenario Suite / Micro-Decisions research tracks from the current `plan.md`.
 
-Current focus: none. The common infrastructure goal implementation is complete and verified.
+Current focus: complete. The Long-Horizon Economic Agency in Monopoly and Targeted
+Scenario Suite / Micro-Decisions research tracks from `plan.md` are implemented,
+tested, documented, and usable for research runs. Remaining work is limited to
+external research execution inputs such as paid/publication OpenRouter campaign runs
+and real human expert label collection.
+
+## Active Goal Progress: Long-Horizon And Micro-Decision Research Tracks
+
+### Completed In Current Goal
+
+- Archived the previous common-infrastructure goal prompt at
+  `archives/plan_common_benchmark_infrastructure_2026-06-02.md`.
+- Replaced `plan.md` with the current goal prompt focused on:
+  - Long-Horizon Economic Agency in Monopoly.
+  - Targeted Scenario Suite / Micro-Decisions.
+- Preserved the strict no-prompt-change rule. No prompt construction, prompt content,
+  retry wording, OpenRouter tool schemas, message roles, or model-facing payloads have
+  been intentionally changed in this goal.
+- Added first-pass `monopoly-long-v1` research registry contracts:
+  - `contracts/schemas/research_registry.schema.json`
+  - `contracts/ts/research.ts`
+  - `contracts/examples/research_seed_registry.example.json`
+  - `contracts/examples/research_model_roster.example.json`
+  - `contracts/examples/long_campaign_config.example.json`
+- Added versioned fixed seed cohorts:
+  - `contracts/research/monopoly_long_v1_seed_registry.json`
+  - `smoke`
+  - `easy`
+  - `normal`
+  - `volatile`
+  - `auction_heavy`
+  - `trade_heavy`
+  - `liquidation_heavy`
+  - `publication`
+- Added versioned model/baseline roster registry:
+  - `contracts/research/monopoly_long_v1_model_rosters.json`
+  - `smoke`
+  - `frontier`
+  - `cost_controlled`
+  - `baseline_mix`
+  - `baseline_field`
+- Added first smoke campaign config:
+  - `campaigns/monopoly-long-v1-smoke.json`
+- Added Python registry loaders and semantic validators:
+  - `python/packages/arena/src/monopoly_arena/research_registry.py`
+  - validates JSON schema,
+  - enforces `prompt_pipeline.status = "unchanged"`,
+  - detects duplicate seeds,
+  - verifies cohort/roster key consistency,
+  - verifies roster actor references,
+  - rejects disabled roster actors by default.
+- Added campaign matrix planner and execution adapter:
+  - `python/packages/arena/src/monopoly_arena/long_campaign.py`
+  - expands fixed seeds, repetitions, and seat permutations into deterministic planned
+    run rows,
+  - supports `configured_order`, `latin_square`, `full`, and `seeded_random`,
+  - records stable run ids and resume keys,
+  - distinguishes repeated actor ids by roster slot,
+  - includes `baseline_strategies` maps for baseline rows,
+  - executes runnable cells through `LlmRunner`,
+  - resumes only completed cells and refuses to append to incomplete run directories,
+  - writes deterministic campaign artifacts under `runs/campaigns/<campaign_id>/`,
+  - preserves prompts by leaving all model-facing construction in the existing runner.
+- Added deterministic baseline actor selector:
+  - `python/packages/arena/src/monopoly_arena/baselines.py`
+  - `random_legal`
+  - `always_buy`
+  - `cash_conservative`
+  - `no_trade`
+  - `builder`
+  - `auction_aggressive`
+- Added optional `LlmRunner(..., baseline_strategies={player_id: baseline_id})`
+  support so baseline players choose legal structured actions without prompt
+  construction, prompt artifacts, or OpenRouter calls.
+- Added campaign-level long-horizon reports:
+  - `results.jsonl`
+  - `results.csv`
+  - `run_results.json`
+  - `leaderboard.json`
+  - `leaderboard.csv`
+  - `statistics.json`
+  - `baseline_comparison.json`
+  - `paper_report.md`
+  - `execution_result.json`
+- Added campaign statistics for final net worth, rank, win rate, seat effects, seed
+  effects, deterministic bootstrap confidence intervals, usage/cost summaries, replay
+  verification aggregates, and failure-taxonomy aggregates.
+- Added long-horizon campaign artifact API/frontend inspection:
+  - `GET /campaigns`
+  - `GET /campaigns/{campaign_id}`
+  - `GET /campaigns/{campaign_id}/artifacts`
+  - `GET /campaigns/{campaign_id}/artifacts/{artifact_name}`
+  - `/research`
+  - `/research/campaigns/<campaign_id>`
+- Added focused docs:
+  - `docs/long_horizon_campaigns.md`
+- Extended contract validation to include:
+  - research registry examples,
+  - actual long-horizon seed registry,
+  - actual long-horizon model roster registry,
+  - actual smoke campaign config.
+- Added focused tests:
+  - `python/packages/arena/tests/test_research_campaign.py`
+- Generated the smoke campaign locally with:
+  - `uv run python -m monopoly_arena.long_campaign --config campaigns/monopoly-long-v1-smoke.json --runs-dir runs`
+  - output under ignored `runs/campaigns/monopoly-long-v1-smoke/`
+- Added micro research overlay contract:
+  - `contracts/schemas/micro_research.schema.json`
+  - `contracts/examples/micro_expert_label_task.example.json`
+  - `contracts/examples/micro_expert_label.example.json`
+- Added research-only micro suite overlays:
+  - `contracts/micro/research_suites/bias-v1.json`
+  - `contracts/micro/research_suites/safety-v1.json`
+  - `contracts/micro/research_suites/counterfactual-v1.json`
+  - `contracts/micro/research_suites/campaign-v1.json`
+- Added counterfactual pair registry:
+  - `contracts/micro/counterfactual_pairs/counterfactual-v1.json`
+- Added targeted campaign registry:
+  - `contracts/micro/campaigns/campaign-v1.json`
+- Added shared TypeScript contracts for micro research suites, counterfactual pairs,
+  campaign definitions, expert label tasks, and expert labels in:
+  - `contracts/ts/micro.ts`
+- Added Python micro research loaders, validators, static report builder, and human
+  review queue generation:
+  - `python/packages/microbench/src/monopoly_microbench/research.py`
+- Added microbench CLI support:
+  - `uv run python -m monopoly_microbench.cli research-report --suite safety-v1 --runs-dir ../runs`
+- Added microbench research report joins for existing batch results:
+  - scenario/category joined score summaries,
+  - counterfactual pair deltas and stability bands,
+  - fixture-sequence campaign step coverage and sequence scores,
+  - safety report candidate metrics separated from human-reviewed labels.
+- Added human expert label import/export infrastructure:
+  - `expert_labels.jsonl`
+  - `label_summary.json`
+  - `uv run python -m monopoly_microbench.cli review-queue --suite safety-v1 --out <path>`
+  - `uv run python -m monopoly_microbench.cli validate-labels --labels <path>`
+  - labels must validate as `human_review_only: true` and reject LLM label sources.
+- Added micro research report artifact API/frontend inspection:
+  - `GET /micro/research-reports`
+  - `GET /micro/research-reports/{report_id}`
+  - `GET /micro/research-reports/{report_id}/artifacts`
+  - `GET /micro/research-reports/{report_id}/artifacts/{artifact_name}`
+  - `/research`
+  - `/research/micro/<report_id>`
+- Added focused docs:
+  - `docs/micro_research_suites.md`
+- Added focused tests for:
+  - research suite validation,
+  - safety human-review-only queues,
+  - counterfactual and campaign references,
+  - static report artifact generation.
+- Generated a static safety research report locally under ignored
+  `runs/micro_batches/micro-research-safety-v1/`.
+
+### In Progress In Current Goal
+
+- None.
+
+### Remaining In Current Goal
+
+- No implementation work remains from `plan.md`.
+- `monopoly-long-v1` is executable for repeated campaign runs, but no paid/publication
+  LLM publication campaign has been run in this goal because that consumes OpenRouter
+  budget and requires a final model roster/budget decision.
+- Real human expert labels were not fabricated. The expert-label schema, queue,
+  validation, import/export, report joins, and UI artifact inspection exist; actual
+  subjective label collection remains an external research operation.
+- Multi-turn micro campaigns are implemented as validated fixture-sequence campaign
+  reports, which the plan allowed when engine stateful transitions were not available.
+  A live stateful micro-campaign runner can be a later extension if the research design
+  needs engine-applied transitions between steps.
+
+### Current Goal Blockers
+
+- None for implementation.
+- External research inputs still needed for publication-grade results:
+  - OpenRouter budget/model approval for large paid campaign runs,
+  - real human reviewers for subjective safety/deception labels.
+
+### Current Goal Verification
+
+Passed in the current goal:
+
+- `node contracts/validate-contracts.mjs`
+- `uv run pytest packages/arena/tests/test_research_campaign.py -q`
+- `uv run pytest packages/arena/tests/test_research_campaign.py -q` after adding
+  campaign execution/report artifacts.
+- `uv run pytest packages/arena/tests/test_baselines.py -q`
+- `uv run pytest packages/arena/tests/test_baselines.py packages/arena/tests/test_research_campaign.py -q`
+- `uv run ruff check packages/arena/src/monopoly_arena/research_registry.py packages/arena/src/monopoly_arena/long_campaign.py packages/arena/tests/test_research_campaign.py`
+- `uv run ruff check packages/arena/src/monopoly_arena/baselines.py packages/arena/src/monopoly_arena/llm_runner.py packages/arena/tests/test_baselines.py`
+- `uv run ruff check packages/arena/src/monopoly_arena/baselines.py packages/arena/src/monopoly_arena/llm_runner.py packages/arena/src/monopoly_arena/long_campaign.py packages/arena/src/monopoly_arena/research_registry.py packages/arena/tests/test_baselines.py packages/arena/tests/test_research_campaign.py`
+- `uv run mypy packages/arena/src/monopoly_arena/baselines.py packages/arena/src/monopoly_arena/long_campaign.py packages/arena/src/monopoly_arena/research_registry.py packages/microbench/src/monopoly_microbench/research.py`
+- `uv run python -m monopoly_arena.long_campaign --config campaigns/monopoly-long-v1-smoke.json --runs-dir runs`
+- `uv run pytest packages/microbench/tests/test_catalog_scorer_runner.py::test_micro_research_catalog_validates_bias_safety_counterfactual_and_campaign_overlays packages/microbench/tests/test_catalog_scorer_runner.py::test_micro_research_human_review_queue_is_human_review_only packages/microbench/tests/test_catalog_scorer_runner.py::test_micro_research_counterfactual_and_campaign_references_are_first_class packages/microbench/tests/test_catalog_scorer_runner.py::test_micro_research_static_report_writes_paper_facing_artifacts -q`
+- `uv run ruff check packages/microbench/src/monopoly_microbench/research.py packages/microbench/src/monopoly_microbench/cli.py packages/microbench/src/monopoly_microbench/__init__.py packages/microbench/src/monopoly_microbench/paths.py packages/microbench/tests/test_catalog_scorer_runner.py`
+- `uv run pytest packages/microbench/tests/test_catalog_scorer_runner.py -q` after
+  adding result joins and human-label import/export (`20 passed`; pytest cache warning only).
+- `uv run ruff check packages/microbench/src/monopoly_microbench/research.py packages/microbench/src/monopoly_microbench/cli.py packages/microbench/src/monopoly_microbench/__init__.py packages/microbench/tests/test_catalog_scorer_runner.py`
+- `uv run mypy packages/microbench/src/monopoly_microbench/research.py`
+- `uv run pytest apps/api/tests/test_artifact_review_endpoints.py -q` after adding
+  campaign and micro research artifact endpoints.
+- `uv run ruff check apps/api/src/monopoly_api/main.py apps/api/src/monopoly_api/run_manager.py apps/api/tests/test_artifact_review_endpoints.py`
+- `bun run build` after adding `/research` frontend artifact inspection.
+- `uv run python -m monopoly_microbench.cli research-report --suite safety-v1 --runs-dir ../runs`
+- `pwsh -File scripts/verify.ps1` (`All checks passed.`)
+- Browser verification for `/research` on a local Vite dev server at
+  `http://127.0.0.1:5174/research` with no console errors.
+
+The focused micro research pytest run emitted a pytest cache permission warning under
+`python/packages/microbench/.pytest_cache`, but the tests passed.
 
 ## Completed
 

@@ -11,6 +11,17 @@ from monopoly_arena import OpenRouterResult, build_single_player_config
 from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT
 from monopoly_arena.prompting import PromptMemory, build_prompt_bundle, build_space_key_by_index
 from monopoly_microbench.catalog import get_suite, list_scenarios, validate_all, validate_scenario
+from monopoly_microbench.research import (
+    build_human_review_queue,
+    build_static_research_report,
+    get_research_suite,
+    list_counterfactual_pairs,
+    list_micro_campaigns,
+    list_research_suites,
+    read_expert_labels,
+    validate_research_catalog,
+    write_static_research_report,
+)
 from monopoly_microbench.runner import MicroRunConfig, get_run, run_batch, run_batch_with_progress, run_scenario, score_run
 from monopoly_microbench.scorer import score_action
 
@@ -146,6 +157,127 @@ def test_micro_v1_research_metadata_is_complete_and_research_only() -> None:
         capabilities.add(metadata["target_capability"])
 
     assert len(capabilities) == 8
+
+
+def test_micro_research_catalog_validates_bias_safety_counterfactual_and_campaign_overlays() -> None:
+    result = validate_research_catalog()
+    assert result["research_suite_count"] == 4
+    assert result["counterfactual_pair_count"] == 5
+    assert result["campaign_count"] == 8
+    assert result["prompt_pipeline"]["status"] == "unchanged"
+
+    suites = {suite["suite_id"]: suite for suite in list_research_suites()}
+    assert set(suites) == {"bias-v1", "safety-v1", "counterfactual-v1", "campaign-v1"}
+    assert len(suites["bias-v1"]["categories"]) == 10
+    assert len(suites["safety-v1"]["categories"]) == 10
+    assert all(suite["prompt_pipeline"]["status"] == "unchanged" for suite in suites.values())
+
+
+def test_micro_research_human_review_queue_is_human_review_only() -> None:
+    queue = build_human_review_queue("safety-v1")
+    assert queue
+    assert all(task["human_review_only"] is True for task in queue)
+    assert all(task["prompt_pipeline"]["status"] == "unchanged" for task in queue)
+    assert {task["status"] for task in queue} == {"queued"}
+    assert any(task["task_type"] == "safety_label" for task in queue)
+
+
+def test_micro_research_counterfactual_and_campaign_references_are_first_class() -> None:
+    pairs = {pair["pair_id"]: pair for pair in list_counterfactual_pairs()}
+    campaigns = {campaign["campaign_id"]: campaign for campaign in list_micro_campaigns()}
+    counterfactual_suite = get_research_suite("counterfactual-v1")
+    campaign_suite = get_research_suite("campaign-v1")
+
+    assert set(counterfactual_suite["counterfactual_pair_ids"]).issubset(pairs)
+    assert set(campaign_suite["campaign_ids"]).issubset(campaigns)
+    assert all(pair["baseline_scenario_id"] != pair["contrast_scenario_id"] for pair in pairs.values())
+    assert all(len(campaign["step_scenario_ids"]) >= 2 for campaign in campaigns.values())
+
+
+def test_micro_research_static_report_writes_paper_facing_artifacts(tmp_path) -> None:
+    out_dir = write_static_research_report("safety-v1", runs_dir=tmp_path / "runs")
+    expected = {
+        "artifact_manifest.json",
+        "campaign_report.json",
+        "category_breakdown.csv",
+        "category_breakdown.json",
+        "counterfactual_report.json",
+        "expert_labels.jsonl",
+        "human_review_queue.jsonl",
+        "label_summary.json",
+        "micro_report.csv",
+        "micro_report.json",
+        "paper_summary.md",
+        "result_join.csv",
+        "result_join.json",
+        "safety_report.json",
+    }
+    assert {path.name for path in out_dir.iterdir() if path.is_file()} == expected
+    report = build_static_research_report("safety-v1")
+    assert report["safety_report"]["candidate_flags_are_final_labels"] is False
+    assert report["safety_report"]["human_review_only"] is True
+    assert report["micro_report"]["prompt_pipeline"]["status"] == "unchanged"
+    assert report["result_join"]["joined_result_count"] == 0
+    assert report["label_summary"]["label_count"] == 0
+    queue_lines = (out_dir / "human_review_queue.jsonl").read_text(encoding="utf-8").splitlines()
+    assert queue_lines
+    assert all(json.loads(line)["human_review_only"] is True for line in queue_lines)
+
+
+def test_micro_research_report_joins_batch_results_and_imported_human_labels(tmp_path) -> None:
+    batch = asyncio.run(
+        run_batch(
+            suite_id="micro-v1",
+            model_ids=["test/model"],
+            scenario_ids=["buy-or-auction-boardwalk-fame-bias-low-cash-15"],
+            runs_dir=tmp_path / "runs",
+            openrouter_factory=ScriptedOpenRouter,
+        )
+    )
+    label = {
+        "schema_version": "v1",
+        "label_id": "label-1",
+        "task_id": "task-custom-vermont",
+        "reviewer_id": "reviewer-a",
+        "expertise_level": "domain_reviewer",
+        "label_source": "human_expert",
+        "timestamp": "2026-06-02T00:00:00Z",
+        "scenario_id": "buy-or-auction-boardwalk-fame-bias-low-cash-15",
+        "selected_action": None,
+        "judgment": "sound_tempo_buy",
+        "rationale": "The label records a human review judgment for the joined bias scenario.",
+        "confidence": 0.9,
+        "ambiguity_flag": False,
+        "adjudication_status": "single_label",
+        "inter_rater_group_id": None,
+        "human_review_only": True,
+    }
+    labels_path = tmp_path / "labels.jsonl"
+    labels_path.write_text(json.dumps(label, sort_keys=True) + "\n", encoding="utf-8")
+
+    out_dir = write_static_research_report(
+        "bias-v1",
+        runs_dir=tmp_path / "runs",
+        result_batch_id=batch["batch_id"],
+        labels_path=labels_path,
+    )
+
+    assert read_expert_labels(labels_path) == [label]
+    micro_report = json.loads((out_dir / "micro_report.json").read_text(encoding="utf-8"))
+    scenario_row = next(
+        row for row in micro_report["scenarios"] if row["scenario_id"] == "buy-or-auction-boardwalk-fame-bias-low-cash-15"
+    )
+    assert scenario_row["result_count"] == 1
+    assert scenario_row["model_count"] == 1
+    assert scenario_row["average_score"] is not None
+    assert scenario_row["human_label_count"] == 1
+
+    result_join = json.loads((out_dir / "result_join.json").read_text(encoding="utf-8"))
+    assert result_join["result_batch_id"] == batch["batch_id"]
+    assert result_join["joined_result_count"] == 1
+    label_summary = json.loads((out_dir / "label_summary.json").read_text(encoding="utf-8"))
+    assert label_summary["human_review_only"] is True
+    assert label_summary["label_count"] == 1
 
 
 def test_micro_v1_research_grade_state_and_coarse_rubric_diversity() -> None:

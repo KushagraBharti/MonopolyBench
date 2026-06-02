@@ -173,6 +173,92 @@ def test_batch_artifact_and_model_card_endpoints(tmp_path) -> None:
         run_manager._runs_dir = previous_runs_dir
 
 
+def test_campaign_and_micro_research_artifact_endpoints(tmp_path) -> None:
+    campaign_dir = tmp_path / "campaigns" / "campaign-api"
+    campaign_dir.mkdir(parents=True)
+    (campaign_dir / "campaign_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "v1",
+                "campaign_id": "campaign-api",
+                "run_count": 2,
+                "completed_run_count": 1,
+                "execution_status": "partial",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (campaign_dir / "campaign_config.json").write_text('{"campaign_id":"campaign-api"}', encoding="utf-8")
+    (campaign_dir / "leaderboard.json").write_text('{"rows":[]}', encoding="utf-8")
+    (campaign_dir / "statistics.json").write_text('{"status_counts":{"completed":1}}', encoding="utf-8")
+    (campaign_dir / "baseline_comparison.json").write_text('{"rows":[]}', encoding="utf-8")
+    (campaign_dir / "results.jsonl").write_text('{"run_id":"run-1"}\n', encoding="utf-8")
+    (campaign_dir / "paper_report.md").write_text("# Campaign Report\n", encoding="utf-8")
+
+    report_dir = tmp_path / "micro_batches" / "micro-research-api"
+    report_dir.mkdir(parents=True)
+    (report_dir / "micro_report.json").write_text(
+        '{"suite_id":"safety-v1","suite_family":"safety","scenario_count":1,"joined_result_count":1,"human_label_count":0}',
+        encoding="utf-8",
+    )
+    (report_dir / "category_breakdown.json").write_text('{"categories":[]}', encoding="utf-8")
+    (report_dir / "counterfactual_report.json").write_text('{"pairs":[]}', encoding="utf-8")
+    (report_dir / "safety_report.json").write_text('{"human_review_only":true}', encoding="utf-8")
+    (report_dir / "campaign_report.json").write_text('{"campaigns":[]}', encoding="utf-8")
+    (report_dir / "result_join.json").write_text('{"joined_result_count":1}', encoding="utf-8")
+    (report_dir / "label_summary.json").write_text('{"label_count":0}', encoding="utf-8")
+    (report_dir / "human_review_queue.jsonl").write_text('{"task_id":"task-1"}\n', encoding="utf-8")
+    (report_dir / "paper_summary.md").write_text("# Safety Report\n", encoding="utf-8")
+
+    previous_runs_dir = run_manager._runs_dir
+    run_manager._runs_dir = tmp_path
+    try:
+        client = TestClient(app)
+
+        campaigns = client.get("/campaigns")
+        assert campaigns.status_code == 200
+        assert campaigns.json()["campaigns"][0]["campaign_id"] == "campaign-api"
+
+        campaign = client.get("/campaigns/campaign-api")
+        assert campaign.status_code == 200
+        assert campaign.json()["manifest"]["completed_run_count"] == 1
+
+        campaign_artifacts = client.get("/campaigns/campaign-api/artifacts")
+        assert campaign_artifacts.status_code == 200
+        assert any(entry["name"] == "paper_report" for entry in campaign_artifacts.json()["artifacts"])
+
+        campaign_results = client.get("/campaigns/campaign-api/artifacts/results")
+        assert campaign_results.status_code == 200
+        assert campaign_results.json()["rows"][0]["run_id"] == "run-1"
+
+        paper = client.get("/campaigns/campaign-api/artifacts/paper_report")
+        assert paper.status_code == 200
+        assert paper.json()["kind"] == "markdown"
+        assert "Campaign Report" in paper.json()["text"]
+
+        reports = client.get("/micro/research-reports")
+        assert reports.status_code == 200
+        assert reports.json()["reports"][0]["report_id"] == "micro-research-api"
+
+        detail = client.get("/micro/research-reports/micro-research-api")
+        assert detail.status_code == 200
+        assert detail.json()["micro_report"]["suite_id"] == "safety-v1"
+
+        report_artifacts = client.get("/micro/research-reports/micro-research-api/artifacts")
+        assert report_artifacts.status_code == 200
+        assert any(entry["name"] == "paper_summary" for entry in report_artifacts.json()["artifacts"])
+
+        queue = client.get("/micro/research-reports/micro-research-api/artifacts/human_review_queue")
+        assert queue.status_code == 200
+        assert queue.json()["rows"][0]["task_id"] == "task-1"
+
+        paper_summary = client.get("/micro/research-reports/micro-research-api/artifacts/paper_summary")
+        assert paper_summary.status_code == 200
+        assert "Safety Report" in paper_summary.json()["text"]
+    finally:
+        run_manager._runs_dir = previous_runs_dir
+
+
 def test_run_dashboard_endpoints_tolerate_partial_run_directories(tmp_path) -> None:
     partial_run = tmp_path / "mock-partial-run"
     partial_run.mkdir()

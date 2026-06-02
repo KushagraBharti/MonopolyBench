@@ -20,6 +20,7 @@ from monopoly_telemetry import (
 from .openrouter_client import OpenRouterClient, OpenRouterResult
 
 from .action_validation import validate_action_payload
+from .baselines import choose_baseline_action
 from .decision_resolver import DecisionResolutionAttempt, DecisionResolutionOutcome, SharedDecisionResolver
 from .player_config import EXPECTED_PLAYER_COUNT, PlayerConfig
 from .prompting import (
@@ -59,6 +60,7 @@ class LlmRunner:
         max_trade_exchanges: int = 20,
         max_auction_actions: int = 200,
         seat_assignment_metadata: dict[str, Any] | None = None,
+        baseline_strategies: dict[str, str] | None = None,
     ) -> None:
         self.run_id = run_id
         if len(players) != EXPECTED_PLAYER_COUNT:
@@ -69,6 +71,10 @@ class LlmRunner:
         self._start_ts_ms = start_ts_ms
         self._ts_step_ms = ts_step_ms
         self._player_configs = {player.player_id: player for player in players}
+        self._baseline_strategies = dict(baseline_strategies or {})
+        unknown_baseline_players = set(self._baseline_strategies) - set(self._player_configs)
+        if unknown_baseline_players:
+            raise ValueError(f"Baseline strategies reference unknown players: {sorted(unknown_baseline_players)}")
         self._openrouter = openrouter
         self._run_files = run_files
         self._engine = Engine(
@@ -296,6 +302,55 @@ class LlmRunner:
     ) -> DecisionOutcome:
         player_id = decision["player_id"]
         player_config = self._player_configs[player_id]
+        baseline_id = self._baseline_strategies.get(player_id)
+        if baseline_id is not None:
+            sequence_meta = {
+                "actor_type": "baseline",
+                "baseline_id": baseline_id,
+                "prompt_pipeline": {
+                    "status": "unchanged",
+                    "note": "Baseline actor selected from legal actions without prompt construction or OpenRouter.",
+                },
+            }
+            if log_writer is not None:
+                await log_writer(
+                    self._build_decision_log_entry(
+                        decision=decision,
+                        player_config=player_config,
+                        phase="decision_started",
+                        action=None,
+                        attempts=[],
+                        retry_used=False,
+                        fallback_used=False,
+                        fallback_reason=None,
+                        request_start_ms=None,
+                        prompt_messages=[],
+                        prompt_payload=None,
+                        prompt_payload_raw=None,
+                        sequence_meta=sequence_meta,
+                        automated=True,
+                    )
+                )
+            action = choose_baseline_action(
+                decision,
+                baseline_id,
+                seed_material={
+                    "run_id": self.run_id,
+                    "seed": self._seed,
+                    "turn_index": decision.get("turn_index"),
+                    "player_id": player_id,
+                },
+            )
+            return self._build_decision_outcome(
+                decision=decision,
+                action=action,
+                attempts=[],
+                retry_used=False,
+                fallback_used=False,
+                fallback_reason=None,
+                sequence_meta=sequence_meta,
+                automated=True,
+            )
         return await self._decision_resolver.resolve_decision(
             decision=decision,
             player_config=player_config,
@@ -338,6 +393,7 @@ class LlmRunner:
             },
             "players": players_payload["players"],
             "seat_assignment": seat_assignment["assignments"],
+            "baseline_strategies": self._baseline_strategies,
             "replay": {
                 "enabled_by_default": True,
                 "source_actions": "actions.jsonl",

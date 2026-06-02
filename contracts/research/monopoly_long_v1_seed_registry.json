@@ -1,0 +1,113 @@
+{
+  "schema_version": "v1",
+  "registry_version": "long_horizon_seed_registry_v1",
+  "benchmark_id": "monopoly-long-v1",
+  "description": "Versioned seed cohorts for Long-Horizon Economic Agency in Monopoly. Cohorts are research-facing and do not affect prompt construction.",
+  "cohorts": {
+    "smoke": {
+      "cohort_id": "smoke",
+      "version": "2026-06-02",
+      "description": "Tiny local verification cohort for fast matrix, artifact, and replay checks.",
+      "intended_use": "local_smoke_test",
+      "seeds": [
+        { "seed": 101, "label": "smoke-a", "rationale": "Short deterministic sanity run." },
+        { "seed": 202, "label": "smoke-b", "rationale": "Second deterministic sanity run for resume/dedup checks." }
+      ]
+    },
+    "easy": {
+      "cohort_id": "easy",
+      "version": "2026-06-02",
+      "description": "Lower-chaos games useful for catching obvious strategy and validity issues.",
+      "intended_use": "initial_model_comparison",
+      "seeds": [
+        { "seed": 11021, "label": "easy-opening-1", "rationale": "Representative opening acquisition flow." },
+        { "seed": 22567, "label": "easy-opening-2", "rationale": "Light auction/trade surface with stable early game." },
+        { "seed": 34510, "label": "easy-opening-3", "rationale": "Property acquisition sanity check." },
+        { "seed": 49415, "label": "easy-opening-4", "rationale": "Low-volatility benchmark cell." }
+      ]
+    },
+    "normal": {
+      "cohort_id": "normal",
+      "version": "2026-06-02",
+      "description": "Default benchmark distribution for routine long-horizon comparisons.",
+      "intended_use": "default_research_batch",
+      "seeds": [
+        { "seed": 14380, "label": "normal-1", "rationale": "Balanced property and auction surface." },
+        { "seed": 21474, "label": "normal-2", "rationale": "Balanced midgame decision surface." },
+        { "seed": 25273, "label": "normal-3", "rationale": "Representative full-game trajectory." },
+        { "seed": 3094, "label": "normal-4", "rationale": "Different opening order and acquisition pressure." },
+        { "seed": 62512, "label": "normal-5", "rationale": "General-purpose repeated-run seed." },
+        { "seed": 69165, "label": "normal-6", "rationale": "General-purpose repeated-run seed." }
+      ]
+    },
+    "volatile": {
+      "cohort_id": "volatile",
+      "version": "2026-06-02",
+      "description": "Higher-swing seeds intended to expose bankroll, bankruptcy, and recovery behavior.",
+      "intended_use": "variance_and_survival_analysis",
+      "seeds": [
+        { "seed": 69425, "label": "volatile-1", "rationale": "Bankroll pressure and swing exposure." },
+        { "seed": 77114, "label": "volatile-2", "rationale": "High-variance trajectory candidate." },
+        { "seed": 77234, "label": "volatile-3", "rationale": "Late-game collapse/recovery candidate." },
+        { "seed": 8847, "label": "volatile-4", "rationale": "Different bankruptcy-pressure path." }
+      ]
+    },
+    "auction_heavy": {
+      "cohort_id": "auction_heavy",
+      "version": "2026-06-02",
+      "description": "Seeds selected to stress declined purchases, bidding, overpay, and defensive auction behavior.",
+      "intended_use": "auction_behavior_analysis",
+      "seeds": [
+        { "seed": 12007, "label": "auction-1", "rationale": "Auction discipline candidate." },
+        { "seed": 28031, "label": "auction-2", "rationale": "Early auction pressure candidate." },
+        { "seed": 43019, "label": "auction-3", "rationale": "Defensive bid candidate." },
+        { "seed": 58123, "label": "auction-4", "rationale": "Overpay/dropout candidate." }
+      ]
+    },
+    "trade_heavy": {
+      "cohort_id": "trade_heavy",
+      "version": "2026-06-02",
+      "description": "Seeds selected to create color-group fragmentation and bargaining opportunities.",
+      "intended_use": "negotiation_and_trade_analysis",
+      "seeds": [
+        { "seed": 15013, "label": "trade-1", "rationale": "Monopoly-completion trade candidate." },
+        { "seed": 31729, "label": "trade-2", "rationale": "Mutual-trade opportunity candidate." },
+        { "seed": 46061, "label": "trade-3", "rationale": "Defensive trade/block candidate." },
+        { "seed": 61283, "label": "trade-4", "rationale": "Cash-plus-property trade candidate." }
+      ]
+    },
+    "liquidation_heavy": {
+      "cohort_id": "liquidation_heavy",
+      "version": "2026-06-02",
+      "description": "Seeds selected to stress mortgage, liquidation, cash buffer, and bankruptcy sequencing.",
+      "intended_use": "liquidity_and_bankruptcy_analysis",
+      "seeds": [
+        { "seed": 17117, "label": "liquidation-1", "rationale": "Debt-pressure candidate." },
+        { "seed": 33211, "label": "liquidation-2", "rationale": "Mortgage sequencing candidate." },
+        { "seed": 50777, "label": "liquidation-3", "rationale": "Survival under rent pressure candidate." },
+        { "seed": 64439, "label": "liquidation-4", "rationale": "Bankruptcy-decision candidate." }
+      ]
+    },
+    "publication": {
+      "cohort_id": "publication",
+      "version": "2026-06-02",
+      "description": "Frozen paper-facing cohort composed across normal, volatile, auction, trade, and liquidation surfaces.",
+      "intended_use": "paper_leaderboard",
+      "source_cohorts": ["normal", "volatile", "auction_heavy", "trade_heavy", "liquidation_heavy"],
+      "seeds": [
+        { "seed": 14380, "label": "pub-normal-1", "rationale": "Normal cohort representative." },
+        { "seed": 21474, "label": "pub-normal-2", "rationale": "Normal cohort representative." },
+        { "seed": 69425, "label": "pub-volatile-1", "rationale": "Volatile cohort representative." },
+        { "seed": 77114, "label": "pub-volatile-2", "rationale": "Volatile cohort representative." },
+        { "seed": 12007, "label": "pub-auction-1", "rationale": "Auction cohort representative." },
+        { "seed": 15013, "label": "pub-trade-1", "rationale": "Trade cohort representative." },
+        { "seed": 17117, "label": "pub-liquidation-1", "rationale": "Liquidation cohort representative." },
+        { "seed": 33211, "label": "pub-liquidation-2", "rationale": "Liquidation cohort representative." }
+      ]
+    }
+  },
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "Seed selection changes only deterministic run configuration and never changes model-facing prompt construction."
+  }
+}

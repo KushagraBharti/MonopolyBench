@@ -565,6 +565,109 @@ class RunManager:
             "markdown": markdown_path.read_text(encoding="utf-8") if markdown_path.exists() else None,
         }
 
+    def list_campaigns(self) -> dict[str, Any]:
+        root = self._runs_dir / "campaigns"
+        campaigns = []
+        if root.exists():
+            for path in sorted(root.iterdir()):
+                if not path.is_dir() or not _is_safe_run_id(path.name):
+                    continue
+                manifest = _read_json(path / "campaign_manifest.json")
+                campaigns.append(
+                    {
+                        "campaign_id": path.name,
+                        "campaign_dir": str(path),
+                        "run_count": manifest.get("run_count"),
+                        "completed_run_count": manifest.get("completed_run_count"),
+                        "execution_status": manifest.get("execution_status"),
+                        "manifest_exists": bool(manifest),
+                    }
+                )
+        return {"campaigns": campaigns}
+
+    def get_campaign(self, campaign_id: str) -> dict[str, Any] | None:
+        campaign_dir = self._resolve_campaign_dir(campaign_id)
+        if campaign_dir is None:
+            return None
+        return {
+            "campaign_id": campaign_id,
+            "campaign_dir": str(campaign_dir),
+            "manifest": _read_json(campaign_dir / "campaign_manifest.json"),
+            "config": _read_json(campaign_dir / "campaign_config.json"),
+            "leaderboard": _read_json(campaign_dir / "leaderboard.json"),
+            "statistics": _read_json(campaign_dir / "statistics.json"),
+            "baseline_comparison": _read_json(campaign_dir / "baseline_comparison.json"),
+        }
+
+    def list_campaign_artifacts(self, campaign_id: str) -> dict[str, Any] | None:
+        campaign_dir = self._resolve_campaign_dir(campaign_id)
+        if campaign_dir is None:
+            return None
+        return {
+            "campaign_id": campaign_id,
+            "artifacts": _artifact_index(_campaign_artifact_paths(campaign_dir)),
+        }
+
+    def get_campaign_artifact(self, campaign_id: str, artifact_name: str) -> dict[str, Any] | None:
+        campaign_dir = self._resolve_campaign_dir(campaign_id)
+        if campaign_dir is None:
+            return None
+        path = _campaign_artifact_paths(campaign_dir).get(artifact_name)
+        return _artifact_payload("campaign_id", campaign_id, artifact_name, path)
+
+    def list_micro_research_reports(self) -> dict[str, Any]:
+        root = self._runs_dir / "micro_batches"
+        reports = []
+        if root.exists():
+            for path in sorted(root.iterdir()):
+                if not path.is_dir() or not _is_safe_run_id(path.name) or not (path / "micro_report.json").exists():
+                    continue
+                report = _read_json(path / "micro_report.json")
+                reports.append(
+                    {
+                        "report_id": path.name,
+                        "report_dir": str(path),
+                        "suite_id": report.get("suite_id"),
+                        "suite_family": report.get("suite_family"),
+                        "scenario_count": report.get("scenario_count"),
+                        "joined_result_count": report.get("joined_result_count"),
+                        "human_label_count": report.get("human_label_count"),
+                    }
+                )
+        return {"reports": reports}
+
+    def get_micro_research_report(self, report_id: str) -> dict[str, Any] | None:
+        report_dir = self._resolve_micro_research_dir(report_id)
+        if report_dir is None:
+            return None
+        return {
+            "report_id": report_id,
+            "report_dir": str(report_dir),
+            "micro_report": _read_json(report_dir / "micro_report.json"),
+            "category_breakdown": _read_json(report_dir / "category_breakdown.json"),
+            "counterfactual_report": _read_json(report_dir / "counterfactual_report.json"),
+            "safety_report": _read_json(report_dir / "safety_report.json"),
+            "campaign_report": _read_json(report_dir / "campaign_report.json"),
+            "result_join": _read_json(report_dir / "result_join.json"),
+            "label_summary": _read_json(report_dir / "label_summary.json"),
+        }
+
+    def list_micro_research_artifacts(self, report_id: str) -> dict[str, Any] | None:
+        report_dir = self._resolve_micro_research_dir(report_id)
+        if report_dir is None:
+            return None
+        return {
+            "report_id": report_id,
+            "artifacts": _artifact_index(_micro_research_artifact_paths(report_dir)),
+        }
+
+    def get_micro_research_artifact(self, report_id: str, artifact_name: str) -> dict[str, Any] | None:
+        report_dir = self._resolve_micro_research_dir(report_id)
+        if report_dir is None:
+            return None
+        path = _micro_research_artifact_paths(report_dir).get(artifact_name)
+        return _artifact_payload("report_id", report_id, artifact_name, path)
+
     def _is_running(self) -> bool:
         return self._runner_task is not None and not self._runner_task.done()
 
@@ -590,6 +693,22 @@ class RunManager:
         if not batch_dir.exists() or not batch_dir.is_dir():
             return None
         return batch_dir
+
+    def _resolve_campaign_dir(self, campaign_id: str) -> Path | None:
+        if not _is_safe_run_id(campaign_id):
+            return None
+        campaign_dir = self._runs_dir / "campaigns" / campaign_id
+        if not campaign_dir.exists() or not campaign_dir.is_dir():
+            return None
+        return campaign_dir
+
+    def _resolve_micro_research_dir(self, report_id: str) -> Path | None:
+        if not _is_safe_run_id(report_id):
+            return None
+        report_dir = self._runs_dir / "micro_batches" / report_id
+        if not report_dir.exists() or not report_dir.is_dir() or not (report_dir / "micro_report.json").exists():
+            return None
+        return report_dir
 
 
 def _is_safe_run_id(run_id: str) -> bool:
@@ -671,6 +790,95 @@ def _batch_artifact_paths(batch_dir: Path) -> dict[str, Path]:
         "review_queue": batch_dir / "review_queue.jsonl",
         "artifact_manifest": batch_dir / "artifact_manifest.json",
     }
+
+
+def _campaign_artifact_paths(campaign_dir: Path) -> dict[str, Path]:
+    return {
+        "campaign_config": campaign_dir / "campaign_config.json",
+        "campaign_manifest": campaign_dir / "campaign_manifest.json",
+        "seed_manifest": campaign_dir / "seed_manifest.json",
+        "model_roster": campaign_dir / "model_roster.json",
+        "baseline_roster": campaign_dir / "baseline_roster.json",
+        "run_matrix": campaign_dir / "run_matrix.json",
+        "run_matrix_jsonl": campaign_dir / "run_matrix.jsonl",
+        "results": campaign_dir / "results.jsonl",
+        "results_csv": campaign_dir / "results.csv",
+        "run_results": campaign_dir / "run_results.json",
+        "leaderboard": campaign_dir / "leaderboard.json",
+        "leaderboard_csv": campaign_dir / "leaderboard.csv",
+        "statistics": campaign_dir / "statistics.json",
+        "baseline_comparison": campaign_dir / "baseline_comparison.json",
+        "paper_report": campaign_dir / "paper_report.md",
+        "execution_result": campaign_dir / "execution_result.json",
+        "batch_runner_compatibility": campaign_dir / "batch_runner_compatibility.json",
+        "artifact_manifest": campaign_dir / "artifact_manifest.json",
+    }
+
+
+def _micro_research_artifact_paths(report_dir: Path) -> dict[str, Path]:
+    return {
+        "micro_report": report_dir / "micro_report.json",
+        "micro_report_csv": report_dir / "micro_report.csv",
+        "category_breakdown": report_dir / "category_breakdown.json",
+        "category_breakdown_csv": report_dir / "category_breakdown.csv",
+        "counterfactual_report": report_dir / "counterfactual_report.json",
+        "safety_report": report_dir / "safety_report.json",
+        "campaign_report": report_dir / "campaign_report.json",
+        "result_join": report_dir / "result_join.json",
+        "result_join_csv": report_dir / "result_join.csv",
+        "human_review_queue": report_dir / "human_review_queue.jsonl",
+        "expert_labels": report_dir / "expert_labels.jsonl",
+        "label_summary": report_dir / "label_summary.json",
+        "paper_summary": report_dir / "paper_summary.md",
+        "artifact_manifest": report_dir / "artifact_manifest.json",
+    }
+
+
+def _artifact_index(paths: dict[str, Path]) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": name,
+            "path": str(path),
+            "exists": path.exists(),
+            "kind": _artifact_kind(path),
+        }
+        for name, path in paths.items()
+    ]
+
+
+def _artifact_payload(
+    owner_key: str,
+    owner_id: str,
+    artifact_name: str,
+    path: Path | None,
+) -> dict[str, Any] | None:
+    if path is None or not path.exists() or not path.is_file():
+        return None
+    kind = _artifact_kind(path)
+    payload: dict[str, Any] = {
+        owner_key: owner_id,
+        "artifact": artifact_name,
+        "kind": kind,
+    }
+    if kind == "jsonl":
+        payload["rows"] = _read_jsonl(path)
+    elif kind == "json":
+        payload["content"] = _read_json(path)
+    else:
+        payload["text"] = path.read_text(encoding="utf-8")
+    return payload
+
+
+def _artifact_kind(path: Path) -> str:
+    if path.suffix == ".jsonl":
+        return "jsonl"
+    if path.suffix == ".json":
+        return "json"
+    if path.suffix == ".csv":
+        return "csv"
+    if path.suffix == ".md":
+        return "markdown"
+    return "text"
 
 
 def _dict(value: Any) -> dict[str, Any]:

@@ -92,6 +92,128 @@ export interface MicroSuite {
   prompt_conditions: MicroPromptCondition[];
 }
 
+export type MicroResearchSuiteFamily = "bias" | "safety" | "counterfactual" | "campaign";
+
+export interface MicroResearchCategory {
+  category_id: string;
+  title: string;
+  description: string;
+  target_behavior: string;
+  trap_behaviors: string[];
+  preferred_behaviors: string[];
+  scenario_ids: string[];
+  counterfactual_pair_ids?: string[];
+  human_review_required: boolean;
+  scoring_notes: string;
+  source_claims: string[];
+  source_urls: string[];
+}
+
+export interface MicroResearchSuite {
+  schema_version: "v1";
+  suite_id: string;
+  suite_family: MicroResearchSuiteFamily;
+  benchmark_suite_version: string;
+  title: string;
+  description: string;
+  source_suite_id: string;
+  scenario_ids: string[];
+  categories: MicroResearchCategory[];
+  counterfactual_pair_ids?: string[];
+  campaign_ids?: string[];
+  human_review_required: boolean;
+  report_dimensions: string[];
+  prompt_pipeline: {
+    status: "unchanged";
+    note?: string;
+  };
+}
+
+export interface MicroCounterfactualPair {
+  pair_id: string;
+  baseline_scenario_id: string;
+  contrast_scenario_id: string;
+  controlled_difference: string;
+  invariant_claims: string[];
+  expected_stability_metric: string;
+  scoring_notes: string;
+  human_review_required: boolean;
+}
+
+export interface MicroCounterfactualPairRegistry {
+  schema_version: "v1";
+  registry_version: "micro_counterfactual_pairs_v1";
+  suite_id: string;
+  pairs: MicroCounterfactualPair[];
+  prompt_pipeline: {
+    status: "unchanged";
+    note?: string;
+  };
+}
+
+export interface MicroCampaignDefinition {
+  campaign_id: string;
+  title: string;
+  description: string;
+  category: string;
+  step_scenario_ids: string[];
+  deterministic_opponent_policy: string;
+  expected_strategic_path: string[];
+  per_step_rubrics: string[];
+  final_scoring_notes: string;
+  replay_mode: "fixture_sequence" | "engine_replay_required";
+  human_review_required: boolean;
+}
+
+export interface MicroCampaignRegistry {
+  schema_version: "v1";
+  registry_version: "micro_campaigns_v1";
+  suite_id: string;
+  campaigns: MicroCampaignDefinition[];
+  prompt_pipeline: {
+    status: "unchanged";
+    note?: string;
+  };
+}
+
+export interface MicroExpertLabelTask {
+  schema_version: "v1";
+  task_id: string;
+  task_type: "scenario" | "counterfactual_pair" | "campaign" | "safety_label";
+  suite_id: string;
+  scenario_id?: string;
+  counterfactual_pair_id?: string;
+  campaign_id?: string;
+  label_dimensions: string[];
+  status: "queued" | "completed";
+  human_review_only: true;
+  prompt_pipeline: {
+    status: "unchanged";
+    note?: string;
+  };
+}
+
+export interface MicroExpertLabel {
+  schema_version: "v1";
+  label_id: string;
+  task_id: string;
+  reviewer_id: string;
+  expertise_level: string;
+  label_source: string;
+  timestamp: string;
+  scenario_id?: string;
+  counterfactual_pair_id?: string;
+  campaign_id?: string;
+  selected_action: Action | null;
+  judgment: string;
+  rationale: string;
+  confidence: number;
+  ambiguity_flag: boolean;
+  adjudication_status: "single_label" | "pending_adjudication" | "adjudicated";
+  inter_rater_group_id?: string | null;
+  human_review_only: true;
+}
+
 export interface MicroResult {
   schema_version: "v1";
   run_id: string;
