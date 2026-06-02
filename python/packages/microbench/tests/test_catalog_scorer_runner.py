@@ -10,7 +10,7 @@ from monopoly_arena import OpenRouterResult, build_single_player_config
 from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT
 from monopoly_arena.prompting import PromptMemory, build_prompt_bundle, build_space_key_by_index
 from monopoly_microbench.catalog import get_suite, list_scenarios, validate_all, validate_scenario
-from monopoly_microbench.runner import MicroRunConfig, get_run, run_batch, run_scenario, score_run
+from monopoly_microbench.runner import MicroRunConfig, get_run, run_batch, run_batch_with_progress, run_scenario, score_run
 from monopoly_microbench.scorer import score_action
 
 
@@ -21,6 +21,14 @@ class ScriptedOpenRouter:
     async def create_chat_completion(self, **kwargs: object) -> OpenRouterResult:
         self.calls.append(dict(kwargs))
         return _tool_call_result("buy_property", {"private_thought": "scripted"})
+
+    async def aclose(self) -> None:
+        return None
+
+
+class FailingOpenRouter:
+    async def create_chat_completion(self, **_: object) -> OpenRouterResult:
+        raise RuntimeError("scripted provider failure")
 
     async def aclose(self) -> None:
         return None
@@ -222,6 +230,98 @@ def test_batch_runner_writes_leaderboard(tmp_path) -> None:
         )
     )
     assert batch["leaderboard"]["rows"]
+
+
+def test_progress_batch_continues_and_reports_failures(tmp_path) -> None:
+    events: list[dict] = []
+
+    async def on_progress(event: dict) -> None:
+        events.append(event)
+
+    batch = asyncio.run(
+        run_batch_with_progress(
+            suite_id="micro-v1",
+            model_id="test/model",
+            scenario_ids=[
+                "buy-or-auction-vermont-light-blue-tempo-01",
+                "auction-new-york-orange-completion-02",
+            ],
+            runs_dir=tmp_path / "runs",
+            openrouter_factory=FailingOpenRouter,
+            progress_callback=on_progress,
+        )
+    )
+    assert batch["results"] == []
+    assert len(batch["failures"]) == 2
+    assert [event["event"] for event in events].count("scenario_failed") == 2
+    assert events[-1]["event"] == "batch_completed"
+    assert events[-1]["failed"] == 2
+    assert (tmp_path / "runs" / "micro_batches" / batch["batch_id"] / "failures.jsonl").exists()
+
+
+def test_tui_filtering_and_selection_helpers() -> None:
+    from monopoly_microbench import tui
+
+    state = tui.MicroTuiState(category="JAIL", search="cash")
+    items = tui._filtered_scenarios(state)
+    assert items
+    assert all(item["category"] == "JAIL" for item in items)
+    assert any("cash" in item["title"].lower() or "cash" in item["description"].lower() for item in items)
+    state.selected_index = 10_000
+    tui._clamp_selection(state)
+    assert state.selected_index == len(items) - 1
+
+
+def test_tui_keyboard_navigation_and_edit_helpers() -> None:
+    from monopoly_microbench import tui
+
+    state = tui.MicroTuiState()
+    tui._apply_dashboard_key(state, tui.KeyPress("down"))
+    assert state.selected_index == 1
+    tui._apply_dashboard_key(state, tui.KeyPress("right"))
+    assert state.category == "BUY_OR_AUCTION"
+    tui._apply_dashboard_key(state, tui.KeyPress("tab"))
+    assert state.focus == "actions"
+    assert tui._apply_dashboard_key(state, tui.KeyPress("char", "r")) == "run_selected"
+
+    tui._apply_dashboard_key(state, tui.KeyPress("char", "/"))
+    assert state.input_mode == "search"
+    for char in "orange":
+        tui._apply_dashboard_key(state, tui.KeyPress("char", char))
+    tui._apply_dashboard_key(state, tui.KeyPress("enter"))
+    assert state.input_mode is None
+    assert state.search.endswith("orange")
+    tui._apply_dashboard_key(state, tui.KeyPress("char", "g"))
+    assert state.reasoning_effort == "high"
+    tui._apply_dashboard_key(state, tui.KeyPress("char", "n"))
+    assert state.input_mode == "name"
+    for _ in range(len(state.input_buffer)):
+        tui._apply_dashboard_key(state, tui.KeyPress("backspace"))
+    for char in "Tester":
+        tui._apply_dashboard_key(state, tui.KeyPress("char", char))
+    tui._apply_dashboard_key(state, tui.KeyPress("enter"))
+    assert state.display_name == "Tester"
+
+
+def test_tui_mouse_click_helpers() -> None:
+    from monopoly_microbench import tui
+
+    mouse = tui._parse_sgr_mouse("0;80;25M")
+    assert mouse == tui.KeyPress("mouse", x=80, y=25)
+
+    state = tui.MicroTuiState(terminal_width=100, terminal_height=40)
+    regions = tui._layout_regions(state)
+    action_x = regions["actions"][0] + 2
+    action_y = regions["actions"][1] + 2
+    assert tui._apply_dashboard_key(state, tui.KeyPress("mouse", x=action_x, y=action_y)) == "run_selected"
+    assert state.focus == "actions"
+    assert state.action_index == 0
+
+    catalog_x = regions["catalog"][0] + 2
+    catalog_y = regions["catalog"][1] + 4
+    assert tui._apply_dashboard_key(state, tui.KeyPress("mouse", x=catalog_x, y=catalog_y)) is None
+    assert state.focus == "catalog"
+    assert state.selected_index == 0
 
 
 def _strip_volatile_state_fields(payload: dict) -> dict:

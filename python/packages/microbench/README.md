@@ -63,3 +63,12 @@ MonopolyBench game decisions so micro-decision results are directly comparable
 to live-game behavior. The `/micro` frontend page exposes single runs, category
 batches, full-suite batches, result inspection, artifact paths, and category
 leaderboards using this fixed prompt mode.
+
+The Rich TUI (`monopoly-micro tui`) mirrors the micro dashboard workflow in a
+terminal-friendly form: search/filter scenarios, inspect scenario details, run a
+single scenario, run the filtered/category scope, run the full suite, and review
+leaderboards, score breakdowns, artifacts, and failures. Batch runs continue
+after individual scenario failures and show progress bars instead of streaming
+model output. It supports keyboard navigation with arrows, tab/shift-tab, enter,
+escape, and shortcut keys, plus terminal mouse clicks where the terminal reports
+SGR mouse events.

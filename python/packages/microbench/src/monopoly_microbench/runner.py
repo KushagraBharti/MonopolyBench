@@ -7,7 +7,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 from monopoly_arena import OpenRouterClient, build_single_player_config
 from monopoly_arena.decision_resolver import SharedDecisionResolver
@@ -245,6 +245,118 @@ async def run_batch(
     return {"batch_id": batch_id, "leaderboard": leaderboard}
 
 
+async def run_batch_with_progress(
+    *,
+    suite_id: str,
+    model_id: str,
+    prompt_condition: str = "live_game",
+    reasoning: dict[str, Any] | None = None,
+    scenario_ids: list[str] | None = None,
+    runs_dir: Path | None = None,
+    openrouter_factory: Callable[[], Any] = OpenRouterClient,
+    progress_callback: Callable[[dict[str, Any]], Awaitable[None] | None] | None = None,
+) -> dict[str, Any]:
+    root = runs_dir or default_runs_dir()
+    batch_id = f"micro-batch-{suite_id}-{int(time.time() * 1000)}"
+    out_dir = batch_dir(root, batch_id)
+    suite = get_suite(suite_id)
+    selected = scenario_ids or suite["scenario_ids"]
+    config = {
+        "batch_id": batch_id,
+        "suite_id": suite_id,
+        "model_ids": [model_id],
+        "prompt_condition": prompt_condition,
+        "scenario_ids": selected,
+        "continue_on_failure": True,
+    }
+    (out_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=True), encoding="utf-8")
+    result_items: list[dict[str, Any]] = []
+    failure_items: list[dict[str, Any]] = []
+    await _emit_progress(
+        progress_callback,
+        {
+            "event": "batch_started",
+            "batch_id": batch_id,
+            "suite_id": suite_id,
+            "model": model_id,
+            "total": len(selected),
+        },
+    )
+    for index, scenario_id in enumerate(selected, start=1):
+        await _emit_progress(
+            progress_callback,
+            {
+                "event": "scenario_started",
+                "batch_id": batch_id,
+                "scenario_id": scenario_id,
+                "index": index,
+                "total": len(selected),
+            },
+        )
+        try:
+            result = await run_scenario(
+                MicroRunConfig(
+                    scenario_id=scenario_id,
+                    openrouter_model_id=model_id,
+                    prompt_condition=prompt_condition,
+                    reasoning=reasoning,
+                ),
+                runs_dir=root,
+                openrouter_factory=openrouter_factory,
+            )
+        except Exception as exc:  # pragma: no cover - exercised through integration paths
+            failure = {
+                "scenario_id": scenario_id,
+                "model": model_id,
+                "error": str(exc),
+            }
+            failure_items.append(failure)
+            append_jsonl(out_dir / "failures.jsonl", failure)
+            await _emit_progress(
+                progress_callback,
+                {
+                    "event": "scenario_failed",
+                    "batch_id": batch_id,
+                    "scenario_id": scenario_id,
+                    "index": index,
+                    "total": len(selected),
+                    "failure": failure,
+                },
+            )
+            continue
+        result_items.append(result)
+        append_jsonl(out_dir / "results.jsonl", compact_result_for_jsonl(result))
+        await _emit_progress(
+            progress_callback,
+            {
+                "event": "scenario_completed",
+                "batch_id": batch_id,
+                "scenario_id": scenario_id,
+                "index": index,
+                "total": len(selected),
+                "result": result,
+            },
+        )
+    leaderboard = build_leaderboard(result_items)
+    (out_dir / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2, ensure_ascii=True), encoding="utf-8")
+    (out_dir / "category_breakdown.json").write_text(
+        json.dumps(leaderboard.get("category_breakdown", {}), indent=2, ensure_ascii=True),
+        encoding="utf-8",
+    )
+    await _emit_progress(
+        progress_callback,
+        {
+            "event": "batch_completed",
+            "batch_id": batch_id,
+            "total": len(selected),
+            "completed": len(result_items),
+            "failed": len(failure_items),
+            "leaderboard": leaderboard,
+        },
+    )
+    return {"batch_id": batch_id, "leaderboard": leaderboard, "results": result_items, "failures": failure_items}
+
+
 def get_run(run_id: str, *, runs_dir: Path | None = None) -> dict[str, Any]:
     run_dir = (runs_dir or default_runs_dir()) / "micro" / run_id
     if not run_dir.exists():
@@ -374,6 +486,17 @@ def generate_micro_run_id(*, scenario_id: str, model_id: str, prompt_condition: 
         digest = hashlib.sha1(safe.encode("utf-8")).hexdigest()[:10]
         safe = f"{safe[:24]}-{digest}"
     return f"micro-{safe}-{int(time.time() * 1000)}"
+
+
+async def _emit_progress(
+    callback: Callable[[dict[str, Any]], Awaitable[None] | None] | None,
+    event: dict[str, Any],
+) -> None:
+    if callback is None:
+        return
+    maybe = callback(event)
+    if asyncio.iscoroutine(maybe):
+        await maybe
 
 
 
