@@ -51,8 +51,11 @@ ALLOWED_REASONING_KEYS = {"effort"}
 ALLOWED_PROVIDER_KEYS = {"only", "order", "allow_fallbacks", "require_parameters"}
 DEFAULT_PROVIDER_BY_MODEL_ID = {
     "openai/gpt-5.4-mini": {"only": ["openai"], "allow_fallbacks": False},
+    "openai/gpt-5.5": {"only": ["openai"], "allow_fallbacks": False},
     "anthropic/claude-haiku-4.5": {"only": ["anthropic"], "allow_fallbacks": False},
+    "anthropic/claude-opus-4.8": {"only": ["anthropic"], "allow_fallbacks": False},
     "google/gemini-3-flash-preview": {"only": ["google-ai-studio"], "allow_fallbacks": False},
+    "google/gemini-3.1-pro-preview": {"only": ["google-ai-studio"], "allow_fallbacks": False},
     "x-ai/grok-4.3": {"only": ["xai"], "allow_fallbacks": False},
 }
 

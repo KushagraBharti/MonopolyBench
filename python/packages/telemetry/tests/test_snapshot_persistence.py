@@ -6,6 +6,7 @@ from monopoly_telemetry import (
     write_trace_failure_artifacts,
     write_usage_artifacts,
 )
+from monopoly_telemetry.summary import build_summary
 
 
 def test_write_snapshot_does_not_overwrite_turn_file(tmp_path) -> None:
@@ -172,6 +173,119 @@ def test_write_scorecard_artifacts_from_logs(tmp_path) -> None:
     assert players["p1"]["rent_collected"] == 12
     assert players["p2"]["rent_paid"] == 12
     assert players["p1"]["retries_used"] == 1
+
+
+def test_summary_bankruptcy_cash_does_not_mark_creditor_bankrupt(tmp_path) -> None:
+    run_files = init_run_files(tmp_path, "run-bankruptcy-summary")
+    run_files.write_players(
+        {
+            "schema_version": "v1",
+            "players": [
+                {"player_id": "winner", "name": "Winner", "openrouter_model_id": "model/w"},
+                {"player_id": "debtor", "name": "Debtor", "openrouter_model_id": "model/d"},
+                {"player_id": "p3", "name": "P3", "openrouter_model_id": "model/3"},
+                {"player_id": "p4", "name": "P4", "openrouter_model_id": "model/4"},
+            ],
+        }
+    )
+    for seq, event in enumerate(
+        [
+            {
+                "type": "CASH_CHANGED",
+                "payload": {"player_id": "debtor", "delta": -42, "reason": "BANKRUPTCY_CASH"},
+            },
+            {
+                "type": "CASH_CHANGED",
+                "payload": {"player_id": "winner", "delta": 42, "reason": "BANKRUPTCY_CASH"},
+            },
+            {
+                "type": "CASH_CHANGED",
+                "payload": {"player_id": "debtor", "delta": 0, "reason": "BANKRUPTCY"},
+            },
+            {
+                "type": "GAME_ENDED",
+                "payload": {"winner_player_id": "winner", "reason": "BANKRUPTCY"},
+            },
+        ]
+    ):
+        run_files.write_event(
+            {
+                "schema_version": "v1",
+                "run_id": "run-bankruptcy-summary",
+                "event_id": f"evt-{seq}",
+                "seq": seq,
+                "turn_index": 12,
+                "ts_ms": seq,
+                "actor": {"kind": "ENGINE", "player_id": None},
+                **event,
+            }
+        )
+
+    summary = build_summary(run_files)
+
+    assert summary["winner_player_id"] == "winner"
+    assert summary["players"]["winner"]["bankrupt"] is False
+    assert summary["players"]["debtor"]["bankrupt"] is True
+
+
+def test_scorecard_winner_not_bankrupt_even_if_summary_is_stale(tmp_path) -> None:
+    run_files = init_run_files(tmp_path, "run-scorecard-winner-bankrupt-guard")
+    run_files.write_players(
+        {
+            "schema_version": "v1",
+            "players": [
+                {"player_id": "winner", "name": "Winner", "openrouter_model_id": "model/w"},
+                {"player_id": "p2", "name": "P2", "openrouter_model_id": "model/2"},
+                {"player_id": "p3", "name": "P3", "openrouter_model_id": "model/3"},
+                {"player_id": "p4", "name": "P4", "openrouter_model_id": "model/4"},
+            ],
+        }
+    )
+    run_files.write_seat_assignment(
+        {
+            "schema_version": "v1",
+            "assignments": [
+                {"player_id": "winner", "seat_index": 0, "turn_order": 0},
+                {"player_id": "p2", "seat_index": 1, "turn_order": 1},
+                {"player_id": "p3", "seat_index": 2, "turn_order": 2},
+                {"player_id": "p4", "seat_index": 3, "turn_order": 3},
+            ],
+        }
+    )
+    run_files.write_event(
+        {
+            "schema_version": "v1",
+            "run_id": "run-scorecard-winner-bankrupt-guard",
+            "event_id": "evt-end",
+            "seq": 0,
+            "turn_index": 10,
+            "ts_ms": 0,
+            "actor": {"kind": "ENGINE", "player_id": None},
+            "type": "GAME_ENDED",
+            "payload": {"winner_player_id": "winner", "reason": "BANKRUPTCY"},
+        }
+    )
+    run_files.write_summary(
+        {
+            "run_id": "run-scorecard-winner-bankrupt-guard",
+            "winner_player_id": "winner",
+            "turn_count": 10,
+            "reason": "BANKRUPTCY",
+            "players": {
+                "winner": {"name": "Winner", "cash": 2000, "net_worth_estimate": 2000, "bankrupt": True, "turns_played": 10},
+                "p2": {"name": "P2", "cash": 0, "net_worth_estimate": 0, "bankrupt": True, "turns_played": 9},
+                "p3": {"name": "P3", "cash": 0, "net_worth_estimate": 0, "bankrupt": True, "turns_played": 8},
+                "p4": {"name": "P4", "cash": 0, "net_worth_estimate": 0, "bankrupt": True, "turns_played": 7},
+            },
+        }
+    )
+
+    scorecard = write_scorecard_artifacts(run_files)
+    players = {entry["player_id"]: entry for entry in scorecard["players"]}
+
+    assert players["winner"]["winner"] is True
+    assert players["winner"]["bankrupt"] is False
+    assert players["winner"]["score_matrix"]["survival_score"] == 1.0
 
 
 def test_write_usage_artifacts_from_openrouter_actuals(tmp_path) -> None:

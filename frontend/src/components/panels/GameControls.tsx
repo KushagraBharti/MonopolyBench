@@ -94,13 +94,12 @@ export const GameControls = () => {
         <input
           type="number"
           min={1}
-          max={500}
           step={1}
           value={maxTurns}
           disabled={isLoading || isRunning}
           onChange={(event) => {
             const value = Number.parseInt(event.target.value, 10);
-            setMaxTurns(Number.isFinite(value) ? Math.max(1, Math.min(500, value)) : 50);
+            setMaxTurns(Number.isFinite(value) ? Math.max(1, value) : 50);
           }}
           className="h-7 w-16 rounded-[2px] border-[1.5px] border-black bg-white px-2 text-right text-[11px] font-black text-black shadow-neo-sm outline-none disabled:bg-gray-100 disabled:text-gray-400"
         />

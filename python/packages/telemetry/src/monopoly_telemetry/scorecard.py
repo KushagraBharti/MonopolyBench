@@ -682,6 +682,8 @@ def _apply_final_summary_metrics(
             player["turns_played"] = _int(summary_player.get("turns_played"))
             player["turns_survived"] = _int(summary_player.get("turns_played"))
         player["winner"] = player_id == winner_id
+        if player["winner"]:
+            player["bankrupt"] = False
         owned = [space_index for space_index, owner_id in owner_by_index.items() if owner_id == player_id]
         player["final_property_count"] = len(owned)
         player["final_mortgage_count"] = sum(1 for space_index in owned if mortgaged_by_index.get(space_index, False))

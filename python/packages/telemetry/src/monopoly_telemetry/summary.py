@@ -90,7 +90,7 @@ def _build_summary_from_logs(
                 cash_by_player.setdefault(player_id, DEFAULT_STARTING_CASH)
                 cash_by_player[player_id] += delta
             if isinstance(player_id, str) and isinstance(reason, str):
-                if reason.startswith("BANKRUPTCY"):
+                if reason == "BANKRUPTCY":
                     bankrupt_by_player[player_id] = True
                 if reason == "BANKRUPTCY_ASSETS_TO_BANK":
                     for space_index, owner_id in list(owner_by_index.items()):
