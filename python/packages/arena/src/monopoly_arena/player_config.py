@@ -47,6 +47,14 @@ When a decision is presented, think carefully and make one legal tool call that 
 DEFAULT_SYSTEM_PROMPT = SYSTEM_PROMPT_V1
 EXPECTED_PLAYER_COUNT = 4
 ALLOWED_REASONING_EFFORT = {"low", "medium", "high"}
+ALLOWED_REASONING_KEYS = {"effort"}
+ALLOWED_PROVIDER_KEYS = {"only", "order", "allow_fallbacks", "require_parameters"}
+DEFAULT_PROVIDER_BY_MODEL_ID = {
+    "openai/gpt-5.4-mini": {"only": ["openai"], "allow_fallbacks": False},
+    "anthropic/claude-haiku-4.5": {"only": ["anthropic"], "allow_fallbacks": False},
+    "google/gemini-3-flash-preview": {"only": ["google-ai-studio"], "allow_fallbacks": False},
+    "x-ai/grok-4.3": {"only": ["xai"], "allow_fallbacks": False},
+}
 
 
 def derive_model_display_name(model_id: str) -> str:
@@ -63,6 +71,11 @@ class PlayerConfig:
     model_display_name: str
     system_prompt: str
     reasoning: dict[str, Any] | None
+    provider: dict[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "reasoning", normalize_reasoning(self.reasoning))
+        object.__setattr__(self, "provider", normalize_provider(self.provider))
 
     def to_status(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -73,6 +86,8 @@ class PlayerConfig:
         }
         if self.reasoning is not None:
             payload["reasoning"] = self.reasoning
+        if self.provider is not None:
+            payload["provider"] = self.provider
         return payload
 
 
@@ -89,6 +104,7 @@ def _normalize_player_entry(
     model_id = entry.get("openrouter_model_id") or default_model_id
     system_prompt = entry.get("system_prompt") or default_system_prompt
     reasoning = _normalize_reasoning(entry.get("reasoning"))
+    provider = _normalize_provider(entry.get("provider") or default_provider_for_model(model_id))
     return PlayerConfig(
         player_id=player_id,
         name=name,
@@ -96,6 +112,7 @@ def _normalize_player_entry(
         model_display_name=derive_model_display_name(model_id),
         system_prompt=system_prompt,
         reasoning=reasoning,
+        provider=provider,
     )
 
 
@@ -120,7 +137,7 @@ def build_player_configs(
     requested_players: list[dict[str, Any]] | None,
     config_path: Path,
 ) -> list[PlayerConfig]:
-    default_model_id = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-120b")
+    default_model_id = os.getenv("OPENROUTER_MODEL", "openai/gpt-5.4-mini")
     default_system_prompt = DEFAULT_SYSTEM_PROMPT
 
     file_entries = load_player_config_file(config_path)
@@ -169,11 +186,13 @@ def build_single_player_config(
     openrouter_model_id: str | None = None,
     system_prompt: str | None = None,
     reasoning: dict[str, Any] | None = None,
+    provider: dict[str, Any] | None = None,
 ) -> PlayerConfig:
-    default_model_id = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-120b")
+    default_model_id = os.getenv("OPENROUTER_MODEL", "openai/gpt-5.4-mini")
     default_system_prompt = DEFAULT_SYSTEM_PROMPT
     normalized_reasoning = normalize_reasoning(reasoning)
     model_id = openrouter_model_id or default_model_id
+    normalized_provider = normalize_provider(provider or default_provider_for_model(model_id))
     return PlayerConfig(
         player_id=player_id,
         name=name,
@@ -181,6 +200,7 @@ def build_single_player_config(
         model_display_name=derive_model_display_name(model_id),
         system_prompt=system_prompt or default_system_prompt,
         reasoning=normalized_reasoning,
+        provider=normalized_provider,
     )
 
 
@@ -196,6 +216,7 @@ def _validate_player_entries(entries: list[dict[str, Any]], *, source: str) -> N
             raise ValueError(f"{source} contains duplicate player_id '{player_id}'.")
         seen.add(player_id)
         _validate_reasoning(entry.get("reasoning"), source=source, player_id=player_id)
+        _validate_provider(entry.get("provider"), source=source, player_id=player_id)
 
 
 def _validate_reasoning(reasoning: Any, *, source: str, player_id: str) -> None:
@@ -205,12 +226,41 @@ def _validate_reasoning(reasoning: Any, *, source: str, player_id: str) -> None:
         raise ValueError(f"{source} player '{player_id}' reasoning must be an object.")
     if "effort" not in reasoning:
         raise ValueError(f"{source} player '{player_id}' reasoning.effort is required.")
+    extra_keys = sorted(str(key) for key in reasoning if key not in ALLOWED_REASONING_KEYS)
+    if extra_keys:
+        raise ValueError(
+            f"{source} player '{player_id}' reasoning supports effort only; "
+            f"token budget controls are not allowed: {', '.join(extra_keys)}."
+        )
     effort = reasoning.get("effort")
     if effort not in ALLOWED_REASONING_EFFORT:
         raise ValueError(
             f"{source} player '{player_id}' reasoning.effort must be one of: "
             f"{', '.join(sorted(ALLOWED_REASONING_EFFORT))}."
         )
+
+
+def _validate_provider(provider: Any, *, source: str, player_id: str) -> None:
+    if provider is None:
+        return
+    if not isinstance(provider, dict):
+        raise ValueError(f"{source} player '{player_id}' provider must be an object.")
+    extra_keys = sorted(str(key) for key in provider if key not in ALLOWED_PROVIDER_KEYS)
+    if extra_keys:
+        raise ValueError(
+            f"{source} player '{player_id}' provider supports routing controls only: "
+            f"{', '.join(extra_keys)}."
+        )
+    for key in ("only", "order"):
+        value = provider.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
+            raise ValueError(f"{source} player '{player_id}' provider.{key} must be a non-empty string list.")
+    for key in ("allow_fallbacks", "require_parameters"):
+        value = provider.get(key)
+        if value is not None and not isinstance(value, bool):
+            raise ValueError(f"{source} player '{player_id}' provider.{key} must be a boolean.")
 
 
 def _normalize_reasoning(reasoning: Any) -> dict[str, Any] | None:
@@ -220,14 +270,46 @@ def _normalize_reasoning(reasoning: Any) -> dict[str, Any] | None:
         raise ValueError("Player reasoning must be an object.")
     if "effort" not in reasoning:
         raise ValueError("Player reasoning.effort is required.")
+    extra_keys = sorted(str(key) for key in reasoning if key not in ALLOWED_REASONING_KEYS)
+    if extra_keys:
+        raise ValueError(
+            "Player reasoning supports effort only; token budget controls are not allowed: "
+            + ", ".join(extra_keys)
+            + "."
+        )
     effort = reasoning.get("effort")
     if effort not in ALLOWED_REASONING_EFFORT:
         raise ValueError(
             "Player reasoning.effort must be one of: "
             f"{', '.join(sorted(ALLOWED_REASONING_EFFORT))}."
         )
-    return dict(reasoning)
+    return {"effort": effort}
 
 
 def normalize_reasoning(reasoning: Any) -> dict[str, Any] | None:
     return _normalize_reasoning(reasoning)
+
+
+def _normalize_provider(provider: Any) -> dict[str, Any] | None:
+    if provider is None:
+        return None
+    _validate_provider(provider, source="Player config", player_id="unknown")
+    payload: dict[str, Any] = {}
+    for key in ("only", "order"):
+        value = provider.get(key)
+        if value is not None:
+            payload[key] = list(value)
+    for key in ("allow_fallbacks", "require_parameters"):
+        value = provider.get(key)
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
+def normalize_provider(provider: Any) -> dict[str, Any] | None:
+    return _normalize_provider(provider)
+
+
+def default_provider_for_model(model_id: str) -> dict[str, Any] | None:
+    provider = DEFAULT_PROVIDER_BY_MODEL_ID.get(model_id)
+    return dict(provider) if provider is not None else None

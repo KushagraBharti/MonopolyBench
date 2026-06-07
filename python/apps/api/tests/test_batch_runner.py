@@ -149,6 +149,9 @@ def test_batch_runner_writes_index_and_summaries(tmp_path: Path) -> None:
         "failure_summary.json",
         "cost_report.json",
         "token_report.json",
+        "experiment_manifest.json",
+        "review_cost_aggregate.json",
+        "review_cost_calls.jsonl",
         "budget_report.json",
         "review_queue.jsonl",
         "artifact_manifest.json",
@@ -169,6 +172,12 @@ def test_batch_runner_writes_index_and_summaries(tmp_path: Path) -> None:
     pricing_snapshot = json.loads((batch_dir / "model_pricing_snapshot.json").read_text(encoding="utf-8"))
     assert pricing_snapshot["status"] == "unavailable"
     assert pricing_snapshot["reason"] == "client_has_no_get_models"
+    experiment_manifest = json.loads((batch_dir / "experiment_manifest.json").read_text(encoding="utf-8"))
+    assert experiment_manifest["gateway"] == "openrouter"
+    assert experiment_manifest["max_token_policy"]["max_tokens_set"] is False
+    review_cost_aggregate = json.loads((batch_dir / "review_cost_aggregate.json").read_text(encoding="utf-8"))
+    assert review_cost_aggregate["batch_id"] == "batch-test"
+    assert "by_model" in review_cost_aggregate
 
     for line in lines:
         entry = json.loads(line)

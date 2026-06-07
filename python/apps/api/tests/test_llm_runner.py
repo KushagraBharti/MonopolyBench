@@ -1230,7 +1230,7 @@ def test_openrouter_network_error_fallback_reason(tmp_path) -> None:
 
 def test_reasoning_effort_and_free_model_propagate(tmp_path) -> None:
     players = _make_players()
-    reasoning = {"effort": "high", "budget_tokens": 1200}
+    reasoning = {"effort": "low"}
     players[0] = PlayerConfig(
         player_id="p1",
         name="P1",
@@ -1287,6 +1287,15 @@ def test_reasoning_effort_and_free_model_propagate(tmp_path) -> None:
         (run_files.prompts_dir / f"decision_{decision_id}_user.json").read_text(encoding="utf-8")
     )
     assert prompt_payload["llm"]["reasoning"] == reasoning
+
+    request_payload = json.loads(
+        (run_files.quality_dir / f"decision_{decision_id}_request.txt").read_text(encoding="utf-8")
+    )
+    assert request_payload["reasoning"] == reasoning
+    assert "temperature" not in request_payload
+    assert "max_tokens" not in request_payload
+    assert "max_completion_tokens" not in request_payload
+    assert "max_tokens" not in request_payload["reasoning"]
 
 
 def test_missing_reasoning_omits_openrouter_field(tmp_path) -> None:

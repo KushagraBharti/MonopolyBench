@@ -12,6 +12,8 @@ from pathlib import Path
 from statistics import mean, median, stdev
 from typing import Any
 
+from monopoly_telemetry import build_experiment_manifest, build_review_cost_aggregate, usage_calls_jsonl
+
 from .player_config import PlayerConfig
 
 
@@ -145,6 +147,9 @@ def batch_paths(runs_root: Path, batch_id: str) -> dict[str, Path]:
         "cost_report": batch_dir / "cost_report.json",
         "token_report": batch_dir / "token_report.json",
         "usage_summary": batch_dir / "usage_summary.json",
+        "experiment_manifest": batch_dir / "experiment_manifest.json",
+        "review_cost_aggregate": batch_dir / "review_cost_aggregate.json",
+        "review_cost_calls": batch_dir / "review_cost_calls.jsonl",
         "budget_report": batch_dir / "budget_report.json",
         "model_failure_breakdown": batch_dir / "model_failure_breakdown.json",
         "failure_leaderboard": batch_dir / "failure_leaderboard.json",
@@ -205,6 +210,17 @@ def write_batch_static_artifacts(
     paths["model_cards_dir"].mkdir(parents=True, exist_ok=True)
     _write_json(paths["batch_config"], config)
     _write_json(paths["model_config"], _model_config(players))
+    _write_json(
+        paths["experiment_manifest"],
+        build_experiment_manifest(
+            experiment_id=str(config.get("batch_id") or "batch"),
+            benchmark_tracks=["full_game"],
+            models=_model_config(players)["models"],
+            reasoning_policy=None,
+            batch_type=str(config.get("batch_type") or "full_game"),
+            run_count=len(specs),
+        ),
+    )
     _write_json(paths["seed_manifest"], _seed_manifest(config, specs))
     _write_json(paths["seat_manifest"], _seat_manifest(config, specs))
     _write_json(paths["model_pricing_snapshot"], pricing_snapshot)
@@ -238,6 +254,13 @@ def write_batch_dynamic_artifacts(
     _write_json(paths["cost_report"], _batch_cost_report(run_entries))
     _write_json(paths["token_report"], _batch_token_report(run_entries))
     _write_json(paths["usage_summary"], _batch_usage_summary(run_entries))
+    review_cost_aggregate = build_review_cost_aggregate(
+        batch_id=str(config.get("batch_id") or "batch"),
+        batch_type=str(config.get("batch_type") or "full_game"),
+        entries=run_entries,
+    )
+    _write_json(paths["review_cost_aggregate"], review_cost_aggregate)
+    _write_jsonl(paths["review_cost_calls"], usage_calls_jsonl(review_cost_aggregate))
     _write_json(paths["model_failure_breakdown"], _model_failure_breakdown(run_entries))
     _write_json(paths["failure_leaderboard"], _failure_leaderboard(run_entries))
     _write_jsonl(paths["top_findings"], _top_findings(run_entries))
@@ -717,18 +740,51 @@ def _batch_cost_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
     by_run: dict[str, Any] = {}
     for entry in run_entries:
         report = _dict(entry.get("cost_report"))
+        usage = _dict(entry.get("usage"))
+        totals = _dict(usage.get("totals"))
         run_id = str(entry.get("run_id"))
         by_run[run_id] = {
             "total_actual_cost": report.get("total_actual_cost"),
+            "input_tokens": totals.get("input_tokens") or totals.get("prompt_tokens"),
+            "output_tokens": totals.get("output_tokens") or totals.get("completion_tokens"),
+            "total_tokens": totals.get("total_tokens"),
+            "reasoning_tokens": totals.get("reasoning_tokens"),
             "missing_usage_attempt_count": report.get("missing_usage_attempt_count"),
         }
         for model_id, model_row in _dict(report.get("by_model")).items():
             if not isinstance(model_row, dict):
                 continue
-            aggregate = by_model.setdefault(str(model_id), {"decision_count": 0, "cost": 0.0})
+            aggregate = by_model.setdefault(
+                str(model_id),
+                {
+                    "decision_count": 0,
+                    "cost": 0.0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "total_tokens": 0,
+                    "reasoning_tokens": 0,
+                    "latency_ms": 0,
+                },
+            )
             aggregate["decision_count"] += int(model_row.get("decision_count") or 0)
             if isinstance(model_row.get("cost"), (int, float)):
                 aggregate["cost"] += float(model_row["cost"])
+            for field, source_field in (
+                ("input_tokens", "input_tokens"),
+                ("output_tokens", "output_tokens"),
+                ("total_tokens", "total_tokens"),
+                ("reasoning_tokens", "reasoning_tokens"),
+                ("latency_ms", "latency_ms"),
+            ):
+                value = model_row.get(source_field)
+                if not isinstance(value, (int, float)) and field == "input_tokens":
+                    value = model_row.get("prompt_tokens")
+                if not isinstance(value, (int, float)) and field == "output_tokens":
+                    value = model_row.get("completion_tokens")
+                if isinstance(value, (int, float)):
+                    aggregate[field] += int(value)
+    for row in by_model.values():
+        row["cost"] = round(float(row["cost"]), 10)
     return {
         "schema_version": "v1",
         "usage_accounting_version": "batch_usage_accounting_v1",
@@ -743,7 +799,9 @@ def _batch_cost_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
 def _batch_token_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
     totals = {
         "prompt_tokens": 0,
+        "input_tokens": 0,
         "completion_tokens": 0,
+        "output_tokens": 0,
         "total_tokens": 0,
         "native_prompt_tokens": 0,
         "native_completion_tokens": 0,
@@ -757,12 +815,28 @@ def _batch_token_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
         for key in totals:
             if isinstance(run_totals.get(key), (int, float)):
                 totals[key] += int(run_totals[key])
+        if not isinstance(run_totals.get("input_tokens"), (int, float)) and isinstance(run_totals.get("prompt_tokens"), (int, float)):
+            totals["input_tokens"] += int(run_totals["prompt_tokens"])
+        if not isinstance(run_totals.get("output_tokens"), (int, float)) and isinstance(run_totals.get("completion_tokens"), (int, float)):
+            totals["output_tokens"] += int(run_totals["completion_tokens"])
+    by_model: dict[str, dict[str, Any]] = {}
+    by_run: dict[str, dict[str, Any]] = {}
+    for entry in run_entries:
+        run_id = str(entry.get("run_id") or "unknown")
+        usage = _dict(entry.get("usage"))
+        run_totals = _dict(usage.get("totals"))
+        by_run[run_id] = _usage_token_row(run_totals)
+        for model_id, row in _dict(usage.get("by_model")).items():
+            current = by_model.setdefault(str(model_id), _empty_token_row())
+            _add_token_row(current, _usage_token_row(_dict(row)))
     return {
         "schema_version": "v1",
         "usage_accounting_version": "batch_token_report_v1",
         "source": "openrouter_actuals_only",
         "local_tokenizer_estimates_used": False,
         "totals": totals,
+        "by_model": by_model,
+        "by_run": by_run,
     }
 
 
@@ -778,6 +852,42 @@ def _batch_usage_summary(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
         "actual_tokens": batch_actual_tokens(run_entries),
         "run_count": len(run_entries),
     }
+
+
+def _empty_token_row() -> dict[str, Any]:
+    return {
+        "prompt_tokens": 0,
+        "input_tokens": 0,
+        "completion_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "native_prompt_tokens": 0,
+        "native_completion_tokens": 0,
+        "native_total_tokens": 0,
+        "reasoning_tokens": 0,
+        "cached_tokens": 0,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+    }
+
+
+def _usage_token_row(source: dict[str, Any]) -> dict[str, Any]:
+    row = _empty_token_row()
+    for key in row:
+        value = source.get(key)
+        if isinstance(value, (int, float)):
+            row[key] = int(value)
+    if not isinstance(source.get("input_tokens"), (int, float)) and isinstance(source.get("prompt_tokens"), (int, float)):
+        row["input_tokens"] = int(source["prompt_tokens"])
+    if not isinstance(source.get("output_tokens"), (int, float)) and isinstance(source.get("completion_tokens"), (int, float)):
+        row["output_tokens"] = int(source["completion_tokens"])
+    return row
+
+
+def _add_token_row(target: dict[str, Any], row: dict[str, Any]) -> None:
+    for key, value in row.items():
+        if isinstance(value, (int, float)):
+            target[key] = int(target.get(key) or 0) + int(value)
 
 
 def _model_failure_breakdown(run_entries: list[dict[str, Any]]) -> dict[str, Any]:

@@ -36,6 +36,7 @@ def replay_actions(
     max_auction_actions: int = 200,
     assert_decision_ids: bool = True,
 ) -> list[dict[str, Any]]:
+    action_entries = list(actions)
     engine = Engine(
         seed=seed,
         players=players,
@@ -48,11 +49,14 @@ def replay_actions(
     )
     events: list[dict[str, Any]] = []
 
-    for entry in actions:
-        _, new_events, decision, _ = engine.advance_until_decision(max_steps=1)
+    max_auto_steps = max(1, max_turns + len(players) + 1)
+    for entry in action_entries:
+        _, new_events, decision, _ = engine.advance_until_decision(max_steps=max_auto_steps)
         events.extend(new_events)
         if decision is None:
-            break
+            if engine.is_game_over():
+                break
+            raise ValueError("Replay could not reach the next decision before applying an action.")
         if assert_decision_ids:
             expected_id = entry.get("decision_id")
             if isinstance(expected_id, str) and decision.get("decision_id") != expected_id:
@@ -64,6 +68,10 @@ def replay_actions(
         events.extend(action_events)
         if engine.is_game_over():
             break
+
+    if not engine.is_game_over():
+        _, tail_events, _, _ = engine.advance_until_decision(max_steps=max_auto_steps)
+        events.extend(tail_events)
 
     return events
 

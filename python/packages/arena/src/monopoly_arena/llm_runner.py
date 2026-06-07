@@ -12,6 +12,7 @@ from monopoly_engine.board import normalize_space_key
 from monopoly_telemetry import (
     RunFiles,
     build_summary,
+    write_experiment_review_artifacts,
     write_scorecard_artifacts,
     write_trace_failure_artifacts,
     write_usage_artifacts,
@@ -186,12 +187,26 @@ class LlmRunner:
                 if self._run_files is not None:
                     write_usage_artifacts(self._run_files)
                     await self._write_pricing_snapshot_artifact()
+                    write_experiment_review_artifacts(
+                        self._run_files,
+                        benchmark_tracks=["long_horizon_game"],
+                        models=[player.to_status() for player in self._players],
+                        reasoning_policy=self._common_reasoning_policy(),
+                        batch_type="full_game_single",
+                    )
                     write_scorecard_artifacts(self._run_files)
                     write_replay_verification_artifacts(self._run_files)
                     write_trace_failure_artifacts(self._run_files)
                     self._run_files.write_artifact_manifest()
         finally:
             await self._close_openrouter()
+
+    def _common_reasoning_policy(self) -> dict[str, Any] | None:
+        policies = [player.reasoning for player in self._players]
+        if not policies:
+            return None
+        first = policies[0]
+        return first if all(policy == first for policy in policies) else None
 
     async def _write_pricing_snapshot_artifact(self) -> None:
         if self._run_files is None:
@@ -746,7 +761,6 @@ class LlmRunner:
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
-            "temperature": 0.0,
         }
         if tools is not None:
             payload["tools"] = tools
@@ -1154,6 +1168,7 @@ def _players_payload(players: list[PlayerConfig]) -> dict[str, Any]:
                 "openrouter_model_id": player.openrouter_model_id,
                 "model_display_name": player.model_display_name,
                 "reasoning": player.reasoning,
+                "provider": player.provider,
                 "system_prompt_logged": False,
             }
             for player in players

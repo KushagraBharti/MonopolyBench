@@ -35,6 +35,9 @@ class RunFiles:
     usage_attempts_path: Path
     pricing_snapshot_path: Path
     cost_report_path: Path
+    experiment_manifest_path: Path
+    review_cost_aggregate_path: Path
+    review_cost_calls_path: Path
     replay_report_path: Path
     replay_steps_path: Path
     replay_flags_path: Path
@@ -241,6 +244,9 @@ def build_run_files(
         usage_attempts_path=run_dir / "usage_attempts.jsonl",
         pricing_snapshot_path=run_dir / "pricing_snapshot.json",
         cost_report_path=run_dir / "cost_report.json",
+        experiment_manifest_path=run_dir / "experiment_manifest.json",
+        review_cost_aggregate_path=run_dir / "review_cost_aggregate.json",
+        review_cost_calls_path=run_dir / "review_cost_calls.jsonl",
         replay_report_path=run_dir / "replay_report.json",
         replay_steps_path=run_dir / "replay_steps.jsonl",
         replay_flags_path=run_dir / "replay_flags.jsonl",
@@ -303,6 +309,9 @@ def _known_artifact_paths(run_files: RunFiles) -> list[tuple[str, Path]]:
         ("usage_attempts", run_files.usage_attempts_path),
         ("pricing_snapshot", run_files.pricing_snapshot_path),
         ("cost_report", run_files.cost_report_path),
+        ("experiment_manifest", run_files.experiment_manifest_path),
+        ("review_cost_aggregate", run_files.review_cost_aggregate_path),
+        ("review_cost_calls", run_files.review_cost_calls_path),
         ("replay_report", run_files.replay_report_path),
         ("replay_steps", run_files.replay_steps_path),
         ("replay_flags", run_files.replay_flags_path),

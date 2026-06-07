@@ -46,6 +46,15 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def add_local_private_network_header(request: Any, call_next: Any) -> Any:
+    response = await call_next(request)
+    origin = request.headers.get("origin", "")
+    if origin.startswith(("http://localhost:", "http://127.0.0.1:")):
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
+
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
@@ -61,6 +70,7 @@ class PlayerSpec(BaseModel):
 class StartRunRequest(BaseModel):
     seed: int | None = None
     players: list[PlayerSpec] | None = None
+    max_turns: int | None = None
     max_trade_exchanges: int | None = None
     max_auction_actions: int | None = None
 
@@ -109,6 +119,7 @@ async def run_start(body: StartRunRequest) -> dict:
     run_id = await run_manager.start_run(
         seed=seed,
         players=players,
+        max_turns=max(1, int(body.max_turns or 200)),
         max_trade_exchanges=max(1, int(body.max_trade_exchanges or 20)),
         max_auction_actions=max(1, int(body.max_auction_actions or 200)),
     )

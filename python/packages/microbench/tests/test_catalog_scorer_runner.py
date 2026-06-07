@@ -418,12 +418,21 @@ def test_batch_runner_writes_leaderboard(tmp_path) -> None:
         run_batch(
             suite_id="micro-v1",
             model_ids=["test/model"],
+            reasoning={"effort": "low"},
             scenario_ids=["buy-or-auction-vermont-light-blue-tempo-01"],
             runs_dir=tmp_path / "runs",
             openrouter_factory=ScriptedOpenRouter,
         )
     )
     assert batch["leaderboard"]["rows"]
+    batch_dir = tmp_path / "runs" / "micro_batches" / batch["batch_id"]
+    manifest = json.loads((batch_dir / "experiment_manifest.json").read_text(encoding="utf-8"))
+    aggregate = json.loads((batch_dir / "review_cost_aggregate.json").read_text(encoding="utf-8"))
+    assert manifest["reasoning_policy"]["request_payload"] == {"effort": "low"}
+    assert manifest["max_token_policy"]["max_tokens_set"] is False
+    assert aggregate["call_count"] == 1
+    assert aggregate["per_call"][0]["input_tokens"] is None
+    assert (batch_dir / "review_cost_calls.jsonl").exists()
 
 
 def test_progress_batch_continues_and_reports_failures(tmp_path) -> None:
@@ -486,7 +495,7 @@ def test_tui_keyboard_navigation_and_edit_helpers() -> None:
     assert state.input_mode is None
     assert state.search.endswith("orange")
     tui._apply_dashboard_key(state, tui.KeyPress("char", "g"))
-    assert state.reasoning_effort == "high"
+    assert state.reasoning_effort == "medium"
     tui._apply_dashboard_key(state, tui.KeyPress("char", "n"))
     assert state.input_mode == "name"
     for _ in range(len(state.input_buffer)):

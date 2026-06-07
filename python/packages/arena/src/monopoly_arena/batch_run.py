@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-from monopoly_telemetry import init_run_files
+from monopoly_telemetry import build_experiment_manifest, build_review_cost_aggregate, init_run_files, usage_calls_jsonl
 
 from .batch_artifacts import (
     DEFAULT_SEAT_MODE,
@@ -274,13 +274,21 @@ async def _run_micro_suite_batch(
         for value in config.get("scenario_ids", [])
         if isinstance(value, str)
     ] or None
-    model_ids = _micro_model_ids(config)
-    if not model_ids:
+    model_configs = _micro_model_configs(config)
+    if not model_configs:
         players_path = config.get("players")
         players_file = resolve_repo_path(str(players_path)) if players_path else default_players_config_path()
-        model_ids = [player.openrouter_model_id for player in build_player_configs(requested_players=None, config_path=players_file)]
-    if not model_ids:
+        model_configs = [
+            {
+                "openrouter_model_id": player.openrouter_model_id,
+                "model_display_name": player.model_display_name,
+                "reasoning": player.reasoning,
+            }
+            for player in build_player_configs(requested_players=None, config_path=players_file)
+        ]
+    if not model_configs:
         raise ValueError("Micro-suite batch requires at least one model id.")
+    model_ids = [str(row["openrouter_model_id"]) for row in model_configs]
 
     micro_runner = importlib.import_module("monopoly_microbench.runner")
     micro_catalog = importlib.import_module("monopoly_microbench.catalog")
@@ -303,10 +311,22 @@ async def _run_micro_suite_batch(
         "micro_suite_id": suite_id,
         "scenario_ids": selected_scenarios,
         "model_ids": model_ids,
+        "models": model_configs,
         "prompt_condition": prompt_condition,
     }
     _write_json(paths["batch_config"], normalized_config)
-    _write_json(paths["model_config"], {"schema_version": "v1", "models": [{"openrouter_model_id": model_id} for model_id in model_ids]})
+    _write_json(paths["model_config"], {"schema_version": "v1", "models": model_configs})
+    _write_json(
+        paths["experiment_manifest"],
+        build_experiment_manifest(
+            experiment_id=batch_id,
+            benchmark_tracks=["micro_suite"],
+            models=model_configs,
+            reasoning_policy=None,
+            batch_type="micro_suite",
+            run_count=len(model_configs) * len(selected_scenarios),
+        ),
+    )
 
     metadata_client = (openrouter_factory or OpenRouterClient)()
     pricing_snapshot = await _openrouter_metadata_snapshot(metadata_client, method_name="get_models")
@@ -318,7 +338,9 @@ async def _run_micro_suite_batch(
     budget_stop_reason: str | None = None
     factory = openrouter_factory or OpenRouterClient
     continue_on_failure = bool(config.get("continue_on_failure", False))
-    for model_id in model_ids:
+    for model_config in model_configs:
+        model_id = str(model_config["openrouter_model_id"])
+        reasoning = model_config.get("reasoning") if isinstance(model_config.get("reasoning"), dict) else None
         for scenario_id in selected_scenarios:
             if budget_stop_reason:
                 break
@@ -329,6 +351,7 @@ async def _run_micro_suite_batch(
                         scenario_id=scenario_id,
                         openrouter_model_id=model_id,
                         prompt_condition=prompt_condition,
+                        reasoning=reasoning,
                         run_id=run_id,
                     ),
                     runs_dir=runs_root,
@@ -355,6 +378,7 @@ async def _run_micro_suite_batch(
                 "suite_id": suite_id,
                 "scenario_id": scenario_id,
                 "model_id": model_id,
+                "reasoning": reasoning,
                 "prompt_condition": prompt_condition,
                 "result": result,
             }
@@ -412,17 +436,28 @@ def _read_existing_run_entries(path: Path) -> list[dict[str, Any]]:
 
 
 def _micro_model_ids(config: dict[str, Any]) -> list[str]:
+    return [str(row["openrouter_model_id"]) for row in _micro_model_configs(config)]
+
+
+def _micro_model_configs(config: dict[str, Any]) -> list[dict[str, Any]]:
     values = config.get("model_ids") or config.get("models") or []
-    model_ids: list[str] = []
+    model_configs: list[dict[str, Any]] = []
     if isinstance(values, list):
         for value in values:
             if isinstance(value, str):
-                model_ids.append(value)
+                model_configs.append({"openrouter_model_id": value, "reasoning": _dict(config.get("reasoning")) or None})
             elif isinstance(value, dict):
                 model_id = value.get("openrouter_model_id") or value.get("model_id") or value.get("id")
                 if isinstance(model_id, str):
-                    model_ids.append(model_id)
-    return model_ids
+                    reasoning = value.get("reasoning") if isinstance(value.get("reasoning"), dict) else config.get("reasoning")
+                    model_configs.append(
+                        {
+                            "openrouter_model_id": model_id,
+                            "model_display_name": value.get("model_display_name") or value.get("display_name"),
+                            "reasoning": reasoning if isinstance(reasoning, dict) else None,
+                        }
+                    )
+    return model_configs
 
 
 def _micro_should_stop_for_budget(config: dict[str, Any], entries: list[dict[str, Any]]) -> str | None:
@@ -462,6 +497,13 @@ def _write_micro_batch_dynamic(
     _write_json(paths["usage_summary"], _micro_usage_summary(entries))
     _write_json(paths["token_report"], _micro_token_report(entries))
     _write_json(paths["cost_report"], _micro_cost_report(entries))
+    review_cost_aggregate = build_review_cost_aggregate(
+        batch_id=str(config.get("batch_id") or "micro_suite"),
+        batch_type="micro_suite",
+        entries=entries,
+    )
+    _write_json(paths["review_cost_aggregate"], review_cost_aggregate)
+    _write_jsonl(paths["review_cost_calls"], usage_calls_jsonl(review_cost_aggregate))
     _write_json(
         paths["budget_report"],
         {
@@ -568,7 +610,9 @@ def _micro_token_report(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "usage_accounting_version": "micro_batch_token_report_v1",
         "source": "openrouter_actuals_only",
         "local_tokenizer_estimates_used": False,
-        "totals": {"total_tokens": _micro_total_tokens(entries)},
+        "totals": _micro_usage_totals(entries),
+        "by_model": _micro_usage_by_key(entries, "model_id"),
+        "by_run": _micro_usage_by_key(entries, "run_id"),
     }
 
 
@@ -579,29 +623,83 @@ def _micro_cost_report(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "source": "openrouter_actuals_only",
         "local_tokenizer_estimates_used": False,
         "total_actual_cost": _micro_total_cost(entries),
+        "by_model": _micro_usage_by_key(entries, "model_id"),
+        "by_run": _micro_usage_by_key(entries, "run_id"),
     }
 
 
 def _micro_total_tokens(entries: list[dict[str, Any]]) -> int:
-    total = 0
-    for entry in entries:
-        usage = _read_json(Path(str(entry.get("run_dir"))) / "usage.json")
-        totals = usage.get("totals") if isinstance(usage.get("totals"), dict) else {}
-        value = totals.get("total_tokens") if isinstance(totals, dict) else None
-        if isinstance(value, (int, float)):
-            total += int(value)
-    return total
+    return int(_micro_usage_totals(entries).get("total_tokens") or 0)
 
 
 def _micro_total_cost(entries: list[dict[str, Any]]) -> float:
-    total = 0.0
+    return round(float(_micro_usage_totals(entries).get("cost") or 0.0), 10)
+
+
+def _micro_usage_totals(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    total = _empty_usage_totals()
     for entry in entries:
-        usage = _read_json(Path(str(entry.get("run_dir"))) / "usage.json")
-        totals = usage.get("totals") if isinstance(usage.get("totals"), dict) else {}
-        value = totals.get("cost") if isinstance(totals, dict) else None
+        _add_usage_totals(total, _run_usage_totals(entry))
+    total["cost"] = round(float(total["cost"]), 10)
+    return total
+
+
+def _micro_usage_by_key(entries: list[dict[str, Any]], key: str) -> dict[str, Any]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        group_key = str(entry.get(key) or "unknown")
+        row = grouped.setdefault(group_key, _empty_usage_totals())
+        row["run_count"] = int(row.get("run_count") or 0) + 1
+        _add_usage_totals(row, _run_usage_totals(entry))
+    for row in grouped.values():
+        row["cost"] = round(float(row["cost"]), 10)
+    return grouped
+
+
+def _run_usage_totals(entry: dict[str, Any]) -> dict[str, Any]:
+    usage = _read_json(Path(str(entry.get("run_dir"))) / "usage.json")
+    totals = usage.get("totals") if isinstance(usage.get("totals"), dict) else {}
+    row = _empty_usage_totals()
+    if not isinstance(totals, dict):
+        return row
+    for key in row:
+        value = totals.get(key)
         if isinstance(value, (int, float)):
-            total += float(value)
-    return round(total, 10)
+            row[key] = float(value) if key == "cost" else int(value)
+    if not isinstance(totals.get("input_tokens"), (int, float)) and isinstance(totals.get("prompt_tokens"), (int, float)):
+        row["input_tokens"] = int(totals["prompt_tokens"])
+    if not isinstance(totals.get("output_tokens"), (int, float)) and isinstance(totals.get("completion_tokens"), (int, float)):
+        row["output_tokens"] = int(totals["completion_tokens"])
+    return row
+
+
+def _empty_usage_totals() -> dict[str, Any]:
+    return {
+        "prompt_tokens": 0,
+        "input_tokens": 0,
+        "completion_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "native_prompt_tokens": 0,
+        "native_completion_tokens": 0,
+        "native_total_tokens": 0,
+        "reasoning_tokens": 0,
+        "cached_tokens": 0,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost": 0.0,
+        "latency_ms": 0,
+    }
+
+
+def _add_usage_totals(target: dict[str, Any], row: dict[str, Any]) -> None:
+    for key, value in row.items():
+        if not isinstance(value, (int, float)):
+            continue
+        if key == "cost":
+            target[key] = float(target.get(key) or 0.0) + float(value)
+        else:
+            target[key] = int(target.get(key) or 0) + int(value)
 
 
 def _micro_batch_manifest(config: dict[str, Any], entries: list[dict[str, Any]], paths: dict[str, Path]) -> dict[str, Any]:

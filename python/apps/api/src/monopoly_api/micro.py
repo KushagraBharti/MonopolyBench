@@ -23,6 +23,7 @@ from monopoly_microbench import (
 )
 from monopoly_microbench.artifacts import batch_dir, compact_result_for_jsonl
 from monopoly_microbench.runner import build_leaderboard
+from monopoly_telemetry import build_experiment_manifest, build_review_cost_aggregate, usage_calls_jsonl
 from monopoly_telemetry.writer_jsonl import append_jsonl
 
 from .settings import Settings
@@ -145,8 +146,27 @@ async def stream_micro_batch(
         "model_ids": request.openrouter_model_ids,
         "prompt_condition": request.prompt_condition,
         "scenario_ids": selected,
+        "reasoning": request.reasoning,
     }
     (out_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=True), encoding="utf-8")
+    (out_dir / "experiment_manifest.json").write_text(
+        json.dumps(
+            build_experiment_manifest(
+                experiment_id=batch_id,
+                benchmark_tracks=["micro_suite"],
+                models=[
+                    {"openrouter_model_id": model_id, "reasoning": request.reasoning}
+                    for model_id in request.openrouter_model_ids
+                ],
+                reasoning_policy=request.reasoning,
+                batch_type="micro_suite",
+                run_count=len(model_targets) * len(selected),
+            ),
+            indent=2,
+            ensure_ascii=True,
+        ),
+        encoding="utf-8",
+    )
     queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     results: list[dict[str, Any]] = []
 
@@ -251,12 +271,45 @@ async def stream_micro_batch(
             json.dumps(leaderboard.get("category_breakdown", {}), indent=2, ensure_ascii=True),
             encoding="utf-8",
         )
+        _write_stream_batch_usage_artifacts(out_dir, batch_id=batch_id, results=results)
         yield _sse("batch_result", {"batch_id": batch_id, "leaderboard": leaderboard})
         yield _sse("status", {"state": "complete", "batch_id": batch_id})
     except asyncio.CancelledError:
         raise
     except Exception as exc:
         yield _sse("error", {"message": str(exc), "batch_id": batch_id})
+
+
+def _write_stream_batch_usage_artifacts(out_dir: Path, *, batch_id: str, results: list[dict[str, Any]]) -> None:
+    entries = [
+        {
+            "run_index": index,
+            "run_id": result.get("run_id"),
+            "status": "completed",
+            "run_dir": str(out_dir.parent.parent / "micro" / str(result.get("run_id") or "")),
+            "scenario_id": result.get("scenario_id"),
+            "model_id": _model_id_from_result(result),
+            "result": result,
+        }
+        for index, result in enumerate(results)
+    ]
+    aggregate = build_review_cost_aggregate(batch_id=batch_id, batch_type="micro_suite", entries=entries)
+    (out_dir / "review_cost_aggregate.json").write_text(
+        json.dumps(aggregate, indent=2, ensure_ascii=True),
+        encoding="utf-8",
+    )
+    (out_dir / "review_cost_calls.jsonl").write_text(
+        "".join(json.dumps(row, separators=(",", ":"), ensure_ascii=True) + "\n" for row in usage_calls_jsonl(aggregate)),
+        encoding="utf-8",
+    )
+
+
+def _model_id_from_result(result: dict[str, Any]) -> str | None:
+    model = result.get("model")
+    if not isinstance(model, dict):
+        return None
+    value = model.get("openrouter_model_id")
+    return str(value) if isinstance(value, str) else None
 
 
 def get_micro_scenario_detail(scenario_id: str) -> dict[str, Any]:

@@ -35,8 +35,7 @@ export type ResearchActor = {
   baseline_id?: string
   display_name: string
   openrouter_model_id?: string
-  reasoning?: { effort?: 'low' | 'medium' | 'high'; [key: string]: unknown } | null
-  temperature?: number | null
+  reasoning?: { effort: 'low' | 'medium' | 'high' } | null
   top_p?: number | null
   enabled: boolean
   cost_budget_group: string

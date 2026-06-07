@@ -1,4 +1,5 @@
 from .analysis import write_trace_failure_artifacts
+from .experiment import build_experiment_manifest, build_review_cost_aggregate, usage_calls_jsonl, write_experiment_review_artifacts
 from .review import append_review_label, build_review_summary, read_review_labels
 from .run_files import RunFiles, build_artifact_manifest, build_run_files, init_run_files
 from .scorecard import build_scorecard, write_scorecard_artifacts
@@ -24,6 +25,10 @@ __all__ = [
     "build_usage_report",
     "write_usage_artifacts",
     "write_trace_failure_artifacts",
+    "build_experiment_manifest",
+    "build_review_cost_aggregate",
+    "usage_calls_jsonl",
+    "write_experiment_review_artifacts",
     "append_review_label",
     "build_review_summary",
     "read_review_labels",

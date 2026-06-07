@@ -56,6 +56,7 @@ class RunManager:
         seed: int,
         players: list[PlayerConfig],
         *,
+        max_turns: int = 200,
         max_trade_exchanges: int = 20,
         max_auction_actions: int = 200,
     ) -> str:
@@ -65,6 +66,7 @@ class RunManager:
             run_id = self._generate_run_id(
                 seed,
                 players,
+                max_turns=max_turns,
                 max_trade_exchanges=max_trade_exchanges,
                 max_auction_actions=max_auction_actions,
             )
@@ -84,6 +86,7 @@ class RunManager:
                 run_id=run_id,
                 openrouter=self._openrouter_factory(),
                 run_files=self._telemetry,
+                max_turns=max_turns,
                 max_trade_exchanges=max_trade_exchanges,
                 max_auction_actions=max_auction_actions,
             )
@@ -193,6 +196,7 @@ class RunManager:
         seed: int,
         players: list[PlayerConfig],
         *,
+        max_turns: int,
         max_trade_exchanges: int,
         max_auction_actions: int,
     ) -> str:
@@ -209,6 +213,7 @@ class RunManager:
             {
                 "seed": seed,
                 "players": players_blob,
+                "max_turns": max_turns,
                 "max_trade_exchanges": max_trade_exchanges,
                 "max_auction_actions": max_auction_actions,
             },

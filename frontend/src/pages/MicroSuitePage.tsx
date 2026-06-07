@@ -150,9 +150,9 @@ export const MicroSuitePage = () => {
   const [batchRunning, setBatchRunning] = useState(false)
   const [batchId, setBatchId] = useState<string | null>(null)
   const [leaderboard, setLeaderboard] = useState<MicroLeaderboard | null>(null)
-  const [modelId, setModelId] = useState('openai/gpt-oss-120b')
+  const [modelId, setModelId] = useState('openai/gpt-5.4-mini')
   const [modelName, setModelName] = useState('Micro Agent')
-  const [reasoningEffort, setReasoningEffort] = useState<(typeof reasoningOptions)[number]>('medium')
+  const [reasoningEffort, setReasoningEffort] = useState<(typeof reasoningOptions)[number]>('low')
 
   useEffect(() => {
     let cancelled = false

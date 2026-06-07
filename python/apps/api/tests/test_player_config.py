@@ -69,6 +69,24 @@ def test_players_file_requires_reasoning_effort(tmp_path) -> None:
         build_player_configs(requested_players=None, config_path=config_path)
 
 
+def test_players_file_rejects_reasoning_token_budget_controls(tmp_path) -> None:
+    config_path = tmp_path / "players.json"
+    players = [
+        {
+            "player_id": "p1",
+            "name": "Player 1",
+            "openrouter_model_id": "openai/gpt-oss-120b",
+            "reasoning": {"effort": "low", "max_tokens": 1200},
+        },
+        {"player_id": "p2", "name": "Player 2", "openrouter_model_id": "openai/gpt-oss-120b"},
+        {"player_id": "p3", "name": "Player 3", "openrouter_model_id": "openai/gpt-oss-120b"},
+        {"player_id": "p4", "name": "Player 4", "openrouter_model_id": "openai/gpt-oss-120b"},
+    ]
+    config_path.write_text(json.dumps({"players": players}), encoding="utf-8")
+    with pytest.raises(ValueError, match="effort only"):
+        build_player_configs(requested_players=None, config_path=config_path)
+
+
 def test_requested_players_wrong_count(tmp_path) -> None:
     config_path = tmp_path / "players.json"
     _write_players(config_path, 4)

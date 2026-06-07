@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from monopoly_engine import Engine
+from monopoly_engine import Engine, canonical_event_lines, replay_actions
 
 from .utils import collect_events
 
@@ -407,3 +407,84 @@ def test_third_failed_attempt_requires_fine() -> None:
     assert decision_after["decision_type"] == "JAIL_DECISION"
     legal_actions = {entry["action"] for entry in decision_after["legal_actions"]}
     assert legal_actions == {"pay_jail_fine"}
+
+
+def test_replay_continues_across_automatic_no_decision_turns() -> None:
+    players = [
+        {"player_id": "p1", "name": "P1"},
+        {"player_id": "p2", "name": "P2"},
+        {"player_id": "p3", "name": "P3"},
+        {"player_id": "p4", "name": "P4"},
+    ]
+    engine = Engine(seed=3, players=players, run_id="run-replay-auto", max_turns=15, ts_step_ms=1)
+    events = []
+    actions = []
+    saw_automatic_turn_between_decisions = False
+
+    while not engine.is_game_over():
+        _, new_events, decision, _ = engine.advance_until_decision(max_steps=1)
+        if new_events and decision is None and actions and not engine.is_game_over():
+            saw_automatic_turn_between_decisions = True
+        events.extend(new_events)
+        if decision is None:
+            continue
+        action = _choose_basic_legal_action(decision)
+        actions.append({"decision_id": decision["decision_id"], "action": action})
+        _, action_events, _, _ = engine.apply_action(action)
+        events.extend(action_events)
+
+    assert saw_automatic_turn_between_decisions
+
+    replayed = replay_actions(
+        seed=3,
+        players=players,
+        run_id="run-replay-auto",
+        actions=actions,
+        max_turns=15,
+        ts_step_ms=1,
+    )
+
+    assert canonical_event_lines(events) == canonical_event_lines(replayed)
+
+
+def test_turn_limit_winner_uses_net_worth_not_cash() -> None:
+    players = [
+        {"player_id": "cash-rich", "name": "Cash Rich"},
+        {"player_id": "asset-rich", "name": "Asset Rich"},
+    ]
+    engine = Engine(seed=1, players=players, run_id="run-net-worth-winner", max_turns=0, ts_step_ms=1)
+    cash_rich = engine.state.players[0]
+    asset_rich = engine.state.players[1]
+    cash_rich.cash = 1350
+    asset_rich.cash = 1200
+    engine.state.board[1].owner_id = "asset-rich"
+    engine.state.board[1].houses = 2
+    engine.state.board[3].owner_id = "asset-rich"
+
+    _, events, _, _ = engine.advance_until_decision(max_steps=1)
+    game_ended = next(event for event in events if event["type"] == "GAME_ENDED")
+
+    assert game_ended["payload"]["winner_player_id"] == "asset-rich"
+
+
+def _choose_basic_legal_action(decision: dict) -> dict:
+    legal_actions = [entry["action"] for entry in decision.get("legal_actions", [])]
+    preferred = [
+        "buy_property",
+        "end_turn",
+        "pay_jail_fine",
+        "roll_for_doubles",
+        "drop_out",
+        "reject_trade",
+        "declare_bankruptcy",
+    ]
+    action_name = next((action for action in preferred if action in legal_actions), legal_actions[0])
+    args = {}
+    if action_name == "bid_auction":
+        args = {"bid_amount": 0}
+    return {
+        "schema_version": "v1",
+        "decision_id": decision["decision_id"],
+        "action": action_name,
+        "args": args,
+    }

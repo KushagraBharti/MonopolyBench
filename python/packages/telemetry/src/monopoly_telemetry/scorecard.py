@@ -727,8 +727,8 @@ def _rank_players(by_player: dict[str, dict[str, Any]], run_metrics: dict[str, A
     ranked = sorted(
         by_player.values(),
         key=lambda player: (
-            bool(player.get("winner")),
             _number_or_min(player.get("final_net_worth_estimate")),
+            bool(player.get("winner")),
             _number_or_min(player.get("final_liquid_net_worth_estimate")),
             _number_or_min(player.get("final_cash")),
         ),

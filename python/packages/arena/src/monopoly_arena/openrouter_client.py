@@ -55,14 +55,12 @@ class OpenRouterClient:
         tools: list[dict[str, Any]] | None = None,
         tool_choice: str | dict[str, Any] | None = None,
         parallel_tool_calls: bool | None = None,
-        temperature: float = 0.0,
-        max_tokens: int | None = None,
         reasoning: dict[str, Any] | None = None,
+        provider: dict[str, Any] | None = None,
     ) -> OpenRouterResult:
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
-            "temperature": temperature,
         }
         if tools is not None:
             payload["tools"] = tools
@@ -70,10 +68,10 @@ class OpenRouterClient:
             payload["tool_choice"] = tool_choice
         if parallel_tool_calls is not None:
             payload["parallel_tool_calls"] = parallel_tool_calls
-        if max_tokens is not None:
-            payload["max_tokens"] = max_tokens
         if reasoning is not None:
-            payload["reasoning"] = reasoning
+            payload["reasoning"] = _validate_reasoning_payload(reasoning)
+        if provider is not None:
+            payload["provider"] = _validate_provider_payload(provider)
         if self._stream_callback is not None:
             payload["stream"] = True
         payload_text = json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
@@ -372,6 +370,47 @@ class OpenRouterClient:
 
     async def aclose(self) -> None:
         await self._client.aclose()
+
+
+def _validate_reasoning_payload(reasoning: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(reasoning, dict):
+        raise ValueError("OpenRouter reasoning must be an object.")
+    allowed_keys = {"effort"}
+    extra_keys = sorted(str(key) for key in reasoning if key not in allowed_keys)
+    if extra_keys:
+        raise ValueError(
+            "OpenRouter reasoning config supports effort only; token budget controls are not allowed: "
+            + ", ".join(extra_keys)
+        )
+    effort = reasoning.get("effort")
+    if effort not in {"low", "medium", "high"}:
+        raise ValueError("OpenRouter reasoning.effort must be one of: low, medium, high.")
+    return {"effort": effort}
+
+
+def _validate_provider_payload(provider: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(provider, dict):
+        raise ValueError("OpenRouter provider must be an object.")
+    allowed_keys = {"only", "order", "allow_fallbacks", "require_parameters"}
+    extra_keys = sorted(str(key) for key in provider if key not in allowed_keys)
+    if extra_keys:
+        raise ValueError(f"OpenRouter provider supports only routing controls: {', '.join(extra_keys)}.")
+    payload: dict[str, Any] = {}
+    for key in ("only", "order"):
+        value = provider.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
+            raise ValueError(f"OpenRouter provider.{key} must be a non-empty string list.")
+        payload[key] = list(value)
+    for key in ("allow_fallbacks", "require_parameters"):
+        value = provider.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, bool):
+            raise ValueError(f"OpenRouter provider.{key} must be a boolean.")
+        payload[key] = value
+    return payload
 
 
 def _http_error_type(status_code: int) -> str:

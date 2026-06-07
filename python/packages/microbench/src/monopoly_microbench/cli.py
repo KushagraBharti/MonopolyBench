@@ -30,15 +30,17 @@ def main() -> None:
     run_parser.add_argument("--scenario", required=True)
     run_parser.add_argument("--model", default=None)
     run_parser.add_argument("--name", default=None)
-    run_parser.add_argument("--reasoning", default=None)
+    run_parser.add_argument("--reasoning", choices=["low", "medium", "high"], default="low")
     run_parser.add_argument("--prompt-condition", choices=["live_game"], default="live_game")
     suite_parser = sub.add_parser("run-suite")
     suite_parser.add_argument("--suite", default="micro-v1")
     suite_parser.add_argument("--model", default=None)
+    suite_parser.add_argument("--reasoning", choices=["low", "medium", "high"], default="low")
     suite_parser.add_argument("--prompt-condition", choices=["live_game"], default="live_game")
     compare_parser = sub.add_parser("compare")
     compare_parser.add_argument("--suite", default="micro-v1")
     compare_parser.add_argument("--models", required=True)
+    compare_parser.add_argument("--reasoning", choices=["low", "medium", "high"], default="low")
     compare_parser.add_argument("--prompt-condition", choices=["live_game"], default="live_game")
     compare_parser.add_argument("--scenario", action="append", dest="scenario_ids")
     score_parser = sub.add_parser("score")
@@ -74,7 +76,7 @@ def main() -> None:
                     scenario_id=args.scenario,
                     openrouter_model_id=args.model,
                     name=args.name,
-                    reasoning={"effort": args.reasoning} if args.reasoning else None,
+                    reasoning={"effort": args.reasoning},
                     prompt_condition=args.prompt_condition,
                 )
             )
@@ -86,6 +88,7 @@ def main() -> None:
                 args.suite,
                 model_id=args.model,
                 prompt_condition=args.prompt_condition,
+                reasoning={"effort": args.reasoning},
             )
         )
         console.print(f"Completed {len(results)} scenario runs.")
@@ -97,6 +100,7 @@ def main() -> None:
                 suite_id=args.suite,
                 model_ids=list(model_ids),
                 prompt_condition=args.prompt_condition,
+                reasoning={"effort": args.reasoning},
                 scenario_ids=args.scenario_ids,
             )
         )

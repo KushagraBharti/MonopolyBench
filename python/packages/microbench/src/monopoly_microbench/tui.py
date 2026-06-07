@@ -30,7 +30,7 @@ CATEGORIES = [
     "POST_TURN_STRATEGY",
 ]
 PROMPT_CONDITION = "live_game"
-DEFAULT_MODEL_ID = "openai/gpt-oss-120b"
+DEFAULT_MODEL_ID = "openai/gpt-5.4-mini"
 FOCUS_AREAS = ["catalog", "actions"]
 ACTION_BUTTONS = [
     ("Run selected", "run_selected", "r"),
@@ -69,7 +69,7 @@ class MicroTuiState:
     input_mode: str | None = None
     input_buffer: str = ""
     display_name: str = "Micro Agent"
-    reasoning_effort: str = "medium"
+    reasoning_effort: str = "low"
     latest_result: dict[str, Any] | None = None
     latest_batch: dict[str, Any] | None = None
     latest_failures: list[dict[str, Any]] = field(default_factory=list)

@@ -947,7 +947,7 @@ or unstable private strategy notes.
 - Require at least 5-10 games per model for initial comparisons.
 - Require more games for publication-quality claims.
 - Use same player names and prompt versions unless explicitly ablated.
-- Record OpenRouter model ids, reasoning settings, temperature, and date.
+- Record OpenRouter model ids, reasoning settings, provider defaults, and date.
 - Report mean, median, standard deviation, min, max, and confidence intervals.
 
 ### Scoring

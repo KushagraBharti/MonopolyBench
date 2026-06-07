@@ -18,7 +18,7 @@ from .baselines import BASELINE_IDS
 from .llm_runner import LlmRunner
 from .openrouter_client import OpenRouterClient
 from .paths import resolve_repo_path, resolve_repo_root
-from .player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name
+from .player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name, normalize_reasoning
 from .research_registry import (
     EXPECTED_LONG_HORIZON_PLAYERS,
     get_model_roster,
@@ -312,7 +312,7 @@ def _seat_actor(actor: dict[str, Any], seat_index: int) -> dict[str, Any]:
         "roster_slot_index": actor["roster_slot_index"],
         "roster_actor_ref": actor["roster_actor_ref"],
     }
-    for key in ("openrouter_model_id", "reasoning", "temperature", "top_p", "baseline_id", "notes"):
+    for key in ("openrouter_model_id", "reasoning", "top_p", "baseline_id", "notes"):
         if key in actor:
             row[key] = actor[key]
     return row
@@ -545,7 +545,7 @@ def _campaign_players(row: dict[str, Any]) -> list[PlayerConfig]:
             model_id = str(actor.get("openrouter_model_id") or "")
             if not model_id:
                 raise ValueError(f"Actor {actor.get('actor_id')} is missing openrouter_model_id.")
-            reasoning = actor.get("reasoning") if isinstance(actor.get("reasoning"), dict) else None
+            reasoning = normalize_reasoning(actor.get("reasoning")) if isinstance(actor.get("reasoning"), dict) else None
         players.append(
             PlayerConfig(
                 player_id=str(actor["player_id"]),

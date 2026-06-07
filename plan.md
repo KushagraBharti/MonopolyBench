@@ -247,7 +247,7 @@ Required roster features:
 - display name,
 - provider route through OpenRouter when known,
 - reasoning settings if configured,
-- temperature/top-p settings if configured by existing code,
+- provider-default sampling settings and top-p settings if configured by existing code,
 - enabled/disabled flag,
 - cost-budget group,
 - notes,

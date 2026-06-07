@@ -15,12 +15,14 @@ def build_summary(run_files: RunFiles) -> dict[str, Any]:
     events = _read_jsonl(run_files.events_path)
     decisions = _read_jsonl(run_files.decisions_path)
     actions = _read_jsonl(run_files.actions_path)
+    players_payload = _read_json(run_files.players_path)
     board_spec = _load_board_spec()
     return _build_summary_from_logs(
         run_id=run_files.run_id,
         events=events,
         decisions=decisions,
         actions=actions,
+        players_payload=players_payload,
         board_spec=board_spec,
     )
 
@@ -31,17 +33,20 @@ def _build_summary_from_logs(
     events: list[dict[str, Any]],
     decisions: list[dict[str, Any]],
     actions: list[dict[str, Any]],
+    players_payload: dict[str, Any],
     board_spec: dict[str, Any],
 ) -> dict[str, Any]:
-    space_key_by_index, price_by_index = _build_space_maps(board_spec)
-    player_name_by_id = _collect_player_names(decisions)
-    player_ids = _collect_player_ids(events, decisions, actions, player_name_by_id)
+    space_key_by_index, price_by_index, house_cost_by_index = _build_space_maps(board_spec)
+    player_name_by_id = _collect_player_names(decisions, players_payload or {})
+    player_ids = _collect_player_ids(events, decisions, actions, player_name_by_id, players_payload or {})
 
     cash_by_player = {player_id: DEFAULT_STARTING_CASH for player_id in player_ids}
     bankrupt_by_player = {player_id: False for player_id in player_ids}
     owned_by_player: dict[str, set[int]] = {player_id: set() for player_id in player_ids}
     owner_by_index: dict[int, str | None] = {}
     mortgaged_by_index: dict[int, bool] = {}
+    houses_by_index: dict[int, int] = {}
+    hotels_by_index: dict[int, int] = {}
     turns_played_by_player = {player_id: 0 for player_id in player_ids}
     turn_first_actor: dict[int, str] = {}
 
@@ -65,6 +70,15 @@ def _build_summary_from_logs(
                 turn_first_actor[turn_index] = player_id
                 if player_id in turns_played_by_player:
                     turns_played_by_player[player_id] += 1
+            continue
+
+        if event_type == "DICE_ROLLED":
+            actor = event.get("actor", {})
+            player_id = actor.get("player_id") if isinstance(actor, dict) else None
+            if isinstance(player_id, str) and turn_index not in turn_first_actor:
+                turn_first_actor[turn_index] = player_id
+                turns_played_by_player.setdefault(player_id, 0)
+                turns_played_by_player[player_id] += 1
             continue
 
         if event_type == "CASH_CHANGED":
@@ -153,6 +167,23 @@ def _build_summary_from_logs(
                 mortgaged_by_index[space_index] = False
             continue
 
+        if event_type in {"HOUSE_BUILT", "HOUSE_SOLD", "HOTEL_BUILT", "HOTEL_SOLD"}:
+            payload = event.get("payload", {})
+            space_index = payload.get("space_index")
+            count = payload.get("count")
+            if isinstance(space_index, int) and isinstance(count, int):
+                if event_type == "HOUSE_BUILT":
+                    houses_by_index[space_index] = max(0, houses_by_index.get(space_index, 0) + count)
+                elif event_type == "HOUSE_SOLD":
+                    houses_by_index[space_index] = max(0, houses_by_index.get(space_index, 0) - count)
+                elif event_type == "HOTEL_BUILT":
+                    hotels_by_index[space_index] = max(0, hotels_by_index.get(space_index, 0) + count)
+                    houses_by_index[space_index] = 0
+                elif event_type == "HOTEL_SOLD":
+                    hotels_by_index[space_index] = max(0, hotels_by_index.get(space_index, 0) - count)
+                    houses_by_index[space_index] = min(4, houses_by_index.get(space_index, 0) + (4 * count))
+            continue
+
         if event_type == "GAME_ENDED":
             payload = event.get("payload", {})
             winner_id = payload.get("winner_player_id")
@@ -165,17 +196,25 @@ def _build_summary_from_logs(
         cash = cash_by_player.get(player_id, DEFAULT_STARTING_CASH)
         owned = owned_by_player.get(player_id, set())
         property_value = 0
+        building_value = 0
         mortgage_value = 0
         for space_index in owned:
             price = price_by_index.get(space_index) or 0
             property_value += price
+            house_cost = house_cost_by_index.get(space_index) or 0
+            building_value += (houses_by_index.get(space_index, 0) * house_cost) + (
+                hotels_by_index.get(space_index, 0) * house_cost * 5
+            )
             if mortgaged_by_index.get(space_index, False):
                 mortgage_value += price // 2
-        net_worth = cash + property_value - mortgage_value
+        net_worth = cash + property_value + building_value - mortgage_value
         players_summary[player_id] = {
             "name": player_name_by_id.get(player_id),
             "cash": cash,
             "net_worth_estimate": net_worth,
+            "property_value_estimate": property_value,
+            "building_value_estimate": building_value,
+            "mortgage_liability_estimate": mortgage_value,
             "bankrupt": bankrupt_by_player.get(player_id, False),
             "turns_played": turns_played_by_player.get(player_id, 0),
         }
@@ -260,8 +299,15 @@ def _median(values: list[int]) -> int:
     return int((sorted_vals[mid - 1] + sorted_vals[mid]) / 2)
 
 
-def _collect_player_names(decisions: list[dict[str, Any]]) -> dict[str, str]:
+def _collect_player_names(decisions: list[dict[str, Any]], players_payload: dict[str, Any]) -> dict[str, str]:
     names: dict[str, str] = {}
+    for entry in _list(players_payload.get("players")):
+        if not isinstance(entry, dict):
+            continue
+        player_id = entry.get("player_id")
+        name = entry.get("name")
+        if isinstance(player_id, str) and isinstance(name, str):
+            names[player_id] = name
     for entry in decisions:
         player_id = entry.get("player_id")
         player_name = entry.get("player_name")
@@ -275,8 +321,15 @@ def _collect_player_ids(
     decisions: list[dict[str, Any]],
     actions: list[dict[str, Any]],
     player_name_by_id: dict[str, str],
+    players_payload: dict[str, Any],
 ) -> list[str]:
     ids: set[str] = set(player_name_by_id.keys())
+    for entry in _list(players_payload.get("players")):
+        if not isinstance(entry, dict):
+            continue
+        player_id = entry.get("player_id")
+        if isinstance(player_id, str):
+            ids.add(player_id)
     for entry in decisions:
         player_id = entry.get("player_id")
         if isinstance(player_id, str):
@@ -323,6 +376,20 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return entries
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
 def _resolve_repo_root() -> Path:
     start = Path(__file__).resolve()
     current = start if start.is_dir() else start.parent
@@ -343,9 +410,15 @@ def _load_board_spec() -> dict[str, Any]:
     return json.loads(board_path.read_text(encoding="utf-8"))
 
 
-def _build_space_maps(board_spec: dict[str, Any]) -> tuple[dict[int, str], dict[int, int]]:
+def _build_space_maps(board_spec: dict[str, Any]) -> tuple[dict[int, str], dict[int, int], dict[int, int]]:
     space_key_by_index: dict[int, str] = {}
     price_by_index: dict[int, int] = {}
+    house_cost_by_index: dict[int, int] = {}
+    house_cost_by_group = {
+        str(key): int(value)
+        for key, value in (board_spec.get("house_cost_by_group") or {}).items()
+        if isinstance(value, (int, float))
+    }
     for space in board_spec.get("spaces", []):
         if not isinstance(space, dict):
             continue
@@ -354,4 +427,7 @@ def _build_space_maps(board_spec: dict[str, Any]) -> tuple[dict[int, str], dict[
         price = space.get("price")
         space_key_by_index[index] = _normalize_space_key(name)
         price_by_index[index] = int(price) if price is not None else 0
-    return space_key_by_index, price_by_index
+        group = space.get("color_group") or space.get("group")
+        if isinstance(group, str):
+            house_cost_by_index[index] = house_cost_by_group.get(group, 0)
+    return space_key_by_index, price_by_index, house_cost_by_index

@@ -12,7 +12,13 @@ from typing import Any, Awaitable, Callable
 from monopoly_arena import OpenRouterClient, build_single_player_config
 from monopoly_arena.decision_resolver import SharedDecisionResolver
 from monopoly_arena.prompting import PromptMemory, build_space_key_by_index
-from monopoly_telemetry import write_usage_artifacts
+from monopoly_telemetry import (
+    build_experiment_manifest,
+    build_review_cost_aggregate,
+    usage_calls_jsonl,
+    write_experiment_review_artifacts,
+    write_usage_artifacts,
+)
 from monopoly_telemetry.writer_jsonl import append_jsonl
 
 from .artifacts import batch_dir, compact_result_for_jsonl, micro_run_files
@@ -85,6 +91,20 @@ async def run_scenario(
         run_files.write_decision(entry)
 
     outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
+    run_files.write_decision(
+        resolver.build_decision_log_entry(
+            decision=decision,
+            player_config=player_config,
+            phase="decision_resolved",
+            action=outcome.action,
+            attempts=outcome.attempts,
+            retry_used=outcome.retry_used,
+            fallback_used=outcome.fallback_used,
+            fallback_reason=outcome.fallback_reason,
+            applied=False,
+            sequence_meta=outcome.sequence_meta,
+        )
+    )
     close = getattr(resolver._openrouter, "aclose", None)
     if close is not None:
         maybe = close()
@@ -171,6 +191,13 @@ async def run_scenario(
             "reason": "micro_run_resolver_closed_before_metadata_snapshot",
         },
     )
+    write_experiment_review_artifacts(
+        run_files,
+        benchmark_tracks=["micro_decision_suite"],
+        models=[player_config.to_status()],
+        reasoning_policy=player_config.reasoning,
+        batch_type="micro_single",
+    )
     run_files.write_artifact_manifest()
     return result
 
@@ -223,8 +250,24 @@ async def run_batch(
         "model_ids": model_ids,
         "prompt_condition": prompt_condition,
         "scenario_ids": selected,
+        "reasoning": reasoning,
     }
     (out_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=True), encoding="utf-8")
+    (out_dir / "experiment_manifest.json").write_text(
+        json.dumps(
+            build_experiment_manifest(
+                experiment_id=batch_id,
+                benchmark_tracks=["micro_suite"],
+                models=[{"openrouter_model_id": model_id, "reasoning": reasoning} for model_id in model_ids],
+                reasoning_policy=reasoning,
+                batch_type="micro_suite",
+                run_count=len(model_ids) * len(selected),
+            ),
+            indent=2,
+            ensure_ascii=True,
+        ),
+        encoding="utf-8",
+    )
     failures_path = out_dir / "failures.jsonl"
     result_items: list[dict[str, Any]] = []
     model_targets = model_ids
@@ -249,6 +292,7 @@ async def run_batch(
             result_items.append(result)
             append_jsonl(out_dir / "results.jsonl", compact_result_for_jsonl(result))
     leaderboard = build_leaderboard(result_items)
+    _write_batch_usage_artifacts(out_dir, batch_id=batch_id, results=result_items, failures=[])
     (out_dir / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2, ensure_ascii=True), encoding="utf-8")
     (out_dir / "category_breakdown.json").write_text(
         json.dumps(leaderboard.get("category_breakdown", {}), indent=2, ensure_ascii=True),
@@ -279,9 +323,25 @@ async def run_batch_with_progress(
         "model_ids": [model_id],
         "prompt_condition": prompt_condition,
         "scenario_ids": selected,
+        "reasoning": reasoning,
         "continue_on_failure": True,
     }
     (out_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=True), encoding="utf-8")
+    (out_dir / "experiment_manifest.json").write_text(
+        json.dumps(
+            build_experiment_manifest(
+                experiment_id=batch_id,
+                benchmark_tracks=["micro_suite"],
+                models=[{"openrouter_model_id": model_id, "reasoning": reasoning}],
+                reasoning_policy=reasoning,
+                batch_type="micro_suite",
+                run_count=len(selected),
+            ),
+            indent=2,
+            ensure_ascii=True,
+        ),
+        encoding="utf-8",
+    )
     result_items: list[dict[str, Any]] = []
     failure_items: list[dict[str, Any]] = []
     await _emit_progress(
@@ -350,6 +410,7 @@ async def run_batch_with_progress(
             },
         )
     leaderboard = build_leaderboard(result_items)
+    _write_batch_usage_artifacts(out_dir, batch_id=batch_id, results=result_items, failures=failure_items)
     (out_dir / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2, ensure_ascii=True), encoding="utf-8")
     (out_dir / "category_breakdown.json").write_text(
         json.dumps(leaderboard.get("category_breakdown", {}), indent=2, ensure_ascii=True),
@@ -490,6 +551,59 @@ def build_leaderboard(results: list[dict[str, Any]]) -> dict[str, Any]:
         )
     rows.sort(key=lambda row: float(row["average_score"]), reverse=True)
     return {"rows": rows, "category_breakdown": category_breakdown}
+
+
+def _write_batch_usage_artifacts(
+    out_dir: Path,
+    *,
+    batch_id: str,
+    results: list[dict[str, Any]],
+    failures: list[dict[str, Any]],
+) -> None:
+    entries: list[dict[str, Any]] = []
+    for index, result in enumerate(results):
+        run_id = str(result.get("run_id") or "")
+        entries.append(
+            {
+                "run_index": index,
+                "run_id": run_id,
+                "status": "completed",
+                "run_dir": str(out_dir.parent.parent / "micro" / run_id),
+                "scenario_id": result.get("scenario_id"),
+                "model_id": _model_id_from_result(result),
+                "result": result,
+            }
+        )
+    offset = len(entries)
+    for index, failure in enumerate(failures, start=offset):
+        entries.append(
+            {
+                "run_index": index,
+                "run_id": failure.get("run_id"),
+                "status": "failed",
+                "run_dir": failure.get("run_dir"),
+                "scenario_id": failure.get("scenario_id"),
+                "model_id": failure.get("model"),
+                "error": failure.get("error"),
+            }
+        )
+    aggregate = build_review_cost_aggregate(batch_id=batch_id, batch_type="micro_suite", entries=entries)
+    (out_dir / "review_cost_aggregate.json").write_text(
+        json.dumps(aggregate, indent=2, ensure_ascii=True),
+        encoding="utf-8",
+    )
+    (out_dir / "review_cost_calls.jsonl").write_text(
+        "".join(json.dumps(row, separators=(",", ":"), ensure_ascii=True) + "\n" for row in usage_calls_jsonl(aggregate)),
+        encoding="utf-8",
+    )
+
+
+def _model_id_from_result(result: dict[str, Any]) -> str | None:
+    model = result.get("model")
+    if not isinstance(model, dict):
+        return None
+    value = model.get("openrouter_model_id")
+    return str(value) if isinstance(value, str) else None
 
 
 def generate_micro_run_id(*, scenario_id: str, model_id: str, prompt_condition: str = "live_game") -> str:

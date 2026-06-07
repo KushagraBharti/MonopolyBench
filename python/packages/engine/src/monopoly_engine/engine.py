@@ -3137,10 +3137,29 @@ class Engine:
     def _determine_winner(self) -> str:
         active_players = [player for player in self.state.players if not player.bankrupt]
         if active_players:
-            winner = max(active_players, key=lambda player: player.cash)
+            winner = max(active_players, key=self._winner_score)
             return winner.player_id
-        winner = max(self.state.players, key=lambda player: player.cash)
+        winner = max(self.state.players, key=self._winner_score)
         return winner.player_id
+
+    def _winner_score(self, player: PlayerState) -> tuple[int, int, int]:
+        property_value = 0
+        building_value = 0
+        mortgage_liability = 0
+        for space in self.state.board:
+            if space.owner_id != player.player_id:
+                continue
+            price = int(space.price or 0)
+            property_value += price
+            if space.mortgaged:
+                mortgage_liability += price // 2
+            if space.group:
+                house_cost = int(HOUSE_COST_BY_GROUP.get(space.group, 0))
+                building_value += int(space.houses) * house_cost
+                if space.hotel:
+                    building_value += HOTEL_HOUSE_EQUIV * house_cost
+        net_worth = player.cash + property_value + building_value - mortgage_liability
+        return net_worth, player.cash, property_value + building_value
 
     def _validate_action(self, action: dict[str, Any], decision: DecisionPoint) -> str | None:
         if action.get("schema_version") != "v1":

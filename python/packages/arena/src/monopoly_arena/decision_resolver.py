@@ -212,7 +212,7 @@ class SharedDecisionResolver:
                 prompt_payload_raw=prompt_bundle.user_content,
             )
         )
-        tool_choice = "required"
+        tool_choice = "auto"
         parallel_tool_calls = False
         create_kwargs: dict[str, Any] = {
             "model": player_config.openrouter_model_id,
@@ -223,6 +223,8 @@ class SharedDecisionResolver:
         }
         if player_config.reasoning is not None:
             create_kwargs["reasoning"] = player_config.reasoning
+        if player_config.provider is not None:
+            create_kwargs["provider"] = player_config.provider
         result = await self._openrouter.create_chat_completion(**create_kwargs)
         response_end_ms = _now_ms()
         result = await self._with_generation_metadata(result)
@@ -233,6 +235,7 @@ class SharedDecisionResolver:
             tool_choice=tool_choice,
             parallel_tool_calls=parallel_tool_calls,
             reasoning=player_config.reasoning,
+            provider=player_config.provider,
         )
         self._write_quality_artifacts(
             decision_id=decision["decision_id"],
@@ -293,6 +296,8 @@ class SharedDecisionResolver:
             }
             if player_config.reasoning is not None:
                 retry_kwargs["reasoning"] = player_config.reasoning
+            if player_config.provider is not None:
+                retry_kwargs["provider"] = player_config.provider
             retry_result = await self._openrouter.create_chat_completion(**retry_kwargs)
             retry_end_ms = _now_ms()
             retry_result = await self._with_generation_metadata(retry_result)
@@ -303,6 +308,7 @@ class SharedDecisionResolver:
                 tool_choice=tool_choice,
                 parallel_tool_calls=parallel_tool_calls,
                 reasoning=player_config.reasoning,
+                provider=player_config.provider,
             )
             self._write_quality_artifacts(
                 decision_id=decision["decision_id"],
@@ -835,8 +841,9 @@ class SharedDecisionResolver:
         tool_choice: str | dict[str, Any] | None,
         parallel_tool_calls: bool | None,
         reasoning: dict[str, Any] | None,
+        provider: dict[str, Any] | None,
     ) -> str:
-        payload: dict[str, Any] = {"model": model, "messages": messages, "temperature": 0.0}
+        payload: dict[str, Any] = {"model": model, "messages": messages}
         if tools is not None:
             payload["tools"] = tools
         if tool_choice is not None:
@@ -845,6 +852,8 @@ class SharedDecisionResolver:
             payload["parallel_tool_calls"] = parallel_tool_calls
         if reasoning is not None:
             payload["reasoning"] = reasoning
+        if provider is not None:
+            payload["provider"] = provider
         return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
 
     def _write_quality_artifacts(

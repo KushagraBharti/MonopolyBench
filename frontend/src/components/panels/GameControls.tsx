@@ -7,6 +7,7 @@ export const GameControls = () => {
   const [loadingAction, setLoadingAction] = useState<null | 'start' | 'stop' | 'pause' | 'resume'>(null);
   const [pendingStart, setPendingStart] = useState(false);
   const [pendingResume, setPendingResume] = useState(false);
+  const [maxTurns, setMaxTurns] = useState(50);
   const pendingStartRef = useRef(false);
   const pendingResumeRef = useRef(false);
   const runStatus = useGameStore((state) => state.runStatus);
@@ -23,7 +24,7 @@ export const GameControls = () => {
       await fetch(`${apiBase}/run/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seed: Date.now() % 100000 }),
+        body: JSON.stringify({ seed: Date.now() % 100000, max_turns: maxTurns }),
       });
     } catch (e) {
       console.error(e);
@@ -88,6 +89,22 @@ export const GameControls = () => {
 
   return (
     <div className="flex flex-col gap-1.5">
+      <label className="flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-[0.16em] text-gray-500">
+        <span>Max Turns</span>
+        <input
+          type="number"
+          min={1}
+          max={500}
+          step={1}
+          value={maxTurns}
+          disabled={isLoading || isRunning}
+          onChange={(event) => {
+            const value = Number.parseInt(event.target.value, 10);
+            setMaxTurns(Number.isFinite(value) ? Math.max(1, Math.min(500, value)) : 50);
+          }}
+          className="h-7 w-16 rounded-[2px] border-[1.5px] border-black bg-white px-2 text-right text-[11px] font-black text-black shadow-neo-sm outline-none disabled:bg-gray-100 disabled:text-gray-400"
+        />
+      </label>
       <div className="flex items-center gap-1.5">
         <button
           onClick={handleStart}
