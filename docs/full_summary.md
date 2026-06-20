@@ -1,5 +1,7 @@
 # Handoff Summary — MonopolyBench / Monopoly LLM Benchmark Research Project
 
+This is the broad project context record: the accumulated project history, research thinking, implementation context, and prior handoff material. It is intended to be updated periodically. Some details may lag the current implementation between updates, so treat the canonical root docs and current artifacts as authoritative when they disagree.
+
 ## 0. Executive State of the Project
 
 The conversation centered around turning a working **Monopoly LLM Benchmark** repository into a serious research platform and paper project. The project began as a deterministic, inspectable, multi-agent Monopoly game where LLMs play under strict rules. Over the conversation, the framing evolved from “cool LLMs playing Monopoly” into a much sharper research thesis:
