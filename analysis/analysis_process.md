@@ -2,11 +2,60 @@
 
 This file is the canonical repeatable workflow for analyzing a MonopolyBench run after it finishes. `analysis.md` defines what signals matter; this file defines how to process a run, what to generate, what to review manually, and what quality gates must pass before the run can support research claims.
 
+Automation status lives in `analysis_automated.md`. This process file describes the ideal end-to-end workflow; the automation file describes which parts are already scripted and how to run them.
+
 The workflow has three principles:
 
 1. Integrity before interpretation. A run with broken replay, missing prompts, orphan calls, mismatched actions, or unclear usage semantics is not ready for model-behavior claims.
 2. Descriptive before inferential. One saved game can support a case study and failure analysis; it cannot support a leaderboard.
 3. Manual review after automated triage. The scripts should find the important windows, but claims about deception, collusion, promise breach, and intent-like behavior require evidence-linked review.
+
+## Process At A Glance
+
+The short version is:
+
+1. Freeze the run exactly as played.
+2. Check that every artifact needed for inspection exists.
+3. Verify state replay before interpreting model behavior.
+4. Reconcile every model call, attempt, retry, fallback, token count, and cost row.
+5. Generate standardized tables, plots, reports, coverage files, and share zip.
+6. Read the run at three levels: trajectory, mechanism, and decision.
+7. Build a manual review queue from trades, bankruptcies, high-cost calls, invalid chains, and communication risks.
+8. Label only what the evidence supports.
+9. Write case studies from exact event/decision/message windows.
+10. State claims with the right strength: run observation, reviewed case study, replicated pattern, or paper-level result.
+
+The most common mistake is jumping straight from winner and cost totals to a model ranking. This process intentionally prevents that. A full game is a trajectory, not a single row.
+
+## Analyst Reading Order
+
+A serious run should be read in layers. Each layer changes what the next layer means.
+
+| Pass | Question | Primary files |
+|---|---|---|
+| Integrity pass | Can this run be trusted as an artifact? | `replay_report.json`, `state_replay_report.json`, `artifact_replay_report.json`, `artifact_manifest.json`, `events.jsonl`, `actions.jsonl`, `decisions.jsonl` |
+| Endpoint pass | Who survived, who won, and why did the game end? | `summary.json`, final `state/` snapshot, `scorecard.json`, `scorecard_players.json` |
+| Trajectory pass | How did cash, net worth, board control, and development move over time? | `state/`, `timeline.json`, generated state/property tables and plots |
+| Mechanism pass | Which trades, auctions, rent shocks, mortgages, and bankruptcies moved the game? | `events.jsonl`, `asset_flow.jsonl`, `cash_flow.jsonl`, `auction_threads.jsonl`, `negotiation_threads.jsonl` |
+| Decision pass | What did each model see, choose, and say at important moments? | `decisions.jsonl`, `actions.jsonl`, `prompts/`, `quality_check/` |
+| Cost/reliability pass | What did each call cost, how long did it take, and did it fail or retry? | `usage_attempts.jsonl`, `usage_decisions.jsonl`, `usage.json`, `cost_report.json` |
+| Review pass | Which windows need human labels or case-study treatment? | `review_queue.jsonl`, `trace_findings.jsonl`, `failure_findings.jsonl`, prompt/response files |
+
+Do not read prompt/response text first. It is too easy to build a narrative around model prose before knowing whether the action mattered economically.
+
+## Claim Strength Levels
+
+Use these levels when deciding how strongly to phrase a finding.
+
+| Level | Meaning | Example wording |
+|---|---|---|
+| Observation | Descriptive fact from one complete run. | "In this run, GPT 5.5 completed and developed orange before the final bankruptcy cascade." |
+| Reviewed case | Observation plus evidence-linked manual review. | "This accepted trade is a reviewed case of a high-leverage monopoly-completion deal." |
+| Hypothesis | Repeated or plausible pattern, not yet balanced/replicated. | "These runs suggest trading frequency may separate winners from passive asset holders." |
+| Replicated pattern | Seen across seed/seat blocks with uncertainty reported. | "Across seed blocks, Model A had higher net-worth AUC under this roster." |
+| Paper claim | Replicated, quality-gated, caveated, and backed by released artifacts. | "Under the declared roster and prompt policy, Model A showed stronger liquidity discipline by the preregistered metric." |
+
+If a claim depends on manual labels, it is not ready until label provenance, reviewer identity or masking policy, confidence, and adjudication status are recorded.
 
 ## Inputs And Outputs
 
@@ -67,7 +116,7 @@ analysis/
     negotiation_events.csv
     manual_review_queue.csv
     metric_provenance.csv
-  figures/
+  plots/
     net_worth_trajectory.png
     cash_trajectory.png
     asset_composition.png
@@ -103,7 +152,7 @@ analysis/
     source_artifact_hashes.json
 ```
 
-For early runs, some oracle-dependent files may be partial. They should still exist if possible, with missing columns set to null and provenance explaining what could not yet be computed.
+For early runs, some oracle-dependent files may be partial. They should still exist if possible, with missing columns set to null and provenance explaining what could not yet be computed. The current automated standardizer uses `plots/`; if later publication exports use `figures/`, the report should state whether those files are regenerated from the same tables or are paper-specific derived figures.
 
 ## Phase 0: Freeze The Run
 
@@ -116,6 +165,40 @@ Do this before generating new reports.
 5. Create `analysis_manifest.json` with analysis script versions, metric-definition versions, input artifact hashes, generated file hashes, and analyst notes.
 
 The freeze step prevents the common failure where graphs, summaries, and saved-game files drift apart.
+
+### Remote-Run Intake
+
+If a game was played on another laptop and transferred through Git, treat the pulled artifacts as the canonical run. Do not re-run model calls to "reproduce" the game. Live provider calls are not the reproducibility surface; the committed run artifacts are.
+
+Remote intake checklist:
+
+1. Pull the commit containing the run artifacts.
+2. Identify the raw run folder: `runs/<run_id>/`.
+3. Identify the quality-check folder: `quality_check/<run_id>/`.
+4. Confirm that the run folder contains at least `events.jsonl`, `actions.jsonl`, `decisions.jsonl`, `state/`, `prompts/`, `run_config.json`, and `players.json`.
+5. Confirm that quality-check files exist for model decisions where prompt/response audit is needed.
+6. Create or refresh the saved-game folder with `run/` and `quality_check/`.
+7. Run the automated standardizer from `analysis_automated.md`.
+8. Record the source commit and any known differences between the running laptop and the analyzing laptop.
+
+The correct question after a remote run is not "Would my laptop have generated identical files?" It is "Do the committed artifacts fully describe the game that was actually played, and do they replay/analyze correctly?"
+
+### Freeze Notes To Preserve
+
+Every serious saved game should have a short analyst note, either in the analysis report or manifest, covering:
+
+| Field | Why it matters |
+|---|---|
+| Run origin | Local run, collaborator laptop, cloud runner, or copied archive. |
+| Commit at run time | Connects behavior to engine/prompt/artifact code. |
+| Commit at analysis time | Connects generated plots/tables to analysis code. |
+| Model roster | Exact model slugs and display names. |
+| Routing policy | Provider restriction, fallback policy, and observed provider if available. |
+| Reasoning policy | Requested effort and provider-native semantics if known. |
+| Temperature/max-token policy | Whether these were omitted or sent. |
+| Prompt policy | Persona/default prompt status and prompt hash if available. |
+| Endpoint policy | Bankruptcy winner or turn-limit winner semantics. |
+| Known defects | Replay mismatch, missing usage, artifact gaps, UI issues, or provider anomalies. |
 
 ## Phase 1: Artifact Completeness Gate
 
@@ -158,6 +241,22 @@ Treat these as blockers for serious research claims:
 
 If any blocker exists, the analysis report should lead with the blocker and avoid model-behavior conclusions beyond what remains inspectable.
 
+### Non-Blocking But Reportable Issues
+
+Some issues do not invalidate the game but should be visible in the report:
+
+| Issue | How to report it |
+|---|---|
+| Artifact replay fails while state replay passes | State that game-state conclusions are still supported, but strict artifact replay found metadata/event-log drift. |
+| Missing reasoning tokens for one provider | Preserve missingness; do not impute. Compare models with a caveat. |
+| Missing pricing snapshot | Report observed usage/cost if available and mark pricing provenance incomplete. |
+| Missing quality-check text for some calls | Use JSON prompt artifacts if present; mark human-readability coverage incomplete. |
+| Manual review not done | Keep deception/collusion/promise claims as candidates, not labels. |
+| Analysis generated on a later commit | Record analysis commit separately from run commit. |
+| Saved-game folder contains legacy files | Archive or mark them so canonical and legacy outputs are not mixed. |
+
+The report should distinguish "run invalid," "run valid but incomplete for a claim," and "run valid with caveats." These are different outcomes.
+
 ## Phase 2: Replay And State Verification
 
 Replay is the proof that the engine transition surface is auditable.
@@ -172,6 +271,18 @@ Replay is the proof that the engine transition surface is auditable.
 8. If state replay fails due to a verifier bug rather than a run bug, fix the verifier and rerun before publishing the run.
 
 Do not treat screenshots, UI state, or summary files as replay proof. Events, actions, and canonical snapshots are authoritative.
+
+### Replay Interpretation
+
+Use the split replay reports this way:
+
+| Report | What it answers | Publication meaning |
+|---|---|---|
+| `state_replay_report.json` | Did the engine state trajectory replay from the recorded actions after state-relevant canonicalization? | This is the main determinism gate for game-state claims. |
+| `artifact_replay_report.json` | Did the full event stream, including LLM observation events and strict metadata, match? | This is the strict artifact-log gate. Failures may matter for prompt/response or metadata claims. |
+| `replay_report.json` | Aggregate status and pointers to the two detailed reports. | Use as a summary only; inspect child reports before interpreting failures. |
+
+If state replay passes and artifact replay fails, do not discard the run automatically. Instead identify whether the mismatch is in LLM observation metadata, event sequencing, fallback metadata, prompt/response emission, or a true state mutation. Only the last category directly threatens game-state conclusions.
 
 ## Phase 3: Call And Usage Reconciliation
 
@@ -240,6 +351,21 @@ Reasoning-token handling:
 3. Add `derived_input_plus_output`.
 4. Add a consistency flag when totals do not match the declared semantics.
 5. Report reasoning tokens separately, but do not add them to output tokens unless semantics say they are additional.
+
+### Cost Review Windows
+
+After reconciliation, inspect these windows manually:
+
+1. Top 10 costliest calls overall.
+2. Top 10 output-token calls overall.
+3. Top 10 reasoning-token calls overall.
+4. Top 10 slowest calls overall.
+5. Every call with missing usage.
+6. Every call with retry, fallback, invalid schema, illegal action, or empty response.
+7. Every high-cost call during negotiation, bankruptcy, auction, or trade resolution.
+8. First and last calls for each model, because setup/endgame prompts often reveal systematic context burden.
+
+For each outlier, record whether the call was strategically meaningful, merely verbose, provider-abnormal, invalid, or a consequence of a difficult state.
 
 ## Phase 4: Metric Definitions
 
@@ -829,3 +955,36 @@ Before a run is used in a paper figure or table, verify:
 10. Raw run artifacts, analysis tables, figures, manifests, and reports are saved together.
 
 If any gate fails, the run can still be useful for debugging or a qualified case study, but not for an unqualified benchmark result.
+
+## Completion Definition
+
+A full-game analysis is complete only when the following are true:
+
+1. The raw run artifacts are frozen and preserved in a saved-game folder.
+2. The automated analysis has been regenerated after the final artifact state.
+3. The analysis zip corresponds to the current `analysis/` folder.
+4. Replay status has been inspected, not merely assumed.
+5. Cost and token tables reconcile with the aggregate usage report.
+6. Winner, endpoint, terminal net worth, and bankruptcy status agree across summary, scorecard, and final snapshot.
+7. The major trajectory plots have been reviewed for obvious scaling, truncation, or missing-player issues.
+8. Top outlier calls have been inspected in prompt/response form.
+9. Trades, auctions, bankruptcy windows, and communication-risk windows have been queued or reviewed.
+10. Any manual labels used in prose have source IDs and confidence.
+11. Every figure/table cited in the final report exists in the saved-game analysis folder.
+12. Every conclusion is phrased at the correct strength for the evidence.
+
+Completion does not mean every possible oracle, branch, or cross-run analysis has been done. It means the run has been processed to the level required for its intended use: debugging, demo, case study, or paper figure.
+
+## Analysis Modes
+
+Not every run needs the same depth. Declare the mode before writing conclusions.
+
+| Mode | Required work | Appropriate use |
+|---|---|---|
+| Smoke audit | Basic artifact presence, summary, replay status, top usage/cost, obvious failures. | Checking that a short run worked. |
+| Descriptive run report | Full automated analysis, trajectory review, cost/reliability review, mechanism summary. | Sharing one run internally. |
+| Case-study run | Descriptive report plus manual review of selected windows and source-linked narrative. | Paper qualitative examples. |
+| Benchmark run | Case-study work plus balanced replications, seat/seed controls, and uncertainty intervals. | Model comparison claims. |
+| Methodology validation | Benchmark run plus artifact completeness, replay, prompt preservation, and schema validation evidence. | Dataset/benchmark paper claims. |
+
+The same saved game can start as a smoke audit and later become a case-study run, but the report must say which mode it currently satisfies.
