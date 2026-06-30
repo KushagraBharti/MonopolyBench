@@ -194,8 +194,14 @@ def test_batch_runner_writes_index_and_summaries(tmp_path: Path) -> None:
         assert (run_dir / "scorecard.json").exists()
         assert (run_dir / "usage.json").exists()
         assert (run_dir / "replay_report.json").exists()
+        assert (run_dir / "state_replay_report.json").exists()
+        assert (run_dir / "artifact_replay_report.json").exists()
         assert (run_dir / "trace_summary.json").exists()
         assert (run_dir / "failure_summary.json").exists()
+
+    batch_replay_report = json.loads((batch_dir / "replay_report.json").read_text(encoding="utf-8"))
+    assert "state_status_counts" in batch_replay_report
+    assert "artifact_status_counts" in batch_replay_report
 
     leaderboard = json.loads((batch_dir / "leaderboard.json").read_text(encoding="utf-8"))
     assert leaderboard["ranking_modes"]["primary"] == "winner_then_average_final_net_worth"

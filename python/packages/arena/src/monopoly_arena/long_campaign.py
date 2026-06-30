@@ -570,6 +570,8 @@ def _completed_run_exists(run_dir: Path) -> bool:
         "scorecard.json",
         "scorecard_players.json",
         "replay_report.json",
+        "state_replay_report.json",
+        "artifact_replay_report.json",
         "trace_summary.json",
         "failure_summary.json",
     ]
@@ -593,6 +595,8 @@ def _campaign_result_entry(
     usage = _read_json(run_dir / "usage.json")
     cost_report = _read_json(run_dir / "cost_report.json")
     replay_report = _read_json(run_dir / "replay_report.json")
+    state_replay_report = _read_json(run_dir / "state_replay_report.json")
+    artifact_replay_report = _read_json(run_dir / "artifact_replay_report.json")
     trace_summary = _read_json(run_dir / "trace_summary.json")
     failure_summary = _read_json(run_dir / "failure_summary.json")
     run_metrics = _dict(scorecard.get("run")) if scorecard else {}
@@ -639,6 +643,8 @@ def _campaign_result_entry(
         "usage": usage,
         "cost_report": cost_report,
         "replay_report": _compact_replay_report(replay_report),
+        "state_replay_report": _compact_replay_report(state_replay_report),
+        "artifact_replay_report": _compact_replay_report(artifact_replay_report),
         "trace_summary": trace_summary,
         "failure_summary": failure_summary,
         "artifact_counts": {
@@ -1160,15 +1166,25 @@ def _failure_taxonomy_aggregate(run_entries: list[dict[str, Any]]) -> dict[str, 
 
 def _replay_verification_aggregate(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
+    state_status_counts: dict[str, int] = {}
+    artifact_status_counts: dict[str, int] = {}
     mismatch_count = 0
     for entry in run_entries:
         report = _dict(entry.get("replay_report"))
         status = str(report.get("status") or "missing")
+        state_report = _dict(entry.get("state_replay_report"))
+        artifact_report = _dict(entry.get("artifact_replay_report"))
+        state_status = str(report.get("state_status") or state_report.get("status") or "missing")
+        artifact_status = str(report.get("artifact_status") or artifact_report.get("status") or "missing")
         _increment(status_counts, status)
+        _increment(state_status_counts, state_status)
+        _increment(artifact_status_counts, artifact_status)
         if status not in {"ok", "passed"}:
             mismatch_count += 1 if report else 0
     return {
         "status_counts": status_counts,
+        "state_status_counts": state_status_counts,
+        "artifact_status_counts": artifact_status_counts,
         "non_ok_report_count": mismatch_count,
     }
 
@@ -1343,6 +1359,8 @@ def _paper_report_markdown(
         _markdown_table(
             [
                 ("Status counts", statistics["replay_verification"]["status_counts"]),
+                ("State status counts", statistics["replay_verification"]["state_status_counts"]),
+                ("Artifact status counts", statistics["replay_verification"]["artifact_status_counts"]),
                 ("Non-ok reports", statistics["replay_verification"]["non_ok_report_count"]),
             ],
             headers=("Metric", "Value"),
@@ -1538,6 +1556,11 @@ def _compact_replay_report(report: dict[str, Any]) -> dict[str, Any]:
         return {}
     return {
         "status": report.get("status"),
+        "state_status": report.get("state_status"),
+        "artifact_status": report.get("artifact_status"),
+        "comparison_scope": report.get("comparison_scope"),
+        "canonicalization": report.get("canonicalization"),
+        "first_mismatch_index": report.get("first_mismatch_index"),
         "matched": report.get("matched"),
         "mismatch_count": report.get("mismatch_count"),
         "diff_path": report.get("diff_path"),

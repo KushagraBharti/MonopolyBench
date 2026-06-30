@@ -64,7 +64,8 @@ def replay_actions(
         action_payload = entry.get("action") if isinstance(entry.get("action"), dict) else entry
         if not isinstance(action_payload, dict):
             raise ValueError("Invalid action payload for replay.")
-        _, action_events, _, _ = engine.apply_action(action_payload)
+        decision_meta = entry.get("decision_meta") if isinstance(entry.get("decision_meta"), dict) else None
+        _, action_events, _, _ = engine.apply_action(action_payload, decision_meta=decision_meta)
         events.extend(action_events)
         if engine.is_game_over():
             break

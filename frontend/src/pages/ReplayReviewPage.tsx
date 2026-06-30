@@ -166,6 +166,8 @@ export const ReplayReviewPage = () => {
   const [reviewLabels, setReviewLabels] = useState<ReviewLabel[]>([]);
   const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null);
   const [replayReport, setReplayReport] = useState<Record<string, unknown> | null>(null);
+  const [stateReplayReport, setStateReplayReport] = useState<Record<string, unknown> | null>(null);
+  const [artifactReplayReport, setArtifactReplayReport] = useState<Record<string, unknown> | null>(null);
   const [replayDiff, setReplayDiff] = useState<Record<string, unknown> | null>(null);
   const [eventHashes, setEventHashes] = useState<Record<string, unknown> | null>(null);
   const [snapshots, setSnapshots] = useState<SnapshotIndexEntry[]>([]);
@@ -198,6 +200,8 @@ export const ReplayReviewPage = () => {
       setStatus('Loading replay artifacts...');
       const [
         replayReportArtifact,
+        stateReplayReportArtifact,
+        artifactReplayReportArtifact,
         replayDiffArtifact,
         eventHashesArtifact,
         replayStepsArtifact,
@@ -210,6 +214,8 @@ export const ReplayReviewPage = () => {
         summary,
       ] = await Promise.all([
         safeLoadArtifact<Record<string, unknown>>(runId, 'replay_report'),
+        safeLoadArtifact<Record<string, unknown>>(runId, 'state_replay_report'),
+        safeLoadArtifact<Record<string, unknown>>(runId, 'artifact_replay_report'),
         safeLoadArtifact<Record<string, unknown>>(runId, 'replay_diff'),
         safeLoadArtifact<Record<string, unknown>>(runId, 'event_hashes'),
         safeLoadArtifact<ReplayStep>(runId, 'replay_steps'),
@@ -224,6 +230,8 @@ export const ReplayReviewPage = () => {
       if (!active) return;
       const loadedSteps = asRows<ReplayStep>(replayStepsArtifact);
       setReplayReport(asContent<Record<string, unknown>>(replayReportArtifact));
+      setStateReplayReport(asContent<Record<string, unknown>>(stateReplayReportArtifact));
+      setArtifactReplayReport(asContent<Record<string, unknown>>(artifactReplayReportArtifact));
       setReplayDiff(asContent<Record<string, unknown>>(replayDiffArtifact));
       setEventHashes(asContent<Record<string, unknown>>(eventHashesArtifact));
       setSteps(loadedSteps);
@@ -526,7 +534,13 @@ export const ReplayReviewPage = () => {
             <DecisionPanel step={selectedStep} bundle={decisionBundle} snapshot={snapshot} />
           ) : null}
           {tab === 'diff' ? (
-            <DiffPanel replayReport={replayReport} replayDiff={replayDiff} eventHashes={eventHashes} />
+            <DiffPanel
+              replayReport={replayReport}
+              stateReplayReport={stateReplayReport}
+              artifactReplayReport={artifactReplayReport}
+              replayDiff={replayDiff}
+              eventHashes={eventHashes}
+            />
           ) : null}
         </div>
       </aside>
@@ -718,39 +732,64 @@ const DecisionPanel = ({
 
 const DiffPanel = ({
   replayReport,
+  stateReplayReport,
+  artifactReplayReport,
   replayDiff,
   eventHashes,
 }: {
   replayReport: Record<string, unknown> | null;
+  stateReplayReport: Record<string, unknown> | null;
+  artifactReplayReport: Record<string, unknown> | null;
   replayDiff: Record<string, unknown> | null;
   eventHashes: Record<string, unknown> | null;
-}) => (
-  <div className="space-y-3">
-    <div className="border border-black/15 rounded-[2px] bg-white p-2">
-      <div className="text-[10px] font-black uppercase mb-1">Replay Diff</div>
-      <div className="grid grid-cols-3 gap-2 mb-2">
-        <TextMetric label="Status" value={typeof replayDiff?.status === 'string' ? replayDiff.status : 'missing'} />
-        <Metric label="Mismatch" value={typeof replayDiff?.first_mismatch_index === 'number' ? replayDiff.first_mismatch_index : 0} />
-        <Metric label="Errors" value={Array.isArray(replayDiff?.errors) ? replayDiff.errors.length : 0} />
+}) => {
+  const aggregateStatus = statusValue(replayReport);
+  const stateStatus = statusValue(stateReplayReport) || stringValue(replayReport?.state_status);
+  const artifactStatus = statusValue(artifactReplayReport) || stringValue(replayReport?.artifact_status);
+  return (
+    <div className="space-y-3">
+      <div className="border border-black/15 rounded-[2px] bg-white p-2">
+        <div className="text-[10px] font-black uppercase mb-1">Replay Status</div>
+        <div className="grid grid-cols-3 gap-2">
+          <TextMetric label="Aggregate" value={aggregateStatus || 'missing'} />
+          <TextMetric label="State" value={stateStatus || 'missing'} />
+          <TextMetric label="Artifact" value={artifactStatus || 'missing'} />
+        </div>
       </div>
-      <pre className="text-[11px] font-mono whitespace-pre-wrap bg-black text-white p-3 rounded-[2px] max-h-64 overflow-auto brutal-scroll">
-        {formatJson(replayDiff ?? { status: 'missing_replay_diff' })}
-      </pre>
+      <div className="border border-black/15 rounded-[2px] bg-white p-2">
+        <div className="text-[10px] font-black uppercase mb-1">Replay Diff</div>
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          <TextMetric label="Status" value={typeof replayDiff?.status === 'string' ? replayDiff.status : 'missing'} />
+          <Metric label="Mismatch" value={typeof replayDiff?.first_mismatch_index === 'number' ? replayDiff.first_mismatch_index : 0} />
+          <Metric label="Errors" value={Array.isArray(replayDiff?.errors) ? replayDiff.errors.length : 0} />
+        </div>
+        <pre className="text-[11px] font-mono whitespace-pre-wrap bg-black text-white p-3 rounded-[2px] max-h-64 overflow-auto brutal-scroll">
+          {formatJson(replayDiff ?? { status: 'missing_replay_diff' })}
+        </pre>
+      </div>
+      <ReplayJsonPanel title="State Replay Report" payload={stateReplayReport ?? { status: 'missing_state_replay_report' }} />
+      <ReplayJsonPanel
+        title="Artifact Replay Report"
+        payload={artifactReplayReport ?? { status: 'missing_artifact_replay_report' }}
+      />
+      <ReplayJsonPanel title="Aggregate Replay Report" payload={replayReport ?? { status: 'missing_replay_report' }} />
+      <ReplayJsonPanel title="Event Hashes" payload={eventHashes ?? { status: 'missing_event_hashes' }} />
     </div>
-    <div className="border border-black/15 rounded-[2px] bg-white p-2">
-      <div className="text-[10px] font-black uppercase mb-1">Replay Report</div>
-      <pre className="text-[11px] font-mono whitespace-pre-wrap bg-black text-white p-3 rounded-[2px] max-h-56 overflow-auto brutal-scroll">
-        {formatJson(replayReport ?? { status: 'missing_replay_report' })}
-      </pre>
-    </div>
-    <div className="border border-black/15 rounded-[2px] bg-white p-2">
-      <div className="text-[10px] font-black uppercase mb-1">Event Hashes</div>
-      <pre className="text-[11px] font-mono whitespace-pre-wrap bg-black text-white p-3 rounded-[2px] max-h-56 overflow-auto brutal-scroll">
-        {formatJson(eventHashes ?? { status: 'missing_event_hashes' })}
-      </pre>
-    </div>
+  );
+};
+
+const ReplayJsonPanel = ({ title, payload }: { title: string; payload: Record<string, unknown> }) => (
+  <div className="border border-black/15 rounded-[2px] bg-white p-2">
+    <div className="text-[10px] font-black uppercase mb-1">{title}</div>
+    <pre className="text-[11px] font-mono whitespace-pre-wrap bg-black text-white p-3 rounded-[2px] max-h-56 overflow-auto brutal-scroll">
+      {formatJson(payload)}
+    </pre>
   </div>
 );
+
+const statusValue = (payload: Record<string, unknown> | null): string | null => stringValue(payload?.status);
+
+const stringValue = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 const TextMetric = ({ label, value }: { label: string; value: string }) => (
   <div className="border border-black/15 bg-white rounded-[2px] px-2 py-1">

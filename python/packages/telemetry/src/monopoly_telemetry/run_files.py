@@ -39,6 +39,8 @@ class RunFiles:
     review_cost_aggregate_path: Path
     review_cost_calls_path: Path
     replay_report_path: Path
+    state_replay_report_path: Path
+    artifact_replay_report_path: Path
     replay_steps_path: Path
     replay_flags_path: Path
     replay_navigation_path: Path
@@ -248,6 +250,8 @@ def build_run_files(
         review_cost_aggregate_path=run_dir / "review_cost_aggregate.json",
         review_cost_calls_path=run_dir / "review_cost_calls.jsonl",
         replay_report_path=run_dir / "replay_report.json",
+        state_replay_report_path=run_dir / "state_replay_report.json",
+        artifact_replay_report_path=run_dir / "artifact_replay_report.json",
         replay_steps_path=run_dir / "replay_steps.jsonl",
         replay_flags_path=run_dir / "replay_flags.jsonl",
         replay_navigation_path=run_dir / "replay_navigation.json",
@@ -313,6 +317,8 @@ def _known_artifact_paths(run_files: RunFiles) -> list[tuple[str, Path]]:
         ("review_cost_aggregate", run_files.review_cost_aggregate_path),
         ("review_cost_calls", run_files.review_cost_calls_path),
         ("replay_report", run_files.replay_report_path),
+        ("state_replay_report", run_files.state_replay_report_path),
+        ("artifact_replay_report", run_files.artifact_replay_report_path),
         ("replay_steps", run_files.replay_steps_path),
         ("replay_flags", run_files.replay_flags_path),
         ("replay_navigation", run_files.replay_navigation_path),

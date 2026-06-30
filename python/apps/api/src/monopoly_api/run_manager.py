@@ -417,6 +417,8 @@ class RunManager:
                         "summary_exists": bool(summary),
                         "scorecard_exists": bool(scorecard),
                         "replay_report_exists": (path / "replay_report.json").exists(),
+                        "state_replay_report_exists": (path / "state_replay_report.json").exists(),
+                        "artifact_replay_report_exists": (path / "artifact_replay_report.json").exists(),
                     }
                 )
         return {"runs": runs}
@@ -435,6 +437,8 @@ class RunManager:
             "scorecard": _read_json(run_files.scorecard_path),
             "usage": _read_json(run_files.usage_path),
             "replay_report": _read_json(run_files.replay_report_path),
+            "state_replay_report": _read_json(run_files.state_replay_report_path),
+            "artifact_replay_report": _read_json(run_files.artifact_replay_report_path),
             "trace_summary": _read_json(run_files.trace_summary_path),
             "failure_summary": _read_json(run_files.failure_summary_path),
         }
@@ -741,6 +745,8 @@ def _run_artifact_paths(run_files: RunFiles) -> dict[str, Path]:
         "usage_attempts": run_files.usage_attempts_path,
         "cost_report": run_files.cost_report_path,
         "replay_report": run_files.replay_report_path,
+        "state_replay_report": run_files.state_replay_report_path,
+        "artifact_replay_report": run_files.artifact_replay_report_path,
         "replay_diff": run_files.replay_diff_path,
         "event_hashes": run_files.event_hashes_path,
         "replay_steps": run_files.replay_steps_path,

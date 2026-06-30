@@ -193,6 +193,8 @@ Every completed full-game run writes the core event/action/decision logs plus:
 - `usage_attempts.jsonl`
 - `cost_report.json`
 - `replay_report.json`
+- `state_replay_report.json`
+- `artifact_replay_report.json`
 - `replay_steps.jsonl`
 - `replay_flags.jsonl`
 - `replay_navigation.json`
@@ -205,8 +207,10 @@ Every completed full-game run writes the core event/action/decision logs plus:
 - `reviews/review_summary.json`
 - `artifact_manifest.json`
 
-Replay verification compares canonicalized replayed events against the original
-`events.jsonl` using the recorded `actions.jsonl` and `run_config.json`.
+Replay verification produces two views. `state_replay_report.json` checks whether
+the game-state trajectory replays from `actions.jsonl` and `run_config.json`.
+`artifact_replay_report.json` strictly compares the full canonical event stream,
+including LLM observation metadata. `replay_report.json` is the aggregate status.
 
 ### Full-Game Batches
 

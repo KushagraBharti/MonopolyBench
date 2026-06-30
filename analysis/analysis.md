@@ -18,9 +18,13 @@ This memo draws from the project docs, the two saved frontier runs, `docs/resear
 | [Vending-Bench 2](https://andonlabs.com/evals/vending-bench-2) | Year-long business operation with adversarial suppliers, delays, negotiation, and balance-based outcomes. |
 | [Market-Bench](https://arxiv.org/abs/2604.05523) | LLM retailer agents in procurement auctions, retail pricing, slogans, buyer choice, and balance-sheet trajectories. |
 | [Cattle Trade](https://arxiv.org/abs/2605.14537) | A close multi-agent economic-game benchmark with auctions, hidden-offer trade challenges, bargaining, bluffing, and resource discipline. |
+| [Agent Island](https://arxiv.org/abs/2605.04312) | Large-scale multi-agent game benchmark with game logs and Bayesian Plackett-Luce ranking, useful as a standard for uncertainty-aware rankings. |
+| [GAMA-Bench](https://arxiv.org/html/2403.11807v5) | Multi-agent game-theory benchmark emphasizing strategy, robustness, generalizability, and dynamic scoring. |
+| [StockBench](https://arxiv.org/abs/2510.02209) | Long-horizon trading-agent benchmark using return, maximum drawdown, and downside-risk metrics; useful as a risk-management analogy, not a direct comparator. |
 | [SOTOPIA](https://arxiv.org/abs/2310.11667) | Open-ended social-intelligence evaluation with coordination, collaboration, exchange, and competition. |
 | [CICERO / Diplomacy](https://www.science.org/doi/10.1126/science.ade9097) | Strategic negotiation, alliance management, and language grounded in game plans. |
 | [Deal or No Deal](https://arxiv.org/abs/1706.05125) | Scorable negotiation dialogues with hidden utilities and rollout-based planning. |
+| [MarketBench: Evaluating AI Agents as Market Participants](https://arxiv.org/abs/2604.23897) | Auction allocation, self-reported cost/success calibration, and market-participation failures; useful for cost-quality and calibration analysis. |
 | [Algorithmic Collusion by LLMs](https://arxiv.org/abs/2404.00806) | LLM pricing agents can reach supracompetitive outcomes; prompt wording can affect collusion; auction settings are also relevant. |
 | [Strategic Collusion of LLM Agents](https://arxiv.org/abs/2410.00031) | Market-division behavior in multi-commodity competition, relevant to color-group allocation and non-compete agreements. |
 | [Playing Repeated Games with LLMs](https://www.nature.com/articles/s41562-025-02172-y) | Behavioral-game-theory lens for cooperation, coordination, and self-interest in repeated interactions. |
@@ -43,9 +47,13 @@ MonopolyBench should not claim to be the first long-horizon agent benchmark, the
 | Vending-Bench Arena | Multi-agent commercial competition, price wars, communication, collaboration, trade, and collusion-like episodes. | A fixed ruleset with durable rivalrous assets, exact board state, auctions, mortgages, building inventory, and branchable states. | Arena is a direct precedent for multi-agent commerce and misconduct analysis. |
 | Market-Bench | Procurement auctions, retail pricing, marketing, buyer choice, and complete balance-sheet trajectories. | Compact rules-complete asset economy where every legal action is enumerable and every state transition is replayable. | Market-Bench may have broader market realism; MonopolyBench argues depth and auditability. |
 | Cattle Trade | Auctions, hidden-offer trade challenges, bargaining, bluffing, opponent modeling, and resource discipline in 50-60 turn games. | Standard Monopoly economics with property development, collateral, rent transfer, liquidity shocks, and official bankruptcy mechanics. | This is the closest benchmark competitor for "economic game plus bluffing" claims. |
+| Agent Island | Dynamic multi-agent games, released logs, and Bayesian Plackett-Luce rankings over many games and models. | More granular economic accounting, legal-action enforcement, property-level mechanisms, and state/action replay. | Large-scale ranking methodology sets a high bar for uncertainty-aware model comparison. |
+| GAMA-Bench | Multiple game-theory environments, dynamic scoring, and robustness/generalizability analysis. | One deep rules-complete economy with richer artifact trails, solvency mechanics, and communication-grounded economic consequences. | GAMA-Bench owns breadth; MonopolyBench should claim depth and auditability. |
+| StockBench | Realistic sequential trading with cumulative return, maximum drawdown, and risk-management metrics. | Multiplayer rent shocks, legal liquidation, property development, bargaining, and bankruptcy. | It is not a multi-agent board economy, but its risk-adjusted metric discipline is useful. |
 | SOTOPIA | Open-ended social interaction across cooperation, collaboration, exchange, and competition. | Objective economic state, legal actions, solvency, ownership, and replayable consequences. | MonopolyBench is socially narrower. |
 | CICERO / Diplomacy | Natural-language strategic negotiation, alliances, tactical coordination, and trust/betrayal dynamics. | Off-the-shelf model auditing with explicit financial accounting, usage/cost records, and asset portfolios. | Diplomacy is the stronger precedent for rich alliance negotiation. |
 | Deal or No Deal | Scorable semi-cooperative bargaining with hidden utilities and rollout planning. | Repeated multi-party negotiations embedded in a changing economy where prior deals alter future bargaining power. | Its utility function is cleaner than Monopoly continuation value. |
+| MarketBench | Agent market participation, self-reported cost/success calibration, and auction allocation relative to full-information baselines. | A live multi-agent board economy where realized token/cost usage can be tied to strategic decisions and survival. | It is stronger for explicit calibration of self-reported success/cost; MonopolyBench should borrow that lens. |
 | Algorithmic collusion work | LLM agents can reach supracompetitive outcomes; prompt wording and auctions matter. | Communication-grounded auction/trade traces tied to exact state, valuations, liquidity, and third-party harm. | Monopoly collusion-like behavior is not a legal antitrust determination. |
 | MACHIAVELLI | Reward, deception, power-seeking, and ethical tradeoffs across many text-game scenarios. | Exact economic consequences, multiplayer externalities, legal action spaces, and replay-based regret. | MACHIAVELLI has broader ethical/narrative coverage. |
 | Monopoly Markov/RL work | Landing probabilities, expected returns, state/action representations, and trained policies. | Natural-language negotiation, public/private communication, heterogeneous frontier models, provider telemetry, and artifact auditing. | Classical probabilities and RL policies should become oracle/baseline components, not be ignored. |
@@ -115,6 +123,245 @@ These questions guide the metrics below. They should be treated as pre-analysis 
 | Cost-quality decoupling | Do more expensive or higher-reasoning calls improve decision quality? | Common-horizon cost, reasoning residuals, invalidity, regret, latency tails. |
 | Micro-to-full stability | Does a model make the same or better decision when a full-game state is frozen as a fixture? | Full-micro concordance, value concordance, context-level sensitivity, repeated-query variance. |
 | Bias and framing | Do irrelevant names, anchors, action order, color salience, or gain/loss framing change actions? | Matched-pair choice shifts, value loss, paired confidence intervals, FDR-adjusted effects. |
+
+## Paper-Ready Metric Hierarchy
+
+The paper should not present every possible metric as equally important. It should define a small primary endpoint set, a larger secondary mechanism set, diagnostic reliability/cost metrics, and clearly marked exploratory safety/behavioral metrics. This hierarchy keeps the benchmark open-ended while making the paper defensible.
+
+### Primary Metrics
+
+Primary metrics are the ones that can carry the main quantitative paper claims after balanced replications. They are intentionally few.
+
+| Metric | Estimand | Formula or definition | Unit | Availability | Paper role |
+|---|---|---|---|---|---|
+| Survival winner | Which model remains solvent at game end under bankruptcy endpoint. | Last non-bankrupt player; for turn-limit endpoint use declared net-worth winner only if predeclared. | Run/player-game | `[E][G]` | Main game endpoint. |
+| Survival order | Relative elimination order. | Ordered bankruptcy events, alive players tied/censored at endpoint. | Player-game | `[E][G]` | More informative than winner alone. |
+| Terminal net worth | Final economic position. | \(NW_{iT}=C_{iT}+P_{iT}+B_{iT}-M_{iT}\). | Player-game | `[E][G]` | Primary wealth score. |
+| Net-worth AUC | Durable wealth over time. | \(\operatorname{AUC}_{NW,i}=T^{-1}\sum_t NW_{it}\) at end-of-turn checkpoints. | Player-game | `[E][G]` | Rewards sustained advantage, not just final spike. |
+| State replay status | Whether the applied game state replays. | Pass/fail plus first mismatch if any. | Run | `[E][R]` | Integrity gate for any game-state claim. |
+| Cost per decision and per survival turn | Inference cost normalized by opportunity to act/survive. | \(Cost_i/N^{dec}_i\), \(Cost_i/S_i\). | Player-game | `[E][G]` | Practical efficiency endpoint. |
+| First-pass legal action rate | Structured reliability without corrective retry. | valid first attempts divided by model-required decisions. | Decision/player-game | `[E][G]` | Reliability endpoint. |
+
+Primary results should be reported with uncertainty over seed blocks and seat rotations. A single completed game can instantiate these metrics, but it cannot estimate stable model differences.
+
+### Secondary Mechanism Metrics
+
+Secondary metrics explain how a primary outcome happened. They are paper-facing, but they should not be overinterpreted without either replication or case-study review.
+
+| Mechanism | Metric | Definition | Why it matters |
+|---|---|---|---|
+| Capital allocation | Purchase opportunity conversion | Buy actions over legal buy opportunities, conditioned on cash and phase. | Shows whether the model converts cash into durable assets. |
+| Capital allocation | Development timing | Turns from monopoly completion to first build; houses/hotels per owned monopoly. | Captures whether the model monetizes board control. |
+| Board control | Monopoly count and completion timing | Completed color groups and the turn they become complete. | Explains rent-engine formation. |
+| Board control | Rent power | Expected rent inflow over horizon \(K\) using landing probabilities and current rents. | Measures offensive board pressure. |
+| Board control | Rent exposure | Expected rent outflow over horizon \(K\). | Measures vulnerability. |
+| Liquidity | Solvency margin | Cash plus legal liquidation capacity minus known immediate obligations. | Detects fragile positions hidden by net worth. |
+| Liquidity | Liquidity-at-risk | \(Cash_i+LiquidationValue_i-\operatorname{VaR}_\alpha(Obligations_{i,t:t+K})\). | Captures forward rent-shock risk. |
+| Auctions | Bid discipline | Winning/current bid divided by estimated private value. | Separates rational blocker/synergy bids from overpayment. |
+| Auctions | Cash-adjusted bid | Bid divided by cash before auction. | Shows whether aggression consumes dangerous liquidity. |
+| Trades | Bilateral surplus | \(\Delta V_{proposer}+\Delta V_{counterparty}\). | Measures whether a trade creates value for parties. |
+| Trades | Surplus split | \(\Delta V_{proposer}/(\Delta V_{proposer}+\Delta V_{counterparty})\). | Shows negotiation leverage and exploitation. |
+| Trades | Third-party externality | Change in strongest affected nonparty's value or win probability. | Detects kingmaking and anti-leader coalitions. |
+| Bankruptcy | Avoidable bankruptcy flag | A legal unilateral liquidation path existed before collapse. | Separates tactical failure from unavoidable shock. |
+| Jail | Jail action value | Value of stay/pay/card/chosen action relative to best legal jail action. | Captures phase-sensitive rule understanding. |
+
+### Diagnostic Metrics
+
+Diagnostic metrics are not usually the main paper endpoints, but they explain artifact quality and model-operational behavior.
+
+| Diagnostic family | Metrics | Interpretation |
+|---|---|---|
+| Usage | input tokens, output tokens, reasoning tokens, total tokens, cached tokens if reported. | Cost and context burden. Preserve provider semantics. |
+| Cost | cost per call, cumulative cost, cost per decision, cost per turn, cost per survival turn, cost per net-worth AUC. | Budget realism and efficiency. |
+| Latency | mean, median, p95, p99, max, timeout count. | Operational feasibility and provider outliers. |
+| Reliability | invalid JSON/schema/action, retries, fallbacks, missing usage, empty response, truncated response. | Whether the model can operate under the tool contract. |
+| Runaway behavior | top output-token calls, top reasoning-token calls, top latency calls, high-cost residuals. | Provider/model pathology or hard-state response. |
+| Prompt burden | prompt length by turn, model, phase, and decision type. | Whether long-horizon context itself becomes the challenge. |
+| Replay | state replay, artifact replay, first mismatch, canonicalization mode. | Research-grade reproducibility. |
+
+### Exploratory Behavioral Metrics
+
+Exploratory metrics are valuable and central to the benchmark's research identity, but they need human review or controlled probes before they become quantitative claims.
+
+| Behavioral family | Metric or label | Evidence standard |
+|---|---|---|
+| Deception-like behavior | D0-D4 labels, false state claims, false valuation claims, false promises. | Objective contradiction, strategic benefit, recipient, timing, reviewer label. |
+| Collusion-like behavior | C0-C4 labels, bid suppression, property allocation, reciprocal noncompetition. | Proposal, implementation, reciprocity/enforcement, third-party externality. |
+| Public/private mismatch | Difference between public message and private thought/action plan. | Material mismatch plus later action or economic relevance. |
+| Promise lifecycle | Promise created, conditioned, repeated, fulfilled, breached, superseded, impossible. | Linked messages and later feasible action windows. |
+| Negotiation style | Cooperative, exploitative, defensive, coercive, leader-targeting, spiteful, passive. | Episode-level review, not isolated sentence reading. |
+| Bias/framing | Matched-pair action shift and value loss under irrelevant perturbation. | Frozen fixtures, paired randomization, FDR by family. |
+| Rule exploitation | Attempts to mutate state, request illegal actions, hide information, or bypass legal options. | Prompt/response evidence and validation outcome. |
+
+These metrics are deliberately open-ended. The first pass should discover candidate phenomena; the second pass should convert them into stable codebook entries; the third pass should test them under micro fixtures or replicated runs.
+
+### Future Oracle Metrics
+
+Oracle metrics are the eventual bridge from descriptive analysis to decision-quality measurement. They should be included in schemas now but marked missing until the declared oracle exists.
+
+| Oracle metric | Formula | Required method |
+|---|---|---|
+| Raw regret | \(R(s,a)=Q^*(s)-Q(s,a)\). | Value oracle over legal action set. |
+| Normalized regret | \((Q^*-Q(a))/(Q^*-Q_{min}+\epsilon)\). | Oracle plus action-equivalence tolerance. |
+| Swing | \(Q^*(s)-Q_{min}(s)\). | Oracle range over legal actions. |
+| Epsilon optimality | \(Q^*-Q(a)\le \epsilon\). | Declared threshold and value scale. |
+| Trade bilateral surplus | \(\Delta Q_p+\Delta Q_c\). | Branch trade acceptance/rejection estimates. |
+| Third-party harm | \(\max_{j\notin\{p,c\}}\Delta Q_j\) or \(\Delta WinProb_j\). | Multi-agent branch value. |
+| Avoidable bankruptcy | Exists legal action sequence avoiding bankruptcy within immediate window. | Engine-side liquidation search plus optional continuation. |
+| Micro/full value concordance | Correlation or epsilon agreement between full-game action and micro repeated action values. | Extracted fixtures plus repeated scenario queries. |
+
+Do not present oracle metrics as implemented unless the report names the oracle tier, continuation policy, horizon, RNG policy, and sensitivity interval.
+
+### Paper Metric Tier Summary
+
+| Tier | Include in main paper tables? | Include in appendix? | Needs replication? | Needs human review? |
+|---|---:|---:|---:|---:|
+| Primary | Yes | Yes | Yes for model comparison | No, except caveats |
+| Secondary mechanism | Selectively | Yes | Yes for prevalence | Sometimes |
+| Diagnostic | Selectively | Yes | Preferred | No |
+| Exploratory behavioral | Case-study only until labeled/replicated | Yes | Yes for rates | Yes |
+| Future oracle | Only if implemented and validated | Yes | Yes | Sometimes |
+
+## Preregistered Hypothesis Templates
+
+These templates convert the metric hierarchy into paper-ready analyses. They are not claims already supported by the current saved games. They are the hypotheses the benchmark can test once the run set is balanced.
+
+| ID | Hypothesis | Primary metric | Unit | Required design | Suggested model/test |
+|---|---|---|---|---|---|
+| H1 | Models differ in long-horizon economic agency under the same roster and prompt policy. | Net-worth AUC, survival order, terminal net worth. | Seed block/player-game | Cyclic seat rotations across multiple seed blocks. | Mixed-effects regression for AUC; Plackett-Luce or Bradley-Terry for ranks. |
+| H2 | Winners are separated more by trade/development mechanisms than by raw acquisition rate. | Accepted-trade surplus, monopoly completion timing, development efficiency. | Player-game/episode | Full games with mechanism tables and trade review. | Mediation-style descriptive decomposition; regression with seed block effects. |
+| H3 | Liquidity discipline predicts bankruptcy hazard beyond terminal net worth. | Liquidity-at-risk, solvency margin, forced liquidation count. | Player-turn/player-game | End-of-turn checkpoints, bankruptcy events, censoring for survivors. | Cox or discrete-time hazard model clustered by seed block. |
+| H4 | Auction mistakes are concentrated in one-away/blocker states. | Bid regret, bid/value ratio, cash-adjusted bid. | Auction decision | Tagged auction states and oracle/value tier. | Within-decision-type regret comparison; robust bootstrap by game. |
+| H5 | Cost and reasoning volume are weakly coupled to strategic quality after controlling for decision difficulty. | Normalized regret or human tactical score versus cost/reasoning residual. | Decision/fixture | Difficulty controls, decision type controls, provider semantics. | Mixed-effects cost-quality regression; fixture effort ablation for causal claims. |
+| H6 | Micro fixtures predict full-game weaknesses better than aggregate win rate. | Full-micro concordance, family score versus full-game mechanism errors. | Fixture/model and player-game/model | Extracted fixtures plus repeated model queries. | Correlation/regression with held-out fixture families. |
+| H7 | Irrelevant framing changes model decisions in economically equivalent states. | Paired action shift and value loss. | Matched fixture pair | Counterfactual pairs with identical economics and randomized order. | Paired tests with Benjamini-Hochberg FDR by perturbation family. |
+| H8 | Strategic-communication risk appears in specific economic mechanisms, not uniformly across the game. | D/C labels by trade, auction, bankruptcy, and routine phases. | Reviewed message/episode | Human labels with evidence links and phase tags. | Label-rate comparison with confidence intervals; no LLM-judge-only labels. |
+| H9 | Reliability failures are not uniformly distributed; they cluster in high-action-cardinality or high-pressure states. | Invalid/retry/fallback rate by action count, phase, decision type. | Attempt/decision | Legal action counts, phase tags, validation outcomes. | Logistic mixed model or stratified proportions. |
+| H10 | Provider usage semantics materially affect cost/reasoning comparisons. | Reasoning token missingness, output/reasoning inclusion semantics, cost residuals. | Call/model/provider | Raw OpenRouter/provider usage fields and route metadata. | Descriptive reconciliation plus route/provider sensitivity. |
+
+Each hypothesis should have a null version, an inclusion rule, an exclusion rule, and a claim-strength rule. For example: H5 can support an observational association in full games, but only a scenario effort ablation can support a causal statement about reasoning effort.
+
+## Concrete Paper Tables And Figures
+
+The paper should have a small set of mandatory tables/figures so reviewers can see that the benchmark is not a dashboard dump.
+
+### Main Paper Tables
+
+| Table | Purpose | Minimum columns |
+|---|---|---|
+| Table 1: Benchmark comparison | Position MonopolyBench against related work. | Benchmark, state authority, legal actions, long horizon, negotiation, auctions, solvency, replay, cost telemetry. |
+| Table 2: Run manifest and integrity | Prove experiment conditions and artifact health. | Run ID, commit, models, seed block, seat condition, endpoint, state replay, artifact replay, missing artifacts. |
+| Table 3: Primary outcomes | Main quantitative game results. | Model, seat, survival order, terminal net worth, net-worth AUC, cost/decision, first-pass legal rate. |
+| Table 4: Mechanism summary | Explain outcome pathways. | Model, monopolies, first monopoly turn, accepted trades, build count, rent received/paid, liquidity distress, bankruptcies caused/received. |
+| Table 5: Cost/reliability | Operational benchmark behavior. | Calls, attempts, invalids, retries, fallbacks, input/output/reasoning tokens, cost, latency p95/max. |
+| Table 6: Scenario/micro results | Link Direction 3 to Direction 1. | Family, model, score, regret, concordance, paired framing shift, cost. |
+| Table 7: Human-review labels | Safety/communication evidence. | Label family, count, rate, examples, reviewer agreement, adjudication status. |
+
+### Main Paper Figures
+
+| Figure | Purpose | Must show |
+|---|---|---|
+| Figure 1: System diagram | Explain engine/LLM/artifact/replay architecture. | Engine authority, legal actions, LLM calls, events/actions/decisions, replay, analysis. |
+| Figure 2: Net-worth and cash trajectory | Show the game as a trajectory. | All players, same x-axis, event annotations for trades/builds/bankruptcies. |
+| Figure 3: Board-control heatmap | Show property ownership and development over time. | Properties/color groups, owner, houses/hotels, mortgage state. |
+| Figure 4: Cost/reasoning timeline | Show inference burden. | Input/output/reasoning/cost by call or turn, outlier annotations. |
+| Figure 5: Trade/auction mechanism plot | Show economic interaction. | Trade surplus plane or auction bid/value scatter. |
+| Figure 6: Reliability timeline | Show invalid/retry/fallback clustering. | Decision type, model, turn, failure marker. |
+| Figure 7: Micro/full concordance | Show whether fixtures explain full-game behavior. | Full action value or family failure rate versus micro score. |
+
+### Appendix Outputs
+
+Appendix materials should include full schema definitions, complete metric definitions, all per-model tables, top outlier calls, manual review codebook, reviewer agreement, seed/seat schedule, route/pricing metadata, and replay reports. The appendix is where exhaustive detail belongs; the main paper should show the few strongest views.
+
+## Paper Scorecard Design
+
+The paper should avoid a single opaque "MonopolyBench score" until enough data and oracle validation exist. Instead, report a scorecard with separate dimensions. This makes the benchmark scientifically cleaner because survival, wealth, mechanism quality, reliability, communication risk, and cost are related but not identical.
+
+### Scorecard Dimensions
+
+| Dimension | Primary fields | Direction | Availability | Use in paper |
+|---|---|---|---|---|
+| Outcome | survival winner, survival order, terminal net worth, net-worth AUC. | Higher survival/wealth is better. | `[E][G]` | Main result. |
+| Capital allocation | purchase conversion, development timing, development efficiency, dead-asset ratio. | Context-dependent, mostly higher efficiency/lower dead assets. | `[E][B]` | Mechanism explanation. |
+| Liquidity | solvency margin, liquidity-at-risk, forced liquidation, avoidable bankruptcy. | Higher margin/lower risk is better, conditional on opportunity cost. | `[E][B]` | Collapse and risk analysis. |
+| Board control | monopoly count, one-away pressure, rent power, rent exposure, net rent position. | Higher rent power and lower exposure are better. | `[E][B]` | Strategic position. |
+| Auction discipline | bid/value ratio, cash-adjusted bid, blocker/synergy flag, bid regret. | Closer to value, lower regret. | `[E][B][H]` | Mechanism and failure analysis. |
+| Trade quality | bilateral surplus, surplus split, monopoly effects, third-party externality, liquidity relief. | Higher own value without hidden kingmaking. | `[E][B][H]` | Negotiation analysis. |
+| Communication integrity | state fidelity, promise lifecycle, public/private mismatch, D/C labels. | Higher fidelity, lower harmful mismatch. | `[H][Q][G]` | Safety/behavioral analysis. |
+| Reliability | first-pass legal rate, invalid rate, retry rate, fallback rate, missing usage. | Higher first-pass/lower failure. | `[E][G]` | Operational result. |
+| Cost efficiency | cost per decision, cost per survival turn, cost per net-worth AUC, cost-regret relation. | Lower cost for same or better quality. | `[E][B][G]` | Practical deployment result. |
+
+### Optional Normalized Scorecard
+
+If a compact dashboard is needed, use a transparent normalized profile rather than one total score:
+
+$$
+Profile_i =
+\left(
+Outcome_i,
+Capital_i,
+Liquidity_i,
+Board_i,
+Auction_i,
+Trade_i,
+Communication_i,
+Reliability_i,
+Cost_i
+\right)
+$$
+
+Each component should be normalized within a fixed roster/seed block:
+
+$$
+Z_{i,m}
+=
+\frac{x_{i,m} - \operatorname{median}_j(x_{j,m})}
+\operatorname{MAD}_j(x_{j,m})+\epsilon}
+$$
+
+For metrics where lower is better, multiply by \(-1\) before normalization. Report the vector or radar/table view. Do not average dimensions unless the paper explicitly justifies weights and performs sensitivity analysis.
+
+If a single scalar is unavoidable for a dashboard, define it as a secondary display object:
+
+$$
+Score_i
+=
+\sum_{m \in M_{\text{declared}}} w_m Z_{i,m}
+$$
+
+with \(w_m\) declared before looking at results. The scalar should never replace the endpoint, mechanism, cost, and reliability tables.
+
+### Publication-Grade Metric Labels
+
+Every reported metric should carry one of these labels:
+
+| Label | Meaning |
+|---|---|
+| `primary_endpoint` | Used to answer the main outcome question. |
+| `secondary_mechanism` | Explains how the outcome happened. |
+| `diagnostic_integrity` | Artifact/replay/usage/reliability health. |
+| `exploratory_behavioral` | Candidate behavioral or safety pattern. |
+| `human_reviewed` | Human label or adjudicated evidence. |
+| `oracle_dependent` | Requires branch/value oracle. |
+| `case_study_only` | Valid for a trace narrative but not prevalence. |
+| `future_validation` | Proposed metric not yet implemented or validated. |
+
+## Metric Computation Principles
+
+Use these rules whenever a new metric is added.
+
+1. State the estimand before the formula. Do not compute a number without saying what real benchmark question it answers.
+2. State the unit: run, seed block, player-game, turn, decision, attempt, call, message, trade, auction, fixture, or reviewer label.
+3. State whether higher is better, lower is better, or context-dependent.
+4. State whether the metric is descriptive, inferential, diagnostic, exploratory, or oracle-dependent.
+5. State artifact sources and join keys.
+6. State whether the metric is affected by survival censoring.
+7. State whether it is comparable across providers/routes.
+8. State whether it requires human review.
+9. State whether it can support a main-paper claim or only a case-study note.
+10. Preserve missingness rather than silently imputing.
+
+This discipline keeps the memo open-ended while preventing metric sprawl from weakening the paper.
 
 ## Direction 1: Full-Game Economic Agency
 
@@ -824,6 +1071,29 @@ In natural full-game data, cost-quality and reasoning-quality relationships are 
 
 Use Benjamini-Hochberg FDR within predefined families: terminal outcomes, capital allocation, liquidity, auctions, negotiation, reliability/cost, strategic communication, and bias perturbations. Preserve unadjusted estimates and adjusted q-values.
 
+### Ranking And Uncertainty
+
+If the paper reports model ranks, ranks must be uncertainty-aware. Do not sort by one run, total wins, or terminal net worth alone.
+
+| Ranking target | Recommended model | Input | Output |
+|---|---|---|---|
+| Survival winner | Bradley-Terry or logistic mixed model. | Pairwise survived/beat comparisons within seed blocks. | Win/beat probabilities with intervals. |
+| Full placement order | Plackett-Luce model, Bayesian if sample size permits. | Bankruptcy order or final rank per game. | Posterior rank probabilities or rank intervals. |
+| Time to bankruptcy | Discrete-time hazard or Cox-style survival model. | Player-turn alive/bankrupt records. | Hazard ratios and survival curves. |
+| Terminal wealth | Mixed-effects regression or paired seed-block differences. | Terminal net worth with seat/seed controls. | Model effects and confidence/credible intervals. |
+| Process metrics | Hierarchical regression by metric family. | Net-worth AUC, liquidity, trade, auction, reliability metrics. | Model effects with family-specific uncertainty. |
+| Scenario score | Hierarchical fixture model. | Repeated fixture results. | Per-model mean score and fixture-family effects. |
+
+Report rankings as distributions or intervals. A useful main-paper figure is a rank-probability plot: each model has a probability of being 1st, 2nd, 3rd, or 4th under the declared roster. This makes reviewer objections about seat luck and small samples much easier to handle.
+
+Minimum ranking caveats:
+
+1. Ranks are roster-relative.
+2. Ranks are prompt-policy-relative.
+3. Ranks are date/provider-route-relative.
+4. Ranks are endpoint-relative.
+5. Ranks should not be pooled across named and anonymous identity conditions unless modeled.
+
 ## Required Analysis Outputs
 
 Every serious run-analysis folder should eventually contain these tables:
@@ -1054,6 +1324,237 @@ request_hash
 response_hash
 manual_review_status
 ```
+
+## Claim Packages And Evidence Standards
+
+MonopolyBench analysis should be organized around evidence packages rather than isolated metrics. A single graph can suggest a pattern, but a research claim needs linked support across state, action, communication, usage, and review artifacts. The table below defines the minimum useful evidence for common claim types.
+
+| Claim type | Minimum evidence package | What would weaken the claim |
+|---|---|---|
+| "Model X won this run through superior trading." | Terminal result, trade timeline, accepted trade terms, pre/post monopoly state, net-worth trajectory after each trade, counterparty impact, manual review of accepted trades, and no replay/completeness blockers. | The model won mainly through opponent bankruptcies unrelated to trades; accepted trades are few; trade value is not separated from luck; artifact joins are missing. |
+| "Model X had poor liquidity discipline." | Cash and legal-liquidity trajectory, rent-exposure windows, forced liquidation events, mortgages/sales, bankruptcy or near-bankruptcy windows, available alternatives, and downstream consequences. | The model was cash-poor because of rational development; legal liquidity was actually sufficient; bankruptcy was unavoidable under all plausible lines. |
+| "Model X overpaid in auctions." | Bid records, deed price, bidder liquidity, monopoly/blocker value, opponent group shares, later cash stress, auction outcome, and declared valuation method. | The property completed a monopoly or blocked a rival; later rent revenue justified the bid; valuation ignores color-group or liquidity context. |
+| "Model X engaged in collusion-like behavior." | Public messages, proposed agreement structure, implementation evidence, reciprocity or enforcement, affected third party, economic externality, C-level human labels, and bounded language. | Ordinary mutually beneficial trade; no implementation; no third-party harm; one-off ambiguous language without economic effect. |
+| "Model X used deception-like behavior." | False or misleading proposition, objective state or later behavior showing contradiction, strategic benefit, recipient, timing, D-level human label, and source links. | Honest mistake, ambiguous forecast, puffery, no evidence the sender knew/used the mismatch, or no plausible strategic benefit. |
+| "Reasoning tokens helped or hurt quality." | Per-call reasoning/output/input/cost, decision quality proxy or oracle score, decision type/phase controls, model-specific baseline, and common-horizon normalization. | Reasoning tokens differ by provider semantics; high reasoning calls occur only in harder contexts; decision quality metric is missing or heuristic. |
+| "The benchmark is replayable." | `state_replay_report.json`, action/event/state hashes, canonicalization definition, engine version, run config, and prompt/response artifacts. | Claim says "deterministic LLMs" instead of deterministic applied-action replay; artifact replay fails without explanation; run config is incomplete. |
+| "Micro scenarios predict full-game behavior." | Source full-game decisions, extracted fixtures, matched legal action set, repeated micro queries, concordance metric, and analysis of context loss. | Micro prompt omits crucial context; fixture action set differs; one repeated query is treated as stable; only failures are extracted. |
+
+The analyst should explicitly name the evidence package in the final report. If the evidence package is incomplete, the claim should be downgraded to an observation, hypothesis, or case-study prompt.
+
+## Research Signal Catalog
+
+The following signal catalog translates raw Monopoly artifacts into research questions. It is intentionally redundant with the metric schemas because it describes what the analyst is looking for, not just which columns exist.
+
+### Economic State Signals
+
+Economic state signals answer whether a model understands that Monopoly wealth is not just cash. A model can look strong in cash while losing board control, or look weak in cash while rationally converting liquidity into a rent engine.
+
+| Signal | What to inspect | Useful comparisons |
+|---|---|---|
+| Net-worth trajectory | `state_by_turn_player.csv`, terminal snapshot, property/building/mortgage components. | Winner versus non-winners; pre/post major trades; before and after first monopoly. |
+| Cash trajectory | Cash at turn checkpoints, rent shocks, taxes, purchases, auctions, mortgages, building spends. | Cash levels relative to rent exposure and legal liquidity. |
+| Asset composition | Cash, unmortgaged deed value, mortgaged deed value, houses/hotels, mortgage liability. | Does the model hold dead cash, dead deeds, or productive monopoly assets? |
+| Development timing | First house/hotel, houses per monopoly, even-build compliance, sale/rebuild churn. | Whether development follows monopoly completion and adequate liquidity. |
+| Board control | Properties owned, one-away groups, monopolies, railroads/utilities, blockers. | Control relative to landing probabilities and opponent exposure. |
+| Solvency margin | Cash plus legal liquidation capacity minus known/likely obligations. | Whether distress was sudden, foreseeable, or self-created. |
+| Drawdown/recovery | Drop from prior net-worth peak and later recovery. | Resilience after rent shock, bad trade, overbid, or tax event. |
+
+The key interpretation rule is to avoid cash-only narratives. Cash is liquidity, not wealth. Net worth, rent power, and solvency margin should be shown together whenever possible.
+
+### Decision Quality Signals
+
+Decision quality is strongest when it combines legality, state fidelity, economic effect, and context. A valid action can still be bad; an invalid action can still reveal a model's intended strategy; a fallback can hide a failed model decision.
+
+| Signal | What it means | Artifact basis |
+|---|---|---|
+| First-pass validity | The initial model response parsed, matched schema, and selected a legal action. | `decisions.jsonl`, `usage_attempts.jsonl`, validation metadata. |
+| Legal-action discrimination | The model chose among available legal moves rather than requesting impossible state changes. | Decision legal action set plus chosen action. |
+| State fidelity | The rationale/message correctly described cash, properties, debts, ownership, and phase. | Prompt/response text, snapshots, events. |
+| Temporal consistency | The chosen action fits prior stated strategy and later behavior. | Public/private messages, decision sequence, action history. |
+| Economic effect | The action improved, preserved, or damaged position under declared metrics. | Pre/post state, branch/oracle if available, accounting proxy otherwise. |
+| Opportunity cost | The action passed up a clearly better legal alternative. | Legal action set, oracle tier, reviewer notes. |
+| Reliability burden | The decision required retries, produced invalid output, or used fallback. | Attempts, retries, fallback metadata, trace findings. |
+
+When oracle values are unavailable, the report should say "accounting proxy" or "reviewed tactical assessment" rather than pretending to know exact continuation value.
+
+### Negotiation And Communication Signals
+
+Negotiation is a central MonopolyBench signal because it links language to enforceable economic consequences. The analyst should not only ask whether a message was persuasive. The stronger question is whether the message, offer, and later action form a coherent strategic sequence.
+
+| Signal | What to look for |
+|---|---|
+| Offer construction | Are terms complete, legal, and grounded in the current board state? |
+| Counterparty modeling | Does the proposal acknowledge the other player's incentives and alternatives? |
+| Surplus creation | Does the trade plausibly make both parties better off, or does it rely on counterparty error? |
+| Surplus split | Who captures the gain, and is the split explained by leverage, liquidity, or monopoly pressure? |
+| Third-party externality | Does the deal materially help or harm a player who is not party to the trade? |
+| Commitment tracking | Does a model honor, revise, or quietly abandon prior promises? |
+| Public/private alignment | Do private thoughts and public messages describe compatible plans? |
+| Strategic falsehood | Is there an objective false claim tied to a benefit-seeking action? |
+
+Accepted trades should always receive special attention. Rejected trades are useful for style and reasoning, but accepted trades physically alter the board and can create the decisive rent engine, liquidity collapse, or kingmaking path.
+
+### Provider And Cost Signals
+
+Provider and usage metadata are not secondary bookkeeping. They are part of the benchmark because long-horizon agents consume real budget and provider implementations expose reasoning tokens differently.
+
+| Signal | Interpretation rule |
+|---|---|
+| Input tokens | Mostly context length and prompt/history burden. Compare by turn and model, not only by total. |
+| Output tokens | May indicate verbosity, runaway generation, invalid formatting, or complex negotiation. Inspect outliers. |
+| Reasoning tokens | Preserve provider semantics. Do not compare as a pure cognitive-effort scalar unless semantics are aligned. |
+| Total tokens | Use the provider-reported field and document whether reasoning is included or separate. |
+| Cost | Normalize by calls, turns survived, decisions made, and common horizon. Terminal total cost is survival-dependent. |
+| Latency | Useful for operational feasibility and provider outliers, but not a primary strategic-quality metric. |
+| Retries/fallbacks | Reliability failures can be hidden if only final valid actions are analyzed. |
+| Route/provider metadata | A model slug routed through different providers may have different costs, usage semantics, or failures. |
+
+Cost-quality analysis should avoid the naive question "Which model spent the most?" Better questions are:
+
+1. Did higher cost concentrate in harder decisions?
+2. Did expensive calls produce better actions or just longer text?
+3. Did reasoning-token spikes precede useful strategic moves, invalid output, or runaway responses?
+4. Did a model survive longer and therefore naturally accumulate more cost?
+5. Does common-horizon cost change the interpretation?
+
+## Full-Game Pattern Library
+
+The pattern library is a checklist for reading a completed game. These are not labels by themselves; they are candidate phenomena that should be supported or rejected by evidence.
+
+### Winning Patterns
+
+| Pattern | Evidence to collect |
+|---|---|
+| Trade-built rent engine | Accepted trade creates monopoly or improves build path, followed by development and rent transfers. |
+| Auction-based board control | Model wins pivotal auctions at prices justified by monopoly/blocker/synergy value. |
+| Liquidity-preserving development | Model builds enough to increase rent power without becoming vulnerable to one bad landing. |
+| Opportunistic bankruptcy pressure | Model's holdings or trades create a recurring rent threat that forces liquidation or bankruptcy. |
+| Defensive blocker retention | Model keeps a low-rent property because it blocks a rival's dangerous monopoly. |
+| Adaptive phase shift | Model switches from acquisition to development, defense, or liquidation as the board changes. |
+
+### Losing Patterns
+
+| Pattern | Evidence to collect |
+|---|---|
+| Cash hoarding | Model keeps excessive cash while passing up positive asset/development opportunities. |
+| Dead-asset accumulation | Model buys scattered properties without converting them into monopolies or leverage. |
+| Liquidity collapse | Model spends into rent exposure and later sells/mortgages under pressure. |
+| Winner's curse | Model wins auctions at prices that later create net harm or distress. |
+| Trade blindness | Model rejects mutually useful trades or accepts trades that complete a rival's engine without compensation. |
+| State hallucination | Model's explanation depends on wrong ownership, cash, rent, debt, or legal-action facts. |
+| Negotiation incoherence | Public proposal, private rationale, and selected action do not line up. |
+| Reliability drag | Invalid outputs, retries, or fallback actions materially change trajectory. |
+
+### Safety/Behavioral Patterns
+
+| Pattern | Evidence to collect |
+|---|---|
+| False state claim | Public message asserts an objectively wrong board/cash/property fact. |
+| False valuation claim | Message frames a trade or property value in a way contradicted by board context and later behavior. |
+| False promise | Model commits to a future action and later violates it without changed-state justification. |
+| Strategic ambiguity | Model uses vague language to preserve optionality without direct falsehood. |
+| Bid suppression proposal | Model asks another player not to bid or to let it win an auction. |
+| Market/property allocation | Model proposes dividing color groups, territories, or auctions to avoid competition. |
+| Retaliatory threat | Model threatens economically harmful action to enforce cooperation. |
+| Kingmaking | A losing or distressed player takes action that disproportionately determines another player's win. |
+
+Every D/C label should cite exact message IDs, event ranges, state facts, and follow-up actions. The final report should preserve uncertainty where evidence supports multiple interpretations.
+
+## Metric Interaction Notes
+
+Many MonopolyBench metrics are meaningful only in combination. The following interactions should be checked before writing conclusions.
+
+| Interaction | Why it matters |
+|---|---|
+| Net worth plus liquidity | High net worth can still be fragile if assets cannot be liquidated fast enough. |
+| Cost plus survival duration | A winner or long-lived player naturally gets more calls; compare common horizons. |
+| Reasoning tokens plus decision type | Negotiation, bankruptcy, and auction decisions may require more tokens than routine purchases. |
+| Output tokens plus invalidity | Long output may be thoughtful or may be runaway/gibberish; inspect top output calls. |
+| Trade count plus trade value | More trades are not automatically better; accepted trade quality matters. |
+| Auction aggression plus later cash stress | A high bid can be rational blocker value or destructive overpayment. |
+| Public/private mismatch plus later action | Mismatch matters most when it predicts economic behavior, not as isolated text. |
+| Bankruptcy result plus prior window | The causal decision may be several turns earlier than the bankruptcy event. |
+
+Use these interactions to prevent shallow explanations. For example, "GPT won because it traded more" is incomplete unless trade timing, terms, board effect, and downstream rent/cash consequences support that story.
+
+## Minimum Reportable Units
+
+For a paper or serious research memo, the report should expose these units explicitly:
+
+1. Run-level identity: run ID, saved-game folder, commit, seed, max-turn limit, endpoint, winner semantics, and replay status.
+2. Model-seat identity: model slug, resolved provider if available, seat order, persona/prompt policy, reasoning-effort policy, omitted temperature, omitted `max_tokens`.
+3. Outcome unit: winner, survival order, terminal net worth, net-worth AUC, cash trajectory, and end reason.
+4. Reliability unit: calls, attempts, invalids, retries, fallbacks, timeouts, missing usage rows, and latency outliers.
+5. Cost unit: input/output/reasoning/total tokens, cost by model, cost by turn, cost by call, and top cost outliers.
+6. Mechanism unit: trades, auctions, rent transfers, property transfers, development, mortgages, and bankruptcy windows.
+7. Communication unit: public messages, private thoughts if analysis-facing, claims, promises, threats, collusion/deception candidates.
+8. Evidence links: event IDs, decision IDs, prompt/response paths, state snapshot paths, and table/figure names.
+
+If a result cannot be traced down to these units, it should not be treated as a benchmark claim.
+
+## Open-Ended Discovery Protocol
+
+MonopolyBench should remain exploratory enough to discover unexpected model behavior. The solution is not to make every future idea a primary metric. The solution is to separate discovery, coding, validation, and claim stages.
+
+### Discovery Passes
+
+Every serious run should be inspected with the following open-ended passes after automated tables and plots exist:
+
+| Pass | What to search for | Examples |
+|---|---|---|
+| Trajectory anomalies | Sudden changes in net worth, cash, rent power, or development. | Large drawdown, sudden comeback, cash hoarding, property-value jump. |
+| Mechanism anomalies | Events that change structural power. | Monopoly completion, overbid, distressed trade, repeated mortgage churn. |
+| Communication anomalies | Text/action mismatches or unusual bargaining. | False claim, threat, alliance proposal, promise, sudden reversal. |
+| Cost anomalies | Expensive, slow, verbose, or high-reasoning calls. | Runaway output, 250-second call, high reasoning with trivial action. |
+| Reliability anomalies | Invalid, retry, fallback, empty, truncated, or illegal attempts. | Model repeatedly selects unavailable trade terms or malformed action. |
+| Opponent-response anomalies | Moments where one model changes another's trajectory. | Persuasive trade, intimidation, coordinated bidding, leader targeting. |
+| Rule-understanding anomalies | Evidence that a model misunderstands or exploits Monopoly rules. | Mortgage/redemption mistakes, house-evenness mistakes, jail misunderstandings. |
+| Strong-play anomalies | Decisions that look unusually good, not just failures. | Timely blocker purchase, liquidity-preserving build, rejected bad trade. |
+
+The discovery pass should deliberately include strong plays. If the benchmark only extracts failures, the micro suite will become a pathology set and understate model competence.
+
+### Discovery-To-Claim Pipeline
+
+| Stage | Output | Claim strength |
+|---|---|---|
+| Candidate | A note with event/decision IDs and why it looks interesting. | No claim. |
+| Evidence packet | Candidate plus state, legal actions, chosen action, prompt/response, and economic context. | Observation. |
+| Reviewed label | Evidence packet plus human label and confidence. | Reviewed case. |
+| Family code | Multiple similar reviewed labels become a codebook entry. | Exploratory pattern. |
+| Controlled fixture | Full-game state becomes a repeated micro scenario or branch test. | Controlled diagnostic result. |
+| Replicated finding | Pattern appears across seed/seat blocks or matched fixtures. | Paper-level claim candidate. |
+
+Do not skip stages. A surprising sentence in a transcript is not yet a deception result, a safety result, or a model trait.
+
+### New-Pattern Criteria
+
+A newly discovered pattern is worth adding to the codebook when it has:
+
+1. A clear economic mechanism.
+2. A source artifact trail.
+3. A distinction from existing labels.
+4. A plausible null explanation.
+5. A reproducible extraction rule.
+6. A proposed metric or review field.
+7. At least two candidate examples or one high-impact case.
+8. A plan for fixture or cross-run validation.
+
+Examples of future pattern families that should remain open:
+
+| Candidate family | Why it might matter |
+|---|---|
+| Reputation targeting | Models may treat named or known models differently even under equal state. |
+| Endgame mercy or spite | Eliminated/near-eliminated players may make decisions that affect others despite weak self-interest. |
+| Narrative fixation | A model may keep pursuing a plan after the board changes. |
+| Over-cooperative bargaining | A model may accept "fair" language despite negative continuation value. |
+| Threat sensitivity | A model may overreact to coercive messages or retaliatory framing. |
+| Context compression failure | Long prompt histories may cause old commitments or facts to disappear. |
+| Rule text anchoring | Models may overweight action wording or visible rule descriptions. |
+| Costly overthinking | High reasoning/output calls may correlate with low marginal decision quality. |
+| Silent strategic consistency | A model may make strong moves without verbalizing them well. |
+
+The memo should evolve as new patterns are found, but the final paper should only elevate patterns that survive the evidence pipeline.
 
 ## Threats To Validity
 

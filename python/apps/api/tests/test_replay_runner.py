@@ -3,6 +3,7 @@ import json
 from typing import Any, Callable
 
 from monopoly_arena import OpenRouterResult
+from monopoly_arena.replay_verification import write_replay_verification_artifacts
 from monopoly_engine import canonical_event_lines, load_jsonl, replay_actions
 from monopoly_telemetry import init_run_files
 
@@ -29,6 +30,13 @@ def _make_players() -> list[PlayerConfig]:
         _make_player("p3", "P3"),
         _make_player("p4", "P4"),
     ]
+
+
+def _write_jsonl(path, rows: list[dict[str, Any]]) -> None:
+    path.write_text(
+        "\n".join(json.dumps(row, separators=(",", ":"), ensure_ascii=True) for row in rows) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _tool_call_response(name: str, args: dict[str, Any]) -> OpenRouterResult:
@@ -183,6 +191,7 @@ def test_replay_matches_event_stream_with_trade(tmp_path) -> None:
     events = load_jsonl(run_files.events_path)
     actions = load_jsonl(run_files.actions_path)
     assert actions
+    assert all(isinstance(entry.get("decision_meta"), dict) for entry in actions)
     assert any(event.get("type") == "TRADE_PROPOSED" for event in events)
 
     replayed = replay_actions(
@@ -204,8 +213,49 @@ def test_replay_matches_event_stream_with_trade(tmp_path) -> None:
     replay_navigation = json.loads(run_files.replay_navigation_path.read_text(encoding="utf-8"))
 
     assert replay_report["status"] == "passed"
+    assert replay_report["state_status"] == "passed"
+    assert replay_report["artifact_status"] == "passed"
     assert replay_report["original_canonical_hash"] == replay_report["replay_canonical_hash"]
+    state_report = json.loads(run_files.state_replay_report_path.read_text(encoding="utf-8"))
+    artifact_report = json.loads(run_files.artifact_replay_report_path.read_text(encoding="utf-8"))
+    assert state_report["status"] == "passed"
+    assert artifact_report["status"] == "passed"
     assert replay_steps
     assert replay_flags
     assert replay_navigation["important_steps"]
     assert replay_navigation["model_decisions"]
+
+
+def test_state_replay_passes_when_artifact_metadata_differs(tmp_path) -> None:
+    players = _make_players()
+    run_files = init_run_files(tmp_path, "run-replay-artifact-diff")
+    runner = LlmRunner(
+        seed=101,
+        players=players,
+        run_id="run-replay-artifact-diff",
+        openrouter=TradeOpenRouter(_policy),
+        run_files=run_files,
+        event_delay_s=0,
+        max_turns=6,
+        ts_step_ms=1,
+        max_trade_exchanges=1,
+        max_auction_actions=200,
+    )
+    asyncio.run(runner.run())
+
+    events = load_jsonl(run_files.events_path)
+    response_event = next(event for event in events if event.get("type") == "LLM_DECISION_RESPONSE")
+    response_event["payload"]["valid"] = False
+    response_event["payload"]["error"] = "fallback:illogical_after_retry"
+    _write_jsonl(run_files.events_path, events)
+
+    replay_report = write_replay_verification_artifacts(run_files)
+    state_report = json.loads(run_files.state_replay_report_path.read_text(encoding="utf-8"))
+    artifact_report = json.loads(run_files.artifact_replay_report_path.read_text(encoding="utf-8"))
+
+    assert state_report["status"] == "passed"
+    assert artifact_report["status"] == "failed"
+    assert replay_report["status"] == "state_passed_artifact_failed"
+    assert replay_report["state_status"] == "passed"
+    assert replay_report["artifact_status"] == "failed"
+    assert artifact_report["first_mismatch_original_event"]["payload"]["error"] == "fallback:illogical_after_retry"

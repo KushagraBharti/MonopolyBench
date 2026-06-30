@@ -10,7 +10,20 @@ from monopoly_engine import canonical_event_lines, replay_actions
 from monopoly_telemetry import RunFiles
 
 
-REPLAY_REPORT_VERSION = "replay_report_v1"
+REPLAY_REPORT_VERSION = "replay_report_v2"
+STATE_REPLAY_REPORT_VERSION = "state_replay_report_v1"
+ARTIFACT_REPLAY_REPORT_VERSION = "artifact_replay_report_v1"
+STATE_REPLAY_EXCLUDED_EVENT_TYPES = {
+    "LLM_DECISION_REQUESTED",
+    "LLM_DECISION_RESPONSE",
+    "LLM_PUBLIC_MESSAGE",
+    "LLM_PRIVATE_THOUGHT",
+}
+STATE_REPLAY_CANONICALIZATION = (
+    "monopoly_engine.canonical_event_lines over state-relevant events after dropping "
+    "LLM observation events and normalizing global event_id/seq/ts_ms to a state_event_index"
+)
+ARTIFACT_REPLAY_CANONICALIZATION = "monopoly_engine.canonical_event_lines over the full event stream"
 MAJOR_EVENT_TYPES = {
     "GAME_ENDED",
     "LLM_DECISION_REQUESTED",
@@ -37,76 +50,43 @@ MAJOR_EVENT_TYPES = {
 
 
 def write_replay_verification_artifacts(run_files: RunFiles) -> dict[str, Any]:
-    report = build_replay_verification_report(run_files)
+    reports = build_replay_verification_reports(run_files)
+    report = reports["replay_report"]
+    state_report = reports["state_replay_report"]
+    artifact_report = reports["artifact_replay_report"]
     original_events = _read_jsonl(run_files.events_path)
     _write_jsonl(run_files.replay_steps_path, _build_replay_steps(original_events))
     _write_jsonl(run_files.replay_flags_path, _build_replay_flags(original_events))
     run_files.write_json_artifact(run_files.replay_navigation_path, _build_replay_navigation(original_events))
-    run_files.write_json_artifact(run_files.event_hashes_path, _build_event_hashes(original_events, report))
-    run_files.write_json_artifact(run_files.replay_diff_path, _build_replay_diff(report))
+    run_files.write_json_artifact(run_files.event_hashes_path, _build_event_hashes(original_events, artifact_report))
+    run_files.write_json_artifact(run_files.replay_diff_path, _build_replay_diff(artifact_report))
+    run_files.write_json_artifact(run_files.state_replay_report_path, state_report)
+    run_files.write_json_artifact(run_files.artifact_replay_report_path, artifact_report)
     run_files.write_json_artifact(run_files.replay_report_path, report)
     return report
 
 
 def build_replay_verification_report(run_files: RunFiles) -> dict[str, Any]:
+    return build_replay_verification_reports(run_files)["replay_report"]
+
+
+def build_replay_verification_reports(run_files: RunFiles) -> dict[str, dict[str, Any]]:
     started_at = datetime.now(timezone.utc).isoformat()
     original_events = _read_jsonl(run_files.events_path)
     actions = _read_jsonl(run_files.actions_path)
     run_config = _read_json(run_files.run_config_path)
     players = _replay_players(run_config)
-    base_report: dict[str, Any] = {
-        "schema_version": "v1",
-        "replay_report_version": REPLAY_REPORT_VERSION,
-        "run_id": run_files.run_id,
-        "attempted": False,
-        "status": "not_attempted",
-        "started_at": started_at,
-        "finished_at": None,
-        "original_event_count": len(original_events),
-        "replay_event_count": None,
-        "original_canonical_hash": _hash_lines(canonical_event_lines(original_events)),
-        "replay_canonical_hash": None,
-        "first_mismatch_index": None,
-        "first_mismatch_original_event": None,
-        "first_mismatch_replay_event": None,
-        "missing_actions": 0,
-        "extra_actions": 0,
-        "missing_events": None,
-        "extra_events": None,
-        "decision_id_mismatch": False,
-        "error": None,
-        "run_config_used": {
-            "seed": run_config.get("seed"),
-            "max_turns": run_config.get("max_turns", 200),
-            "start_ts_ms": run_config.get("start_ts_ms", 0),
-            "ts_step_ms": run_config.get("ts_step_ms", 250),
-            "max_trade_exchanges": run_config.get("max_trade_exchanges", 20),
-            "max_auction_actions": run_config.get("max_auction_actions", 200),
-            "player_count": len(players),
-        },
-    }
+    context = _replay_context(run_files, started_at, original_events, actions, run_config, players)
     if not original_events:
-        base_report["status"] = "failed"
-        base_report["error"] = "events.jsonl is empty or missing"
-        base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-        return base_report
+        return _failed_reports(context, "events.jsonl is empty or missing")
     if not actions:
-        base_report["status"] = "failed"
-        base_report["error"] = "actions.jsonl is empty or missing"
-        base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-        return base_report
+        return _failed_reports(context, "actions.jsonl is empty or missing")
     if not isinstance(run_config.get("seed"), int):
-        base_report["status"] = "failed"
-        base_report["error"] = "run_config.json missing integer seed"
-        base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-        return base_report
+        return _failed_reports(context, "run_config.json missing integer seed")
     if not players:
-        base_report["status"] = "failed"
-        base_report["error"] = "run_config.json missing replay players"
-        base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-        return base_report
+        return _failed_reports(context, "run_config.json missing replay players")
 
-    base_report["attempted"] = True
+    context["attempted"] = True
     try:
         replayed_events = replay_actions(
             seed=int(run_config["seed"]),
@@ -120,42 +100,328 @@ def build_replay_verification_report(run_files: RunFiles) -> dict[str, Any]:
             max_auction_actions=int(run_config.get("max_auction_actions", 200)),
         )
     except ValueError as exc:
-        base_report["status"] = "failed"
-        base_report["error"] = str(exc)
-        base_report["decision_id_mismatch"] = "Decision id mismatch" in str(exc)
-        base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-        return base_report
+        return _failed_reports(
+            context,
+            str(exc),
+            decision_id_mismatch="Decision id mismatch" in str(exc),
+        )
     except Exception as exc:  # pragma: no cover - defensive report path
-        base_report["status"] = "failed"
-        base_report["error"] = str(exc)
-        base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-        return base_report
+        return _failed_reports(context, str(exc))
 
-    original_lines = canonical_event_lines(original_events)
-    replay_lines = canonical_event_lines(replayed_events)
+    finished_at = datetime.now(timezone.utc).isoformat()
+    state_report = _build_stream_report(
+        context,
+        report_kind="state",
+        version_key="state_replay_report_version",
+        version=STATE_REPLAY_REPORT_VERSION,
+        comparison_scope="engine_state_relevant_events",
+        original_events=original_events,
+        replayed_events=replayed_events,
+        original_lines=_state_event_lines(original_events),
+        replay_lines=_state_event_lines(replayed_events),
+        finished_at=finished_at,
+        excluded_event_types=sorted(STATE_REPLAY_EXCLUDED_EVENT_TYPES),
+        canonicalization=STATE_REPLAY_CANONICALIZATION,
+    )
+    artifact_report = _build_stream_report(
+        context,
+        report_kind="artifact",
+        version_key="artifact_replay_report_version",
+        version=ARTIFACT_REPLAY_REPORT_VERSION,
+        comparison_scope="full_event_artifact_stream",
+        original_events=original_events,
+        replayed_events=replayed_events,
+        original_lines=canonical_event_lines(original_events),
+        replay_lines=canonical_event_lines(replayed_events),
+        finished_at=finished_at,
+        excluded_event_types=[],
+        canonicalization=ARTIFACT_REPLAY_CANONICALIZATION,
+    )
+    replay_report = _build_aggregate_replay_report(context, state_report, artifact_report, finished_at)
+    return {
+        "replay_report": replay_report,
+        "state_replay_report": state_report,
+        "artifact_replay_report": artifact_report,
+    }
+
+
+def _replay_context(
+    run_files: RunFiles,
+    started_at: str,
+    original_events: list[dict[str, Any]],
+    actions: list[dict[str, Any]],
+    run_config: dict[str, Any],
+    players: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        "run_id": run_files.run_id,
+        "attempted": False,
+        "started_at": started_at,
+        "original_event_count": len(original_events),
+        "action_count": len(actions),
+        "missing_actions": 0,
+        "extra_actions": 0,
+        "decision_id_mismatch": False,
+        "run_config_used": {
+            "seed": run_config.get("seed"),
+            "max_turns": run_config.get("max_turns", 200),
+            "start_ts_ms": run_config.get("start_ts_ms", 0),
+            "ts_step_ms": run_config.get("ts_step_ms", 250),
+            "max_trade_exchanges": run_config.get("max_trade_exchanges", 20),
+            "max_auction_actions": run_config.get("max_auction_actions", 200),
+            "player_count": len(players),
+        },
+    }
+
+
+def _failed_reports(
+    context: dict[str, Any],
+    error: str,
+    *,
+    decision_id_mismatch: bool = False,
+) -> dict[str, dict[str, Any]]:
+    finished_at = datetime.now(timezone.utc).isoformat()
+    failed_context = {
+        **context,
+        "decision_id_mismatch": decision_id_mismatch,
+    }
+    state_report = _failed_stream_report(
+        failed_context,
+        report_kind="state",
+        version_key="state_replay_report_version",
+        version=STATE_REPLAY_REPORT_VERSION,
+        comparison_scope="engine_state_relevant_events",
+        finished_at=finished_at,
+        error=error,
+        excluded_event_types=sorted(STATE_REPLAY_EXCLUDED_EVENT_TYPES),
+        canonicalization=STATE_REPLAY_CANONICALIZATION,
+    )
+    artifact_report = _failed_stream_report(
+        failed_context,
+        report_kind="artifact",
+        version_key="artifact_replay_report_version",
+        version=ARTIFACT_REPLAY_REPORT_VERSION,
+        comparison_scope="full_event_artifact_stream",
+        finished_at=finished_at,
+        error=error,
+        excluded_event_types=[],
+        canonicalization=ARTIFACT_REPLAY_CANONICALIZATION,
+    )
+    replay_report = _build_aggregate_replay_report(failed_context, state_report, artifact_report, finished_at)
+    return {
+        "replay_report": replay_report,
+        "state_replay_report": state_report,
+        "artifact_replay_report": artifact_report,
+    }
+
+
+def _failed_stream_report(
+    context: dict[str, Any],
+    *,
+    report_kind: str,
+    version_key: str,
+    version: str,
+    comparison_scope: str,
+    finished_at: str,
+    error: str,
+    excluded_event_types: list[str],
+    canonicalization: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "v1",
+        version_key: version,
+        "run_id": context["run_id"],
+        "report_kind": report_kind,
+        "comparison_scope": comparison_scope,
+        "canonicalization": canonicalization,
+        "attempted": context["attempted"],
+        "status": "failed",
+        "started_at": context["started_at"],
+        "finished_at": finished_at,
+        "original_event_count": context["original_event_count"],
+        "replay_event_count": None,
+        "original_compared_event_count": None,
+        "replay_compared_event_count": None,
+        "original_canonical_hash": None,
+        "replay_canonical_hash": None,
+        "first_mismatch_index": None,
+        "first_mismatch_original_event": None,
+        "first_mismatch_replay_event": None,
+        "missing_actions": context["missing_actions"],
+        "extra_actions": context["extra_actions"],
+        "missing_events": None,
+        "extra_events": None,
+        "decision_id_mismatch": context["decision_id_mismatch"],
+        "error": error,
+        "excluded_event_types": excluded_event_types,
+        "run_config_used": context["run_config_used"],
+    }
+
+
+def _build_stream_report(
+    context: dict[str, Any],
+    *,
+    report_kind: str,
+    version_key: str,
+    version: str,
+    comparison_scope: str,
+    original_events: list[dict[str, Any]],
+    replayed_events: list[dict[str, Any]],
+    original_lines: list[str],
+    replay_lines: list[str],
+    finished_at: str,
+    excluded_event_types: list[str],
+    canonicalization: str,
+) -> dict[str, Any]:
     first_mismatch = _first_mismatch(original_lines, replay_lines)
-    base_report["replay_event_count"] = len(replayed_events)
-    base_report["replay_canonical_hash"] = _hash_lines(replay_lines)
-    base_report["first_mismatch_index"] = first_mismatch
-    if len(original_lines) > len(replay_lines):
-        base_report["missing_events"] = len(original_lines) - len(replay_lines)
-        base_report["extra_events"] = 0
-    elif len(replay_lines) > len(original_lines):
-        base_report["missing_events"] = 0
-        base_report["extra_events"] = len(replay_lines) - len(original_lines)
-    else:
-        base_report["missing_events"] = 0
-        base_report["extra_events"] = 0
+    missing_events, extra_events = _event_count_delta(len(original_lines), len(replay_lines))
+    report: dict[str, Any] = {
+        "schema_version": "v1",
+        version_key: version,
+        "run_id": context["run_id"],
+        "report_kind": report_kind,
+        "comparison_scope": comparison_scope,
+        "canonicalization": canonicalization,
+        "attempted": True,
+        "status": "passed" if first_mismatch is None else "failed",
+        "started_at": context["started_at"],
+        "finished_at": finished_at,
+        "original_event_count": len(original_events),
+        "replay_event_count": len(replayed_events),
+        "original_compared_event_count": len(original_lines),
+        "replay_compared_event_count": len(replay_lines),
+        "original_canonical_hash": _hash_lines(original_lines),
+        "replay_canonical_hash": _hash_lines(replay_lines),
+        "first_mismatch_index": first_mismatch,
+        "first_mismatch_original_event": None,
+        "first_mismatch_replay_event": None,
+        "missing_actions": context["missing_actions"],
+        "extra_actions": context["extra_actions"],
+        "missing_events": missing_events,
+        "extra_events": extra_events,
+        "decision_id_mismatch": context["decision_id_mismatch"],
+        "error": None,
+        "excluded_event_types": excluded_event_types,
+        "run_config_used": context["run_config_used"],
+    }
     if first_mismatch is not None:
-        base_report["first_mismatch_original_event"] = (
-            original_events[first_mismatch] if first_mismatch < len(original_events) else None
+        report["first_mismatch_original_event"] = _event_for_compared_index(
+            original_events,
+            first_mismatch,
+            excluded_event_types=excluded_event_types,
         )
-        base_report["first_mismatch_replay_event"] = (
-            replayed_events[first_mismatch] if first_mismatch < len(replayed_events) else None
+        report["first_mismatch_replay_event"] = _event_for_compared_index(
+            replayed_events,
+            first_mismatch,
+            excluded_event_types=excluded_event_types,
         )
-    base_report["status"] = "passed" if first_mismatch is None else "failed"
-    base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
-    return base_report
+    return report
+
+
+def _build_aggregate_replay_report(
+    context: dict[str, Any],
+    state_report: dict[str, Any],
+    artifact_report: dict[str, Any],
+    finished_at: str,
+) -> dict[str, Any]:
+    state_status = str(state_report.get("status") or "missing")
+    artifact_status = str(artifact_report.get("status") or "missing")
+    if state_status == "passed" and artifact_status == "passed":
+        status = "passed"
+    elif state_status == "passed" and artifact_status != "passed":
+        status = "state_passed_artifact_failed"
+    else:
+        status = "failed"
+    return {
+        "schema_version": "v1",
+        "replay_report_version": REPLAY_REPORT_VERSION,
+        "run_id": context["run_id"],
+        "attempted": bool(state_report.get("attempted") or artifact_report.get("attempted")),
+        "status": status,
+        "status_semantics": "aggregate_state_and_artifact_replay",
+        "state_status": state_status,
+        "artifact_status": artifact_status,
+        "started_at": context["started_at"],
+        "finished_at": finished_at,
+        "original_event_count": context["original_event_count"],
+        "replay_event_count": artifact_report.get("replay_event_count"),
+        "state_original_canonical_hash": state_report.get("original_canonical_hash"),
+        "state_replay_canonical_hash": state_report.get("replay_canonical_hash"),
+        "artifact_original_canonical_hash": artifact_report.get("original_canonical_hash"),
+        "artifact_replay_canonical_hash": artifact_report.get("replay_canonical_hash"),
+        "state_first_mismatch_index": state_report.get("first_mismatch_index"),
+        "artifact_first_mismatch_index": artifact_report.get("first_mismatch_index"),
+        "state_first_mismatch_original_event": state_report.get("first_mismatch_original_event"),
+        "state_first_mismatch_replay_event": state_report.get("first_mismatch_replay_event"),
+        "artifact_first_mismatch_original_event": artifact_report.get("first_mismatch_original_event"),
+        "artifact_first_mismatch_replay_event": artifact_report.get("first_mismatch_replay_event"),
+        "missing_actions": context["missing_actions"],
+        "extra_actions": context["extra_actions"],
+        "state_missing_events": state_report.get("missing_events"),
+        "state_extra_events": state_report.get("extra_events"),
+        "artifact_missing_events": artifact_report.get("missing_events"),
+        "artifact_extra_events": artifact_report.get("extra_events"),
+        "decision_id_mismatch": bool(
+            state_report.get("decision_id_mismatch") or artifact_report.get("decision_id_mismatch")
+        ),
+        "error": state_report.get("error") or artifact_report.get("error"),
+        "state_replay_report": {
+            "artifact": "state_replay_report.json",
+            "status": state_status,
+            "comparison_scope": state_report.get("comparison_scope"),
+        },
+        "artifact_replay_report": {
+            "artifact": "artifact_replay_report.json",
+            "status": artifact_status,
+            "comparison_scope": artifact_report.get("comparison_scope"),
+        },
+        # Compatibility aliases preserve the old strict event-stream fields.
+        "original_canonical_hash": artifact_report.get("original_canonical_hash"),
+        "replay_canonical_hash": artifact_report.get("replay_canonical_hash"),
+        "first_mismatch_index": artifact_report.get("first_mismatch_index"),
+        "first_mismatch_original_event": artifact_report.get("first_mismatch_original_event"),
+        "first_mismatch_replay_event": artifact_report.get("first_mismatch_replay_event"),
+        "missing_events": artifact_report.get("missing_events"),
+        "extra_events": artifact_report.get("extra_events"),
+        "run_config_used": context["run_config_used"],
+    }
+
+
+def _event_count_delta(original_count: int, replay_count: int) -> tuple[int, int]:
+    if original_count > replay_count:
+        return original_count - replay_count, 0
+    if replay_count > original_count:
+        return 0, replay_count - original_count
+    return 0, 0
+
+
+def _state_event_lines(events: list[dict[str, Any]]) -> list[str]:
+    return canonical_event_lines(_state_replay_events(events))
+
+
+def _state_replay_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    state_events: list[dict[str, Any]] = []
+    for event in events:
+        if event.get("type") in STATE_REPLAY_EXCLUDED_EVENT_TYPES:
+            continue
+        normalized = dict(event)
+        normalized.pop("event_id", None)
+        normalized.pop("seq", None)
+        normalized.pop("ts_ms", None)
+        normalized["state_event_index"] = len(state_events)
+        state_events.append(normalized)
+    return state_events
+
+
+def _event_for_compared_index(
+    events: list[dict[str, Any]],
+    compared_index: int,
+    *,
+    excluded_event_types: list[str],
+) -> dict[str, Any] | None:
+    filtered = [event for event in events if event.get("type") not in set(excluded_event_types)]
+    return filtered[compared_index] if compared_index < len(filtered) else None
 
 
 def _build_event_hashes(events: list[dict[str, Any]], report: dict[str, Any]) -> dict[str, Any]:
