@@ -293,6 +293,8 @@ def build_run_entry(
     usage = _read_json(run_dir / "usage.json")
     cost_report = _read_json(run_dir / "cost_report.json")
     replay_report = _read_json(run_dir / "replay_report.json")
+    state_replay_report = _read_json(run_dir / "state_replay_report.json")
+    artifact_replay_report = _read_json(run_dir / "artifact_replay_report.json")
     trace_summary = _read_json(run_dir / "trace_summary.json")
     failure_summary = _read_json(run_dir / "failure_summary.json")
     seat_assignment = _read_json(run_dir / "seat_assignment.json")
@@ -315,6 +317,8 @@ def build_run_entry(
         "usage": usage,
         "cost_report": cost_report,
         "replay_report": replay_report,
+        "state_replay_report": state_replay_report,
+        "artifact_replay_report": artifact_replay_report,
         "trace_summary": trace_summary,
         "failure_summary": failure_summary,
     }
@@ -560,6 +564,10 @@ def _result_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "turn_count": summary.get("turn_count"),
         "reason": summary.get("reason"),
         "replay_status": replay_report.get("status"),
+        "state_replay_status": replay_report.get("state_status")
+        or _dict(entry.get("state_replay_report")).get("status"),
+        "artifact_replay_status": replay_report.get("artifact_status")
+        or _dict(entry.get("artifact_replay_report")).get("status"),
         "total_actual_cost": cost_report.get("total_actual_cost"),
     }
 
@@ -691,17 +699,31 @@ def _statistical_summary(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _batch_replay_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
     statuses: dict[str, int] = {}
+    state_statuses: dict[str, int] = {}
+    artifact_statuses: dict[str, int] = {}
     for entry in run_entries:
         replay_report = _dict(entry.get("replay_report"))
         status = str(replay_report.get("status") or "missing")
         statuses[status] = statuses.get(status, 0) + 1
+        state_report = _dict(entry.get("state_replay_report"))
+        artifact_report = _dict(entry.get("artifact_replay_report"))
+        state_status = str(replay_report.get("state_status") or state_report.get("status") or "missing")
+        artifact_status = str(replay_report.get("artifact_status") or artifact_report.get("status") or "missing")
+        state_statuses[state_status] = state_statuses.get(state_status, 0) + 1
+        artifact_statuses[artifact_status] = artifact_statuses.get(artifact_status, 0) + 1
     passed = statuses.get("passed", 0)
+    state_passed = state_statuses.get("passed", 0)
+    artifact_passed = artifact_statuses.get("passed", 0)
     return {
         "schema_version": "v1",
-        "replay_report_version": "batch_replay_report_v1",
+        "replay_report_version": "batch_replay_report_v2",
         "run_count": len(run_entries),
         "status_counts": statuses,
+        "state_status_counts": state_statuses,
+        "artifact_status_counts": artifact_statuses,
         "pass_rate": passed / len(run_entries) if run_entries else 0,
+        "state_pass_rate": state_passed / len(run_entries) if run_entries else 0,
+        "artifact_pass_rate": artifact_passed / len(run_entries) if run_entries else 0,
     }
 
 
@@ -1188,6 +1210,8 @@ def _model_card(model_id: str, run_entries: list[dict[str, Any]], leaderboard: d
                 "run_dir": entry.get("run_dir"),
                 "scorecard": str(Path(str(entry.get("run_dir"))) / "scorecard.json"),
                 "replay": str(Path(str(entry.get("run_dir"))) / "replay_report.json"),
+                "state_replay": str(Path(str(entry.get("run_dir"))) / "state_replay_report.json"),
+                "artifact_replay": str(Path(str(entry.get("run_dir"))) / "artifact_replay_report.json"),
                 "review_queue": str(Path(str(entry.get("run_dir"))) / "review_queue.jsonl"),
             }
             for entry in model_run_entries

@@ -53,6 +53,8 @@ EXPECTED_RUN_TOP_LEVEL = [
     "replay_flags.jsonl",
     "replay_navigation.json",
     "replay_report.json",
+    "state_replay_report.json",
+    "artifact_replay_report.json",
     "replay_steps.jsonl",
     "review_cost_aggregate.json",
     "review_cost_calls.jsonl",

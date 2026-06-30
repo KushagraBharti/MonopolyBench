@@ -24,7 +24,7 @@ run/
   prompts/
   responses/
   usage/cost artifacts
-  replay_report.json or enough data to produce one
+  replay_report.json, state_replay_report.json, and artifact_replay_report.json, or enough data to produce them
 ```
 
 The analysis should also have access to:
@@ -93,6 +93,8 @@ analysis/
   quality/
     artifact_completeness.json
     replay_report.json
+    state_replay_report.json
+    artifact_replay_report.json
     call_reconciliation.json
     quality_flags.json
   manifests/
@@ -143,7 +145,8 @@ Produce `artifact_completeness.json` and `integrity_summary.csv` with:
 
 Treat these as blockers for serious research claims:
 
-- replay status failed without an explained engine/verifier bug;
+- state replay failed without an explained engine/verifier bug;
+- artifact replay failed without a documented artifact-metadata explanation;
 - applied action differs from the validated parsed action;
 - event sequence gaps that cannot be explained;
 - decisions without actions or terminal reasons;
@@ -161,10 +164,12 @@ Replay is the proof that the engine transition surface is auditable.
 
 1. Reconstruct the initial state, ruleset, seed bundle, and model seat map.
 2. Apply the recorded structured actions in order.
-3. Compare canonical event stream and state hashes after every replay checkpoint.
-4. Stop on the first mismatch and write the first mismatching event sequence, expected event, replayed event, expected state hash, replayed state hash, and canonical diff URI.
-5. If replay passes, copy or regenerate `quality/replay_report.json`.
-6. If replay fails due to a verifier bug rather than a run bug, fix the verifier and rerun before publishing the run.
+3. Read `state_replay_report.json` first. This is the engine-state determinism gate and should pass before making model-behavior claims.
+4. Read `artifact_replay_report.json` next. This is the strict research-log gate and should catch LLM metadata, fallback metadata, prompt/response observation, or event-emission drift.
+5. Compare canonical event stream and state hashes after every replay checkpoint.
+6. Stop on the first mismatch and write the first mismatching event sequence, expected event, replayed event, expected state hash, replayed state hash, and canonical diff URI.
+7. If state replay passes but artifact replay fails, document the exact artifact mismatch and whether it affects model-behavior conclusions.
+8. If state replay fails due to a verifier bug rather than a run bug, fix the verifier and rerun before publishing the run.
 
 Do not treat screenshots, UI state, or summary files as replay proof. Events, actions, and canonical snapshots are authoritative.
 
@@ -785,7 +790,7 @@ Every primary conclusion should be checked against:
 The final `analysis_report.md` should be structured as:
 
 1. Run identity and endpoint.
-2. Integrity and replay status.
+2. Integrity plus state/artifact replay status.
 3. Artifact completeness and missingness.
 4. Winner, survival order, terminal net worth, and trajectory overview.
 5. Cost, token, reasoning-token, latency, retry, invalidity, and fallback summary.

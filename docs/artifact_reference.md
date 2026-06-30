@@ -9,11 +9,13 @@ Each full game writes to `runs/<run_id>/`.
 
 Core replay artifacts:
 - `events.jsonl`: canonical event stream emitted by the authoritative engine.
-- `actions.jsonl`: applied actions, sufficient for deterministic replay.
-- `replay_report.json`: pass/fail replay status, canonical hashes, mismatch metadata.
+- `actions.jsonl`: applied actions plus decision metadata, sufficient for deterministic replay when available.
+- `state_replay_report.json`: engine-state replay status over state-relevant events. This intentionally excludes LLM observation events and normalizes global event sequencing fields so it answers whether the game-state trajectory replayed.
+- `artifact_replay_report.json`: strict full event-stream replay status. This includes LLM request/response/message/thought events and catches artifact metadata drift, fallback metadata drift, missing observation events, and other research-log mismatches.
+- `replay_report.json`: aggregate replay status with `state_status` and `artifact_status`. A run may be `state_passed_artifact_failed` when game state replayed but strict artifact metadata did not.
 - `replay_diff.json`: compact mismatch/error summary for failed replays.
 - `event_hashes.json`: stream hashes and per-event canonical hashes.
-- `replay.jsonl`: ordered replay steps for UI playback.
+- `replay_steps.jsonl`: ordered replay steps for UI playback.
 - `replay_flags.jsonl`: important replay markers.
 - `replay_navigation.json`: skip targets for important decisions/events.
 
@@ -76,7 +78,7 @@ Batch scoring and statistics:
 - `statistical_summary.json`: descriptive statistics and confidence intervals.
 
 Batch replay, failure, review, and accounting:
-- `replay_report.json`: batch replay pass-rate summary.
+- `replay_report.json`: batch replay pass-rate summary, including aggregate, state, and artifact status counts.
 - `trace_summary.json`: trace finding rollup.
 - `failure_summary.json`: failure finding rollup.
 - `model_failure_breakdown.json`: failures by model.

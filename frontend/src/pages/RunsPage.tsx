@@ -72,8 +72,20 @@ export const RunsPage = () => {
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-black uppercase truncate">{run.run_id}</div>
-                <NeoBadge variant={run.replay_report_exists ? 'success' : 'warning'}>
-                  {run.replay_report_exists ? 'replay' : 'partial'}
+                <NeoBadge
+                  variant={
+                    run.state_replay_report_exists && run.artifact_replay_report_exists
+                      ? 'success'
+                      : run.replay_report_exists
+                        ? 'info'
+                        : 'warning'
+                  }
+                >
+                  {run.state_replay_report_exists && run.artifact_replay_report_exists
+                    ? 'split replay'
+                    : run.replay_report_exists
+                      ? 'legacy replay'
+                      : 'partial'}
                 </NeoBadge>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">

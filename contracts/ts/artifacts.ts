@@ -231,6 +231,8 @@ export interface RunListItem {
   summary_exists?: boolean;
   scorecard_exists?: boolean;
   replay_report_exists?: boolean;
+  state_replay_report_exists?: boolean;
+  artifact_replay_report_exists?: boolean;
 }
 
 export interface RunList {
@@ -247,6 +249,8 @@ export interface RunDetail {
   scorecard: Record<string, unknown>;
   usage: Record<string, unknown>;
   replay_report: Record<string, unknown>;
+  state_replay_report: Record<string, unknown>;
+  artifact_replay_report: Record<string, unknown>;
   trace_summary: Record<string, unknown>;
   failure_summary: Record<string, unknown>;
 }

@@ -163,6 +163,8 @@ export const BatchDashboardPage = () => {
 
   const leaderboardRows = getArray(getRecord(detail?.leaderboard).rankings);
   const replayStatusCounts = getRecord(replayReport?.status_counts);
+  const stateReplayStatusCounts = getRecord(replayReport?.state_status_counts);
+  const artifactReplayStatusCounts = getRecord(replayReport?.artifact_status_counts);
   const costTotals = getRecord(costReport);
   const tokenTotals = getRecord(tokenReport?.totals);
   const failureCounts = getRecord(failureSummary?.by_finding_type);
@@ -179,6 +181,8 @@ export const BatchDashboardPage = () => {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Metric label="Runs" value={String(getRecord(detail?.manifest).run_count ?? '-')} />
             <Metric label="Replay Pass" value={numberText(replayReport?.pass_rate)} />
+            <Metric label="State Pass" value={numberText(replayReport?.state_pass_rate)} />
+            <Metric label="Artifact Pass" value={numberText(replayReport?.artifact_pass_rate)} />
           </div>
         </header>
         <section className="p-3 border-b border-black/10">
@@ -228,7 +232,12 @@ export const BatchDashboardPage = () => {
           <Metric label="Actual Cost" value={numberText(costTotals.total_actual_cost)} />
           <Metric label="Prompt Tokens" value={numberText(tokenTotals.prompt_tokens)} />
           <Metric label="Completion Tokens" value={numberText(tokenTotals.completion_tokens)} />
-          <Metric label="Replay Passed" value={String(replayStatusCounts.passed ?? 0)} />
+          <Metric
+            label="Replay Passed"
+            value={`${String(replayStatusCounts.passed ?? 0)} / ${String(stateReplayStatusCounts.passed ?? 0)} / ${String(
+              artifactReplayStatusCounts.passed ?? 0
+            )}`}
+          />
         </section>
 
         <section className="mt-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-4">

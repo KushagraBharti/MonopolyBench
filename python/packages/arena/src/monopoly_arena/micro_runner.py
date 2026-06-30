@@ -71,6 +71,7 @@ class MicroRunner:
                 "decision_type": decision["decision_type"],
                 "turn_index": decision["turn_index"],
                 "action": outcome.action,
+                "decision_meta": outcome.decision_meta,
             }
         )
         resolved_entry = self._resolver.build_decision_log_entry(
