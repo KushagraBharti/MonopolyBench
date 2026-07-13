@@ -24,7 +24,7 @@ export const GameControls = () => {
       await fetch(`${apiBase}/run/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seed: Date.now() % 100000, max_turns: maxTurns }),
+        body: JSON.stringify({ max_turns: maxTurns }),
       });
     } catch (e) {
       console.error(e);

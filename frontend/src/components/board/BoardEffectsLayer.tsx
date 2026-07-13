@@ -49,6 +49,7 @@ export const BoardEffectsLayer = () => {
     const events = useGameStore((state) => state.events);
     const snapshot = useGameStore((state) => state.snapshot);
     const runId = useGameStore((state) => state.runStatus.runId);
+    const runIsActive = useGameStore((state) => state.runStatus.running);
     const logResetId = useGameStore((state) => state.logResetId);
     const [queue, setQueue] = useState<AnimationItem[]>([]);
     const [cashToasts, setCashToasts] = useState<CashToast[]>([]);
@@ -157,13 +158,17 @@ export const BoardEffectsLayer = () => {
             return;
         }
         if (!hasHydrated.current) {
-            for (const event of events) {
-                if (event?.event_id) {
-                    processedEventIds.current.add(event.event_id);
-                }
-            }
+            const containsGameStart = events.some((event) => event.type === 'GAME_STARTED');
+            const isFreshLiveBatch = runIsActive || containsGameStart;
             hasHydrated.current = true;
-            return;
+            if (!isFreshLiveBatch) {
+                for (const event of events) {
+                    if (event?.event_id) {
+                        processedEventIds.current.add(event.event_id);
+                    }
+                }
+                return;
+            }
         }
         const board = snapshot?.board ?? [];
         const newItems: AnimationItem[] = [];
@@ -292,7 +297,7 @@ export const BoardEffectsLayer = () => {
         if (newItems.length) {
             setQueue((prev) => [...prev, ...newItems]);
         }
-    }, [events, snapshot, runId, getBoardCenter, getBoardPoint, getPlayerPosition, getPlayerAnchor]);
+    }, [events, snapshot, runId, runIsActive, getBoardCenter, getBoardPoint, getPlayerPosition, getPlayerAnchor]);
 
     useEffect(() => {
         if (activeItem || queue.length === 0) return;

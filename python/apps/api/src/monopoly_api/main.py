@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import time
+import secrets
 from typing import Any
 from fastapi import FastAPI, WebSocket, HTTPException, Query
 from fastapi import WebSocketDisconnect
@@ -102,7 +102,7 @@ class ReviewQueueItemRequest(BaseModel):
 
 @app.post("/run/start")
 async def run_start(body: StartRunRequest) -> dict:
-    seed = body.seed if body.seed is not None else int(time.time())
+    seed = body.seed if body.seed is not None else generate_run_seed()
     requested_players = [player.model_dump(exclude_none=True) for player in body.players] if body.players else None
     try:
         players = build_player_configs(
@@ -124,6 +124,11 @@ async def run_start(body: StartRunRequest) -> dict:
         max_auction_actions=max(1, int(body.max_auction_actions or 200)),
     )
     return {"run_id": run_id}
+
+
+def generate_run_seed() -> int:
+    """Generate a fresh seed once; the recorded seed keeps the run replayable."""
+    return secrets.randbits(32)
 
 
 @app.post("/run/stop")

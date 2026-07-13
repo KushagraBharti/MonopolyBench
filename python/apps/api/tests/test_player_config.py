@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+import monopoly_api.main as api_main
 from monopoly_api.main import app, run_manager
 from monopoly_api.player_config import (
     DEFAULT_SYSTEM_PROMPT,
@@ -140,6 +141,12 @@ def test_run_start_rejects_too_many_players() -> None:
     }
     response = client.post("/run/start", json=payload)
     assert response.status_code == 400
+
+
+def test_generate_run_seed_uses_fresh_random_bits(monkeypatch) -> None:
+    monkeypatch.setattr(api_main.secrets, "randbits", lambda bit_count: 4_294_967_291 if bit_count == 32 else 0)
+
+    assert api_main.generate_run_seed() == 4_294_967_291
 
 
 def test_run_status_preserves_free_model_id() -> None:
