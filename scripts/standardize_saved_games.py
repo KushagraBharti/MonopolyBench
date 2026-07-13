@@ -6,6 +6,7 @@ import json
 import math
 import re
 import shutil
+import sys
 import zipfile
 from collections import Counter
 from pathlib import Path
@@ -799,6 +800,13 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
 
     make_plots(plots_dir, usage_df, state_df, bank_df, events_df, decisions_df, model_usage_rows)
 
+    telemetry_src = REPO_ROOT / "python" / "packages" / "telemetry" / "src"
+    if str(telemetry_src) not in sys.path:
+        sys.path.insert(0, str(telemetry_src))
+    from monopoly_telemetry.expanded_metrics import analyze_saved_game
+
+    expanded_metrics = analyze_saved_game(saved_dir, out_dir / "expanded_metrics")
+
     manifest = {
         "schema_version": "saved_game_standard_analysis_v1",
         "saved_game": folder_name,
@@ -821,7 +829,11 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
             "state_player_rows": len(state_rows),
             "property_holding_rows": len(holding_rows),
             "quality_check_files": len(list(quality_dir.glob("*"))) if quality_dir.exists() else 0,
+            "expanded_trade_episodes": expanded_metrics["counts"]["trade_episodes"],
+            "expanded_auction_episodes": expanded_metrics["counts"]["auction_episodes"],
+            "expanded_mortgage_episodes": expanded_metrics["counts"]["mortgage_episodes"],
         },
+        "expanded_metrics_dir": "expanded_metrics",
     }
     write_json(out_dir / "manifest.json", manifest)
     write_reports(reports_dir, folder_name, summary, manifest, run_summary_rows[0], player_rows, model_usage_rows, artifact_presence_rows)
@@ -1017,6 +1029,7 @@ def write_reports(
             f"- Tables: `{len(manifest.get('tables', []))}`",
             f"- Plots: `{len(manifest.get('plots', []))}`",
             "- Reports: `analysis_report.md`, `coverage_report.md`, `data_dictionary.md`",
+            "- Expanded metrics: `expanded_metrics/`",
             "",
             "Legacy and previous analysis artifacts are preserved under `saved_games/archive/<saved-game>/`. This folder is the current standardized cross-run analysis layer.",
         ]
@@ -1073,6 +1086,7 @@ def write_reports(
         "- `trace_findings.csv`, `failure_findings.csv`, `review_queue.csv`: review and issue traces.",
         "- `cash_flow.csv`, `asset_flow.csv`, `auction_threads.csv`, `negotiation_threads.csv`: domain-specific telemetry streams.",
         "- `top_*_calls.csv`: highest cost, latency, output-token, and reasoning-token call outliers.",
+        "- `expanded_metrics/`: deterministic trade, auction, mortgage, cash, rent, and decision episode metrics.",
         "",
         "## Coverage",
         "",
