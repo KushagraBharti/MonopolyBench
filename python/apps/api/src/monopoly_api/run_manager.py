@@ -22,7 +22,7 @@ from monopoly_telemetry import (
 
 from monopoly_api.mock_runner import build_idle_snapshot
 from monopoly_arena import LlmRunner, OpenRouterClient, PlayerConfig
-from monopoly_arena.player_config import EXPECTED_PLAYER_COUNT
+from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT, EXPECTED_PLAYER_COUNT, derive_model_display_name
 from monopoly_api.ws_protocol import make_event, make_hello, make_snapshot
 from monopoly_api.decision_index import DecisionIndex
 
@@ -101,6 +101,55 @@ class RunManager:
     async def stop_run(self) -> None:
         async with self._lock:
             await self._stop_run_locked()
+
+    async def recover_run(self, run_id: str) -> str:
+        async with self._lock:
+            if self._is_running():
+                if self._run_id == run_id:
+                    return run_id
+                raise ValueError("Another run is currently active.")
+            run_files = self._resolve_run_files(run_id)
+            if run_files is None:
+                raise FileNotFoundError(f"Run '{run_id}' was not found.")
+            if run_files.summary_path.exists():
+                raise ValueError("Completed runs cannot be recovered as interrupted runs.")
+
+            run_config = _read_json(run_files.run_config_path)
+            if run_config.get("run_id") != run_id:
+                raise ValueError("Run configuration does not match the requested run id.")
+            events = _read_jsonl(run_files.events_path)
+            actions = _read_jsonl(run_files.actions_path)
+            decisions = _read_jsonl(run_files.decisions_path)
+            if not events:
+                raise ValueError("Interrupted run has no recorded events.")
+            players = _recovery_player_configs(run_config, decisions)
+
+            self._run_id = run_id
+            self._telemetry = init_run_files(self._runs_dir, run_id)
+            self._decision_index = DecisionIndex(self._telemetry)
+            self._players = players
+            self._runner = self._runner_factory(
+                seed=int(run_config["seed"]),
+                players=players,
+                run_id=run_id,
+                openrouter=self._openrouter_factory(),
+                run_files=self._telemetry,
+                max_turns=int(run_config.get("max_turns", 200)),
+                start_ts_ms=int(run_config.get("start_ts_ms", 0)),
+                ts_step_ms=int(run_config.get("ts_step_ms", 250)),
+                max_trade_exchanges=int(run_config.get("max_trade_exchanges", 20)),
+                max_auction_actions=int(run_config.get("max_auction_actions", 200)),
+                baseline_strategies=_dict(run_config.get("baseline_strategies")),
+                resume_actions=actions,
+                resume_events=events,
+            )
+            self._paused = False
+            self._snapshot = self._runner.get_snapshot()
+            self._turn_index = self._snapshot.get("turn_index")
+            self._seq = events[-1].get("seq")
+            await self.broadcast_snapshot(self._snapshot)
+            self._runner_task = asyncio.create_task(self._run_loop(run_id))
+            return run_id
 
     def get_status(self) -> dict[str, Any]:
         running = self._is_running()
@@ -924,3 +973,55 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
         if isinstance(parsed, dict):
             rows.append(parsed)
     return rows
+
+
+def _recovery_player_configs(
+    run_config: dict[str, Any],
+    decisions: list[dict[str, Any]],
+) -> list[PlayerConfig]:
+    entries = [entry for entry in _list(run_config.get("players")) if isinstance(entry, dict)]
+    if len(entries) != EXPECTED_PLAYER_COUNT:
+        raise ValueError(f"Interrupted run must contain exactly {EXPECTED_PLAYER_COUNT} player configurations.")
+
+    prompts_by_player: dict[str, set[str]] = {}
+    for decision in decisions:
+        player_id = decision.get("player_id")
+        if not isinstance(player_id, str):
+            continue
+        for message in _list(decision.get("prompt_messages")):
+            if not isinstance(message, dict) or message.get("role") != "system":
+                continue
+            content = message.get("content")
+            if isinstance(content, str) and content:
+                prompts_by_player.setdefault(player_id, set()).add(content)
+
+    baseline_players = set(_dict(run_config.get("baseline_strategies")))
+    players: list[PlayerConfig] = []
+    for entry in entries:
+        player_id = entry.get("player_id")
+        model_id = entry.get("openrouter_model_id")
+        if not isinstance(player_id, str) or not player_id:
+            raise ValueError("Interrupted run contains a player without a valid player_id.")
+        if not isinstance(model_id, str) or not model_id:
+            raise ValueError(f"Interrupted run player '{player_id}' has no model id.")
+        observed_prompts = prompts_by_player.get(player_id, set())
+        if len(observed_prompts) > 1:
+            raise ValueError(f"Interrupted run player '{player_id}' used multiple system prompts.")
+        if observed_prompts:
+            system_prompt = next(iter(observed_prompts))
+        elif player_id in baseline_players:
+            system_prompt = DEFAULT_SYSTEM_PROMPT
+        else:
+            raise ValueError(f"Interrupted run player '{player_id}' has no recoverable system prompt.")
+        players.append(
+            PlayerConfig(
+                player_id=player_id,
+                name=str(entry.get("name") or player_id),
+                openrouter_model_id=model_id,
+                model_display_name=str(entry.get("model_display_name") or derive_model_display_name(model_id)),
+                system_prompt=system_prompt,
+                reasoning=entry.get("reasoning") if isinstance(entry.get("reasoning"), dict) else None,
+                provider=entry.get("provider") if isinstance(entry.get("provider"), dict) else None,
+            )
+        )
+    return players

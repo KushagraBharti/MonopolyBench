@@ -75,6 +75,10 @@ class StartRunRequest(BaseModel):
     max_auction_actions: int | None = None
 
 
+class RecoverRunRequest(BaseModel):
+    run_id: str
+
+
 class ReviewLabelRequest(BaseModel):
     queue_item_id: str | None = None
     reviewer_id: str | None = None
@@ -129,6 +133,17 @@ async def run_start(body: StartRunRequest) -> dict:
 def generate_run_seed() -> int:
     """Generate a fresh seed once; the recorded seed keeps the run replayable."""
     return secrets.randbits(32)
+
+
+@app.post("/run/recover")
+async def run_recover(body: RecoverRunRequest) -> dict:
+    try:
+        run_id = await run_manager.recover_run(body.run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"run_id": run_id, "recovered": True}
 
 
 @app.post("/run/stop")

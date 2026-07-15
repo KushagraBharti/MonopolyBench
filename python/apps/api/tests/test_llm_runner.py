@@ -38,6 +38,55 @@ def _make_players() -> list[PlayerConfig]:
     ]
 
 
+def test_interrupted_run_recovery_replays_to_pending_decision() -> None:
+    players = _make_players()
+    engine = Engine(
+        seed=7,
+        players=[{"player_id": player.player_id, "name": player.name} for player in players],
+        run_id="resume-test",
+        max_turns=10,
+    )
+    _, opening_events, decision, _ = engine.advance_until_decision(max_steps=20)
+    assert decision is not None
+    action = {
+        "schema_version": "v1",
+        "action": "buy_property",
+        "decision_id": decision["decision_id"],
+        "args": {},
+        "public_message": "Buying.",
+        "private_thought": "Preserve this thought across recovery.",
+    }
+    decision_meta = {"valid": True, "error": None}
+    _, action_events, _, _ = engine.apply_action(action, decision_meta=decision_meta)
+    _, tail_events, pending_decision, _ = engine.advance_until_decision(max_steps=20)
+    assert pending_decision is not None
+    expected_events = [*opening_events, *action_events, *tail_events]
+    actions = [
+        {
+            "decision_id": decision["decision_id"],
+            "actor_player_id": decision["player_id"],
+            "decision_type": decision["decision_type"],
+            "turn_index": decision["turn_index"],
+            "action": action,
+            "decision_meta": decision_meta,
+        }
+    ]
+
+    runner = LlmRunner(
+        seed=7,
+        players=players,
+        run_id="resume-test",
+        openrouter=object(),  # type: ignore[arg-type]
+        max_turns=10,
+        event_delay_s=0,
+        resume_actions=actions,
+        resume_events=expected_events,
+    )
+
+    assert runner.get_snapshot() == engine.get_snapshot()
+    assert runner._recovered_pending_decision_id == pending_decision["decision_id"]  # noqa: SLF001
+
+
 def _event(
     event_type: str,
     payload: dict[str, Any],

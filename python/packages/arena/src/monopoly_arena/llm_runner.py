@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, AsyncIterable, Awaitable, Callable
 
-from monopoly_engine import Engine
+from monopoly_engine import Engine, canonical_event_lines
 from monopoly_engine.board import normalize_space_key
 from monopoly_telemetry import (
     RunFiles,
@@ -62,6 +62,8 @@ class LlmRunner:
         max_auction_actions: int = 200,
         seat_assignment_metadata: dict[str, Any] | None = None,
         baseline_strategies: dict[str, str] | None = None,
+        resume_actions: list[dict[str, Any]] | None = None,
+        resume_events: list[dict[str, Any]] | None = None,
     ) -> None:
         self.run_id = run_id
         if len(players) != EXPECTED_PLAYER_COUNT:
@@ -107,7 +109,13 @@ class LlmRunner:
         self._pending_resolution: PendingResolution | None = None
         self._advance_lock = asyncio.Lock()
         self._applied_decision_ids: set[str] = set()
-        self._write_static_run_artifacts()
+        self._recovered_pending_decision_id: str | None = None
+        if resume_actions is not None or resume_events is not None:
+            if resume_actions is None or resume_events is None:
+                raise ValueError("Interrupted-run recovery requires both actions and events.")
+            self._restore_interrupted_run(actions=resume_actions, expected_events=resume_events)
+        else:
+            self._write_static_run_artifacts()
 
     def request_stop(self, reason: str = "STOPPED") -> None:
         self._engine.request_stop(reason)
@@ -129,6 +137,61 @@ class LlmRunner:
 
     def get_snapshot(self) -> dict[str, Any]:
         return self._engine.get_snapshot()
+
+    def _restore_interrupted_run(
+        self,
+        *,
+        actions: list[dict[str, Any]],
+        expected_events: list[dict[str, Any]],
+    ) -> None:
+        replayed_events: list[dict[str, Any]] = []
+        max_auto_steps = max(1, self._max_turns + len(self._players) + 1)
+
+        for entry in actions:
+            _, decision_events, decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
+            replayed_events.extend(decision_events)
+            if decision is None:
+                raise ValueError("Interrupted-run replay could not reach the next recorded decision.")
+            expected_decision_id = entry.get("decision_id")
+            if isinstance(expected_decision_id, str) and decision.get("decision_id") != expected_decision_id:
+                raise ValueError(
+                    "Interrupted-run replay decision mismatch: "
+                    f"expected {expected_decision_id}, got {decision.get('decision_id')}."
+                )
+            action = entry.get("action")
+            if not isinstance(action, dict):
+                raise ValueError("Interrupted-run replay found an invalid recorded action.")
+            decision_meta = entry.get("decision_meta") if isinstance(entry.get("decision_meta"), dict) else None
+            _, action_events, _, _ = self._engine.apply_action(action, decision_meta=decision_meta)
+            replayed_events.extend(action_events)
+            self._applied_decision_ids.add(str(decision["decision_id"]))
+
+        pending_decision: dict[str, Any] | None = None
+        if not self._engine.is_game_over():
+            _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
+            replayed_events.extend(tail_events)
+
+        replayed_lines = canonical_event_lines(replayed_events)
+        expected_lines = canonical_event_lines(expected_events)
+        if replayed_lines != expected_lines:
+            mismatch_index = next(
+                (
+                    index
+                    for index, (actual, expected) in enumerate(zip(replayed_lines, expected_lines))
+                    if actual != expected
+                ),
+                min(len(replayed_lines), len(expected_lines)),
+            )
+            raise ValueError(
+                "Interrupted-run event replay mismatch at index "
+                f"{mismatch_index} (replayed={len(replayed_lines)}, recorded={len(expected_lines)})."
+            )
+        if pending_decision is None:
+            raise ValueError("Interrupted run has no recoverable pending decision.")
+
+        for event in replayed_events:
+            self._prompt_memory.update(event)
+        self._recovered_pending_decision_id = str(pending_decision["decision_id"])
 
     async def run(
         self,

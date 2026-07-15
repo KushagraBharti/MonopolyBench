@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from monopoly_engine import create_initial_state
+from monopoly_telemetry import init_run_files
 
 from monopoly_api.player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name
 from monopoly_api.run_manager import RunManager
@@ -20,6 +21,8 @@ class FakeRunner:
         **_: object,
     ) -> None:
         self.run_id = run_id
+        self.players = players
+        self.extra_kwargs = _
         self.run_calls = 0
         self.pause_calls = 0
         self.resume_calls = 0
@@ -148,6 +151,60 @@ def test_resume_is_idempotent(tmp_path) -> None:
 
         await manager.resume()
         assert runners[0].resume_calls == 1
+
+        await manager.stop_run()
+
+    asyncio.run(run_test())
+
+
+def test_recover_run_restores_logged_configuration(tmp_path) -> None:
+    async def run_test() -> None:
+        runners: list[FakeRunner] = []
+
+        def runner_factory(**kwargs: object) -> FakeRunner:
+            runner = FakeRunner(**kwargs)
+            runners.append(runner)
+            return runner
+
+        manager = RunManager(
+            tmp_path,
+            runner_factory=runner_factory,
+            openrouter_factory=lambda: object(),
+        )
+        players = _make_players()
+        run_id = "interrupted-run"
+        run_files = init_run_files(tmp_path, run_id)
+        run_files.write_run_config(
+            {
+                "run_id": run_id,
+                "seed": 303,
+                "max_turns": 25,
+                "players": [player.to_status() for player in players],
+                "baseline_strategies": {},
+            }
+        )
+        run_files.write_event({"seq": 0, "turn_index": 0, "type": "LLM_DECISION_REQUESTED"})
+        for index, player in enumerate(players):
+            run_files.write_decision(
+                {
+                    "phase": "decision_started",
+                    "decision_id": f"{run_id}-dec-{index:06d}",
+                    "player_id": player.player_id,
+                    "prompt_messages": [{"role": "system", "content": player.system_prompt}],
+                }
+            )
+
+        recovered_id = await manager.recover_run(run_id)
+        await asyncio.sleep(0)
+
+        assert recovered_id == run_id
+        assert manager.get_status()["running"] is True
+        assert runners[0].extra_kwargs["resume_events"] == [
+            {"seq": 0, "turn_index": 0, "type": "LLM_DECISION_REQUESTED"}
+        ]
+        assert [player.system_prompt for player in runners[0].players] == [
+            player.system_prompt for player in players
+        ]
 
         await manager.stop_run()
 
