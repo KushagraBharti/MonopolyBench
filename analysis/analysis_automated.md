@@ -43,6 +43,7 @@ Use the three analysis files this way:
 |---|---|
 | `scripts/standardize_saved_games.py` | Standardizes saved-game layout, archives older analysis outputs, generates tables, plots, reports, coverage files, manifest, and analysis zip. |
 | `scripts/analyze_saved_game.py` | Builds deterministic expanded trade, auction, mortgage, cash, rent, and decision metrics for one saved game. |
+| `scripts/analyze_negotiation_tactics.py` | Reconstructs trade episodes and generates offer, tactic, episode, per-run frequency, and model-bias tables without changing canonical run artifacts. |
 | `scripts/verify.ps1` | Runs the repo verification suite. This checks the codebase, not one specific saved game, but it should pass before trusting new behavioral or artifact changes. |
 | `python/packages/telemetry/src/monopoly_telemetry/summary.py` | Builds run summary artifacts. |
 | `python/packages/telemetry/src/monopoly_telemetry/scorecard.py` | Builds scorecard artifacts. |
@@ -106,6 +107,20 @@ Use this after `saved_games/<saved_game_name>/run/` and ideally `saved_games/<sa
 
 ```powershell
 uv run python scripts/standardize_saved_games.py <saved_game_name>
+```
+
+### Analyze Negotiation Tactics
+
+For one saved game, write results under `analysis/negotiation/`:
+
+```powershell
+uv run python scripts/analyze_negotiation_tactics.py <saved_game_name>
+```
+
+For a cross-run comparison, pass every saved game and an explicit output directory:
+
+```powershell
+uv run python scripts/analyze_negotiation_tactics.py <game-a> <game-b> --output-dir analysis_outputs/negotiation
 ```
 
 ### Run Saved-Game Analysis For The Two Current Canonical Saved Games
