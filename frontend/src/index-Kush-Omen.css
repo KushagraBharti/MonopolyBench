@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+@theme {
+  /* Fonts — Geometric display + clean mono for data-dense UI */
+  --font-mono: "JetBrains Mono", "SF Mono", "Courier New", monospace;
+  --font-sans: "Inter", "SF Pro Display", "Arial", sans-serif;
+
+  /* Palette — Refined Editorial Brutalism */
+  --color-neo-black: #0a0a0a;
+  --color-neo-white: #ffffff;
+  --color-neo-bg: #f4f3f0;
+
+  /* Accents — Tuned for harmony while staying bold */
+  --color-neo-green: #00e639;
+  --color-neo-pink: #f5007a;
+  --color-neo-blue: #3a0fff;
+  --color-neo-yellow: #ffd900;
+  --color-neo-purple: #7b2ff2;
+  --color-neo-orange: #ff6b1a;
+  --color-neo-red: #ef2020;
+  --color-neo-cyan: #00e5ff;
+
+  /* Surfaces */
+  --color-neo-surface: #fafaf8;
+  --color-neo-muted: #e8e7e4;
+
+  /* Functional Colors */
+  --color-neo-border: #0a0a0a;
+  --color-neo-shadow: #0a0a0a;
+
+  /* Shadows — Crisp with slight depth variation */
+  --shadow-neo-sm: 2px 2px 0px 0px var(--color-neo-shadow);
+  --shadow-neo: 3px 3px 0px 0px var(--color-neo-shadow);
+  --shadow-neo-lg: 6px 6px 0px 0px var(--color-neo-shadow);
+  --shadow-neo-xl: 10px 10px 0px 0px var(--color-neo-shadow);
+
+  /* Animations */
+  --animate-snap-in: snapIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  --animate-pulse-slow: pulseSlow 3s ease-in-out infinite;
+  --animate-grain: grain 8s steps(10) infinite;
+  --animate-fade-in: fadeIn 0.15s ease-out forwards;
+  --animate-slide-up: slideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+  @keyframes snapIn {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseSlow {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes grain {
+
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+
+    10% {
+      transform: translate(-5%, -10%);
+    }
+
+    20% {
+      transform: translate(-15%, 5%);
+    }
+
+    30% {
+      transform: translate(7%, -25%);
+    }
+
+    40% {
+      transform: translate(-5%, 25%);
+    }
+
+    50% {
+      transform: translate(-15%, 10%);
+    }
+
+    60% {
+      transform: translate(15%, 0%);
+    }
+
+    70% {
+      transform: translate(0%, 15%);
+    }
+
+    80% {
+      transform: translate(3%, 35%);
+    }
+
+    90% {
+      transform: translate(-10%, 10%);
+    }
+  }
+}
+
+/* Base Styles */
+:root {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 450;
+  color-scheme: light;
+  color: var(--color-neo-black);
+  background-color: var(--color-neo-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: auto;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+/* Selection color */
+::selection {
+  background: var(--color-neo-yellow);
+  color: var(--color-neo-black);
+}
+
+/* Utilities */
+@utility font-brutal {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+@utility text-poster-title {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+@utility bg-neo-pattern {
+  background-image: radial-gradient(var(--color-neo-black) 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+}
+
+/* Component Classes */
+@layer components {
+  .brutal-card {
+    @apply border-2 border-neo-border bg-white shadow-neo transition-all duration-200 ease-out;
+  }
+
+  .brutal-card:hover {
+    @apply -translate-x-0.5 -translate-y-0.5 shadow-neo-lg;
+  }
+
+  .brutal-btn {
+    @apply inline-flex min-h-9 items-center justify-center px-4 py-2 border-2 border-neo-border bg-white text-neo-black font-semibold uppercase tracking-normal shadow-neo transition-all duration-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none hover:-translate-x-px hover:-translate-y-px hover:shadow-neo-lg cursor-pointer select-none disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-neo;
+  }
+
+  .brutal-btn-primary {
+    @apply bg-neo-black text-neo-white hover:bg-neutral-800;
+  }
+
+  .brutal-btn-danger {
+    @apply bg-neo-red text-neo-white;
+  }
+
+  .brutal-input {
+    @apply border-2 border-neo-border p-2 bg-white font-mono focus:outline-none focus:shadow-neo transition-shadow duration-150;
+  }
+
+  .brutal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(10, 10, 10, 0.35) transparent;
+  }
+
+  .brutal-scroll::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .brutal-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .brutal-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(10, 10, 10, 0.3);
+    border-radius: 3px;
+  }
+
+  .brutal-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(10, 10, 10, 0.55);
+  }
+}
