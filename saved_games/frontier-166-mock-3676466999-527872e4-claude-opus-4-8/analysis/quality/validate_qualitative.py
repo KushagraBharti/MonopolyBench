@@ -224,10 +224,77 @@ require(
 )
 
 case_studies = (REPORTS / "case_studies.md").read_text(encoding="utf-8")
-require(
-    len(re.findall(r"^## \d+\.", case_studies, re.MULTILINE)) == 8,
-    "expected eight mechanism case studies",
+case_matches = list(
+    re.finditer(r"^## (\d+)\. .+$", case_studies, re.MULTILINE)
 )
+require(len(case_matches) == 8, "expected eight mechanism case studies")
+require(
+    [int(match.group(1)) for match in case_matches] == list(range(1, 9)),
+    "mechanism case studies are not numbered 1 through 8",
+)
+required_case_subsections = [
+    "Mechanism title",
+    "Exact source-ID window",
+    "Pre-state economics",
+    "Exact legal action set and selected actions",
+    "Public, private, and model-visible rationale",
+    "Immediate effect",
+    "Downstream causal sequence",
+    "Supported alternatives and unavailable counterfactuals",
+    "Research significance",
+    "Single-run and non-prevalence caveat",
+]
+for index, match in enumerate(case_matches):
+    end = (
+        case_matches[index + 1].start()
+        if index + 1 < len(case_matches)
+        else len(case_studies)
+    )
+    case = case_studies[match.start():end]
+    require(
+        len(case) >= 2_000,
+        f"case study {index + 1} is too compressed for Phase 10",
+    )
+    for subsection in required_case_subsections:
+        require(
+            case.count(f"### {subsection}") == 1,
+            f"case study {index + 1} lacks one '{subsection}' subsection",
+        )
+    require(
+        "review_packet.jsonl" in case and "evidence_index.csv" in case,
+        f"case study {index + 1} lacks review-packet/evidence-index cross-links",
+    )
+
+manual_report = (REPORTS / "manual_review_report.md").read_text(encoding="utf-8")
+required_manual_sections = [
+    "Whole-game trajectory",
+    "Player trajectories and adaptation",
+    "Auctions and trades",
+    "Property control, development, mortgages, and house scarcity",
+    "Bankruptcy and terminal solvency",
+    "Communication, promises, deception, and collusion",
+    "Reliability, retries, provider usage, and cost",
+    "Critical decisions and mechanism cases",
+    "Expanded metrics and interpretive limits",
+    "Claim boundaries and open issues",
+    "Overall qualitative finding",
+]
+require(
+    len(manual_report) >= 20_000,
+    "manual review report is too compressed for the Phase 14 companion",
+)
+for section in required_manual_sections:
+    require(
+        len(
+            re.findall(
+                rf"^## \d+\. {re.escape(section)}$",
+                manual_report,
+                re.MULTILINE,
+            )
+        )
+        == 1,
+        f"manual review report lacks one '{section}' section",
+    )
 
 result = {
     "status": "pass" if not errors else "fail",
@@ -246,7 +313,9 @@ result = {
     "bankruptcies": len(bankruptcy_sections),
     "communication_claims": len(claims),
     "promise_lifecycles": len(promises),
-    "case_studies": len(re.findall(r"^## \d+\.", case_studies, re.MULTILINE)),
+    "case_studies": len(case_matches),
+    "case_study_required_subsections": len(required_case_subsections),
+    "manual_review_required_sections": len(required_manual_sections),
 }
 print(json.dumps(result, indent=2, sort_keys=True))
 if errors:
