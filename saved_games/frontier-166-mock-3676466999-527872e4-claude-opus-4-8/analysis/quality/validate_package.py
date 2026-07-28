@@ -16,6 +16,9 @@ def sha256(path: Path) -> str:
 
 
 errors: list[str] = []
+warnings: list[str] = []
+source_exact_matches = 0
+source_crlf_reconstruction_matches = 0
 layout = json.loads((SAVED / "saved_game_manifest.json").read_text(encoding="utf-8"))
 standard = json.loads((ANALYSIS / "manifest.json").read_text(encoding="utf-8"))
 research = json.loads(
@@ -34,17 +37,40 @@ for area, inventory in source["areas"].items():
     tree_hash = hashlib.sha256()
     for entry in inventory["files"]:
         path = area_root / entry["path"]
-        if (
-            not path.exists()
-            or path.stat().st_size != entry["bytes"]
-            or sha256(path) != entry["sha256"]
-        ):
+        matched = False
+        if path.exists():
+            data = path.read_bytes()
+            matched = (
+                len(data) == entry["bytes"]
+                and hashlib.sha256(data).hexdigest() == entry["sha256"]
+            )
+            if matched:
+                source_exact_matches += 1
+            elif b"\r" not in data and b"\n" in data:
+                # Commit 2d7abea1 contains LF-normalized blobs for line-oriented files,
+                # while the immutable original-source manifest records the pre-add CRLF
+                # byte domain. Accept only an exact, deterministic CRLF reconstruction.
+                reconstructed = data.replace(b"\n", b"\r\n")
+                matched = (
+                    len(reconstructed) == entry["bytes"]
+                    and hashlib.sha256(reconstructed).hexdigest() == entry["sha256"]
+                )
+                if matched:
+                    source_crlf_reconstruction_matches += 1
+        if not matched:
             errors.append(f"source hash mismatch: {area}/{entry['path']}")
         tree_hash.update(
             f"{entry['path']}\0{entry['bytes']}\0{entry['sha256']}\n".encode()
         )
     if tree_hash.hexdigest() != inventory["inventory_sha256"]:
         errors.append(f"source inventory hash mismatch: {area}")
+
+if source_crlf_reconstruction_matches:
+    warnings.append(
+        "original-source manifests hash CRLF bytes while commit 2d7abea1 materializes "
+        f"{source_crlf_reconstruction_matches} line-oriented files as LF; every accepted "
+        "mismatch exactly matches deterministic CRLF reconstruction"
+    )
 
 for entry in research["generated_file_hashes"]:
     path = SAVED / entry["path"]
@@ -98,6 +124,10 @@ with zipfile.ZipFile(zip_path) as bundle:
 result = {
     "status": "pass" if not errors else "fail",
     "errors": errors,
+    "warnings": warnings,
+    "source_exact_matches": source_exact_matches,
+    "source_crlf_reconstruction_matches": source_crlf_reconstruction_matches,
+    "source_total_matches": source_exact_matches + source_crlf_reconstruction_matches,
     "source_run_files": source["areas"]["run"]["file_count"],
     "source_quality_check_files": source["areas"]["quality_check"]["file_count"],
     "standard_tables": len(standard["tables"]),
