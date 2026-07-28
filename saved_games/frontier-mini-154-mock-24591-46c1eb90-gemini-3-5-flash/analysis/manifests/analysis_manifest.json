@@ -1,7 +1,7 @@
 {
   "schema_version": "analysis_manifest_v1",
   "run_id": "mock-24591-46c1eb90",
-  "analysis_mode": "deterministic_integrity_and_descriptive_metrics_only",
+  "analysis_mode": "deterministic_integrity_and_descriptive_metrics_plus_exhaustive_qualitative_review",
   "source_commit_at_intake_and_analysis": "e2623b39ebc054283197a1021a60910172f0279d",
   "source_commit_at_run_time": null,
   "tool_versions": {
@@ -38,7 +38,8 @@
     "uv run pytest -q  # python/packages/arena",
     "uv run pytest -q  # python/packages/telemetry",
     "bun lint  # frontend",
-    "bun run build  # frontend"
+    "bun run build  # frontend",
+    "python -  # inline exhaustive qualitative coverage/citation/structured-artifact and deterministic ZIP parity validation"
   ],
   "command_exit_codes": {
     "initial_standardizer_help_without_ephemeral_dependencies": 1,
@@ -61,7 +62,10 @@
     "arena_tests_23": 0,
     "telemetry_tests_19": 0,
     "frontend_lint": 0,
-    "frontend_build": 0
+    "frontend_build": 0,
+    "qualitative_review_validation": 0,
+    "protected_source_git_status": 0,
+    "deterministic_analysis_zip_rebuild_and_parity": 0
   },
   "verification_summary": {
     "status": "passed_via_constituent_stages",
@@ -74,10 +78,22 @@
     "frontend_build": "passed with Vite chunk-size warning",
     "package_parse_validation": "passed (2190 JSON, 18 JSONL, 38 CSV, 23 PNG)",
     "analysis_manifest_hash_validation": "passed",
-    "analysis_zip_content_validation": "passed"
+    "analysis_zip_content_validation": "passed (deterministic rebuild; exact entry and content parity)",
+    "qualitative_turn_coverage": "passed (155/155 turn indices; 53 blocks, each <=3 turns)",
+    "qualitative_decision_coverage": "passed (396/396 applied decisions; 396 joined packet rows)",
+    "negotiation_reconciliation": "passed (45 episodes: 8 accepted, 37 rejected; 10 counters)",
+    "bankruptcy_reconciliation": "passed (3/3 windows; immediate legal paths separated from branch speculation)",
+    "qualitative_structured_files": "passed (396 evidence rows, 396 JSONL packet rows, 4 promises, 32 communication claims)",
+    "case_study_gate": "passed (9/9 with exact windows, quantitative pre-state, legal menu, rationale, effects, alternatives, significance, and single-run caveat)",
+    "protected_source_git_status": "passed (zero tracked changes at baseline commit 2d7abea1; source manifests preserved)"
   },
   "source_hash_manifest": "analysis/manifests/source_artifact_hashes.json",
   "generated_files_excluding_this_manifest": [
+    {
+      "relative_path": "analysis/README.md",
+      "bytes": 2146,
+      "sha256": "4bb34f99de97350d7e6f7198ac0424bd902df0d4d67ab409ba30f19f7e1c093d"
+    },
     {
       "relative_path": "analysis/coverage/artifact_presence.csv",
       "bytes": 1648,
@@ -160,13 +176,13 @@
     },
     {
       "relative_path": "analysis/manifest.json",
-      "bytes": 4267,
-      "sha256": "118ab60415f19049c6be28ee21b4d7a84760bccf76f35df1e5674a9438a01f14"
+      "bytes": 5232,
+      "sha256": "932f01b81be454a69d69841919977c10f622684221a0698879eac9302c2144b8"
     },
     {
       "relative_path": "analysis/manifests/source_artifact_hashes.json",
-      "bytes": 754170,
-      "sha256": "0b583f5d5fa6f9b9e03a8a043259d42571a5a0995dcf3325b22d7e2413c4f068"
+      "bytes": 754240,
+      "sha256": "60844a6041c8bb0f74ca0c9bf8177d9ec92c85f0ab9cfbe915cd91cf50fdc73e"
     },
     {
       "relative_path": "analysis/plots/bank_inventory_by_turn.png",
@@ -305,23 +321,73 @@
     },
     {
       "relative_path": "analysis/reports/analysis_report.md",
-      "bytes": 1496,
-      "sha256": "fdb4ca9803a17811dbf80dfdcc079fd0c786fba15ef419a6f6d0456725dac1a6"
+      "bytes": 1531,
+      "sha256": "9cb5bc664fcd70dddb265dc699184d9b9f48bdb9b6bc715d3bf4d3e2a90ff00b"
+    },
+    {
+      "relative_path": "analysis/reports/case_studies.md",
+      "bytes": 54809,
+      "sha256": "f8ec546ebb019af6f02838879d9006eb5f71fe96ad3726b8d67f8e85af0f9e47"
     },
     {
       "relative_path": "analysis/reports/coverage_report.md",
-      "bytes": 495,
-      "sha256": "c35c38ea6abbcbffe1cd9bf1474cbcedf4848370cfceedd1441126f9990eaa46"
+      "bytes": 565,
+      "sha256": "482842b280b4ac0c210d42fe30ddc2ffb4e0c155ed3ebd8a610a54f28791a27e"
     },
     {
       "relative_path": "analysis/reports/data_dictionary.md",
-      "bytes": 1605,
-      "sha256": "bcd047cf405e62bd2df4ec557d7a47a500e6c8c79493d8e4099a2dd8afefdd7c"
+      "bytes": 1640,
+      "sha256": "6b8d2107e1a97e30d3a1715cabffeeba0ed38cac724b373aaf0ab7c7262303cd"
     },
     {
       "relative_path": "analysis/reports/integrity_report.md",
       "bytes": 3934,
       "sha256": "03dc7b75398b8f2c28c935542fdb5f02aa49176d2aa441a26fe9aebc4ede0500"
+    },
+    {
+      "relative_path": "analysis/reports/manual_review_report.md",
+      "bytes": 22189,
+      "sha256": "955d70672e582117b9b589f5e3ac776e305602471b6dc79a435e0c959d5a9f6d"
+    },
+    {
+      "relative_path": "analysis/review/bankruptcy_windows.md",
+      "bytes": 34657,
+      "sha256": "99e4f3fb3a65875f251adb7ff291a22f9bf1e93c7f0fcfffdfd0afb043853386"
+    },
+    {
+      "relative_path": "analysis/review/chronological_turn_review.md",
+      "bytes": 290796,
+      "sha256": "052b39b5bc95481e443776992859ecd01e76be510ca494e4a5eadc2e62912458"
+    },
+    {
+      "relative_path": "analysis/review/communication_claims.csv",
+      "bytes": 22270,
+      "sha256": "cbe80ff83c8b6c32b805cca67acc23ed1be7fe6ecac529c61f174bd5b0f87689"
+    },
+    {
+      "relative_path": "analysis/review/evidence_index.csv",
+      "bytes": 184639,
+      "sha256": "e47f4ad069e7514309f702e4d40f947a3febcc363053d9195799a97c0311c590"
+    },
+    {
+      "relative_path": "analysis/review/negotiation_review.md",
+      "bytes": 50076,
+      "sha256": "161c0003060473e76735239efdde134eac054d0108e79698dc46b0bfe8d455fe"
+    },
+    {
+      "relative_path": "analysis/review/player_dossiers.md",
+      "bytes": 37899,
+      "sha256": "65be26919401f4d76139881ab9cf9c424f731ab431508de3ff6c6793db50760d"
+    },
+    {
+      "relative_path": "analysis/review/promise_lifecycle.csv",
+      "bytes": 3222,
+      "sha256": "cc2fed19360e212a8e155e23d47282419d076e6de1b5f8eadae5494319be0027"
+    },
+    {
+      "relative_path": "analysis/review/review_packet.jsonl",
+      "bytes": 3654380,
+      "sha256": "8fa539f3b093c6eceac034f8ede49b54b9728baaede291a9425fd323a8126ecb"
     },
     {
       "relative_path": "analysis/tables/actions.csv",
@@ -420,8 +486,8 @@
     },
     {
       "relative_path": "analysis/tables/run_summary.csv",
-      "bytes": 324,
-      "sha256": "e237b90c8806de9b475b706b2f0896840004d7245eb46ecff5272919cbf9990a"
+      "bytes": 359,
+      "sha256": "ea725dd293fa3cd57ad8e2f748bde332c645b053499af2018b63efd13458aa2f"
     },
     {
       "relative_path": "analysis/tables/state_by_turn_player.csv",
@@ -454,8 +520,8 @@
       "sha256": "c971d220f24b66e2c683b6a01c1a5d6434bbda0de2594da3f03e31e4e907e428"
     }
   ],
-  "generated_file_count_excluding_this_manifest": 75,
-  "qualitative_work_performed": false,
+  "generated_file_count_excluding_this_manifest": 86,
+  "qualitative_work_performed": true,
   "tooling_defects": [
     {
       "code": "STANDARDIZER_WHOLE_DOLLAR_COST_AXIS",
@@ -473,5 +539,25 @@
         "analysis/tables/model_usage.csv"
       ]
     }
-  ]
+  ],
+  "qualitative_review": {
+    "schema_version": "manual_qualitative_review_v1",
+    "review_completed": true,
+    "turn_indices": {
+      "minimum": 0,
+      "maximum": 154,
+      "count": 155
+    },
+    "chronology_blocks": 53,
+    "applied_decisions": 396,
+    "review_packet_rows": 396,
+    "negotiation_episodes": 45,
+    "bankruptcy_windows": 3,
+    "case_studies": 9,
+    "player_dossiers": 4,
+    "promise_lifecycles": 4,
+    "communication_claims": 32,
+    "protected_source_baseline": "2d7abea1",
+    "provenance_note": "Original manifests may encode CRLF source bytes while the canonical Git blobs are LF-normalized; this is line-ending provenance, not a semantic or replay failure."
+  }
 }
