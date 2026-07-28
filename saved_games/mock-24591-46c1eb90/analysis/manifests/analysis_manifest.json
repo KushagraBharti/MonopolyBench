@@ -1,0 +1,477 @@
+{
+  "schema_version": "analysis_manifest_v1",
+  "run_id": "mock-24591-46c1eb90",
+  "analysis_mode": "deterministic_integrity_and_descriptive_metrics_only",
+  "source_commit_at_intake_and_analysis": "e2623b39ebc054283197a1021a60910172f0279d",
+  "source_commit_at_run_time": null,
+  "tool_versions": {
+    "uv": "uv 0.9.26 (ee4f00362 2026-01-15)",
+    "python": "3.14.2",
+    "python_runtime": "3.14.2 (main, Jan 14 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]",
+    "git": "git version 2.52.0.windows.1",
+    "standardizer_schema": "saved_game_standard_analysis_v1",
+    "expanded_metrics_schema": "expanded_game_metrics_v1"
+  },
+  "configuration_evidence": [
+    "run/run_config.json",
+    "run/experiment_manifest.json",
+    "run/players.json",
+    "run/seat_assignment.json",
+    "run/pricing_snapshot.json"
+  ],
+  "commands": [
+    "uv run python scripts/standardize_saved_games.py --help  # exit 1: matplotlib missing from root environment",
+    "uv run --package monopoly-arena python -c \"from pathlib import Path; import json; from monopoly_arena.replay_verification import build_replay_verification_reports; from monopoly_telemetry import build_run_files; run_id='mock-24591-46c1eb90'; run_files=build_run_files(Path('saved_games/to-be-analyzed/runs'), run_id, quality_base_dir=Path('saved_games/to-be-analyzed/quality_check')); reports=build_replay_verification_reports(run_files); print(json.dumps(reports, sort_keys=True))\"",
+    "uv run --package monopoly-telemetry --with matplotlib --with pandas python ../scripts/standardize_saved_games.py mock-24591-46c1eb90",
+    "uv run --package monopoly-telemetry python ../scripts/analyze_saved_game.py ../saved_games/mock-24591-46c1eb90 --output-dir ../saved_games/mock-24591-46c1eb90/analysis/expanded_metrics",
+    "uv run --package monopoly-arena python ../scripts/_prepare_mock_24591_audit.py",
+    "uv run --package monopoly-telemetry --with matplotlib python ../scripts/_refresh_mock_24591_cost_plots.py",
+    "uv run --package monopoly-telemetry --with matplotlib python ../scripts/_finalize_mock_24591_cost_per_call.py",
+    "uv run --package monopoly-telemetry --group test pytest packages/telemetry/tests/test_expanded_metrics.py packages/telemetry/tests/test_snapshot_persistence.py -q",
+    "node contracts/validate-contracts.mjs",
+    "pwsh -File scripts/verify.ps1  # initial exit 1: root uv environment missing fastapi/rich",
+    "uv sync --all-packages --all-groups",
+    "pwsh -File scripts/verify.ps1  # retry timed out at wrapper level; constituent stages below were run directly",
+    "uv run python -m mypy .",
+    "uv run pytest -q  # python/packages/engine",
+    "uv run pytest -q  # python/apps/api",
+    "uv run pytest -q  # python/packages/arena",
+    "uv run pytest -q  # python/packages/telemetry",
+    "bun lint  # frontend",
+    "bun run build  # frontend"
+  ],
+  "command_exit_codes": {
+    "initial_standardizer_help_without_ephemeral_dependencies": 1,
+    "fresh_read_only_replay": 0,
+    "standardize_saved_games": 0,
+    "analyze_saved_game": 0,
+    "prepare_integrity_audit": 0,
+    "refresh_cost_plots": 0,
+    "finalize_cost_per_call_axis": 0,
+    "focused_expanded_metrics_and_snapshot_tests": 0,
+    "contract_validation_before_dependency_install": 1,
+    "contract_validation_after_dependency_install": 0,
+    "full_verify_initial_missing_workspace_dependencies": 1,
+    "uv_sync_all_workspace_packages_and_groups": 0,
+    "full_verify_retry_wrapper_timeout": 124,
+    "ruff": 0,
+    "mypy": 0,
+    "engine_tests_69": 0,
+    "api_tests_121": 0,
+    "arena_tests_23": 0,
+    "telemetry_tests_19": 0,
+    "frontend_lint": 0,
+    "frontend_build": 0
+  },
+  "verification_summary": {
+    "status": "passed_via_constituent_stages",
+    "contracts": "passed",
+    "ruff": "passed",
+    "mypy": "passed (80 source files)",
+    "python_tests": "passed (232 total: engine 69, API 121, arena 23, telemetry 19)",
+    "focused_telemetry_tests": "passed (8)",
+    "frontend_lint": "passed",
+    "frontend_build": "passed with Vite chunk-size warning",
+    "package_parse_validation": "passed (2190 JSON, 18 JSONL, 38 CSV, 23 PNG)",
+    "analysis_manifest_hash_validation": "passed",
+    "analysis_zip_content_validation": "passed"
+  },
+  "source_hash_manifest": "analysis/manifests/source_artifact_hashes.json",
+  "generated_files_excluding_this_manifest": [
+    {
+      "relative_path": "analysis/coverage/artifact_presence.csv",
+      "bytes": 1648,
+      "sha256": "57c412dbf6a93b29b57efab0f166e92a58738506e364124afd5aa364217cd65a"
+    },
+    {
+      "relative_path": "analysis/coverage/file_inventory.csv",
+      "bytes": 263728,
+      "sha256": "aa62a529403b2a4ea2142a1fa7e12b7001f28d5c49841bbf6cd3e22bee6798fb"
+    },
+    {
+      "relative_path": "analysis/coverage/file_inventory_summary.csv",
+      "bytes": 92,
+      "sha256": "283d011f3b71ef67f6f2879de0687912efc484328b9cb650d1b4281dfcf32528"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/auction_episodes.csv",
+      "bytes": 3578,
+      "sha256": "f319b91fdbf58379f4b242c5d31c60c1ea391f9c650874b0fb30d42b35d08db4"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/auction_player_episodes.csv",
+      "bytes": 1965,
+      "sha256": "81ab24745c65755f49908afb89f23a6e46d6f3b732bea55c5238e198b3ba14b3"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/cash_ledger.csv",
+      "bytes": 27523,
+      "sha256": "fe638817aa0bab25a7abfc8f00ea1a866c3ceb90b65c0506ffaa26a29af63cd3"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/cash_reason_metrics.csv",
+      "bytes": 4154,
+      "sha256": "0027caa3a59a993656c3200bc9deada9c8eb1f16c44995d937cf9eb2cddd6d2f"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/decision_metrics.csv",
+      "bytes": 54771,
+      "sha256": "b67a78cbfb14a92ea4b7a3188521106e3a8fe516f46f5b729b0a23c106d0d70c"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/expanded_metrics_report.md",
+      "bytes": 1139,
+      "sha256": "dfc1d229efbbf7f3e05e3d1982685e77fff157ab4ab341b5b9084652a61c0e35"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/metric_definitions.md",
+      "bytes": 2448,
+      "sha256": "694e145f6b501d2451556b23ad962affcabeb09abd81723b32af0e7659156da4"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/mortgage_episodes.csv",
+      "bytes": 2853,
+      "sha256": "39e439f5c3fcc7a59d576ace6bc1565b73c4ed2cbd5547963a20ab48ea1858c3"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/player_metrics.csv",
+      "bytes": 4111,
+      "sha256": "edde370e9b56262062c8477731cc829652c6995c65443fe09ee9d94b3136af24"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/semantic_metric_status.json",
+      "bytes": 1057,
+      "sha256": "76f09fbfe42032d7a31578dbcdf74e3615e9e06d002dc3d9e882c63f13c24b34"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/summary.json",
+      "bytes": 17286,
+      "sha256": "b0344f8eebd0955058b45ce54de0cb40bf1b880d0c93074afa4624c9660cc28c"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/trade_episodes.csv",
+      "bytes": 21284,
+      "sha256": "80989056a6c29b31164b82c52df9d25437d58c960766d5817f0f7b21eac432d6"
+    },
+    {
+      "relative_path": "analysis/expanded_metrics/trade_player_episodes.csv",
+      "bytes": 36655,
+      "sha256": "23aa852e8e8efe5bc455340bde031225136a24f27a9b038a8f07c70e854125f6"
+    },
+    {
+      "relative_path": "analysis/manifest.json",
+      "bytes": 4267,
+      "sha256": "118ab60415f19049c6be28ee21b4d7a84760bccf76f35df1e5674a9438a01f14"
+    },
+    {
+      "relative_path": "analysis/manifests/source_artifact_hashes.json",
+      "bytes": 754170,
+      "sha256": "0b583f5d5fa6f9b9e03a8a043259d42571a5a0995dcf3325b22d7e2413c4f068"
+    },
+    {
+      "relative_path": "analysis/plots/bank_inventory_by_turn.png",
+      "bytes": 64037,
+      "sha256": "7b913712f1e597d9e2e5c151820524472d6c4c985ea2fcf8cfb8e005b813b5cc"
+    },
+    {
+      "relative_path": "analysis/plots/building_value_by_turn.png",
+      "bytes": 71210,
+      "sha256": "b42cddd7c22a7f247509407b21c1d73c175c3f0fc3a85891e561e2a5116f5312"
+    },
+    {
+      "relative_path": "analysis/plots/calls_by_model.png",
+      "bytes": 44088,
+      "sha256": "77472a2ae1f28ad6adbb55abc1c08da3d282afc9dd30a367f9aa8ee2d4a17252"
+    },
+    {
+      "relative_path": "analysis/plots/calls_by_turn.png",
+      "bytes": 120804,
+      "sha256": "97b001c237d2782cd8b6974124b26d98ab953b52d1329e191ea1c6baa1acc997"
+    },
+    {
+      "relative_path": "analysis/plots/cash_by_turn.png",
+      "bytes": 161618,
+      "sha256": "034f9fb7161f43eff545e23674a737a23dd53db2b2b2204a361dd269addfa947"
+    },
+    {
+      "relative_path": "analysis/plots/cost_by_model.png",
+      "bytes": 59526,
+      "sha256": "c9883858710023a435347f421ecd67ce4861abcf59a1f9c2c30d4531c1f7057f"
+    },
+    {
+      "relative_path": "analysis/plots/cost_by_turn.png",
+      "bytes": 124527,
+      "sha256": "c84149d11f79ed6c0e47b0da3efe95a5bbc64ae94ab367b80fdc90e9daf76f13"
+    },
+    {
+      "relative_path": "analysis/plots/cost_per_call.png",
+      "bytes": 187648,
+      "sha256": "aa01419ea752941a8ff06bfe34ee13ea9639114e5010c9bd9412e179082842f2"
+    },
+    {
+      "relative_path": "analysis/plots/cumulative_cost_by_call.png",
+      "bytes": 68902,
+      "sha256": "937327fc9a76c6a68108c0aa3a5b856397997fb87fdc31b767a74f36518e9602"
+    },
+    {
+      "relative_path": "analysis/plots/decision_type_counts.png",
+      "bytes": 72688,
+      "sha256": "b03140ba31fab010e6802cc9665c54135d7b7e7c396555fb06976fa98025ae34"
+    },
+    {
+      "relative_path": "analysis/plots/event_counts.png",
+      "bytes": 101846,
+      "sha256": "c8a5c815df9ba61b37b14c99607580c7398082097c2bb0c8d2adfa797de2465e"
+    },
+    {
+      "relative_path": "analysis/plots/hotels_by_turn.png",
+      "bytes": 63404,
+      "sha256": "298b96362c20953741ebda1c996b4116322a97cc7af57be813bf8850a7e12139"
+    },
+    {
+      "relative_path": "analysis/plots/houses_by_turn.png",
+      "bytes": 74258,
+      "sha256": "e1be0c5a918cb5f453699be5aed006c5b46fe5a74ff772e8a6b51a6082a83fad"
+    },
+    {
+      "relative_path": "analysis/plots/latency_per_call.png",
+      "bytes": 153840,
+      "sha256": "95047aaf622aae164040b56ea3c2f51e1b747f7f89e0f43ae6e8dbc00ca15e53"
+    },
+    {
+      "relative_path": "analysis/plots/mortgage_liability_by_turn.png",
+      "bytes": 82067,
+      "sha256": "fd0af84d74c9101b9840a1f01193ca9cf158b47acc53d2fc8dff2bba8ce224a9"
+    },
+    {
+      "relative_path": "analysis/plots/net_worth_estimate_by_turn.png",
+      "bytes": 88652,
+      "sha256": "884b30b7421bdcd1b880d8c31fb99130194499ebb5b7cf2f53bded773dfb1c87"
+    },
+    {
+      "relative_path": "analysis/plots/output_tokens_per_call.png",
+      "bytes": 173434,
+      "sha256": "afaeb35c64c136e94e8c44fa07b59cabd376e18040a71595c5dc85e488867805"
+    },
+    {
+      "relative_path": "analysis/plots/property_count_by_turn.png",
+      "bytes": 73686,
+      "sha256": "9540da25048d85303df235cc81e321f8a0cb3d4fd4734e9cf2f313bdbc2da5cf"
+    },
+    {
+      "relative_path": "analysis/plots/property_value_by_turn.png",
+      "bytes": 79377,
+      "sha256": "84bb16a673542926d61606e6f6e7ed383cdeb7d31f2cd30a060ad2379def66ad"
+    },
+    {
+      "relative_path": "analysis/plots/reasoning_tokens_by_model.png",
+      "bytes": 51648,
+      "sha256": "6a0251ea1048aa3f7873c88c114564d608d230f30a5619de1c74dbec85a159f2"
+    },
+    {
+      "relative_path": "analysis/plots/reasoning_tokens_per_call.png",
+      "bytes": 161658,
+      "sha256": "f31326434f3ded7656011cd787235b12ed4f05f16789a332f11b3cbeaa83fc1b"
+    },
+    {
+      "relative_path": "analysis/plots/tokens_by_turn.png",
+      "bytes": 189285,
+      "sha256": "2dbdab6ae5b9f5c2dc2ae56aa0961eca852d5b0e4e20c5b669e077da960cf92c"
+    },
+    {
+      "relative_path": "analysis/plots/total_tokens_by_model.png",
+      "bytes": 51708,
+      "sha256": "28be9c1605a80e0125fe2caf5400ec5aaaa649e27cca9f70dc26946856a79265"
+    },
+    {
+      "relative_path": "analysis/quality/artifact_completeness.json",
+      "bytes": 5040,
+      "sha256": "40d7c0c0c85eced71c5c55fc32b3815a168f3e054e627baa0fcea5f2c2678662"
+    },
+    {
+      "relative_path": "analysis/quality/call_reconciliation.json",
+      "bytes": 5181,
+      "sha256": "34ed5eba298e11b28c653a3d7c4064ee7460ea0a74584275ed750576de6f030b"
+    },
+    {
+      "relative_path": "analysis/quality/quality_flags.json",
+      "bytes": 3022,
+      "sha256": "e752bc15f5e1f684d7ca0c903c42fa430106528eaa4947168ed2200f47bae51f"
+    },
+    {
+      "relative_path": "analysis/quality/replay_verification.json",
+      "bytes": 6386,
+      "sha256": "8e8569f5b044c344e47971005786d7d409bf76ccab499b9b41e77164ca9952f6"
+    },
+    {
+      "relative_path": "analysis/reports/analysis_report.md",
+      "bytes": 1496,
+      "sha256": "fdb4ca9803a17811dbf80dfdcc079fd0c786fba15ef419a6f6d0456725dac1a6"
+    },
+    {
+      "relative_path": "analysis/reports/coverage_report.md",
+      "bytes": 495,
+      "sha256": "c35c38ea6abbcbffe1cd9bf1474cbcedf4848370cfceedd1441126f9990eaa46"
+    },
+    {
+      "relative_path": "analysis/reports/data_dictionary.md",
+      "bytes": 1605,
+      "sha256": "bcd047cf405e62bd2df4ec557d7a47a500e6c8c79493d8e4099a2dd8afefdd7c"
+    },
+    {
+      "relative_path": "analysis/reports/integrity_report.md",
+      "bytes": 3934,
+      "sha256": "03dc7b75398b8f2c28c935542fdb5f02aa49176d2aa441a26fe9aebc4ede0500"
+    },
+    {
+      "relative_path": "analysis/tables/actions.csv",
+      "bytes": 271469,
+      "sha256": "02f2aa9d954cac08cf3ddfb682ed9eaaff17dc5df831372e703ad1c0141584a4"
+    },
+    {
+      "relative_path": "analysis/tables/asset_flow.csv",
+      "bytes": 13787,
+      "sha256": "2bf5d8ec1abd0bd4b70a6e952778073367107d0500a89fdef26a7966f8716163"
+    },
+    {
+      "relative_path": "analysis/tables/auction_threads.csv",
+      "bytes": 7415,
+      "sha256": "9609b663b34d939c578a123be5ceb7e58b90fd69327655f4b8650f92557e0415"
+    },
+    {
+      "relative_path": "analysis/tables/bank_inventory_by_turn.csv",
+      "bytes": 8268,
+      "sha256": "bf6c8054d5666478b94d407d2e8539072db74a4da227bac2faab0691bc6b8ce3"
+    },
+    {
+      "relative_path": "analysis/tables/cash_flow.csv",
+      "bytes": 30736,
+      "sha256": "b825775bbd5fbdf025506d95a55e7ac42017d87c2d84cb51f9c3d3927e033a42"
+    },
+    {
+      "relative_path": "analysis/tables/decision_type_counts.csv",
+      "bytes": 177,
+      "sha256": "3d195a1c05634015d2cb5ca36ddf6c9acf5c16de46fcb02575b4076307d47531"
+    },
+    {
+      "relative_path": "analysis/tables/decisions.csv",
+      "bytes": 94288,
+      "sha256": "64c4abd4a04d0229ee91d04feefd1f93a7f33e02aa84c5a27dd8e9bee57210c8"
+    },
+    {
+      "relative_path": "analysis/tables/event_counts.csv",
+      "bytes": 603,
+      "sha256": "3c7054891dda1b333ecf523095ab63a06f0d7420f9ca038e80e6f2bda6a6af29"
+    },
+    {
+      "relative_path": "analysis/tables/events.csv",
+      "bytes": 609065,
+      "sha256": "5d0f6713e37edd21064bb38b0831116ce2f4c8ba420a09f915bdbcbd3085443d"
+    },
+    {
+      "relative_path": "analysis/tables/events_by_turn.csv",
+      "bytes": 1115,
+      "sha256": "4be2772c031db31f5bfc68ea446e11a1222f581344cbfca52ffa53713aecf216"
+    },
+    {
+      "relative_path": "analysis/tables/failure_findings.csv",
+      "bytes": 9566,
+      "sha256": "4f489b5ef5f3bd606bb7e6788c2dcaee6beeb5c714c9af4cedd0b9895f719f02"
+    },
+    {
+      "relative_path": "analysis/tables/model_usage.csv",
+      "bytes": 822,
+      "sha256": "4edc4491644d02561392be79da39ebd0b7a3426367228a5d496cb1877314c8a9"
+    },
+    {
+      "relative_path": "analysis/tables/negotiation_threads.csv",
+      "bytes": 19390,
+      "sha256": "20b196176b6b4ae4eaac9f1a337f080ce382e982582dc60e7efce9256e917404"
+    },
+    {
+      "relative_path": "analysis/tables/per_call_usage.csv",
+      "bytes": 106397,
+      "sha256": "7283d936a67784c1872ca0776d8a1421ff785130d75c31c56cd381629cdb1acb"
+    },
+    {
+      "relative_path": "analysis/tables/per_turn_usage_by_player.csv",
+      "bytes": 11274,
+      "sha256": "dc546fde44dd0e25ec956263f05c1bd918f1fef323f886234a59eff5b881c5fc"
+    },
+    {
+      "relative_path": "analysis/tables/per_turn_usage_total.csv",
+      "bytes": 6225,
+      "sha256": "2334a43a8a4f49838d68f4aa6f6bc7f3b6e57792b96b4c10c921b28c5d996a78"
+    },
+    {
+      "relative_path": "analysis/tables/players.csv",
+      "bytes": 742,
+      "sha256": "2ff1f43e700375c7041b2d4a43ce072611e3a5f7535dc79e16c50107b46ce456"
+    },
+    {
+      "relative_path": "analysis/tables/property_holdings_by_turn.csv",
+      "bytes": 251627,
+      "sha256": "d59b8577bbfeb30ac9e0e7363abe0a66decca28b2cd4a7b864262091f598a586"
+    },
+    {
+      "relative_path": "analysis/tables/review_queue.csv",
+      "bytes": 57215,
+      "sha256": "ceb8d2a474be0946af122bdfbbe9146aac869a0cb1c957b4b784bb76caa73719"
+    },
+    {
+      "relative_path": "analysis/tables/run_summary.csv",
+      "bytes": 324,
+      "sha256": "e237b90c8806de9b475b706b2f0896840004d7245eb46ecff5272919cbf9990a"
+    },
+    {
+      "relative_path": "analysis/tables/state_by_turn_player.csv",
+      "bytes": 66850,
+      "sha256": "f4d2f5a54073428c097807847f4a70798c5c728a1303aacd5ec09f8b28e29b51"
+    },
+    {
+      "relative_path": "analysis/tables/top_costliest_calls.csv",
+      "bytes": 8481,
+      "sha256": "56f861dc6a35cd8ae020871163110d717f15e207a455f8f9c895ad9825b1ef93"
+    },
+    {
+      "relative_path": "analysis/tables/top_output_token_calls.csv",
+      "bytes": 8433,
+      "sha256": "ac14ca875c157d349446f1b046711cbdec71689edd03907a39fdc2b8a3bada8a"
+    },
+    {
+      "relative_path": "analysis/tables/top_reasoning_token_calls.csv",
+      "bytes": 8415,
+      "sha256": "9281103d3717a20819288d34a4a6091e055b515b0b32c029e244b2bed2cc886e"
+    },
+    {
+      "relative_path": "analysis/tables/top_slowest_calls.csv",
+      "bytes": 8384,
+      "sha256": "46e098a5bfe2ef1a7b3c92089f242252e7ce20b303f14293c6301822bcc6ada5"
+    },
+    {
+      "relative_path": "analysis/tables/trace_findings.csv",
+      "bytes": 197986,
+      "sha256": "c971d220f24b66e2c683b6a01c1a5d6434bbda0de2594da3f03e31e4e907e428"
+    }
+  ],
+  "generated_file_count_excluding_this_manifest": 75,
+  "qualitative_work_performed": false,
+  "tooling_defects": [
+    {
+      "code": "STANDARDIZER_WHOLE_DOLLAR_COST_AXIS",
+      "status": "mitigated_in_saved_game_outputs",
+      "detail": "The shared standardizer formats USD axes with zero decimal places, collapsing sub-dollar ticks and repeating rounded labels. Exactly four cost plots were regenerated from canonical CSV tables with two-decimal USD axes; shared code and raw evidence were not changed.",
+      "affected_outputs": [
+        "analysis/plots/cost_by_turn.png",
+        "analysis/plots/cost_per_call.png",
+        "analysis/plots/cumulative_cost_by_call.png",
+        "analysis/plots/cost_by_model.png"
+      ],
+      "source_tables": [
+        "analysis/tables/per_turn_usage_total.csv",
+        "analysis/tables/per_call_usage.csv",
+        "analysis/tables/model_usage.csv"
+      ]
+    }
+  ]
+}

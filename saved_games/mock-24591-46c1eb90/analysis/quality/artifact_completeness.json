@@ -1,0 +1,124 @@
+{
+  "schema_version": "artifact_completeness_v1",
+  "run_id": "mock-24591-46c1eb90",
+  "status": "pass_with_warnings",
+  "failure_category_count": 0,
+  "warning_count": 9,
+  "counts": {
+    "run_files": 2598,
+    "quality_check_files": 802,
+    "standard_expected_top_level_artifacts": 44,
+    "standard_present_top_level_artifacts": 44,
+    "standard_extra_top_level_artifacts": 0,
+    "json_top_level_files_parsed": 24,
+    "jsonl_top_level_files_parsed": 18,
+    "state_json_files_parsed": 551,
+    "prompt_json_files_parsed": 1604,
+    "event_rows": 2916,
+    "decision_log_rows": 792,
+    "decision_started_rows": 396,
+    "decision_resolved_rows": 396,
+    "action_rows": 396,
+    "usage_attempt_rows": 401,
+    "usage_decision_rows": 396,
+    "prompt_attempts": 401,
+    "quality_check_attempts": 401,
+    "canonical_state_snapshots": 155,
+    "all_state_snapshots": 551,
+    "artifact_manifest_entries": 43,
+    "artifact_manifest_existing_entries": 41,
+    "artifact_manifest_planned_missing_entries": 2
+  },
+  "missing_artifacts": [],
+  "extra_artifacts": [],
+  "planned_missing_artifacts_from_run_manifest": [
+    "reviews\\review_labels.jsonl",
+    "reviews\\review_summary.json"
+  ],
+  "checks": {
+    "manifest_hash_mismatches": [],
+    "manifest_size_mismatches": [],
+    "missing_standard_artifacts": [],
+    "event_sequence_gaps": [],
+    "event_sequence_duplicates": [],
+    "applied_without_action": [],
+    "actions_without_decision": [],
+    "calls_without_decision": [],
+    "decisions_without_calls": [],
+    "attempt_index_gaps": {},
+    "attempt_count_mismatches": [],
+    "action_mismatches": [],
+    "terminal_without_reason": [],
+    "incomplete_prompt_attempts": {},
+    "unexpected_prompt_files": [],
+    "incomplete_quality_attempts": {},
+    "unexpected_quality_files": [],
+    "final_player_mismatches": [],
+    "winner_mismatch": false
+  },
+  "warnings": [
+    {
+      "code": "RUN_TIME_SOURCE_COMMIT_UNRECORDED",
+      "detail": "The raw artifacts do not record the repository commit used when the game ran; the intake/analysis source commit is recorded separately."
+    },
+    {
+      "code": "SEPARATE_RESPONSES_DIRECTORY_ABSENT",
+      "detail": "No run/responses/ directory exists. All 401 raw response JSON artifacts are preserved in run/prompts/ alongside parsed/request artifacts."
+    },
+    {
+      "code": "RUN_MANIFEST_FILENAME_ABSENT",
+      "detail": "No run_manifest.json exists; configuration/provenance is split across run_config.json, experiment_manifest.json, players.json, seat_assignment.json, and artifact_manifest.json."
+    },
+    {
+      "code": "PROVIDER_ROUTE_SUMMARY_CSV_ABSENT",
+      "detail": "No provider_route_summary.csv exists. Requested routes are in experiment_manifest.json and observed providers/models are preserved in resolved decision raw responses."
+    },
+    {
+      "code": "TEMPERATURE_REQUEST_FACT_UNRECORDED",
+      "detail": "The artifacts explicitly record max-token omission and reasoning effort, but do not independently record whether temperature was omitted or sent."
+    },
+    {
+      "code": "PER_ARTIFACT_PROMPT_HASH_FIELDS_ABSENT",
+      "detail": "Prompt/response files do not each carry an embedded hash field. The freeze manifest supplies byte-level SHA-256 for every file."
+    },
+    {
+      "code": "REASONING_TOKENS_SUBSET_OF_OUTPUT",
+      "detail": "Raw total_tokens equals input_tokens + output_tokens; reasoning_tokens are reported separately and are not added again."
+    },
+    {
+      "code": "SUMMARY_COST_ROUNDED",
+      "detail": "summary.json reports 4.652755 USD while OpenRouter actual call rows and usage.json report 4.65275495 USD (rounding difference 0.00000005 USD)."
+    },
+    {
+      "code": "STANDARDIZER_WHOLE_DOLLAR_COST_AXIS",
+      "status": "mitigated_in_saved_game_outputs",
+      "detail": "The shared standardizer formats USD axes with zero decimal places, collapsing sub-dollar ticks and repeating rounded labels. Exactly four cost plots were regenerated from canonical CSV tables with two-decimal USD axes; shared code and raw evidence were not changed.",
+      "affected_outputs": [
+        "analysis/plots/cost_by_turn.png",
+        "analysis/plots/cost_per_call.png",
+        "analysis/plots/cumulative_cost_by_call.png",
+        "analysis/plots/cost_by_model.png"
+      ],
+      "source_tables": [
+        "analysis/tables/per_turn_usage_total.csv",
+        "analysis/tables/per_call_usage.csv",
+        "analysis/tables/model_usage.csv"
+      ]
+    }
+  ],
+  "evidence_paths": [
+    "run/artifact_manifest.json",
+    "run/events.jsonl",
+    "run/actions.jsonl",
+    "run/decisions.jsonl",
+    "run/usage_attempts.jsonl",
+    "run/usage_decisions.jsonl",
+    "run/usage.json",
+    "run/summary.json",
+    "run/state/turn_0154.json",
+    "run/prompts/",
+    "quality_check/",
+    "analysis/coverage/artifact_presence.csv",
+    "analysis/manifests/source_artifact_hashes.json"
+  ]
+}
