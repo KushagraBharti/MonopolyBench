@@ -1,0 +1,134 @@
+{
+  "schema_version": "call_reconciliation_v1",
+  "run_id": "mock-321229807-87ca99d7",
+  "status": "pass",
+  "denominators": {
+    "resolved_decisions": 366,
+    "applied_actions": 366,
+    "model_call_attempts": 377,
+    "initial_attempts": 366,
+    "retry_attempts": 11
+  },
+  "linkage": {
+    "resolved_decisions_without_action": 0,
+    "actions_without_resolved_decision": 0,
+    "attempts_without_usage_row": 0,
+    "usage_rows_without_attempt": 0,
+    "duplicate_decision_attempt_usage_keys": 0,
+    "missing_actual_usage_rows": 0
+  },
+  "validation_and_recovery": {
+    "valid_attempts": 364,
+    "invalid_attempts": 13,
+    "malformed_attempts": 11,
+    "illogical_attempts": 2,
+    "decisions_with_corrective_retry": 11,
+    "deterministic_action_fallback_decisions": 2,
+    "provider_route_fallback_attempts": 0,
+    "fallbacks": [
+      {
+        "decision_id": "mock-321229807-87ca99d7-dec-000330",
+        "player_id": "Claude Opus 4.8",
+        "decision_type": "LIQUIDATION_DECISION",
+        "reason": "malformed_after_retry",
+        "attempt_outcomes": ["malformed", "malformed"],
+        "applied_action": "declare_bankruptcy"
+      },
+      {
+        "decision_id": "mock-321229807-87ca99d7-dec-000331",
+        "player_id": "Gemini 3.1 Pro Preview",
+        "decision_type": "POST_TURN_ACTION_DECISION",
+        "reason": "malformed_after_retry",
+        "attempt_outcomes": ["malformed", "malformed"],
+        "applied_action": "end_turn"
+      }
+    ]
+  },
+  "usage_totals": {
+    "input_tokens": 1626640,
+    "output_tokens": 362227,
+    "reasoning_tokens": 291160,
+    "reported_total_tokens": 1988867,
+    "cached_tokens": 67712,
+    "cost_usd": 14.6143825,
+    "latency_ms": 6932579,
+    "missing_usage_attempts": 0,
+    "source": "openrouter_actuals_only",
+    "reasoning_token_semantics": "preserved_raw; reasoning is reported separately and not added to output or reported total"
+  },
+  "aggregate_reconciliation": {
+    "usage_attempt_rows_vs_usage_json": "exact",
+    "usage_json_vs_cost_report_cost": "exact",
+    "usage_json_vs_summary_total_tokens": "exact",
+    "usage_json_vs_summary_cost": "summary rounded to 6 decimal places",
+    "unresolved_discrepancies": []
+  },
+  "by_player": {
+    "Claude Opus 4.8": {
+      "model": "anthropic/claude-opus-4.8",
+      "actual_provider": "Anthropic",
+      "decisions": 60,
+      "attempts": 62,
+      "retries": 2,
+      "invalid_attempts": 3,
+      "fallback_decisions": 1,
+      "input_tokens": 442489,
+      "output_tokens": 42993,
+      "reasoning_tokens": 8845,
+      "total_tokens": 485482,
+      "cost_usd": 3.28727
+    },
+    "Gemini 3.1 Pro Preview": {
+      "model": "google/gemini-3.1-pro-preview",
+      "actual_provider": "Google AI Studio",
+      "decisions": 68,
+      "attempts": 71,
+      "retries": 3,
+      "invalid_attempts": 4,
+      "fallback_decisions": 1,
+      "input_tokens": 280015,
+      "output_tokens": 37523,
+      "reasoning_tokens": 30599,
+      "total_tokens": 317538,
+      "cost_usd": 1.010306
+    },
+    "Grok 4.3": {
+      "model": "x-ai/grok-4.3",
+      "actual_provider": "xAI",
+      "decisions": 83,
+      "attempts": 87,
+      "retries": 4,
+      "invalid_attempts": 4,
+      "fallback_decisions": 0,
+      "input_tokens": 335582,
+      "output_tokens": 47018,
+      "reasoning_tokens": 38811,
+      "total_tokens": 382600,
+      "cost_usd": 0.4758705
+    },
+    "OpenAI GPT 5.5": {
+      "model": "openai/gpt-5.5",
+      "actual_provider": "OpenAI",
+      "decisions": 155,
+      "attempts": 157,
+      "retries": 2,
+      "invalid_attempts": 2,
+      "fallback_decisions": 0,
+      "input_tokens": 568554,
+      "output_tokens": 234693,
+      "reasoning_tokens": 212905,
+      "total_tokens": 803247,
+      "cost_usd": 9.840936
+    }
+  },
+  "evidence": [
+    "run/decisions.jsonl",
+    "run/actions.jsonl",
+    "run/usage_attempts.jsonl",
+    "run/usage_decisions.jsonl",
+    "run/usage.json",
+    "run/cost_report.json",
+    "analysis/tables/per_call_usage.csv",
+    "analysis/tables/model_usage.csv"
+  ]
+}
