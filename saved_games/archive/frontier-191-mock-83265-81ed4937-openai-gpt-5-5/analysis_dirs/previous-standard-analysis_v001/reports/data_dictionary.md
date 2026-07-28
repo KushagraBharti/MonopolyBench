@@ -19,7 +19,6 @@
 - `trace_findings.csv`, `failure_findings.csv`, `review_queue.csv`: review and issue traces.
 - `cash_flow.csv`, `asset_flow.csv`, `auction_threads.csv`, `negotiation_threads.csv`: domain-specific telemetry streams.
 - `top_*_calls.csv`: highest cost, latency, output-token, and reasoning-token call outliers.
-- `expanded_metrics/`: deterministic trade, auction, mortgage, cash, rent, and decision episode metrics.
 
 ## Coverage
 
