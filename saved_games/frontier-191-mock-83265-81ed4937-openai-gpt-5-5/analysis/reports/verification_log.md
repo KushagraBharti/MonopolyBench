@@ -30,6 +30,9 @@ service was called.
 - Generated-output hashes match the declared manifest.
 - ZIP CRC, exact entry-set parity, and byte-identical content parity pass.
 - `saved_game_manifest.json` agrees with the final ZIP hash and entry count.
+- Package-local and archive-local `.gitattributes` preserve the generated 191
+  analysis/ZIP and archive bytes without changing existing Git text handling
+  for raw artifacts or any other saved-game package.
 
 The replay validator intentionally accepts only the documented aggregate result
 `state_passed_artifact_failed`; it does not accept a softened pass.
