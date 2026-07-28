@@ -1,0 +1,62 @@
+{
+  "schema_version": "plot_correction_checksums_v1",
+  "run_id": "mock-321229807-87ca99d7",
+  "status": "applied",
+  "tooling_defect": {
+    "file": "scripts/standardize_saved_games.py",
+    "function": "money_formatter",
+    "observed_implementation": "return f\"${value:,.0f}\"",
+    "effect": "Sub-dollar call and turn costs render as repeated $0/$1 labels; other cost axes lose cents and may show misleading rounded tick intervals.",
+    "shared_code_changed": false
+  },
+  "regeneration": {
+    "method": "Recreated only the four affected PNGs using the standardizer's figure sizes, DPI, locators, line/bar styling, labels, and grid settings, replacing only the y-axis formatter with f\"${value:,.2f}\".",
+    "formatter": "${value:,.2f}",
+    "source_tables": [
+      {
+        "path": "tables/per_turn_usage_total.csv",
+        "sha256": "5127aa4f1faf34c1f894c7e1b1a2775551fd75b035069f4b10a53db1f900c091"
+      },
+      {
+        "path": "tables/per_call_usage.csv",
+        "sha256": "083a842f8a8bdc317d2721c35bde2e886afa80b679b46286de20b536541d030e"
+      },
+      {
+        "path": "tables/model_usage.csv",
+        "sha256": "500690b5571a380665f0d7ac25e99392dcb3d6ae26add7c66e45a744d12f11ae"
+      }
+    ]
+  },
+  "plots": [
+    {
+      "path": "plots/cost_by_turn.png",
+      "source_table": "tables/per_turn_usage_total.csv",
+      "before_sha256": "61d778b18859379fa44c535ca45d416117cd2ef590c2fa5bfa604b8d981db3c1",
+      "after_sha256": "3ea39bbc0c9112a0dd6d9cda1fbac788df44b99a3dfe96950ed0923cc9080d8e"
+    },
+    {
+      "path": "plots/cost_per_call.png",
+      "source_table": "tables/per_call_usage.csv",
+      "before_sha256": "2e628f9f57ccce55c1471dda9ebcbe178fbf9191a1dcc483a6cc31981b4fa740",
+      "after_sha256": "d7c49ba6316b9a29e68f923a558bda511dbae848d7174d671d1824d58c120898"
+    },
+    {
+      "path": "plots/cumulative_cost_by_call.png",
+      "source_table": "tables/per_call_usage.csv",
+      "before_sha256": "91c9ab81b14bafe33c819d492d5e5629f4b70087e22f4e1d32c24cd8345d2ed8",
+      "after_sha256": "278901886cd831cacb969c0b74216b46866222eb9ff7f611420f7d655c38a253"
+    },
+    {
+      "path": "plots/cost_by_model.png",
+      "source_table": "tables/model_usage.csv",
+      "before_sha256": "59bfd39a96dd93a1cffab957c3fdd995d415b2199c416e8e3ab64e7109bdd650",
+      "after_sha256": "83ad5b60bac01107be31825cef2bfbc73e6eb33c1cd368f3e66d7b234c6ff59c"
+    }
+  ],
+  "visual_validation": {
+    "status": "pass",
+    "reviewed_plots": 4,
+    "repeated_or_ambiguous_dollar_tick_labels": 0,
+    "titles_and_axes_intact": true
+  }
+}

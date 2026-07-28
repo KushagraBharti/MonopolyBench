@@ -81,6 +81,21 @@ Standardization generated 26 tables, 23 plots, three standard reports, coverage/
 
 The share zip is validated against the current `analysis/` tree after finalization.
 
+## Post-Completion Cost-Plot Correction
+
+Visual inspection found that the standardizer's shared `money_formatter` renders dollar values with zero decimal places. This produced repeated `$0` and `$1` labels on the sub-dollar per-call and per-turn charts and rounded away useful precision on the other cost charts.
+
+Only these derived plots were regenerated:
+
+- `plots/cost_by_turn.png`
+- `plots/cost_per_call.png`
+- `plots/cumulative_cost_by_call.png`
+- `plots/cost_by_model.png`
+
+They were recreated from `tables/per_turn_usage_total.csv`, `tables/per_call_usage.csv`, and `tables/model_usage.csv`, preserving the standard plot sizes, DPI, locators, styling, titles, and labels while changing the y-axis formatter to two decimal places. Visual reinspection confirmed distinct cent-level ticks and intact titles/axes. Source-table and before/after plot hashes are recorded in `manifests/plot_correction_checksums.json`.
+
+The shared standardizer code was not changed; this report documents the tooling defect for upstream repair. Raw run and quality-check artifacts remain unchanged.
+
 ## Commands
 
 Commands were run from the repository root:
