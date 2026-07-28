@@ -62,9 +62,11 @@
   ],
   "reports": [
     "analysis_report.md",
+    "case_studies.md",
     "coverage_report.md",
     "data_dictionary.md",
-    "integrity_report.md"
+    "integrity_report.md",
+    "manual_review_report.md"
   ],
   "artifact_presence": {
     "actions.jsonl": true,
@@ -122,7 +124,13 @@
     "quality_check_files": 742,
     "expanded_trade_episodes": 44,
     "expanded_auction_episodes": 4,
-    "expanded_mortgage_episodes": 16
+    "expanded_mortgage_episodes": 16,
+    "qualitative_turns_reviewed": 164,
+    "qualitative_decisions_reviewed": 364,
+    "qualitative_trade_episodes_reviewed": 44,
+    "qualitative_bankruptcies_reviewed": 3,
+    "qualitative_case_studies": 8,
+    "qualitative_evidence_packets": 18
   },
   "expanded_metrics_dir": "expanded_metrics",
   "integrity_audit": {
@@ -136,7 +144,7 @@
     "quality_flags": "quality/quality_flags.json",
     "integrity_report": "reports/integrity_report.md",
     "integrity_table": "tables/integrity_summary.csv",
-    "qualitative_review": "not_performed_by_explicit_scope",
+    "qualitative_review": "completed_downstream_after_deterministic_audit",
     "visual_polish": {
       "status": "applied",
       "source_tables": [
@@ -164,5 +172,33 @@
     "quality/call_reconciliation.json",
     "quality/quality_flags.json",
     "quality/replay_verification.json"
-  ]
+  ],
+  "qualitative_review": {
+    "status": "complete",
+    "scope": "single_run_manual_qualitative_review",
+    "reviewer_count": 1,
+    "provider_or_model_calls": 0,
+    "source_order": [
+      "events",
+      "actions",
+      "decisions",
+      "prompt_response_and_quality_check",
+      "snapshots"
+    ],
+    "outputs": [
+      "README.md",
+      "reports/case_studies.md",
+      "reports/manual_review_report.md",
+      "review/chronological_turn_review.md",
+      "review/player_dossiers.md",
+      "review/bankruptcy_windows.md",
+      "review/negotiation_review.md",
+      "review/evidence_index.csv",
+      "review/decision_coverage.csv",
+      "review/review_packet.jsonl",
+      "review/promise_lifecycle.csv",
+      "review/communication_claims.csv"
+    ],
+    "claim_boundary": "D0-D4 and C0-C4 records are evidence-linked candidates, not adjudicated findings; no branch oracle was run; no cross-run prevalence or ranking claim is made."
+  }
 }
