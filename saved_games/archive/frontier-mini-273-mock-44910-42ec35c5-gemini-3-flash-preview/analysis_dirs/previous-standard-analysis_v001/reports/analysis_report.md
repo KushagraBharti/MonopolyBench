@@ -34,6 +34,5 @@
 - Tables: `26`
 - Plots: `23`
 - Reports: `analysis_report.md`, `coverage_report.md`, `data_dictionary.md`
-- Expanded metrics: `expanded_metrics/`
 
 Legacy and previous analysis artifacts are preserved under `saved_games/archive/<saved-game>/`. This folder is the current standardized cross-run analysis layer.

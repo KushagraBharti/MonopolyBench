@@ -2,14 +2,11 @@
 
 ## Canonical Run Artifact Presence
 
-- Expected top-level run artifacts: `44`
+- Expected top-level run artifacts: `42`
 - Present: `42`
-- Missing: `2`
+- Missing: `0`
 
-## Missing
-
-- `state_replay_report.json`
-- `artifact_replay_report.json`
+No canonical run top-level artifacts are missing.
 
 ## Layout Contract
 
