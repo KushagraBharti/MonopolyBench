@@ -1,0 +1,32 @@
+category,check,status,count_or_value,evidence_path,details_json
+completeness,events_exist_parse,pass,,run/events.jsonl,"{""parse_errors"": 0, ""rows"": 2606}"
+completeness,event_sequences_contiguous,pass,,run/events.jsonl,"{""count"": 2606, ""first"": 0, ""last"": 2605}"
+completeness,decisions_exist_parse,pass,,run/decisions.jsonl,"{""parse_errors"": 0, ""resolved_rows"": 346, ""started_rows"": 346, ""unique_decisions"": 346}"
+completeness,actions_link_to_decisions,pass,,run/actions.jsonl,"{""actions"": 346, ""duplicate_action_links"": 0, ""resolved_decisions"": 346}"
+completeness,usage_calls_link_to_attempts,pass,,run/usage_attempts.jsonl,"{""decision_attempts"": 355, ""usage_attempts"": 355}"
+completeness,prompt_artifacts_per_attempt,pass,,run/prompts/,"{""attempts"": 355, ""expected_files"": 1775, ""files"": 1775, ""suffix_counts"": {""parsed.json"": 355, ""response.json"": 355, ""system.txt"": 355, ""tools.json"": 355, ""user.json"": 355}}"
+completeness,quality_check_per_attempt,pass,,quality_check/,"{""attempts"": 355, ""expected_files"": 710, ""files"": 710, ""request_files"": 355, ""response_files"": 355}"
+completeness,usage_raw_metadata,pass,,run/usage.json,"{""local_tokenizer_estimates_used"": false, ""missing_usage_attempt_count"": 0, ""source"": ""openrouter_actuals_only""}"
+completeness,state_snapshot_cadence,pass,,run/state/,"{""all_state_files"": 504, ""canonical_turn_snapshots"": 158, ""first_turn"": 0, ""last_turn"": 157}"
+completeness,raw_split_replay_reports,warning,,run/,"{""derived_reports"": [""analysis/quality/state_replay_report.json"", ""analysis/quality/artifact_replay_report.json""], ""missing"": [""artifact_replay_report.json"", ""state_replay_report.json""]}"
+completeness,derived_state_replay,pass,,analysis/quality/state_replay_report.json,"{""event_count"": 2606, ""first_mismatch_index"": null}"
+completeness,derived_artifact_replay,pass,,analysis/quality/artifact_replay_report.json,"{""event_count"": 2606, ""first_mismatch_index"": null}"
+completeness,separate_responses_directory,warning,,run/prompts/,"{""missing"": ""run/responses/"", ""quality_response_files"": 355, ""substitute_response_json_files"": 355}"
+completeness,run_manifest_metadata,warning,,run/experiment_manifest.json,"{""available"": [""artifact_manifest.json"", ""experiment_manifest.json"", ""run_config.json"", ""seat_assignment.json""], ""missing"": ""run_manifest.json""}"
+completeness,provider_route_summary,warning,,run/run_config.json,"{""actual_provider_field_in_usage_attempts"": false, ""missing"": ""provider_route_summary.csv"", ""requested_provider_restrictions_recorded"": true}"
+completeness,manual_reviews,not_applicable,,run/artifact_manifest.json,"{""missing_optional_manifest_entries"": [""reviews\\review_labels.jsonl"", ""reviews\\review_summary.json""], ""reason"": ""qualitative review explicitly excluded from this task""}"
+reconciliation,attempt_count_matches,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,decision_count_matches,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,all_attempts_have_decision_id,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,attempt_indices_contiguous,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,all_openrouter_request_ids_present,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,all_generation_ids_present,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,usage_totals_match_attempt_rows,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,cost_report_matches_usage,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,summary_tokens_match_usage,pass,,analysis/quality/call_reconciliation.json,
+reconciliation,summary_cost_matches_usage_with_display_rounding,pass,,analysis/quality/call_reconciliation.json,
+replay,state_replay_report,passed,2606,analysis/quality/state_replay_report.json,"{""first_mismatch_index"": null, ""original_canonical_hash"": ""47901e3b36ff45fa957fe08e0203df54dd06f5b498b595fde9f18b9aa6f27597"", ""replay_canonical_hash"": ""47901e3b36ff45fa957fe08e0203df54dd06f5b498b595fde9f18b9aa6f27597""}"
+replay,artifact_replay_report,passed,2606,analysis/quality/artifact_replay_report.json,"{""first_mismatch_index"": null, ""original_canonical_hash"": ""4d7499f702670726e75f7dbee07bbf451cfa421e36987d86bb680876fde5cc5f"", ""replay_canonical_hash"": ""4d7499f702670726e75f7dbee07bbf451cfa421e36987d86bb680876fde5cc5f""}"
+validation,final_summary_matches_final_state,pass,,analysis/tables/state_by_turn_player.csv,"{""fields"": [""cash"", ""net_worth_estimate"", ""property_value_estimate"", ""building_value_estimate"", ""mortgage_liability_estimate""], ""players_compared"": 4, ""turn_index"": 157}"
+validation,endpoint_winner_consistency,pass,,run/events.jsonl,"{""game_ended_event_count"": 1, ""reason"": ""BANKRUPTCY"", ""turn_count"": 157, ""winner_player_id"": ""Grok 4.3""}"
+validation,cost_plot_visual_quality,pass,,analysis/quality/plot_quality.json,"{""plots"": 4, ""shared_code_modified"": false, ""visual_inspection"": ""passed""}"
