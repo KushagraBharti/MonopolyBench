@@ -61,8 +61,10 @@
   ],
   "reports": [
     "analysis_report.md",
+    "case_studies.md",
     "coverage_report.md",
-    "data_dictionary.md"
+    "data_dictionary.md",
+    "manual_review_report.md"
   ],
   "artifact_presence": {
     "actions.jsonl": true,
@@ -130,6 +132,32 @@
     "replay_verification": "quality/replay_verification.json",
     "integrity_report": "reports/integrity_report.md"
   },
+  "qualitative_review": {
+    "schema_version": "manual_qualitative_review_v1",
+    "index": "README.md",
+    "chronological_review": "review/chronological_turn_review.md",
+    "player_dossiers": "review/player_dossiers.md",
+    "bankruptcy_windows": "review/bankruptcy_windows.md",
+    "negotiation_review": "review/negotiation_review.md",
+    "evidence_index": "review/evidence_index.csv",
+    "review_packet": "review/review_packet.jsonl",
+    "promise_lifecycle": "review/promise_lifecycle.csv",
+    "communication_claims": "review/communication_claims.csv",
+    "validation": "quality/qualitative_review_validation.json",
+    "case_studies": "reports/case_studies.md",
+    "manual_review_report": "reports/manual_review_report.md",
+    "playable_turn_indices": {
+      "first": 0,
+      "last": 171,
+      "count": 172
+    },
+    "resolved_decisions": 613,
+    "negotiation_episodes": 133,
+    "bankruptcy_eliminations": 3,
+    "case_studies_count": 7,
+    "review_boundary": "single realized run; no continuation oracle, cross-run ranking, or prevalence claim",
+    "archived_recovery_evidence_status": "supporting provenance only; not merged into canonical action or resolution counts"
+  },
   "recovery_evidence_dir": "archive/evidence/mock-2413970733-53b199c1-pre-resume",
   "analysis_source_commit": "e2623b39ebc054283197a1021a60910172f0279d",
   "commands": [
@@ -144,6 +172,33 @@
     {
       "command": "uv run --project python python scripts/analyze_saved_game.py saved_games/frontier-172-mock-2413970733-53b199c1-gemini-3-1-pro-preview",
       "exit_code": 0
+    },
+    {
+      "command": "python <inline qualitative coverage, join, citation, and source-provenance validator>",
+      "exit_code": 0,
+      "result": "172/172 playable turns; 58 blocks at width <=3; 613/613 decisions/actions/packets; 133 trades; 10,205 evidence rows; 6,001 canonical ID mentions and 2,498 local links validated"
+    },
+    {
+      "command": "git diff --exit-code 2d7abea1 -- <frozen raw/QC/archive/source-manifest paths>",
+      "exit_code": 0,
+      "result": "zero raw diff from baseline 2d7abea1"
+    },
+    {
+      "command": "uv run --project . --package monopoly-telemetry --with pytest python -m pytest packages/telemetry/tests/test_expanded_metrics.py",
+      "working_directory": "python",
+      "exit_code": 0,
+      "result": "1 passed"
+    },
+    {
+      "command": "uv run --project . --package monopoly-api --with pytest python -m pytest apps/api/tests/test_replay_runner.py",
+      "working_directory": "python",
+      "exit_code": 0,
+      "result": "2 passed"
+    },
+    {
+      "command": "python <inline deterministic analysis ZIP, package checksum, and parity validator>",
+      "exit_code": 0,
+      "result": "87 sorted fixed-timestamp ZIP members and 7,405 package checksum entries validated; repeated ZIP build SHA-256 identical"
     }
   ],
   "run_specific_plot_corrections": [

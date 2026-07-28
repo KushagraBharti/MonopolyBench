@@ -61,6 +61,33 @@
       "command": "uv run --project python python <temporary package/hash/archive validator>",
       "exit_code": 0,
       "result": "7,314 source hashes, 7,393 package checksums, 75 zip members, 3,344 JSON files, 18 JSONL files/20,120 rows, and 38 CSV files validated"
+    },
+    {
+      "command": "python <inline qualitative coverage, join, citation, and source-provenance validator>",
+      "exit_code": 0,
+      "result": "172/172 playable turns; 58 blocks at width <=3; 613/613 decisions/actions/packets; 133 trades; 10,205 evidence rows; 6,001 canonical ID mentions and 2,498 local links validated"
+    },
+    {
+      "command": "git diff --exit-code 2d7abea1 -- <frozen raw/QC/archive/source-manifest paths>",
+      "exit_code": 0,
+      "result": "zero raw diff from baseline 2d7abea1"
+    },
+    {
+      "command": "uv run --project . --package monopoly-telemetry --with pytest python -m pytest packages/telemetry/tests/test_expanded_metrics.py",
+      "working_directory": "python",
+      "exit_code": 0,
+      "result": "1 passed"
+    },
+    {
+      "command": "uv run --project . --package monopoly-api --with pytest python -m pytest apps/api/tests/test_replay_runner.py",
+      "working_directory": "python",
+      "exit_code": 0,
+      "result": "2 passed"
+    },
+    {
+      "command": "python <inline deterministic analysis ZIP, package checksum, and parity validator>",
+      "exit_code": 0,
+      "result": "87 sorted fixed-timestamp ZIP members and 7,405 package checksum entries validated; repeated ZIP build SHA-256 identical"
     }
   ],
   "source_hashes": "source_artifact_hashes.json",
@@ -72,7 +99,9 @@
   "standard_analysis_manifest": "../manifest.json",
   "notes": [
     "Raw run, quality-check, and recovery evidence are immutable and byte-preserved.",
-    "No qualitative analysis was performed.",
+    "A downstream manual qualitative review covers every playable turn and resolved decision, all negotiation episodes, all bankruptcy windows, promise/communication candidates, and seven mechanism-focused case studies.",
+    "The duplicated decision_started marker for dec-000242 is resume-boundary provenance; exactly one canonical resolution and action exist.",
+    "Original-source manifests may reflect CRLF bytes while repository blobs are LF-normalized; this is a provenance/line-ending distinction, not semantic or replay failure.",
     "Final commit hash is reported externally because a commit cannot self-record its own hash."
   ]
 }
