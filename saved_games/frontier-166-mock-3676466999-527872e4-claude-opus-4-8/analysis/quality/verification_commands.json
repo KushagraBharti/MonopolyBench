@@ -1,0 +1,41 @@
+{
+  "schema_version": "verification_commands_v1",
+  "run_id": "mock-3676466999-527872e4",
+  "commands": [
+    {
+      "command": "uv run --with matplotlib --with pandas python scripts/standardize_saved_games.py mock-3676466999-527872e4",
+      "exit_code": 0,
+      "result": "standardized"
+    },
+    {
+      "command": "uv run python scripts/analyze_saved_game.py saved_games/frontier-166-mock-3676466999-527872e4-claude-opus-4-8 --output-dir saved_games/frontier-166-mock-3676466999-527872e4-claude-opus-4-8/analysis/expanded_metrics",
+      "exit_code": 0,
+      "result": "4 players, 3341 events, 488 actions, 107 trade episodes, 1 auction episode, 29 mortgage episodes"
+    },
+    {
+      "command": "uv run --project python/packages/arena python -c \"from pathlib import Path; from monopoly_telemetry.run_files import build_run_files; from monopoly_arena.replay_verification import build_replay_verification_reports; s=Path('saved_games/frontier-166-mock-3676466999-527872e4-claude-opus-4-8'); f=build_run_files(s,'run',quality_base_dir=s); f.run_id='mock-3676466999-527872e4'; r=build_replay_verification_reports(f); assert all(x['status']=='passed' for x in r.values()); print({k:v['status'] for k,v in r.items()})\"",
+      "exit_code": 0,
+      "result": "state replay passed; artifact replay passed"
+    },
+    {
+      "command": "uv run --project python/packages/telemetry --group test pytest python/packages/telemetry/tests/test_expanded_metrics.py python/packages/telemetry/tests/test_snapshot_persistence.py -q",
+      "exit_code": 0,
+      "result": "8 passed"
+    },
+    {
+      "command": "uv run --project python/apps/api --group test pytest python/apps/api/tests/test_replay_runner.py python/apps/api/tests/test_prompt_artifacts.py -q",
+      "exit_code": 0,
+      "result": "3 passed"
+    },
+    {
+      "command": "uv run --with matplotlib --with pandas python tmp/build_mock_3676466999_audit.py",
+      "exit_code": 0,
+      "result": "Regenerated cost_by_turn.png and cost_per_call.png from canonical CSV tables with cent-level axes; refreshed audit hashes."
+    },
+    {
+      "command": "python saved_games/frontier-166-mock-3676466999-527872e4-claude-opus-4-8/analysis/quality/validate_package.py",
+      "exit_code": 0,
+      "result": "Package/source/analysis/PNG/zip validation passed."
+    }
+  ]
+}
