@@ -1,0 +1,146 @@
+{
+  "schema_version": "artifact_completeness_v1",
+  "run_id": "mock-3676466999-527872e4",
+  "overall_status": "pass_with_warnings",
+  "counts": {
+    "run_files": 3208,
+    "run_bytes": 56428160,
+    "quality_check_files": 1004,
+    "quality_check_bytes": 13079696,
+    "events": 3341,
+    "decision_rows": 977,
+    "unique_decisions": 488,
+    "actions": 488,
+    "attempts": 502,
+    "state_snapshots": 656,
+    "prompt_artifacts": 2510
+  },
+  "missing_artifacts": [],
+  "extra_artifacts": [],
+  "checks": [
+    {
+      "id": "run_top_level_artifacts",
+      "status": "pass",
+      "expected": 44,
+      "present": 44,
+      "missing": [],
+      "extra": [],
+      "evidence": "analysis/coverage/artifact_presence.csv"
+    },
+    {
+      "id": "json_jsonl_parse",
+      "status": "pass",
+      "json_failures": [],
+      "jsonl_failures": [],
+      "evidence": "run/"
+    },
+    {
+      "id": "event_sequence",
+      "status": "pass",
+      "event_count": 3341,
+      "sequence_start": 0,
+      "sequence_end": 3340,
+      "issues": [],
+      "evidence": "run/events.jsonl"
+    },
+    {
+      "id": "decision_action_links",
+      "status": "pass",
+      "unique_started_decisions": 488,
+      "resolved_decisions": 488,
+      "actions": 488,
+      "usage_decisions": 488,
+      "started_without_resolution": [],
+      "resolved_without_action": [],
+      "actions_without_resolution": [],
+      "evidence": [
+        "run/decisions.jsonl",
+        "run/actions.jsonl",
+        "run/usage_decisions.jsonl"
+      ]
+    },
+    {
+      "id": "decision_start_row_uniqueness",
+      "status": "warning",
+      "start_rows": 489,
+      "unique_started_decisions": 488,
+      "duplicates": [
+        {
+          "decision_id": "mock-3676466999-527872e4-dec-000030",
+          "start_row_count": 2
+        }
+      ],
+      "evidence": "run/decisions.jsonl"
+    },
+    {
+      "id": "attempt_prompt_response_coverage",
+      "status": "pass",
+      "attempts": 502,
+      "prompt_artifact_files": 2510,
+      "prompt_kind_counts": {
+        "parsed": 502,
+        "response": 502,
+        "system": 502,
+        "tools": 502,
+        "user": 502
+      },
+      "quality_check_files": 1004,
+      "quality_check_kind_counts": {
+        "request": 502,
+        "response": 502
+      },
+      "evidence": [
+        "run/prompts/",
+        "quality_check/",
+        "run/usage_attempts.jsonl"
+      ]
+    },
+    {
+      "id": "state_snapshot_cadence",
+      "status": "pass",
+      "all_state_snapshots": 656,
+      "canonical_turn_snapshots": 167,
+      "expected_canonical_turn_snapshots": 167,
+      "first": "turn_0000.json",
+      "last": "turn_0166.json",
+      "evidence": "run/state/"
+    },
+    {
+      "id": "final_summary_state_consistency",
+      "status": "pass",
+      "mismatches": [],
+      "winner": "Claude Opus 4.8",
+      "survivors": [
+        "Claude Opus 4.8"
+      ],
+      "end_reason": "BANKRUPTCY",
+      "final_phase": "GAME_OVER",
+      "evidence": [
+        "run/summary.json",
+        "run/state/turn_0166.json"
+      ]
+    },
+    {
+      "id": "manual_review_artifacts",
+      "status": "warning",
+      "missing": [
+        "reviews\\review_labels.jsonl",
+        "reviews\\review_summary.json"
+      ],
+      "reason": "Manual qualitative review was explicitly out of scope for this task.",
+      "evidence": "run/artifact_manifest.json"
+    },
+    {
+      "id": "standalone_responses_directory",
+      "status": "warning",
+      "missing": [
+        "responses/"
+      ],
+      "reason": "The current run layout colocates 502 response JSON files under prompts/ and preserves 502 human-readable response files under quality_check/.",
+      "evidence": [
+        "run/prompts/",
+        "quality_check/"
+      ]
+    }
+  ]
+}
