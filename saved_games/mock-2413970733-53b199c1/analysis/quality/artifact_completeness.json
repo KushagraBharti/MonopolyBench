@@ -1,0 +1,107 @@
+{
+  "schema_version": "artifact_completeness_v1",
+  "run_id": "mock-2413970733-53b199c1",
+  "overall_status": "pass_with_warnings",
+  "canonical_top_level": {
+    "status": "passed",
+    "expected_count": 44,
+    "present_count": 44,
+    "missing_artifacts": [],
+    "unexpected_artifacts": [],
+    "evidence_path": "analysis/coverage/artifact_presence.csv"
+  },
+  "counts": {
+    "events": 4073,
+    "actions": 613,
+    "decision_rows": 1227,
+    "decision_started_rows": 614,
+    "decision_started_unique": 613,
+    "decision_resolved_rows": 613,
+    "state_files": 787,
+    "prompt_artifact_files": 3155,
+    "quality_check_files": 1262
+  },
+  "checks": [
+    {
+      "check": "canonical top-level run artifacts",
+      "status": "passed",
+      "evidence": "analysis/coverage/artifact_presence.csv",
+      "detail": "44 of 44 present"
+    },
+    {
+      "check": "event/action/decision JSONL parse and linkage",
+      "status": "passed",
+      "evidence": "analysis/quality/call_reconciliation.json",
+      "detail": "4073 events; 613 actions; 613 unique started/resolved decisions; every resolved decision has exactly one action"
+    },
+    {
+      "check": "state snapshots",
+      "status": "passed",
+      "evidence": "run/state/",
+      "detail": "787 snapshot files present"
+    },
+    {
+      "check": "prompt and response audit coverage",
+      "status": "passed",
+      "evidence": "run/prompts/ and quality_check/",
+      "detail": "631 each of system, user, tools, parsed, and response prompt artifacts; 631 request/response text pairs"
+    },
+    {
+      "check": "replay reports",
+      "status": "passed",
+      "evidence": "run/replay_report.json; run/state_replay_report.json; run/artifact_replay_report.json",
+      "detail": "saved and independently recomputed reports pass"
+    },
+    {
+      "check": "usage/cost coverage",
+      "status": "passed",
+      "evidence": "analysis/quality/call_reconciliation.json",
+      "detail": "631/631 attempts have actual OpenRouter usage; zero missing usage attempts"
+    },
+    {
+      "check": "duplicate decision-start row",
+      "status": "warning",
+      "evidence": "run/decisions.jsonl lines 485-486",
+      "detail": "decision mock-2413970733-53b199c1-dec-000242 has two non-identical decision_started rows around the resume boundary; it has one resolved row, one action, and complete attempt accounting"
+    },
+    {
+      "check": "standalone responses directory",
+      "status": "warning",
+      "evidence": "run/prompts/*_response.json and quality_check/*_response.txt",
+      "detail": "analysis_process.md ideal layout names responses/, but this run stores responses in prompts/ and quality_check/; response coverage is complete"
+    },
+    {
+      "check": "run-time source commit metadata",
+      "status": "warning",
+      "evidence": "run/run_config.json and run/experiment_manifest.json",
+      "detail": "run-time repository commit is not recorded; intake/source commit is recorded as e2623b39ebc054283197a1021a60910172f0279d"
+    },
+    {
+      "check": "run_manifest.json/provider_route_summary.csv/metric_definitions.json raw files",
+      "status": "warning",
+      "evidence": "run/experiment_manifest.json; raw responses; analysis/expanded_metrics/metric_definitions.md",
+      "detail": "equivalent metadata is distributed across existing artifacts rather than present under all ideal guide filenames"
+    },
+    {
+      "check": "manual review labels and summary",
+      "status": "not_applicable",
+      "evidence": "run/artifact_manifest.json",
+      "detail": "reviews/review_labels.jsonl and reviews/review_summary.json are absent; qualitative review was explicitly out of scope and no labels were fabricated"
+    }
+  ],
+  "missing_ideal_named_artifacts": [
+    "run/responses/",
+    "run/run_manifest.json",
+    "run/provider_route_summary.csv",
+    "run/metric_definitions.json",
+    "run/reviews/review_labels.jsonl",
+    "run/reviews/review_summary.json"
+  ],
+  "extra_or_duplicate_evidence": [
+    {
+      "decision_id": "mock-2413970733-53b199c1-dec-000242",
+      "row_count": 2
+    }
+  ],
+  "claim_boundary": "Integrity, deterministic metrics, and accounting claims are supported. No qualitative deception, collusion, negotiation, bankruptcy-window, or case-study claims were produced."
+}
