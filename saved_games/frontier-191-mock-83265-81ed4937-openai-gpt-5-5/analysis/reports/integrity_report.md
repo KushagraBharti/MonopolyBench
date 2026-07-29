@@ -2,8 +2,9 @@
 
 ## Scope
 
-This pass is integrity-only. Qualitative and semantic review is deferred, and
-no LLM/provider/network call was made.
+The deterministic facts in this report were produced by the integrity pass.
+The later qualitative review is strictly downstream under `analysis/`; no
+LLM/provider/network call was made and no source artifact was modified.
 
 ## Source freeze
 
@@ -75,3 +76,35 @@ The final share ZIP is generated only after all analysis files are complete.
 The package validator checks CRC, exact entry-set parity, byte-identical
 contents, PNG signatures/dimensions, JSON/CSV parseability, generated hashes,
 source preservation, and saved-game manifest consistency.
+
+## Qualitative-review extension
+
+The authoritative played-turn domain is zero-based `0..190` (191 turns).
+Turn 191 contains the terminal `GAME_ENDED` checkpoint only. The qualitative
+layer covers checkpoints `0..191` in 64 contiguous non-overlapping blocks of
+size at most three, joins exactly 583 resolved decisions to 583 applied actions,
+and nests all 604 attempts without retry inflation. It individually reconciles
+21 retry decisions, 23 invalid attempts, and two fallbacks.
+
+Exactly three bankruptcy windows are declared: Grok turns 98–113, Gemini turns
+91–126, and Claude turns 135–191. The selected starts include the material
+development/liquidity prehistory; the terminal ends correspond to the three
+`CASH_CHANGED` events whose reason is `BANKRUPTCY` at sequences 2851, 3120,
+and 3962. Full rationale and legal-action boundaries are in
+`review/bankruptcy_windows.md`.
+
+Citation resolution is mechanical through `review/evidence_index.csv`. The
+machine packet contains 583 `decision` records plus separately typed mechanism
+and bankruptcy episode records, so episode packets cannot inflate decision
+coverage. The conservative label taxonomy distinguishes supported facts,
+reported reasoning, interpretation, and counterfactual limits.
+
+The exact replay statement above is unchanged and controlling:
+`state_passed_artifact_failed`; state replay passes 1,640 state-relevant
+events; strict artifact replay first differs at sequence 669,
+`mock-83265-81ed4937-evt-000669`,
+`mock-83265-81ed4937-dec-000096`. Original
+`LLM_DECISION_RESPONSE`: `valid=false`,
+`error="fallback:illogical_after_retry"` for `reject_trade`; replay:
+`valid=true`, `error=null`. `missing_actions=0`, `extra_actions=0`, and
+`decision_id_mismatch=false`. No frozen replay report was overwritten.

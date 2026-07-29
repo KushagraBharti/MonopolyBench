@@ -4,16 +4,33 @@
   "saved_game": "frontier-191-mock-83265-81ed4937-openai-gpt-5-5",
   "source_commit": "fa773791718e3b5d8ff18448e2ad3fa42b375259",
   "analysis_commit_base": "fa773791718e3b5d8ff18448e2ad3fa42b375259",
-  "scope": "deterministic preparation and integrity only",
+  "scope": "deterministic integrity foundation plus exhaustive downstream qualitative review",
   "qualitative_review": {
-    "status": "deferred",
-    "placeholder_outputs_created": false,
-    "external_calls": false
+    "status": "complete_pending_final_validator",
+    "external_calls": false,
+    "turn_domain": {
+      "played": [
+        0,
+        190
+      ],
+      "terminal_checkpoint": 191
+    },
+    "resolved_decisions": 583,
+    "attempts": 604,
+    "retry_decisions": 21,
+    "invalid_attempts": 23,
+    "fallbacks": 2,
+    "bankruptcy_windows": 3,
+    "chronological_blocks": 64,
+    "manifest": "qualitative_review_manifest.json",
+    "validation": "../quality/qualitative_review_validation.json"
   },
   "generators": {
     "standardizer": "scripts/standardize_saved_games.py",
     "expanded_metrics": "monopoly_telemetry.expanded_metrics",
-    "integrity_builder": "analysis/tools/build_deterministic_integrity.py"
+    "integrity_builder": "analysis/tools/build_deterministic_integrity.py",
+    "qualitative_review": "analysis/tools/build_qualitative_review.py",
+    "qualitative_finalizer": "analysis/tools/finalize_qualitative_package.py"
   },
   "source_hash_manifest": "source_artifact_hashes.json",
   "generated_output_hash_manifest": "generated_output_hashes.json",
@@ -29,7 +46,9 @@
     "tree_hash_format": "For each regular file recursively under the artifact-set root: relative POSIX path + NUL (0x00) + lowercase hexadecimal file SHA-256 + LF (0x0A), sorted by relative path using ordinal case-sensitive order; SHA-256 the UTF-8 byte stream.",
     "generated_hash_exclusions": [
       "manifests/analysis_manifest.json",
-      "manifests/generated_output_hashes.json"
+      "manifests/generated_output_hashes.json",
+      "manifests/qualitative_review_manifest.json",
+      "quality/qualitative_review_validation.json"
     ]
   }
 }
