@@ -125,6 +125,12 @@ def prepare_manifests() -> None:
     ]
     manifest = {
         "schema_version": "qualitative_review_manifest_v1",
+        "unified_output_contract": {
+            "schema_version": "unified_qualitative_output_contract_v1",
+            "path": "manifests/unified_qualitative_contract.json",
+            "validation": "quality/unified_contract_validation.json",
+            "cross_package_adapter": "analysis/unify_legacy_qualitative_contract.py",
+        },
         "run_id": "mock-83265-81ed4937",
         "task_provenance": {
             "title": "Exhaustive qualitative review · legacy run 191",

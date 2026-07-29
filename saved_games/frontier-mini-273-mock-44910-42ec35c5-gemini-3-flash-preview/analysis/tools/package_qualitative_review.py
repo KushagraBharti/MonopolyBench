@@ -139,6 +139,12 @@ def write_qualitative_manifest() -> None:
         guides.append({"path": rel, "bytes": path.stat().st_size, "sha256": sha256(path), "read_completely": True})
     manifest = {
         "schema_version": "qualitative_review_manifest_v1",
+        "unified_output_contract": {
+            "schema_version": "unified_qualitative_output_contract_v1",
+            "path": "manifests/unified_qualitative_contract.json",
+            "validation": "quality/unified_contract_validation.json",
+            "cross_package_adapter": "analysis/unify_legacy_qualitative_contract.py",
+        },
         "run_id": RUN_ID,
         "saved_game": SAVED.name,
         "task": "Exhaustive qualitative review · legacy run 273",

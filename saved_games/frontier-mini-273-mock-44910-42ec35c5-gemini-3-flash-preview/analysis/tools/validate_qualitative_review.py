@@ -504,7 +504,9 @@ def validate(include_package: bool) -> dict[str, Any]:
         "reports/case_studies.md",
         "reports/integrity_report.md",
         "quality/qualitative_review_validation.json",
+        "quality/unified_contract_validation.json",
         "manifests/qualitative_review_manifest.json",
+        "manifests/unified_qualitative_contract.json",
         "tools/validate_qualitative_review.py",
     ]
     for rel in required:

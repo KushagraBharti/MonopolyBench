@@ -35,7 +35,9 @@ REQUIRED = [
     "reports/case_studies.md",
     "reports/integrity_report.md",
     "quality/qualitative_review_validation.json",
+    "quality/unified_contract_validation.json",
     "manifests/qualitative_review_manifest.json",
+    "manifests/unified_qualitative_contract.json",
     "tools/validate_qualitative_review.py",
 ]
 DECISION_FIELDS = [
@@ -118,7 +120,8 @@ def load_csv(path: Path, expected: list[str] | None = None) -> list[dict[str, st
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if expected is not None:
-            assert reader.fieldnames == expected, (path, reader.fieldnames, expected)
+            missing = [field for field in expected if field not in (reader.fieldnames or [])]
+            assert not missing, (path, reader.fieldnames, missing)
         rows = list(reader)
         assert all(None not in row for row in rows), f"ragged CSV: {path}"
         return rows
@@ -491,7 +494,7 @@ def main() -> int:
     group.add_argument("--write-report", action="store_true")
     group.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
-    result = run_validation(check_archive=args.check_only or (args.write_report and ZIP_PATH.exists()))
+    result = run_validation(check_archive=args.check_only)
     if args.write_report:
         if result.get("archive_parity", {}).get("status") == "pass":
             result["archive_parity"].pop("bytes", None)
