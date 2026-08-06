@@ -1,0 +1,115 @@
+{
+  "schema_version": "monopolybench_confirmatory_analysis_plan_v1",
+  "status": "draft_waiting_e1_design_lock",
+  "analysis_population": {
+    "primary": "complete four-rotation seed blocks passing the frozen strategic-integrity eligibility rule",
+    "attempted_cell_sensitivity": "all attempted planned cells with immutable status and reason codes",
+    "reliability": "all attempted calls and cells, including failures, retries, fallbacks, partial runs, and missing usage"
+  },
+  "independent_unit": "seed block",
+  "dependence": {
+    "games_within_seed": "dependent cyclic rotations",
+    "turns_decisions_attempts_messages_within_game": "not independent replicates",
+    "resampling": "entire seed blocks"
+  },
+  "primary_endpoints": {
+    "placement": {
+      "model": "hierarchical Plackett-Luce",
+      "fixed_effects": [
+        "model identity",
+        "seat"
+      ],
+      "random_effects": [
+        "model-by-seed"
+      ],
+      "reported": [
+        "pairwise superiority probability",
+        "expected rank",
+        "simultaneous 95% interval",
+        "posterior or bootstrap rank probability"
+      ]
+    },
+    "restricted_survival": {
+      "horizon_source": "frozen label-blind E1 quantile rule",
+      "censoring": "active turn-capped players right-censored",
+      "reported": [
+        "restricted mean survival",
+        "pairwise difference",
+        "simultaneous 95% interval",
+        "survival curve"
+      ]
+    },
+    "common_horizon_net_worth_auc": {
+      "horizon_source": "frozen label-blind E1 quantile rule",
+      "terminal_extension": "normally completed games use an absorbing terminal state",
+      "reported": [
+        "mean AUC",
+        "pairwise difference",
+        "simultaneous 95% interval",
+        "seed-block distribution"
+      ]
+    }
+  },
+  "smallest_effects_of_scientific_interest": {
+    "pairwise_placement_probability": 0.15,
+    "restricted_survival_turns": "max(20,0.10*H)",
+    "common_horizon_net_worth_auc_dollars": 300
+  },
+  "precision_targets": {
+    "pairwise_placement_probability_half_width": 0.1,
+    "restricted_survival_turn_half_width": 15,
+    "common_horizon_net_worth_auc_half_width_dollars": 200
+  },
+  "multiplicity": {
+    "omnibus": "Holm across three endpoint-level model tests at familywise alpha 0.05",
+    "pairwise": "joint seed-block max-T across all 18 primary endpoint-by-pair contrasts",
+    "sensitivity": "Holm-adjusted cluster-bootstrap contrasts"
+  },
+  "missingness_and_failures": {
+    "planned_cells": "every planned cell retained",
+    "incomplete_block": "excluded from complete-block primary analysis but retained in attempted-cell and reliability analyses",
+    "technical_rerun": "only under the frozen outcome-blind general rerun rule; original attempt retained",
+    "provider_usage_missing": "reported as missing and never silently imputed in primary cost totals"
+  },
+  "robustness": {
+    "seat": "intrinsic to cyclic primary design",
+    "opponent_roster": "R2 only",
+    "stress_seed_distribution": "R3 only",
+    "provider_route_and_time": "R4 only",
+    "memory_or_context": "registered exact-history fixture comparisons only"
+  },
+  "cross_scale": {
+    "original_action_concordance": "registered only after exact-history repetition coverage passes",
+    "branch_competence": "registered only after D3 legality and one-step consequence validation",
+    "association_model": "seed-block clustered association between fixture competence and corresponding full-game mechanism outcomes",
+    "causal_language": "forbidden beyond the registered branch horizon"
+  },
+  "communication": {
+    "unit": "eligible episode",
+    "discovery": "exhaustive masked LLM-judge review of every turn in contiguous focal blocks of at most three turns, followed by category-specialist and adversarial evidence passes",
+    "judge_execution": "local Codex/Claude Code agentic research tasks over repository artifacts; zero OpenRouter or external model API calls",
+    "candidate_status": "machine-generated until human validation",
+    "human_validation": "two independent humans for publication-facing high-risk candidates, adjudication of disagreements, and a stratified probability audit of judge-negative windows",
+    "campaign_execution_dependency": false,
+    "publication_claim_dependency": true,
+    "agreement": [
+      "raw agreement",
+      "Krippendorff alpha where identified",
+      "Gwet AC1 where appropriate",
+      "judge-candidate confirmation precision",
+      "judge-negative audit miss rate"
+    ],
+    "prevalence_rule": "model-level prevalence requires frozen denominators, known human-review selection probabilities, probability weighting, and seed-block-clustered uncertainty",
+    "epistemic_limit": "model-reported private thoughts are text evidence, not direct mental-state access"
+  },
+  "reporting": {
+    "effect_first": true,
+    "null_results_retained": true,
+    "exploratory_e0_never_pooled": true,
+    "all_protocol_deviations_listed": true
+  },
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "The analysis plan is downstream and never model-facing."
+  }
+}

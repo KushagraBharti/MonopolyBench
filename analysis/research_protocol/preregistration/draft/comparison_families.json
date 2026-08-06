@@ -1,0 +1,71 @@
+{
+  "schema_version": "monopolybench_comparison_families_v1",
+  "status": "draft_waiting_e1_design_lock",
+  "primary_roster": {
+    "roster_id": "frontier_medium_4lab",
+    "actors": [
+      "openai_gpt_55_medium",
+      "claude_opus_48_medium",
+      "gemini_31_pro_preview_medium",
+      "grok_43_medium"
+    ],
+    "expected_winner_preregistered": false
+  },
+  "primary_endpoints": [
+    {
+      "endpoint_id": "placement",
+      "estimand": "roster-relative full-placement likelihood",
+      "primary_model": "hierarchical Plackett-Luce with model-by-seed random effects and fixed seat effects"
+    },
+    {
+      "endpoint_id": "restricted_survival",
+      "estimand": "E[min(T,H)] with active capped players right-censored",
+      "primary_model": "seed-block clustered restricted-mean survival comparison"
+    },
+    {
+      "endpoint_id": "common_horizon_net_worth_auc",
+      "estimand": "mean net-worth AUC through the frozen common horizon Hc",
+      "primary_model": "seed-block hierarchical or cluster-bootstrap comparison with fixed seat effects"
+    }
+  ],
+  "pairwise_comparisons": {
+    "construction": "all six unordered actor pairs within each of the three primary endpoints",
+    "comparison_count": 18,
+    "direction_selected_after_results": false
+  },
+  "multiplicity": {
+    "omnibus_family": "Holm control at alpha=0.05 across the three endpoint-level model-identity tests",
+    "pairwise_family": "single joint seed-block max-T family across all 18 endpoint-by-pair contrasts",
+    "simultaneous_interval_level": 0.95,
+    "sensitivity": "Holm-adjusted cluster-bootstrap p-values over the same 18 contrasts",
+    "reporting": "all effect estimates and simultaneous intervals are reported regardless of significance"
+  },
+  "secondary_families": [
+    {
+      "family_id": "economic_mechanisms",
+      "claim_level": "secondary",
+      "multiplicity": "Benjamini-Hochberg within the frozen family; raw effects and intervals retained"
+    },
+    {
+      "family_id": "reliability_and_cost",
+      "claim_level": "secondary",
+      "multiplicity": "Benjamini-Hochberg within the frozen family; failures and missingness retained"
+    },
+    {
+      "family_id": "communication",
+      "claim_level": "secondary_judge_discovered_human_validated",
+      "campaign_execution_dependency": false,
+      "publication_gate": "high-risk comparisons require human validation, adjudication, and judge-negative audit",
+      "multiplicity": "family-specific correction over eligible-denominator rate contrasts"
+    },
+    {
+      "family_id": "robustness_interactions",
+      "claim_level": "secondary",
+      "multiplicity": "separate registered interaction family by robustness ring"
+    }
+  ],
+  "prompt_pipeline": {
+    "status": "unchanged",
+    "note": "Comparison families are downstream and never model-facing."
+  }
+}
