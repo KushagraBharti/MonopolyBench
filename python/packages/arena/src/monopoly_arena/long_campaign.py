@@ -9,16 +9,27 @@ import json
 import math
 import random
 import re
+from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 from statistics import mean, median, stdev
 from typing import Any
 
 from .baselines import BASELINE_IDS
+from .batch_artifacts import (
+    batch_actual_cost,
+    budget_preflight_estimate,
+    should_stop_for_budget,
+)
 from .llm_runner import LlmRunner
 from .openrouter_client import OpenRouterClient
 from .paths import resolve_repo_path, resolve_repo_root
-from .player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name, normalize_reasoning
+from .player_config import (
+    DEFAULT_SYSTEM_PROMPT,
+    PlayerConfig,
+    derive_model_display_name,
+    normalize_reasoning,
+)
 from .research_registry import (
     EXPECTED_LONG_HORIZON_PLAYERS,
     get_model_roster,
@@ -51,7 +62,9 @@ def build_campaign_plan(
 ) -> dict[str, Any]:
     validate_campaign_config(config)
     seed_registry = seed_registry if seed_registry is not None else load_seed_registry()
-    roster_registry = roster_registry if roster_registry is not None else load_model_roster_registry()
+    roster_registry = (
+        roster_registry if roster_registry is not None else load_model_roster_registry()
+    )
     seed_cohort = get_seed_cohort(str(config["seed_cohort"]), seed_registry)
     roster_bundle = get_model_roster(
         str(config["model_roster"]),
@@ -67,6 +80,7 @@ def build_campaign_plan(
     if seat_mode not in SUPPORTED_SEAT_MODES:
         raise ValueError(f"Unsupported seat_permutation mode: {seat_mode}")
     rows = _build_run_matrix(config=config, seed_cohort=seed_cohort, actors=actors)
+    rows, execution_manifest = _assign_execution_order(config, rows)
     return {
         "schema_version": "v1",
         "campaign_protocol_version": LONG_CAMPAIGN_PROTOCOL_VERSION,
@@ -75,15 +89,20 @@ def build_campaign_plan(
         "model_roster": _model_roster_manifest(config, roster_bundle, actors),
         "baseline_roster": _baseline_roster_manifest(config, actors),
         "run_matrix": rows,
+        "execution_manifest": execution_manifest,
         "batch_runner_compatibility": _batch_runner_compatibility(config, rows),
         "campaign_manifest": _campaign_manifest(config, seed_cohort, actors, rows),
     }
 
 
-def write_campaign_plan(config: dict[str, Any], *, runs_dir: Path | str | None = None) -> Path:
+def write_campaign_plan(
+    config: dict[str, Any], *, runs_dir: Path | str | None = None
+) -> Path:
     plan = build_campaign_plan(config)
     paths = campaign_paths(
-        resolve_repo_path(str(runs_dir)) if runs_dir is not None else resolve_repo_root() / DEFAULT_RUNS_DIR,
+        resolve_repo_path(str(runs_dir))
+        if runs_dir is not None
+        else resolve_repo_root() / DEFAULT_RUNS_DIR,
         str(config["campaign_id"]),
     )
     paths["campaign_dir"].mkdir(parents=True, exist_ok=True)
@@ -92,8 +111,14 @@ def write_campaign_plan(config: dict[str, Any], *, runs_dir: Path | str | None =
     _write_json(paths["seed_manifest"], plan["seed_manifest"])
     _write_json(paths["model_roster"], plan["model_roster"])
     _write_json(paths["baseline_roster"], plan["baseline_roster"])
-    _write_json(paths["run_matrix"], {"schema_version": "v1", "runs": plan["run_matrix"]})
+    _write_json(
+        paths["run_matrix"], {"schema_version": "v1", "runs": plan["run_matrix"]}
+    )
     _write_jsonl(paths["run_matrix_jsonl"], plan["run_matrix"])
+    _write_json(paths["execution_manifest"], plan["execution_manifest"])
+    _write_jsonl(
+        paths["execution_manifest_jsonl"], plan["execution_manifest"]["ordered_runs"]
+    )
     _write_json(paths["batch_runner_compatibility"], plan["batch_runner_compatibility"])
     _write_json(paths["artifact_manifest"], _artifact_manifest(paths))
     return paths["campaign_dir"]
@@ -108,7 +133,11 @@ async def run_campaign(
     force_execute: bool = False,
 ) -> dict[str, Any]:
     validate_campaign_config(config)
-    root = resolve_repo_path(str(runs_dir)) if runs_dir is not None else resolve_repo_root() / DEFAULT_RUNS_DIR
+    root = (
+        resolve_repo_path(str(runs_dir))
+        if runs_dir is not None
+        else resolve_repo_root() / DEFAULT_RUNS_DIR
+    )
     plan = build_campaign_plan(config)
     paths = campaign_paths(root, str(config["campaign_id"]))
     write_campaign_plan(config, runs_dir=root)
@@ -119,17 +148,53 @@ async def run_campaign(
             "status": "dry_run_only",
             "run_count": 0,
             "campaign_dir": str(paths["campaign_dir"]),
-            "prompt_pipeline": _prompt_marker("Dry-run campaign planning does not execute prompts."),
+            "prompt_pipeline": _prompt_marker(
+                "Dry-run campaign planning does not execute prompts."
+            ),
         }
         _write_json(paths["execution_result"], result)
         _write_json(paths["artifact_manifest"], _artifact_manifest(paths))
         return result
 
+    factory = openrouter_factory
+    metadata_client = factory() if callable(factory) else factory
+    endpoint_snapshot_before = await _openrouter_metadata_snapshot(
+        metadata_client, method_name="get_models"
+    )
+    credits_before = await _openrouter_metadata_snapshot(
+        metadata_client, method_name="get_credits"
+    )
+    if callable(factory):
+        await _maybe_close(metadata_client)
+    execution_preflight = _execution_preflight_snapshot(config)
+
     run_entries: list[dict[str, Any]] = []
     executed = 0
-    for row in plan["run_matrix"]:
+    stop_reason = (
+        _credit_gate_stop_reason(config, credits_before)
+        or _preflight_gate_stop_reason(config, execution_preflight)
+        or should_stop_for_budget(
+            config,
+            run_entries,
+        )
+    )
+    for row in _execution_rows(plan):
+        if stop_reason:
+            run_entries.append(
+                _campaign_result_entry(
+                    row,
+                    status=_not_started_status(stop_reason),
+                    run_dir=root / str(row["run_id"]),
+                    error=stop_reason,
+                )
+            )
+            continue
         if max_runs is not None and executed >= max_runs:
-            entry = _campaign_result_entry(row, status="not_started_max_runs_limit", run_dir=root / str(row["run_id"]))
+            entry = _campaign_result_entry(
+                row,
+                status="not_started_max_runs_limit",
+                run_dir=root / str(row["run_id"]),
+            )
             run_entries.append(entry)
             continue
         entry = await _run_campaign_row(
@@ -141,19 +206,56 @@ async def run_campaign(
         run_entries.append(entry)
         if entry["status"] not in {"resumed_completed", "not_runnable"}:
             executed += 1
-        if entry["status"] == "failed" and not bool(config.get("continue_on_failure", False)):
-            break
+        budget_stop_reason = should_stop_for_budget(config, run_entries)
+        if budget_stop_reason:
+            stop_reason = budget_stop_reason
+        if entry["status"] == "failed" and not bool(
+            config.get("continue_on_failure", False)
+        ):
+            stop_reason = (
+                stop_reason or f"campaign_halted_after_failed_run_{row['run_id']}"
+            )
 
-    _write_campaign_dynamic_artifacts(paths, config, plan, run_entries)
+    metadata_client = factory() if callable(factory) else factory
+    endpoint_snapshot_after = await _openrouter_metadata_snapshot(
+        metadata_client, method_name="get_models"
+    )
+    credits_after = await _openrouter_metadata_snapshot(
+        metadata_client, method_name="get_credits"
+    )
+    if callable(factory):
+        await _maybe_close(metadata_client)
+
+    _write_campaign_dynamic_artifacts(
+        paths,
+        config,
+        plan,
+        run_entries,
+        stop_reason=stop_reason,
+        endpoint_snapshot_before=endpoint_snapshot_before,
+        endpoint_snapshot_after=endpoint_snapshot_after,
+        credits_before=credits_before,
+        credits_after=credits_after,
+        execution_preflight=execution_preflight,
+    )
     return {
         "schema_version": "v1",
         "campaign_id": config["campaign_id"],
         "status": "executed",
         "run_count": len(run_entries),
-        "completed_count": sum(1 for entry in run_entries if entry["status"] in {"completed", "resumed_completed"}),
+        "completed_count": sum(
+            1
+            for entry in run_entries
+            if entry["status"] in {"completed", "resumed_completed"}
+        ),
         "failed_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
+        "status_counts": _status_counts(run_entries),
+        "actual_cost": batch_actual_cost(run_entries),
+        "stop_reason": stop_reason,
         "campaign_dir": str(paths["campaign_dir"]),
-        "prompt_pipeline": _prompt_marker("Campaign execution uses existing LlmRunner prompt path for LLMs only."),
+        "prompt_pipeline": _prompt_marker(
+            "Campaign execution uses existing LlmRunner prompt path for LLMs only."
+        ),
     }
 
 
@@ -168,6 +270,15 @@ def campaign_paths(runs_root: Path, campaign_id: str) -> dict[str, Path]:
         "baseline_roster": campaign_dir / "baseline_roster.json",
         "run_matrix": campaign_dir / "run_matrix.json",
         "run_matrix_jsonl": campaign_dir / "run_matrix.jsonl",
+        "execution_manifest": campaign_dir / "execution_manifest.json",
+        "execution_manifest_jsonl": campaign_dir / "execution_manifest.jsonl",
+        "endpoint_snapshot_before": campaign_dir / "endpoint_snapshot_before.json",
+        "endpoint_snapshot_after": campaign_dir / "endpoint_snapshot_after.json",
+        "credits_before": campaign_dir / "credits_before.json",
+        "credits_after": campaign_dir / "credits_after.json",
+        "execution_preflight_snapshot": campaign_dir
+        / "execution_preflight_snapshot.json",
+        "budget_report": campaign_dir / "budget_report.json",
         "results": campaign_dir / "results.jsonl",
         "results_csv": campaign_dir / "results.csv",
         "run_results": campaign_dir / "run_results.json",
@@ -202,8 +313,13 @@ def _build_run_matrix(
                 repetition_index=repetition_index,
                 max_turns=int(config["max_turns"]),
             ):
-                row_actors = [_seat_actor(actor, seat_index) for seat_index, actor in enumerate(ordered_actors)]
-                contains_baseline = any(actor["actor_type"] == "baseline" for actor in row_actors)
+                row_actors = [
+                    _seat_actor(actor, seat_index)
+                    for seat_index, actor in enumerate(ordered_actors)
+                ]
+                contains_baseline = any(
+                    actor["actor_type"] == "baseline" for actor in row_actors
+                )
                 baseline_strategies = _baseline_strategies(row_actors)
                 run_id = _run_id(
                     campaign_id=str(config["campaign_id"]),
@@ -231,15 +347,25 @@ def _build_run_matrix(
                         "permutation_id": permutation_id,
                         "permutation_seed_material": seed_material,
                         "max_turns": int(config["max_turns"]),
-                        "max_trade_exchanges": int(config.get("max_trade_exchanges") or 20),
-                        "max_auction_actions": int(config.get("max_auction_actions") or 200),
+                        "max_trade_exchanges": int(
+                            config.get("max_trade_exchanges") or 20
+                        ),
+                        "max_auction_actions": int(
+                            config.get("max_auction_actions") or 200
+                        ),
                         "actors": row_actors,
                         "contains_baseline": contains_baseline,
                         "baseline_strategies": baseline_strategies,
-                        "runnable_with_current_batch_runner": _runnable_with_current_batch_runner(row_actors),
-                        "runnable_with_long_runner": _runnable_with_long_runner(row_actors),
+                        "runnable_with_current_batch_runner": _runnable_with_current_batch_runner(
+                            row_actors
+                        ),
+                        "runnable_with_long_runner": _runnable_with_long_runner(
+                            row_actors
+                        ),
                         "status": "planned",
-                        "resume_key": _resume_key(config, seed, repetition_index, permutation_id, row_actors),
+                        "resume_key": _resume_key(
+                            config, seed, repetition_index, permutation_id, row_actors
+                        ),
                         "prompt_pipeline": {
                             "status": "unchanged",
                             "note": "This planned cell only assigns seed, seat, and actor ids; it does not change prompts.",
@@ -248,6 +374,93 @@ def _build_run_matrix(
                 )
                 run_index += 1
     return rows
+
+
+def _assign_execution_order(
+    config: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    execution_order_seed = config.get("execution_order_seed")
+    randomized = isinstance(execution_order_seed, int) and not isinstance(
+        execution_order_seed, bool
+    )
+    ranked_rows: list[tuple[str, int, dict[str, Any]]] = []
+    for row in rows:
+        if randomized:
+            order_key = _sha256_hex(
+                {
+                    "campaign_id": config["campaign_id"],
+                    "execution_order_seed": execution_order_seed,
+                    "run_id": row["run_id"],
+                    "run_index": row["run_index"],
+                }
+            )
+        else:
+            order_key = f"natural:{int(row['run_index']):012d}"
+        ranked_rows.append((order_key, int(row["run_index"]), row))
+
+    ranked_rows.sort(key=lambda item: (item[0], item[1]))
+    rank_by_run_id = {
+        str(row["run_id"]): {
+            "execution_rank": rank,
+            "execution_order_key": order_key,
+        }
+        for rank, (order_key, _run_index, row) in enumerate(ranked_rows)
+    }
+    annotated_rows: list[dict[str, Any]] = []
+    for row in rows:
+        assignment = rank_by_run_id[str(row["run_id"])]
+        annotated_rows.append(
+            {
+                **row,
+                **assignment,
+                "execution_order_seed": execution_order_seed if randomized else None,
+            }
+        )
+    ordered_runs = [
+        {
+            "execution_rank": rank,
+            "run_index": row["run_index"],
+            "run_id": row["run_id"],
+            "seed": row["seed"],
+            "repetition_index": row["repetition_index"],
+            "permutation_id": row["permutation_id"],
+            "execution_order_key": order_key,
+        }
+        for rank, (order_key, _run_index, row) in enumerate(ranked_rows)
+    ]
+    return annotated_rows, {
+        "schema_version": "v1",
+        "execution_manifest_version": "long_horizon_execution_manifest_v1",
+        "campaign_id": config["campaign_id"],
+        "strategy": "sha256_key_sort" if randomized else "natural_run_index",
+        "execution_order_seed": execution_order_seed if randomized else None,
+        "sequential_execution": True,
+        "concurrency_requested": int(config.get("concurrency") or 1),
+        "concurrency_effective": 1,
+        "temporal_drift_control": (
+            "Randomized sequential order interleaves seeds and seats across the campaign."
+            if randomized
+            else "Natural order only; use execution_order_seed for confirmatory or calibration campaigns."
+        ),
+        "ordered_runs": ordered_runs,
+        "prompt_pipeline": _prompt_marker(
+            "Execution ordering schedules fixed campaign cells only and is never included in model-facing content."
+        ),
+    }
+
+
+def _execution_rows(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = _list(plan.get("run_matrix"))
+    return sorted(
+        rows,
+        key=lambda row: (
+            int(row["execution_rank"])
+            if isinstance(row.get("execution_rank"), int)
+            else int(row.get("run_index") or 0),
+            int(row.get("run_index") or 0),
+        ),
+    )
 
 
 def _seat_orders(
@@ -271,7 +484,11 @@ def _seat_orders(
         return [("configured_order:0", list(actors), seed_material)]
     if mode == "latin_square":
         return [
-            (f"latin_square:{offset}", list(actors[offset:]) + list(actors[:offset]), seed_material)
+            (
+                f"latin_square:{offset}",
+                list(actors[offset:]) + list(actors[:offset]),
+                seed_material,
+            )
             for offset in range(len(actors))
         ]
     if mode == "full":
@@ -312,7 +529,15 @@ def _seat_actor(actor: dict[str, Any], seat_index: int) -> dict[str, Any]:
         "roster_slot_index": actor["roster_slot_index"],
         "roster_actor_ref": actor["roster_actor_ref"],
     }
-    for key in ("openrouter_model_id", "reasoning", "top_p", "baseline_id", "notes"):
+    for key in (
+        "openrouter_model_id",
+        "reasoning",
+        "provider",
+        "billing_policy",
+        "top_p",
+        "baseline_id",
+        "notes",
+    ):
         if key in actor:
             row[key] = actor[key]
     return row
@@ -322,13 +547,18 @@ def _normalized_campaign_config(config: dict[str, Any]) -> dict[str, Any]:
     return {
         **config,
         "concurrency": int(config.get("concurrency") or 1),
+        "execution_order_seed": config.get("execution_order_seed"),
         "budget_policy": str(config.get("budget_policy") or "stop_immediately"),
         "resume": bool(config.get("resume", True)),
         "continue_on_failure": bool(config.get("continue_on_failure", False)),
         "replay_after_run": bool(config.get("replay_after_run", True)),
-        "build_scorecard_after_run": bool(config.get("build_scorecard_after_run", True)),
+        "build_scorecard_after_run": bool(
+            config.get("build_scorecard_after_run", True)
+        ),
         "build_trace_after_run": bool(config.get("build_trace_after_run", True)),
-        "build_failure_taxonomy_after_run": bool(config.get("build_failure_taxonomy_after_run", True)),
+        "build_failure_taxonomy_after_run": bool(
+            config.get("build_failure_taxonomy_after_run", True)
+        ),
         "prompt_pipeline": {
             "status": "unchanged",
             "note": "Campaign configuration changes only run planning and artifact generation, not model-facing prompts.",
@@ -336,7 +566,9 @@ def _normalized_campaign_config(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _seed_manifest(config: dict[str, Any], seed_cohort: dict[str, Any]) -> dict[str, Any]:
+def _seed_manifest(
+    config: dict[str, Any], seed_cohort: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "schema_version": "v1",
         "seed_manifest_version": "long_horizon_seed_manifest_v1",
@@ -376,7 +608,9 @@ def _model_roster_manifest(
     }
 
 
-def _baseline_roster_manifest(config: dict[str, Any], actors: list[dict[str, Any]]) -> dict[str, Any]:
+def _baseline_roster_manifest(
+    config: dict[str, Any], actors: list[dict[str, Any]]
+) -> dict[str, Any]:
     baselines = [actor for actor in actors if actor["actor_type"] == "baseline"]
     return {
         "schema_version": "v1",
@@ -385,7 +619,9 @@ def _baseline_roster_manifest(config: dict[str, Any], actors: list[dict[str, Any
         "benchmark_id": config["benchmark_id"],
         "baseline_count": len(baselines),
         "baselines": baselines,
-        "execution_status": "long_runner_available" if baselines else "no_baselines_in_selected_roster",
+        "execution_status": "long_runner_available"
+        if baselines
+        else "no_baselines_in_selected_roster",
         "prompt_pipeline": {
             "status": "unchanged",
             "note": "Baselines are non-LLM comparators and must not receive or alter LLM prompts.",
@@ -420,10 +656,29 @@ def _campaign_manifest(
         "runnable_with_current_batch_runner_count": sum(
             1 for row in rows if bool(row.get("runnable_with_current_batch_runner"))
         ),
-        "runnable_with_long_runner_count": sum(1 for row in rows if bool(row.get("runnable_with_long_runner"))),
+        "runnable_with_long_runner_count": sum(
+            1 for row in rows if bool(row.get("runnable_with_long_runner"))
+        ),
         "cost_budget": config.get("cost_budget"),
+        "minimum_available_credits": config.get("minimum_available_credits"),
+        "execution_preflight_path": config.get("execution_preflight_path"),
+        "maximum_preflight_age_hours": config.get("maximum_preflight_age_hours"),
+        "require_preflight_authorization": bool(
+            config.get("require_preflight_authorization", False)
+        ),
         "budget_policy": config.get("budget_policy"),
-        "concurrency": config.get("concurrency"),
+        "concurrency_requested": int(config.get("concurrency") or 1),
+        "concurrency_effective": 1,
+        "execution_order_seed": config.get("execution_order_seed"),
+        "sampling_policy": {
+            "temperature": "provider_default_not_sent",
+            "top_p": "provider_default_not_sent",
+            "reasoning": "actor_specific_reasoning_effort_when_supported",
+            "note": (
+                "MonopolyBench preserves ecological model stochasticity. The campaign freezes and records "
+                "what it sends; it does not claim that unexposed provider internals are deterministic."
+            ),
+        },
         "resume": config.get("resume"),
         "artifacts": [
             "campaign_config.json",
@@ -433,6 +688,9 @@ def _campaign_manifest(
             "baseline_roster.json",
             "run_matrix.json",
             "run_matrix.jsonl",
+            "execution_manifest.json",
+            "execution_manifest.jsonl",
+            "execution_preflight_snapshot.json",
             "batch_runner_compatibility.json",
             "artifact_manifest.json",
         ],
@@ -443,13 +701,22 @@ def _campaign_manifest(
     }
 
 
-def _batch_runner_compatibility(config: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
-    compatible_rows = [row for row in rows if row.get("runnable_with_current_batch_runner")]
+def _batch_runner_compatibility(
+    config: dict[str, Any], rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    compatible_rows = [
+        row for row in rows if row.get("runnable_with_current_batch_runner")
+    ]
     all_rows_compatible = len(compatible_rows) == len(rows)
     reasons: list[str] = []
     if not all_rows_compatible:
-        reasons.append("Selected matrix contains deterministic baseline actors that require long_campaign execution.")
-    if config["seat_permutation"] in {"latin_square", "full"} and len({row["seed"] for row in rows}) > 1:
+        reasons.append(
+            "Selected matrix contains deterministic baseline actors that require long_campaign execution."
+        )
+    if (
+        config["seat_permutation"] in {"latin_square", "full"}
+        and len({row["seed"] for row in rows}) > 1
+    ):
         reasons.append(
             "Existing batch_run cycles seeds and seats by run index; this campaign matrix explicitly expands every seed-seat cell."
         )
@@ -479,6 +746,7 @@ async def _run_campaign_row(
     openrouter_factory: Any,
     resume: bool,
 ) -> dict[str, Any]:
+    campaign_row_started_at_utc = _utc_now()
     run_dir = runs_root / str(row["run_id"])
     if not bool(row.get("runnable_with_long_runner")):
         return _campaign_result_entry(
@@ -486,9 +754,17 @@ async def _run_campaign_row(
             status="not_runnable",
             run_dir=run_dir,
             error="Run row contains a disabled or unsupported actor.",
+            campaign_row_started_at_utc=campaign_row_started_at_utc,
+            campaign_row_ended_at_utc=_utc_now(),
         )
     if resume and _completed_run_exists(run_dir):
-        return _campaign_result_entry(row, status="resumed_completed", run_dir=run_dir)
+        return _campaign_result_entry(
+            row,
+            status="resumed_completed",
+            run_dir=run_dir,
+            campaign_row_started_at_utc=campaign_row_started_at_utc,
+            campaign_row_ended_at_utc=_utc_now(),
+        )
     if run_dir.exists() and not _run_dir_is_empty(run_dir):
         return _campaign_result_entry(
             row,
@@ -498,12 +774,23 @@ async def _run_campaign_row(
                 "Run directory exists but does not contain a completed artifact set. "
                 "Delete or archive it before rerunning this deterministic cell."
             ),
+            campaign_row_started_at_utc=campaign_row_started_at_utc,
+            campaign_row_ended_at_utc=_utc_now(),
         )
 
     try:
         players = _campaign_players(row)
         run_files = init_run_files(runs_root, str(row["run_id"]))
-        openrouter = openrouter_factory() if callable(openrouter_factory) else openrouter_factory
+        openrouter = (
+            openrouter_factory() if callable(openrouter_factory) else openrouter_factory
+        )
+        billing_policies = _campaign_billing_policies(row)
+        if billing_policies:
+            openrouter = _CampaignBillingGuard(
+                delegate=openrouter,
+                policies_by_model=billing_policies,
+                run_dir=run_dir,
+            )
         runner = LlmRunner(
             seed=int(row["seed"]),
             players=players,
@@ -528,9 +815,145 @@ async def _run_campaign_row(
         run_files.write_snapshot(runner.get_snapshot())
         await runner.run()
     except Exception as exc:  # noqa: BLE001 - campaign artifacts should record failed cells.
-        return _campaign_result_entry(row, status="failed", run_dir=run_dir, error=f"{type(exc).__name__}: {exc}")
+        return _campaign_result_entry(
+            row,
+            status="failed",
+            run_dir=run_dir,
+            error=f"{type(exc).__name__}: {exc}",
+            campaign_row_started_at_utc=campaign_row_started_at_utc,
+            campaign_row_ended_at_utc=_utc_now(),
+        )
 
-    return _campaign_result_entry(row, status="completed", run_dir=run_dir)
+    return _campaign_result_entry(
+        row,
+        status="completed",
+        run_dir=run_dir,
+        campaign_row_started_at_utc=campaign_row_started_at_utc,
+        campaign_row_ended_at_utc=_utc_now(),
+    )
+
+
+class _CampaignBillingGuard:
+    """Fail a campaign cell before an action is applied if billing routing drifts."""
+
+    def __init__(
+        self,
+        *,
+        delegate: Any,
+        policies_by_model: dict[str, dict[str, Any]],
+        run_dir: Path,
+    ) -> None:
+        self._delegate = delegate
+        self._policies_by_model = policies_by_model
+        self._run_dir = run_dir
+
+    async def create_chat_completion(self, **kwargs: Any) -> Any:
+        model_id = str(kwargs.get("model") or "")
+        policy = self._policies_by_model.get(model_id)
+        if policy is None:
+            return await self._delegate.create_chat_completion(**kwargs)
+
+        expected_route = _dict(policy.get("provider_route"))
+        observed_route = _dict(kwargs.get("provider"))
+        if observed_route != expected_route:
+            self._fail(
+                model_id=model_id,
+                policy=policy,
+                request_id=None,
+                violations=["request_provider_route_mismatch"],
+                response=None,
+            )
+
+        result = await self._delegate.create_chat_completion(**kwargs)
+        if not bool(getattr(result, "ok", False)):
+            return result
+
+        response = _dict(getattr(result, "response_json", None))
+        usage = _dict(response.get("usage"))
+        billing_policy = _dict(policy.get("billing_policy"))
+        violations: list[str] = []
+        expected_provider = str(billing_policy.get("expected_provider") or "")
+        if response.get("provider") != expected_provider:
+            violations.append("returned_provider_mismatch")
+        if response.get("model") != model_id:
+            violations.append("returned_model_mismatch")
+        if (
+            billing_policy.get("mode") == "byok_required"
+            and usage.get("is_byok") is not True
+        ):
+            violations.append("required_byok_not_confirmed")
+        if violations:
+            self._fail(
+                model_id=model_id,
+                policy=policy,
+                request_id=getattr(result, "request_id", None),
+                violations=violations,
+                response=response,
+            )
+        return result
+
+    async def get_generation(self, generation_id: str) -> Any:
+        return await self._delegate.get_generation(generation_id)
+
+    async def get_models(self) -> Any:
+        return await self._delegate.get_models()
+
+    async def get_credits(self) -> Any:
+        return await self._delegate.get_credits()
+
+    async def aclose(self) -> None:
+        await self._delegate.aclose()
+
+    def _fail(
+        self,
+        *,
+        model_id: str,
+        policy: dict[str, Any],
+        request_id: str | None,
+        violations: list[str],
+        response: dict[str, Any] | None,
+    ) -> None:
+        response_payload = _dict(response)
+        usage = _dict(response_payload.get("usage"))
+        artifact = {
+            "schema_version": "v1",
+            "billing_policy_violation_version": "campaign_billing_policy_violation_v1",
+            "observed_at_utc": _utc_now(),
+            "model_requested": model_id,
+            "model_returned": response_payload.get("model"),
+            "provider_returned": response_payload.get("provider"),
+            "request_id": request_id or response_payload.get("id"),
+            "provider_route_required": policy.get("provider_route"),
+            "billing_policy_required": policy.get("billing_policy"),
+            "usage_observed": {
+                "is_byok": usage.get("is_byok"),
+                "cost": usage.get("cost"),
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "total_tokens": usage.get("total_tokens"),
+            },
+            "violations": violations,
+            "action_applied": False,
+        }
+        _write_json(self._run_dir / "billing_policy_violation.json", artifact)
+        raise RuntimeError(
+            "campaign billing policy violation: " + ", ".join(violations)
+        )
+
+
+def _campaign_billing_policies(row: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    policies: dict[str, dict[str, Any]] = {}
+    for actor in _list(row.get("actors")):
+        model_id = str(actor.get("openrouter_model_id") or "")
+        billing_policy = _dict(actor.get("billing_policy"))
+        if not model_id or not billing_policy:
+            continue
+        policies[model_id] = {
+            "actor_id": actor.get("actor_id"),
+            "provider_route": actor.get("provider"),
+            "billing_policy": billing_policy,
+        }
+    return policies
 
 
 def _campaign_players(row: dict[str, Any]) -> list[PlayerConfig]:
@@ -544,20 +967,31 @@ def _campaign_players(row: dict[str, Any]) -> list[PlayerConfig]:
         else:
             model_id = str(actor.get("openrouter_model_id") or "")
             if not model_id:
-                raise ValueError(f"Actor {actor.get('actor_id')} is missing openrouter_model_id.")
-            reasoning = normalize_reasoning(actor.get("reasoning")) if isinstance(actor.get("reasoning"), dict) else None
+                raise ValueError(
+                    f"Actor {actor.get('actor_id')} is missing openrouter_model_id."
+                )
+            reasoning = (
+                normalize_reasoning(actor.get("reasoning"))
+                if isinstance(actor.get("reasoning"), dict)
+                else None
+            )
         players.append(
             PlayerConfig(
                 player_id=str(actor["player_id"]),
                 name=str(actor.get("display_name") or actor["player_id"]),
                 openrouter_model_id=model_id,
-                model_display_name=str(actor.get("display_name") or derive_model_display_name(model_id)),
+                model_display_name=str(
+                    actor.get("display_name") or derive_model_display_name(model_id)
+                ),
                 system_prompt=DEFAULT_SYSTEM_PROMPT,
                 reasoning=reasoning,
+                provider=_dict(actor.get("provider")) or None,
             )
         )
     if len(players) != EXPECTED_LONG_HORIZON_PLAYERS:
-        raise ValueError(f"Campaign rows must define exactly {EXPECTED_LONG_HORIZON_PLAYERS} players.")
+        raise ValueError(
+            f"Campaign rows must define exactly {EXPECTED_LONG_HORIZON_PLAYERS} players."
+        )
     return players
 
 
@@ -588,6 +1022,8 @@ def _campaign_result_entry(
     status: str,
     run_dir: Path,
     error: str | None = None,
+    campaign_row_started_at_utc: str | None = None,
+    campaign_row_ended_at_utc: str | None = None,
 ) -> dict[str, Any]:
     summary = _read_json(run_dir / "summary.json")
     scorecard = _read_json(run_dir / "scorecard.json")
@@ -607,6 +1043,9 @@ def _campaign_result_entry(
         "campaign_id": row.get("campaign_id"),
         "benchmark_id": row.get("benchmark_id"),
         "run_index": row.get("run_index"),
+        "execution_rank": row.get("execution_rank"),
+        "execution_order_key": row.get("execution_order_key"),
+        "execution_order_seed": row.get("execution_order_seed"),
         "run_id": row.get("run_id"),
         "seed": row.get("seed"),
         "seed_label": row.get("seed_label"),
@@ -616,6 +1055,8 @@ def _campaign_result_entry(
         "permutation_id": row.get("permutation_id"),
         "status": status,
         "error": error,
+        "campaign_row_started_at_utc": campaign_row_started_at_utc,
+        "campaign_row_ended_at_utc": campaign_row_ended_at_utc,
         "run_dir": str(run_dir),
         "contains_baseline": bool(row.get("contains_baseline")),
         "baseline_strategies": _dict(row.get("baseline_strategies")),
@@ -631,7 +1072,9 @@ def _campaign_result_entry(
             "final_turn_index": run_metrics.get("final_turn_index"),
             "total_event_count": run_metrics.get("total_event_count"),
             "total_applied_action_count": run_metrics.get("total_applied_action_count"),
-            "total_property_purchase_count": run_metrics.get("total_property_purchase_count"),
+            "total_property_purchase_count": run_metrics.get(
+                "total_property_purchase_count"
+            ),
             "total_trade_proposed": run_metrics.get("total_trade_proposed"),
             "total_trade_accepted": run_metrics.get("total_trade_accepted"),
             "total_bankruptcies": run_metrics.get("total_bankruptcies"),
@@ -674,7 +1117,10 @@ def _campaign_result_players(
         player_id = str(actor.get("player_id"))
         score = _dict(by_player.get(player_id))
         summary_player = _dict(summary_players.get(player_id))
-        net_worth = _first_number(score.get("final_net_worth_estimate"), summary_player.get("net_worth_estimate"))
+        net_worth = _first_number(
+            score.get("final_net_worth_estimate"),
+            summary_player.get("net_worth_estimate"),
+        )
         results.append(
             {
                 "player_id": player_id,
@@ -683,38 +1129,65 @@ def _campaign_result_players(
                 "actor_type": actor.get("actor_type"),
                 "display_name": actor.get("display_name"),
                 "openrouter_model_id": actor.get("openrouter_model_id"),
+                "provider": actor.get("provider"),
                 "baseline_id": actor.get("baseline_id"),
                 "roster_actor_ref": actor.get("roster_actor_ref"),
                 "final_rank": score.get("final_rank"),
-                "winner": bool(score.get("winner", player_id == summary.get("winner_player_id"))),
-                "bankrupt": bool(score.get("bankrupt", summary_player.get("bankrupt", False))),
-                "turns_played": _first_number(score.get("turns_played"), summary_player.get("turns_played")),
-                "turns_survived": _first_number(score.get("turns_survived"), summary_player.get("turns_played")),
-                "final_cash": _first_number(score.get("final_cash"), summary_player.get("cash")),
+                "winner": bool(
+                    score.get("winner", player_id == summary.get("winner_player_id"))
+                ),
+                "bankrupt": bool(
+                    score.get("bankrupt", summary_player.get("bankrupt", False))
+                ),
+                "turns_played": _first_number(
+                    score.get("turns_played"), summary_player.get("turns_played")
+                ),
+                "turns_survived": _first_number(
+                    score.get("turns_survived"), summary_player.get("turns_played")
+                ),
+                "final_cash": _first_number(
+                    score.get("final_cash"), summary_player.get("cash")
+                ),
                 "final_net_worth_estimate": net_worth,
                 "primary_score": _first_number(score.get("primary_score"), net_worth),
-                "opponents_bankrupted": _first_number(score.get("opponents_bankrupted")),
-                "final_property_count": _first_number(score.get("final_property_count")),
-                "final_complete_color_group_count": _first_number(score.get("final_complete_color_group_count")),
-                "final_developed_monopoly_count": _first_number(score.get("final_developed_monopoly_count")),
+                "opponents_bankrupted": _first_number(
+                    score.get("opponents_bankrupted")
+                ),
+                "final_property_count": _first_number(
+                    score.get("final_property_count")
+                ),
+                "final_complete_color_group_count": _first_number(
+                    score.get("final_complete_color_group_count")
+                ),
+                "final_developed_monopoly_count": _first_number(
+                    score.get("final_developed_monopoly_count")
+                ),
                 "rent_collected": _first_number(score.get("rent_collected")),
                 "rent_paid": _first_number(score.get("rent_paid")),
                 "net_rent_flow": _first_number(score.get("net_rent_flow")),
                 "trades_proposed": _first_number(score.get("trades_proposed")),
                 "trades_accepted": _first_number(score.get("trades_accepted")),
                 "decision_count": _first_number(score.get("decision_count")),
-                "valid_first_response_rate": _first_number(score.get("valid_first_response_rate")),
+                "valid_first_response_rate": _first_number(
+                    score.get("valid_first_response_rate")
+                ),
                 "retry_rate": _first_number(score.get("retry_rate")),
                 "fallback_rate": _first_number(score.get("fallback_rate")),
                 "total_input_tokens": _first_number(score.get("total_input_tokens")),
                 "total_output_tokens": _first_number(score.get("total_output_tokens")),
-                "total_reasoning_tokens": _first_number(score.get("total_reasoning_tokens")),
+                "total_reasoning_tokens": _first_number(
+                    score.get("total_reasoning_tokens")
+                ),
                 "total_cached_tokens": _first_number(score.get("total_cached_tokens")),
                 "total_tokens": _first_number(score.get("total_tokens")),
                 "total_cost": _first_number(score.get("total_cost")),
                 "cost_per_decision": _first_number(score.get("cost_per_decision")),
-                "cost_per_turn_survived": _first_number(score.get("cost_per_turn_survived")),
-                "cost_per_net_worth_point": _first_number(score.get("cost_per_net_worth_point")),
+                "cost_per_turn_survived": _first_number(
+                    score.get("cost_per_turn_survived")
+                ),
+                "cost_per_net_worth_point": _first_number(
+                    score.get("cost_per_net_worth_point")
+                ),
                 "score_matrix": score.get("score_matrix"),
             }
         )
@@ -728,6 +1201,13 @@ def _write_campaign_dynamic_artifacts(
     config: dict[str, Any],
     plan: dict[str, Any],
     run_entries: list[dict[str, Any]],
+    *,
+    stop_reason: str | None,
+    endpoint_snapshot_before: dict[str, Any],
+    endpoint_snapshot_after: dict[str, Any],
+    credits_before: dict[str, Any],
+    credits_after: dict[str, Any],
+    execution_preflight: dict[str, Any],
 ) -> None:
     results = {"schema_version": "v1", "runs": run_entries}
     leaderboard = _leaderboard_payload(config, run_entries)
@@ -741,21 +1221,69 @@ def _write_campaign_dynamic_artifacts(
     _write_csv(paths["leaderboard_csv"], _leaderboard_csv_rows(leaderboard))
     _write_json(paths["statistics"], statistics)
     _write_json(paths["baseline_comparison"], baseline_comparison)
+    _write_json(paths["endpoint_snapshot_before"], endpoint_snapshot_before)
+    _write_json(paths["endpoint_snapshot_after"], endpoint_snapshot_after)
+    _write_json(paths["credits_before"], credits_before)
+    _write_json(paths["credits_after"], credits_after)
+    _write_json(paths["execution_preflight_snapshot"], execution_preflight)
+    _write_json(
+        paths["budget_report"],
+        {
+            "schema_version": "v1",
+            "budget_report_version": "long_horizon_campaign_budget_report_v1",
+            "campaign_id": config["campaign_id"],
+            "budget_policy": config.get("budget_policy"),
+            "cost_budget": config.get("cost_budget"),
+            "minimum_available_credits": config.get("minimum_available_credits"),
+            "actual_cost": batch_actual_cost(run_entries),
+            "stop_reason": stop_reason,
+            "next_run_preflight": budget_preflight_estimate(config, run_entries),
+            "credits_before": credits_before,
+            "credits_after": credits_after,
+            "execution_preflight": execution_preflight,
+            "source": "openrouter_actuals_only",
+            "local_tokenizer_estimates_used": False,
+            "prompt_pipeline": _prompt_marker(
+                "Budget accounting is downstream and is never model-facing."
+            ),
+        },
+    )
     paths["paper_report"].parent.mkdir(parents=True, exist_ok=True)
     paths["paper_report"].write_text(
-        _paper_report_markdown(config, plan, run_entries, leaderboard, statistics, baseline_comparison),
+        _paper_report_markdown(
+            config, plan, run_entries, leaderboard, statistics, baseline_comparison
+        ),
         encoding="utf-8",
     )
-    _write_json(paths["execution_result"], _execution_result_payload(config, paths, run_entries))
+    _write_json(
+        paths["execution_result"], _execution_result_payload(config, paths, run_entries)
+    )
     manifest = {
         **plan["campaign_manifest"],
         "planning_only": False,
         "execution_status": _campaign_execution_status(run_entries),
-        "completed_run_count": sum(1 for entry in run_entries if entry["status"] in {"completed", "resumed_completed"}),
-        "failed_run_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
-        "skipped_run_count": sum(
-            1 for entry in run_entries if entry["status"] in {"not_runnable", "not_started_max_runs_limit"}
+        "completed_run_count": sum(
+            1
+            for entry in run_entries
+            if entry["status"] in {"completed", "resumed_completed"}
         ),
+        "failed_run_count": sum(
+            1 for entry in run_entries if entry["status"] == "failed"
+        ),
+        "skipped_run_count": sum(
+            1
+            for entry in run_entries
+            if entry["status"]
+            in {
+                "not_runnable",
+                "not_started_max_runs_limit",
+                "not_started_budget_stop",
+                "not_started_credit_gate",
+                "not_started_preflight_gate",
+                "not_started_after_failure",
+            }
+        ),
+        "stop_reason": stop_reason,
         "artifacts": [
             "campaign_config.json",
             "campaign_manifest.json",
@@ -764,6 +1292,14 @@ def _write_campaign_dynamic_artifacts(
             "baseline_roster.json",
             "run_matrix.json",
             "run_matrix.jsonl",
+            "execution_manifest.json",
+            "execution_manifest.jsonl",
+            "execution_preflight_snapshot.json",
+            "endpoint_snapshot_before.json",
+            "endpoint_snapshot_after.json",
+            "credits_before.json",
+            "credits_after.json",
+            "budget_report.json",
             "results.jsonl",
             "results.csv",
             "run_results.json",
@@ -784,7 +1320,9 @@ def _write_campaign_dynamic_artifacts(
     _write_json(paths["artifact_manifest"], _artifact_manifest(paths))
 
 
-def _leaderboard_payload(config: dict[str, Any], run_entries: list[dict[str, Any]]) -> dict[str, Any]:
+def _leaderboard_payload(
+    config: dict[str, Any], run_entries: list[dict[str, Any]]
+) -> dict[str, Any]:
     rows = _completed_actor_rows(run_entries)
     by_actor: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
@@ -805,7 +1343,9 @@ def _leaderboard_payload(config: dict[str, Any], run_entries: list[dict[str, Any
             "actor_id": actor_id,
             "actor_type": metadata.get("actor_type"),
             "display_name": metadata.get("display_name"),
-            "openrouter_model_ids": _unique(row.get("openrouter_model_id") for row in actor_rows),
+            "openrouter_model_ids": _unique(
+                row.get("openrouter_model_id") for row in actor_rows
+            ),
             "baseline_ids": _unique(row.get("baseline_id") for row in actor_rows),
             "game_count": len(actor_rows),
             "win_count": wins,
@@ -819,8 +1359,12 @@ def _leaderboard_payload(config: dict[str, Any], run_entries: list[dict[str, Any
             "total_tokens": _numeric_stats(tokens),
             "fallback_rate": _numeric_stats(fallbacks),
             "retry_rate": _numeric_stats(retries),
-            "average_cost_per_game": round(sum(costs) / len(costs), 10) if costs else None,
-            "average_tokens_per_game": round(sum(tokens) / len(tokens), 4) if tokens else None,
+            "average_cost_per_game": round(sum(costs) / len(costs), 10)
+            if costs
+            else None,
+            "average_tokens_per_game": round(sum(tokens) / len(tokens), 4)
+            if tokens
+            else None,
             "average_final_net_worth": round(mean(net_worth), 4) if net_worth else None,
             "average_final_rank": round(mean(ranks), 4) if ranks else None,
         }
@@ -828,7 +1372,7 @@ def _leaderboard_payload(config: dict[str, Any], run_entries: list[dict[str, Any
     leaderboard_rows.sort(
         key=lambda row: (
             row.get("win_rate") or 0,
-            row.get("average_final_net_worth") or -10**9,
+            row.get("average_final_net_worth") or -(10**9),
             -(row.get("average_final_rank") or 10**9),
         ),
         reverse=True,
@@ -842,7 +1386,9 @@ def _leaderboard_payload(config: dict[str, Any], run_entries: list[dict[str, Any
         "primary_score": "final_net_worth_estimate",
         "ranking_note": "Rows sort by win rate, average final net worth, then average final rank.",
         "rows": leaderboard_rows,
-        "prompt_pipeline": _prompt_marker("Leaderboard is post-hoc and not model-facing."),
+        "prompt_pipeline": _prompt_marker(
+            "Leaderboard is post-hoc and not model-facing."
+        ),
     }
 
 
@@ -851,14 +1397,23 @@ def _statistics_payload(
     plan: dict[str, Any],
     run_entries: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    completed = [entry for entry in run_entries if entry["status"] in {"completed", "resumed_completed"}]
+    completed = [
+        entry
+        for entry in run_entries
+        if entry["status"] in {"completed", "resumed_completed"}
+    ]
     run_turns = [_number(entry["summary"].get("turn_count")) for entry in completed]
-    run_costs = [_number(_nested(entry, ("run_metrics", "usage_metrics", "total_cost"))) for entry in completed]
+    run_costs = [
+        _number(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")))
+        for entry in completed
+    ]
     run_decisions = [
-        _number(_nested(entry, ("run_metrics", "decision_stats", "total_resolved"))) for entry in completed
+        _number(_nested(entry, ("run_metrics", "decision_stats", "total_resolved")))
+        for entry in completed
     ]
     run_fallbacks = [
-        _number(_nested(entry, ("run_metrics", "reliability_metrics", "fallback_rate"))) for entry in completed
+        _number(_nested(entry, ("run_metrics", "reliability_metrics", "fallback_rate")))
+        for entry in completed
     ]
     return {
         "schema_version": "v1",
@@ -879,7 +1434,9 @@ def _statistics_payload(
         "seat_effects": _seat_effect_stats(run_entries),
         "failure_taxonomy": _failure_taxonomy_aggregate(run_entries),
         "replay_verification": _replay_verification_aggregate(run_entries),
-        "prompt_pipeline": _prompt_marker("Statistics are derived after execution and are not included in prompts."),
+        "prompt_pipeline": _prompt_marker(
+            "Statistics are derived after execution and are not included in prompts."
+        ),
     }
 
 
@@ -888,11 +1445,19 @@ def _baseline_comparison_payload(
     run_entries: list[dict[str, Any]],
     leaderboard: dict[str, Any],
 ) -> dict[str, Any]:
-    baseline_rows = [row for row in leaderboard.get("rows", []) if row.get("actor_type") == "baseline"]
-    baseline_net_worth_values = [
-        _number(row.get("average_final_net_worth")) for row in baseline_rows if row.get("average_final_net_worth") is not None
+    baseline_rows = [
+        row
+        for row in leaderboard.get("rows", [])
+        if row.get("actor_type") == "baseline"
     ]
-    baseline_mean = round(mean(baseline_net_worth_values), 4) if baseline_net_worth_values else None
+    baseline_net_worth_values = [
+        _number(row.get("average_final_net_worth"))
+        for row in baseline_rows
+        if row.get("average_final_net_worth") is not None
+    ]
+    baseline_mean = (
+        round(mean(baseline_net_worth_values), 4) if baseline_net_worth_values else None
+    )
     rows: list[dict[str, Any]] = []
     for row in leaderboard.get("rows", []):
         avg_net_worth = _number(row.get("average_final_net_worth"))
@@ -915,7 +1480,9 @@ def _baseline_comparison_payload(
                 "average_total_cost": total_cost,
                 "net_worth_per_dollar": (
                     round(avg_net_worth / float(total_cost), 6)
-                    if isinstance(total_cost, (int, float)) and total_cost > 0 and avg_net_worth is not None
+                    if isinstance(total_cost, (int, float))
+                    and total_cost > 0
+                    and avg_net_worth is not None
                     else None
                 ),
             }
@@ -928,7 +1495,9 @@ def _baseline_comparison_payload(
         "baseline_mean_final_net_worth": baseline_mean,
         "rows": rows,
         "note": "Use baseline-normalized values only when the selected roster contains deterministic baseline actors.",
-        "prompt_pipeline": _prompt_marker("Baseline comparison is computed from artifacts only."),
+        "prompt_pipeline": _prompt_marker(
+            "Baseline comparison is computed from artifacts only."
+        ),
     }
 
 
@@ -942,8 +1511,14 @@ def _execution_result_payload(
         "campaign_id": config["campaign_id"],
         "status": _campaign_execution_status(run_entries),
         "run_count": len(run_entries),
-        "completed_count": sum(1 for entry in run_entries if entry["status"] in {"completed", "resumed_completed"}),
+        "completed_count": sum(
+            1
+            for entry in run_entries
+            if entry["status"] in {"completed", "resumed_completed"}
+        ),
         "failed_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
+        "status_counts": _status_counts(run_entries),
+        "actual_cost": batch_actual_cost(run_entries),
         "campaign_dir": str(paths["campaign_dir"]),
         "artifacts": {
             "results": str(paths["results"]),
@@ -951,21 +1526,30 @@ def _execution_result_payload(
             "leaderboard": str(paths["leaderboard"]),
             "statistics": str(paths["statistics"]),
             "baseline_comparison": str(paths["baseline_comparison"]),
+            "budget_report": str(paths["budget_report"]),
+            "execution_manifest": str(paths["execution_manifest"]),
             "paper_report": str(paths["paper_report"]),
         },
-        "prompt_pipeline": _prompt_marker("Execution status artifact is post-hoc and not model-facing."),
+        "prompt_pipeline": _prompt_marker(
+            "Execution status artifact is post-hoc and not model-facing."
+        ),
     }
 
 
 def _runnable_with_current_batch_runner(actors: list[dict[str, Any]]) -> bool:
-    return all(actor["actor_type"] == "llm" and bool(actor["enabled"]) for actor in actors)
+    return all(
+        actor["actor_type"] == "llm" and bool(actor["enabled"]) for actor in actors
+    )
 
 
 def _runnable_with_long_runner(actors: list[dict[str, Any]]) -> bool:
     for actor in actors:
         if actor["actor_type"] == "llm" and bool(actor["enabled"]):
             continue
-        if actor["actor_type"] == "baseline" and actor.get("baseline_id") in BASELINE_IDS:
+        if (
+            actor["actor_type"] == "baseline"
+            and actor.get("baseline_id") in BASELINE_IDS
+        ):
             continue
         return False
     return True
@@ -1096,7 +1680,11 @@ def _by_seed_stats(run_entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
             by_seed.setdefault(seed, []).append(entry)
     rows: list[dict[str, Any]] = []
     for seed, entries in sorted(by_seed.items()):
-        completed = [entry for entry in entries if entry.get("status") in {"completed", "resumed_completed"}]
+        completed = [
+            entry
+            for entry in entries
+            if entry.get("status") in {"completed", "resumed_completed"}
+        ]
         winner_actor_counts: dict[str, int] = {}
         net_worth_values: list[float] = []
         for entry in completed:
@@ -1152,7 +1740,9 @@ def _failure_taxonomy_aggregate(run_entries: list[dict[str, Any]]) -> dict[str, 
         summary = _dict(entry.get("failure_summary"))
         total += int(summary.get("total_findings") or 0)
         review_required += int(summary.get("review_required") or 0)
-        for key, value in _dict(summary.get("by_finding_type") or summary.get("by_type")).items():
+        for key, value in _dict(
+            summary.get("by_finding_type") or summary.get("by_type")
+        ).items():
             _increment(by_type, str(key), int(value or 0))
         for key, value in _dict(summary.get("by_severity")).items():
             _increment(by_severity, str(key), int(value or 0))
@@ -1174,8 +1764,12 @@ def _replay_verification_aggregate(run_entries: list[dict[str, Any]]) -> dict[st
         status = str(report.get("status") or "missing")
         state_report = _dict(entry.get("state_replay_report"))
         artifact_report = _dict(entry.get("artifact_replay_report"))
-        state_status = str(report.get("state_status") or state_report.get("status") or "missing")
-        artifact_status = str(report.get("artifact_status") or artifact_report.get("status") or "missing")
+        state_status = str(
+            report.get("state_status") or state_report.get("status") or "missing"
+        )
+        artifact_status = str(
+            report.get("artifact_status") or artifact_report.get("status") or "missing"
+        )
         _increment(status_counts, status)
         _increment(state_status_counts, state_status)
         _increment(artifact_status_counts, artifact_status)
@@ -1195,7 +1789,17 @@ def _campaign_execution_status(run_entries: list[dict[str, Any]]) -> str:
     status_counts = _status_counts(run_entries)
     if status_counts.get("failed"):
         return "partial_with_failures"
-    if status_counts.get("not_runnable") or status_counts.get("not_started_max_runs_limit"):
+    if any(
+        status_counts.get(status)
+        for status in (
+            "not_runnable",
+            "not_started_max_runs_limit",
+            "not_started_budget_stop",
+            "not_started_credit_gate",
+            "not_started_preflight_gate",
+            "not_started_after_failure",
+        )
+    ):
         return "partial"
     return "completed"
 
@@ -1209,6 +1813,7 @@ def _results_csv_rows(run_entries: list[dict[str, Any]]) -> list[dict[str, Any]]
                 {
                     "run_id": entry.get("run_id"),
                     "run_index": entry.get("run_index"),
+                    "execution_rank": entry.get("execution_rank"),
                     "seed": entry.get("seed"),
                     "status": entry.get("status"),
                     "player_id": None,
@@ -1228,6 +1833,7 @@ def _results_csv_rows(run_entries: list[dict[str, Any]]) -> list[dict[str, Any]]
                 {
                     "run_id": entry.get("run_id"),
                     "run_index": entry.get("run_index"),
+                    "execution_rank": entry.get("execution_rank"),
                     "seed": entry.get("seed"),
                     "status": entry.get("status"),
                     "player_id": player.get("player_id"),
@@ -1279,7 +1885,9 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
             if key not in fieldnames:
                 fieldnames.append(key)
     buffer = StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
+    writer = csv.DictWriter(
+        buffer, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n"
+    )
     writer.writeheader()
     writer.writerows(rows)
     path.write_text(buffer.getvalue(), encoding="utf-8")
@@ -1335,7 +1943,10 @@ def _paper_report_markdown(
         _markdown_table(
             [
                 ("Turn count", statistics["run_level"]["turn_count"]),
-                ("Resolved decisions", statistics["run_level"]["resolved_decision_count"]),
+                (
+                    "Resolved decisions",
+                    statistics["run_level"]["resolved_decision_count"],
+                ),
                 ("Fallback rate", statistics["run_level"]["fallback_rate"]),
                 ("Total cost", statistics["run_level"]["total_cost"]),
             ],
@@ -1359,9 +1970,18 @@ def _paper_report_markdown(
         _markdown_table(
             [
                 ("Status counts", statistics["replay_verification"]["status_counts"]),
-                ("State status counts", statistics["replay_verification"]["state_status_counts"]),
-                ("Artifact status counts", statistics["replay_verification"]["artifact_status_counts"]),
-                ("Non-ok reports", statistics["replay_verification"]["non_ok_report_count"]),
+                (
+                    "State status counts",
+                    statistics["replay_verification"]["state_status_counts"],
+                ),
+                (
+                    "Artifact status counts",
+                    statistics["replay_verification"]["artifact_status_counts"],
+                ),
+                (
+                    "Non-ok reports",
+                    statistics["replay_verification"]["non_ok_report_count"],
+                ),
             ],
             headers=("Metric", "Value"),
         ),
@@ -1427,18 +2047,32 @@ def _baseline_markdown_table(baseline_comparison: dict[str, Any]) -> str:
         )
     return _markdown_table(
         rows,
-        headers=("Actor", "Type", "Win Rate", "Avg Net Worth", "Baseline Norm", "Net Worth / $"),
+        headers=(
+            "Actor",
+            "Type",
+            "Win Rate",
+            "Avg Net Worth",
+            "Baseline Norm",
+            "Net Worth / $",
+        ),
     )
 
 
 def _representative_runs_markdown(run_entries: list[dict[str, Any]]) -> str:
-    completed = [entry for entry in run_entries if entry.get("status") in {"completed", "resumed_completed"}]
+    completed = [
+        entry
+        for entry in run_entries
+        if entry.get("status") in {"completed", "resumed_completed"}
+    ]
     if not completed:
         return "No completed runs are available yet."
     scored: list[tuple[float, dict[str, Any]]] = []
     for entry in completed:
         best = max(
-            (_number(player.get("final_net_worth_estimate")) for player in _list(entry.get("players"))),
+            (
+                _number(player.get("final_net_worth_estimate"))
+                for player in _list(entry.get("players"))
+            ),
             default=float("-inf"),
         )
         scored.append((best, entry))
@@ -1447,8 +2081,16 @@ def _representative_runs_markdown(run_entries: list[dict[str, Any]]) -> str:
     worst_entry = scored[-1][1]
     return _markdown_table(
         [
-            ("Highest winning/net-worth run", best_entry.get("run_id"), best_entry.get("run_dir")),
-            ("Lowest winning/net-worth run", worst_entry.get("run_id"), worst_entry.get("run_dir")),
+            (
+                "Highest winning/net-worth run",
+                best_entry.get("run_id"),
+                best_entry.get("run_dir"),
+            ),
+            (
+                "Lowest winning/net-worth run",
+                worst_entry.get("run_id"),
+                worst_entry.get("run_dir"),
+            ),
         ],
         headers=("Label", "Run ID", "Run Directory"),
     )
@@ -1464,7 +2106,9 @@ def _markdown_table(rows: list[Any], *, headers: tuple[str, ...]) -> str:
 
 def _format_markdown_cell(value: Any) -> str:
     if isinstance(value, (dict, list)):
-        text = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        text = json.dumps(
+            value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        )
     else:
         text = str(value)
     return text.replace("|", "\\|").replace("\n", " ")
@@ -1495,12 +2139,24 @@ def _numeric_stats(values: list[float]) -> dict[str, Any]:
 
 def _bootstrap_mean_ci(values: list[float]) -> dict[str, Any]:
     if not values:
-        return {"method": "deterministic_bootstrap_mean", "lower": None, "upper": None, "resamples": 0}
+        return {
+            "method": "deterministic_bootstrap_mean",
+            "lower": None,
+            "upper": None,
+            "resamples": 0,
+        }
     if len(values) == 1:
         value = round(values[0], 6)
-        return {"method": "deterministic_bootstrap_mean", "lower": value, "upper": value, "resamples": 1}
+        return {
+            "method": "deterministic_bootstrap_mean",
+            "lower": value,
+            "upper": value,
+            "resamples": 1,
+        }
     resamples = 500
-    rng = random.Random(_deterministic_int({"bootstrap_values": [round(value, 6) for value in values]}))
+    rng = random.Random(
+        _deterministic_int({"bootstrap_values": [round(value, 6) for value in values]})
+    )
     means = []
     for _ in range(resamples):
         sample = [values[rng.randrange(len(values))] for _ in values]
@@ -1568,6 +2224,206 @@ def _compact_replay_report(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+async def _openrouter_metadata_snapshot(
+    client: Any, *, method_name: str
+) -> dict[str, Any]:
+    method = getattr(client, method_name, None)
+    if method is None:
+        return {
+            "schema_version": "v1",
+            "source": f"openrouter_{method_name}",
+            "status": "unavailable",
+            "reason": f"client_has_no_{method_name}",
+            "observed_at_utc": _utc_now(),
+        }
+    result = await method()
+    return {
+        "schema_version": "v1",
+        "source": f"openrouter_{method_name}",
+        "status": "ok" if getattr(result, "ok", False) else "error",
+        "status_code": getattr(result, "status_code", None),
+        "request_id": getattr(result, "request_id", None),
+        "error": getattr(result, "error", None),
+        "error_type": getattr(result, "error_type", None),
+        "data": getattr(result, "response_json", None),
+        "observed_at_utc": _utc_now(),
+    }
+
+
+async def _maybe_close(client: Any) -> None:
+    close = getattr(client, "aclose", None)
+    if close is not None:
+        await close()
+
+
+def _execution_preflight_snapshot(config: dict[str, Any]) -> dict[str, Any]:
+    configured_path = config.get("execution_preflight_path")
+    if not isinstance(configured_path, str) or not configured_path.strip():
+        return {
+            "schema_version": "v1",
+            "status": "not_configured",
+            "observed_at_utc": _utc_now(),
+        }
+    path = resolve_repo_path(configured_path)
+    if not path.is_file():
+        return {
+            "schema_version": "v1",
+            "status": "missing",
+            "configured_path": configured_path,
+            "resolved_path": str(path),
+            "observed_at_utc": _utc_now(),
+        }
+    try:
+        raw = path.read_bytes()
+    except OSError as error:
+        return {
+            "schema_version": "v1",
+            "status": "unreadable",
+            "configured_path": configured_path,
+            "resolved_path": str(path),
+            "error": str(error),
+            "observed_at_utc": _utc_now(),
+        }
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        return {
+            "schema_version": "v1",
+            "status": "invalid",
+            "configured_path": configured_path,
+            "resolved_path": str(path),
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "error": str(error),
+            "observed_at_utc": _utc_now(),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "schema_version": "v1",
+            "status": "invalid",
+            "configured_path": configured_path,
+            "resolved_path": str(path),
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "error": "preflight root must be an object",
+            "observed_at_utc": _utc_now(),
+        }
+    return {
+        "schema_version": "v1",
+        "status": "ok",
+        "configured_path": configured_path,
+        "resolved_path": str(path),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "payload": payload,
+        "observed_at_utc": _utc_now(),
+    }
+
+
+def _preflight_gate_stop_reason(
+    config: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> str | None:
+    if not bool(config.get("require_preflight_authorization", False)):
+        return None
+    if snapshot.get("status") != "ok":
+        return f"preflight_gate_snapshot_{snapshot.get('status') or 'unavailable'}"
+    payload = _dict(snapshot.get("payload"))
+    if payload.get("preflight_version") != "openrouter_campaign_preflight_v2":
+        return "preflight_gate_version_mismatch"
+    if payload.get("roster_id") != config.get("model_roster"):
+        return "preflight_gate_roster_mismatch"
+    verdict = _dict(payload.get("verdict"))
+    if not verdict.get("all_tool_calls_ready"):
+        return "preflight_gate_tool_call_not_ready"
+    if not verdict.get("all_billing_policies_satisfied"):
+        return "preflight_gate_billing_policy_not_satisfied"
+    if not verdict.get("openai_byok_ready"):
+        return "preflight_gate_openai_byok_not_ready"
+    if not verdict.get("all_routes_ready"):
+        return "preflight_gate_route_not_ready"
+    if not verdict.get("paid_pilot_authorized_by_preflight"):
+        return "preflight_gate_not_authorized"
+
+    observed_at = payload.get("observed_at_utc")
+    maximum_age = config.get("maximum_preflight_age_hours", 6.0)
+    if not isinstance(observed_at, str):
+        return "preflight_gate_timestamp_missing"
+    if not isinstance(maximum_age, (int, float)) or isinstance(maximum_age, bool):
+        return "preflight_gate_maximum_age_invalid"
+    try:
+        observed = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+    except ValueError:
+        return "preflight_gate_timestamp_invalid"
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=timezone.utc)
+    age_hours = max(
+        (datetime.now(timezone.utc) - observed.astimezone(timezone.utc)).total_seconds()
+        / 3600,
+        0.0,
+    )
+    if age_hours > float(maximum_age):
+        return f"preflight_gate_stale_age_hours_{round(age_hours, 6)}"
+
+    registry_path = resolve_repo_path(
+        "contracts/research/monopoly_long_v1_model_rosters.json"
+    )
+    expected_registry_sha = _dict(payload.get("provenance")).get("registry_sha256")
+    try:
+        observed_registry_sha = hashlib.sha256(registry_path.read_bytes()).hexdigest()
+    except OSError:
+        return "preflight_gate_roster_registry_unreadable"
+    if expected_registry_sha != observed_registry_sha:
+        return "preflight_gate_roster_registry_hash_mismatch"
+
+    required = config.get("minimum_available_credits")
+    available = _dict(payload.get("credits")).get("available_credits")
+    if isinstance(required, (int, float)) and not isinstance(required, bool):
+        if not isinstance(available, (int, float)) or isinstance(available, bool):
+            return "preflight_gate_available_credit_missing"
+        if float(available) < float(required):
+            return "preflight_gate_available_credit_below_required"
+    return None
+
+
+def _credit_gate_stop_reason(
+    config: dict[str, Any],
+    credits_snapshot: dict[str, Any],
+) -> str | None:
+    required = config.get("minimum_available_credits")
+    if not isinstance(required, (int, float)) or isinstance(required, bool):
+        return None
+    required_value = float(required)
+    if credits_snapshot.get("status") != "ok":
+        return f"credit_gate_snapshot_unavailable_required_{required_value}"
+    response = _dict(credits_snapshot.get("data"))
+    credit_data = _dict(response.get("data"))
+    total_credits = credit_data.get("total_credits")
+    total_usage = credit_data.get("total_usage")
+    if (
+        not isinstance(total_credits, (int, float))
+        or isinstance(total_credits, bool)
+        or not isinstance(total_usage, (int, float))
+        or isinstance(total_usage, bool)
+    ):
+        return f"credit_gate_accounting_missing_required_{required_value}"
+    available = round(float(total_credits) - float(total_usage), 10)
+    if available < required_value:
+        return f"available_credit_{available}_below_required_{required_value}"
+    return None
+
+
+def _not_started_status(stop_reason: str) -> str:
+    if stop_reason.startswith("campaign_halted_after_failed_run_"):
+        return "not_started_after_failure"
+    if stop_reason.startswith(("credit_gate_", "available_credit_")):
+        return "not_started_credit_gate"
+    if stop_reason.startswith("preflight_gate_"):
+        return "not_started_preflight_gate"
+    return "not_started_budget_stop"
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def _fill_missing_ranks(players: list[dict[str, Any]]) -> None:
     ranked = sorted(
         players,
@@ -1606,7 +2462,9 @@ def _jsonl_line_count(path: Path) -> int:
     if not path.exists():
         return 0
     try:
-        return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+        return sum(
+            1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+        )
     except OSError:
         return 0
 
@@ -1682,12 +2540,18 @@ def _prompt_marker(note: str) -> dict[str, str]:
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, sort_keys=True, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, sort_keys=True, indent=2, ensure_ascii=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    text = "".join(json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n" for row in rows)
+    text = "".join(
+        json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n"
+        for row in rows
+    )
     path.write_text(text, encoding="utf-8")
 
 
@@ -1698,6 +2562,11 @@ def _deterministic_int(payload: dict[str, Any]) -> int:
 def _sha256_short(payload: dict[str, Any], *, length: int = 10) -> str:
     text = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:length]
+
+
+def _sha256_hex(payload: dict[str, Any]) -> str:
+    text = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _safe_id(value: str) -> str:
@@ -1717,9 +2586,19 @@ def _list(value: Any) -> list[Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Plan or execute a monopoly-long-v1 research campaign.")
-    parser.add_argument("--config", required=True, help="Path to a long-horizon campaign config JSON file.")
-    parser.add_argument("--runs-dir", default=DEFAULT_RUNS_DIR, help="Directory where campaign artifacts are written.")
+    parser = argparse.ArgumentParser(
+        description="Plan or execute a monopoly-long-v1 research campaign."
+    )
+    parser.add_argument(
+        "--config",
+        required=True,
+        help="Path to a long-horizon campaign config JSON file.",
+    )
+    parser.add_argument(
+        "--runs-dir",
+        default=DEFAULT_RUNS_DIR,
+        help="Directory where campaign artifacts are written.",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -1760,7 +2639,11 @@ def main(argv: list[str] | None = None) -> int:
 
     campaign_dir = write_campaign_plan(config, runs_dir=args.runs_dir)
     matrix_path = campaign_dir / "run_matrix.jsonl"
-    run_count = len(matrix_path.read_text(encoding="utf-8").splitlines()) if matrix_path.exists() else 0
+    run_count = (
+        len(matrix_path.read_text(encoding="utf-8").splitlines())
+        if matrix_path.exists()
+        else 0
+    )
     print(
         json.dumps(
             {

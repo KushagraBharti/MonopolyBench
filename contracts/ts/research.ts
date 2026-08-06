@@ -29,6 +29,11 @@ export type LongHorizonSeedRegistry = {
 
 export type ResearchActorType = 'llm' | 'baseline'
 
+export type ResearchBillingPolicy = {
+  mode: 'byok_required' | 'openrouter_credits'
+  expected_provider: string
+}
+
 export type ResearchActor = {
   actor_id: string
   actor_type: ResearchActorType
@@ -36,6 +41,13 @@ export type ResearchActor = {
   display_name: string
   openrouter_model_id?: string
   reasoning?: { effort: 'low' | 'medium' | 'high' } | null
+  provider?: {
+    only?: string[]
+    order?: string[]
+    allow_fallbacks?: boolean
+    require_parameters?: boolean
+  }
+  billing_policy?: ResearchBillingPolicy
   top_p?: number | null
   enabled: boolean
   cost_budget_group: string
@@ -72,7 +84,12 @@ export type LongHorizonCampaignConfig = {
   max_trade_exchanges?: number
   max_auction_actions?: number
   cost_budget?: number
+  minimum_available_credits?: number
+  execution_preflight_path?: string
+  maximum_preflight_age_hours?: number
+  require_preflight_authorization?: boolean
   concurrency?: number
+  execution_order_seed?: number
   budget_policy?: string
   dry_run: boolean
   resume?: boolean
