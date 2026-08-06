@@ -1,0 +1,847 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\Urlmuskip=0mu plus 1mu
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\newcommand{\Bench}{\textsc{MonopolyBench}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\note}[1]{\textcolor{blue}{[NOTE: #1]}}
+\newcommand{\modelname}[1]{\texttt{#1}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{MonopolyBench: Evaluating Long Horizon Economic Agency in Multi Agent Language Model Systems}
+
+\author{
+\IEEEauthorblockN{Kushagra Bharti}
+\IEEEauthorblockA{\textit{Department of Computer Science} \\
+\textit{The University of Texas at Dallas}\\
+Dallas, TX, USA \\
+kushagrabharti@gmail.com}
+\and
+\IEEEauthorblockN{Abhinav Gummmadi}
+\IEEEauthorblockA{\textit{Department of Engineering} \\
+\textit{University of Wisconsin - Madison}\\
+Madison, WI, USA \\
+abhinavgummadi.work@gmail.com
+}
+}
+
+\maketitle
+
+\begin{abstract}
+Large language model agents are increasingly evaluated through interactive tasks, but many benchmarks still emphasize short horizon tool success, isolated conversations, or final outcome scores that obscure how behavior unfolds over time. We introduce MonopolyBench, a deterministic multi agent benchmark for studying language models as long horizon economic actors. In MonopolyBench, agents play complete games of Monopoly involving asset acquisition, auctions, bilateral trades, rent extraction, liquidity pressure, mortgage decisions, liquidation, and bankruptcy. The benchmark records full trajectories rather than only final winners: every decision, public message, private rationale, trade proposal, auction bid, payment, build action, liquidation step, model call, token count, and cost entry is written as an inspectable artifact. We pair full game traces with targeted micro scenarios that isolate tactical, negotiation, liquidation, bias, and safety decisions that are difficult to attribute in noisy full games. Initial frontier model runs show that winning behavior is associated with distinct economic profiles, including trade dominated asset accumulation and rent engine construction, while losing behavior often emerges through rent exposure, weak liquidity management, or bankruptcy cascades. MonopolyBench is intended as both a research instrument and a benchmark suite for measuring economic agency, negotiation behavior, and collapse dynamics in competitive multi agent language model systems.
+\end{abstract}
+
+\begin{IEEEkeywords}
+large language model agents, multi agent systems, economic simulation, long horizon planning, negotiation, strategic games, agent benchmarks, Monopoly
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+Large language models (LLMs) increasingly act as agents: they call tools, negotiate with users or other agents, maintain task state over time, and make repeated decisions whose consequences compound. Standard evaluation settings often understate this challenge. A model that succeeds at a single tool call or answers a static reasoning prompt can still fail when placed in a long running environment where earlier decisions change later constraints, where resources are limited, where other actors adapt, and where poor choices may remain latent until a collapse occurs many turns later.
+
+Economic environments expose this problem sharply. Useful economic agents must accumulate assets, allocate capital, price opportunities, negotiate with counterparties, manage liquidity, respond to competition, and avoid ruin. These capabilities are not captured by final answer accuracy alone. They require trajectory based evaluation: what did the agent own, what did it trade away, when did it build, how much rent did it collect, when did it become overextended, and which sequence of decisions caused bankruptcy?
+
+We introduce \Bench, a deterministic multi agent benchmark for studying LLMs as long horizon economic actors. \Bench\ uses Monopoly as a compact but strategically rich economic simulation. Agents must purchase properties, bid in auctions, negotiate trades, build houses and hotels, pay and collect rent, mortgage and unmortgage assets, liquidate under debt pressure, and survive until all opponents are bankrupt. The official game objective is explicitly economic: the last player remaining after opponents go bankrupt wins \cite{hasbro_rules}. This makes Monopoly a useful testbed for examining not only whether an LLM wins, but how it constructs economic advantage and how other agents collapse.
+
+The motivation is not that Monopoly is a perfect model of real markets. It is not. Rather, Monopoly is attractive because it is small enough to instrument fully and familiar enough to interpret, while still containing many features that matter in agentic economic behavior: stochastic movement, scarce assets, monopoly power, rent seeking, negotiation, leverage, bankruptcy, and adversarial incentives. Unlike a one shot bargaining task, Monopoly requires models to integrate many simple decisions over dozens or hundreds of turns. Unlike an unconstrained text game, the state is explicit and mechanically verifiable. Unlike a pure reinforcement learning environment, LLM agents can communicate in natural language, explain or rationalize decisions, make public claims, and negotiate with other agents.
+
+\Bench\ is designed around a separation between economic behavior and game correctness. The rules engine is authoritative and deterministic. It emits legal decision points and applies chosen actions. The LLM interface presents the model with the current state, relevant history, and a legal action menu. The model chooses an action, and the system records the decision trace. This design prevents invalid game mechanics from dominating the benchmark while preserving strategic freedom over asset, trade, auction, and liquidity decisions. In the paper, we treat this legal action interface as infrastructure, not the headline contribution. The central object of study is economic agency.
+
+This paper develops \Bench\ as a research instrument. We focus on two complementary evaluation modes. First, full game trajectories evaluate long horizon economic behavior: accumulation, development, rent flow, trade pressure, leverage, liquidation, and bankruptcy. Second, targeted micro scenarios evaluate specific tactical and social decisions under controlled state conditions, such as whether a model accepts a trade that completes an opponent monopoly, liquidates a strategic property, overbids in an auction, or makes a false public claim during negotiation. Full games reveal ecological behavior. Micro scenarios provide attribution.
+
+We make the following contributions:
+
+\begin{enumerate}
+    \item We present \Bench, a deterministic multi agent Monopoly benchmark for evaluating LLMs as long horizon economic agents.
+    \item We define a trajectory based evaluation framework that measures asset accumulation, rent extraction, trade behavior, auctions, development, liquidity, liquidation, bankruptcy, cost, and reliability.
+    \item We introduce a targeted scenario suite design for isolating tactical, negotiation, liquidation, bias, and safety behavior outside the variance of full games.
+    \item We describe an artifact pipeline that records decisions, actions, events, prompts, model responses, public messages, private rationales, usage, costs, and replay information for post hoc analysis.
+    \item We report initial full game case studies from frontier model runs, showing distinct economic profiles such as negotiation dominated accumulation and rent engine construction.
+    \item We argue for descriptive trace analysis rather than a hidden scalar heuristic oracle for Monopoly strategy, because the value of a decision often depends on liquidity, monopoly completion, board position, opponent exposure, and downstream bargaining context.
+\end{enumerate}
+
+The rest of the paper is organized as follows. Section~\ref{sec:related} positions \Bench\ relative to LLM agent benchmarks, long horizon business simulations, strategic game benchmarks, bargaining benchmarks, and prior Monopoly reinforcement learning. Section~\ref{sec:environment} describes the benchmark environment. Section~\ref{sec:evaluation} defines the evaluation protocol and metrics. Section~\ref{sec:micro} describes the targeted scenario suite. Section~\ref{sec:pilot} presents initial full game case studies. Section~\ref{sec:discussion} discusses interpretation, the role of descriptive metrics, and why we do not rely on a single heuristic value model. Section~\ref{sec:limitations} covers limitations and next steps.
+
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Interactive LLM Agent Benchmarks}
+
+AgentBench evaluates LLMs as agents across interactive environments rather than static question answering tasks \cite{agentbench}. Its observe, reason, act framing motivates the need for standardized environments where model behavior can be evaluated over multiple transitions. \Bench\ follows this broad direction but focuses on competitive economic agency: agents are not merely solving independent tasks but making economic decisions against other adaptive agents in a shared environment.
+
+Tool use benchmarks such as \(\tau\)-bench emphasize domain specific rules, tool policies, and state based verification of agent behavior \cite{taubench}. This is relevant to \Bench\ because Monopoly actions are state changing and must obey game rules. However, \Bench\ differs in its target phenomenon. The primary research question is not simply whether a tool call is syntactically correct. It is whether repeated, legally valid choices produce coherent economic strategy under competition.
+
+Recent strategic game benchmarks argue that final outcomes are insufficient for understanding agent decision making. DSGBench introduces strategic games with fine grained decision tracking and multi dimensional scoring \cite{dsgbench}. Cattle Trade evaluates LLM agents in an adversarial economic game combining auctions, bargaining, bluffing, hidden offers, opponent modeling, and resource constraints \cite{cattletrade}. \Bench\ is closest to this family of benchmarks. Its distinguishing feature is the use of a familiar full economic board game with explicit asset ownership, rent extraction, liquidation, and bankruptcy mechanics.
+
+\subsection{Long Horizon Economic Simulations}
+
+Vending-Bench evaluates long term coherence by asking agents to operate a simulated vending machine business over long horizons \cite{vendingbench}. Models must manage inventory, place orders, set prices, and handle operational constraints. Vending-Bench Arena extends this setting to multi agent competition in which agents operate vending machines in the same location, can communicate, send money, and trade goods \cite{vendingarena}. These works motivate the economic agency framing of \Bench: a benchmark should reveal not only whether an agent can perform an isolated business action, but whether it can sustain coherent economic behavior over time.
+
+\Bench\ differs from Vending-Bench in granularity and interpretability. Vending-Bench is closer to a business operations simulation. Monopoly is less realistic but more mechanically transparent. Rent payments, property ownership, building decisions, auctions, trades, mortgages, and bankruptcy are discrete, logged, and easy to trace. This makes \Bench\ especially useful for studying causal trajectories: how an agent's trades created a monopoly, how development changed rent exposure, and how a losing player entered a liquidation spiral.
+
+The Beer Game literature and recent autonomous supply chain experiments also motivate long horizon economic simulation \cite{beergame_site,beergame_hbr}. The Beer Game isolates supply chain coordination, information delays, and bullwhip effects. \Bench\ instead emphasizes competitive ownership, bargaining, asset pricing, and bankruptcy.
+
+\subsection{Social Behavior, Negotiation, and Deception}
+
+Negotiation and bargaining are central to economic agency. Prior LLM bargaining benchmarks formalize buyer seller interaction and measure deal outcomes under incomplete information \cite{bargaining}. Mixed motive benchmarks such as M3-Bench argue that social behavior should be evaluated through what agents do, think, and say, rather than outcome alone \cite{m3bench}. This is directly relevant to \Bench, where an agent's public negotiation message, private rationale, and actual action may diverge.
+
+\Bench\ records public messages, private rationales, and applied actions as separate evidence streams. This enables analysis of deception, bluffing, public private mismatch, collusion, coercive threats, exploitative trades, and kingmaking. We treat these labels conservatively. Many such claims require human review rather than automatic classification, especially because aggressive negotiation can be legitimate game strategy.
+
+\subsection{Monopoly Strategy and Reinforcement Learning}
+
+Prior work has studied Monopoly using Markov chains, probability analysis, and reinforcement learning. Markov chain analyses estimate landing probabilities and often identify orange, light blue, red, and yellow properties as strong strategic regions, with three house development frequently highlighted as valuable \cite{monopoly_markov}. Reinforcement learning work has modeled Monopoly as a high dimensional decision problem. Bonjour et al. propose a hybrid deep reinforcement learning approach in which agents combine learned policies with fixed policies for sparse or unevenly distributed decision types, reporting improvements over standard DRL agents against fixed policy opponents \cite{monopoly_drl}.
+
+These works are useful context but have a different focus. They primarily ask whether an algorithm can learn or approximate strong Monopoly play. \Bench\ asks how language model agents behave as economic actors when they can communicate, negotiate, explain decisions, and generate long horizon trajectories. It also emphasizes replayable artifacts, cost accounting, model call traces, public and private language, and targeted micro scenarios.
+
+\section{Benchmark Environment}
+\label{sec:environment}
+
+\subsection{Task Definition}
+
+A \Bench\ full game has four LLM-controlled players and standard Monopoly mechanics: dice movement, property ownership, rent payments, auctions for declined properties, color group monopolies, houses and hotels, railroads, utilities, Chance and Community Chest cards, jail, mortgages, liquidation, and bankruptcy. A run ends when one player remains non bankrupt or when an experimental cap is reached.
+
+The benchmark is designed to evaluate economic agency, not free form rule invention. Agents do not directly mutate state. Instead, the engine exposes legal decisions, and agents select among available actions. This allows the benchmark to focus on strategic behavior: when to buy, bid, trade, build, mortgage, liquidate, or refuse.
+
+\subsection{System Architecture}
+
+The current implementation has six major components:
+
+\begin{itemize}
+    \item \textbf{Contracts:} JSON schemas, TypeScript types, board specifications, examples, and validation scripts defining the protocol between engine, arena, API, telemetry, and frontend.
+    \item \textbf{Engine:} the deterministic Monopoly rules engine. It owns state mutation, legal action generation, dice and card randomness, event emission, and replay.
+    \item \textbf{Arena:} the LLM orchestration layer for prompts, OpenRouter model calls, response parsing, action validation, retries, and deterministic fallbacks.
+    \item \textbf{Telemetry:} the artifact writer. It records events, actions, decisions, prompts, model responses, state snapshots, usage, cost, replay reports, scorecards, and trace findings.
+    \item \textbf{API:} a FastAPI server for starting, stopping, pausing, resuming, and streaming runs.
+    \item \textbf{Frontend:} a render only React interface for observing games, player state, event feeds, auctions, trades, and model I/O.
+\end{itemize}
+
+\todo{Insert architecture diagram exported from the repository or redraw as Fig. 1.}
+
+\begin{figure}[t]
+\centerline{\fbox{\parbox{0.88\linewidth}{\centering Placeholder for \Bench\ architecture diagram: engine, arena, telemetry, API, frontend, contracts.}}}
+\caption{High level \Bench\ architecture. The engine is authoritative, the arena queries models, telemetry records artifacts, and the frontend renders state without computing rules.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Decision Loop}
+
+A run alternates between deterministic environment transitions and agent decisions:
+
+\begin{enumerate}
+    \item The engine advances until a player decision is required.
+    \item The engine emits a decision point containing the acting player, decision type, state summary, and legal actions.
+    \item The arena constructs a model request containing game context, recent history, private/public communication fields, and legal action schemas.
+    \item The model returns one action.
+    \item The arena validates the response against the schema and the current legal action set.
+    \item The engine applies the selected action and emits resulting events.
+    \item Telemetry writes the decision, action, events, state snapshot, model usage, and any retry or fallback metadata.
+    \item The loop continues until game end or run cap.
+\end{enumerate}
+
+The legal action interface is not intended to make the benchmark easy. It removes a confound. If an agent loses, we want to analyze economic behavior rather than corrupted game state. Invalid responses are still recorded as secondary reliability metrics.
+
+\subsection{State, Communication, and Memory}
+
+Each decision can include the following evidence streams:
+
+\begin{itemize}
+    \item current board state and player finances;
+    \item ownership, mortgage, building, and monopoly status;
+    \item relevant recent events;
+    \item pending trades or auctions;
+    \item legal actions and argument schemas;
+    \item public messages visible to other agents;
+    \item private rationales or strategy notes generated by the model;
+    \item raw model responses and parsed actions.
+\end{itemize}
+
+This separation supports process aware analysis. For example, a model may publicly claim that a trade is fair, privately note that it exploits the opponent, and then propose a trade that completes its monopoly. Such cases cannot be understood from final score alone.
+
+\subsection{Artifacts}
+
+Each full game produces a run directory containing machine readable artifacts. The exact artifact set is implementation dependent, but the intended core includes:
+
+\begin{itemize}
+    \item \texttt{events.jsonl}: ordered environment events;
+    \item \texttt{actions.jsonl}: applied actions sufficient for replay;
+    \item \texttt{decisions.jsonl}: decision attempts, retries, fallbacks, validation, and metadata;
+    \item \texttt{state/}: per turn snapshots;
+    \item \texttt{prompts/}: model facing requests and responses;
+    \item \texttt{usage.json} and per decision usage files;
+    \item \texttt{scorecard.json}: outcome and trajectory metrics;
+    \item \texttt{replay\_report.json}: replay verification;
+    \item \texttt{trace\_findings.jsonl}: flagged trace events;
+    \item \texttt{failure\_findings.jsonl}: reliability and strategic failure findings;
+    \item generated CSV tables and plots for paper analysis.
+\end{itemize}
+
+\section{Evaluation Design}
+\label{sec:evaluation}
+
+\subsection{Evaluation Philosophy}
+
+The central evaluation unit is a trajectory, not a single final answer. Monopoly outcomes depend on stochastic movement and multi player interaction. A final win is meaningful, but it is not sufficient. The benchmark therefore reports trajectory features that explain how the result emerged.
+
+We divide metrics into six classes:
+
+\begin{enumerate}
+    \item outcome metrics;
+    \item economic trajectory metrics;
+    \item market and negotiation metrics;
+    \item liquidity and collapse metrics;
+    \item social and communication metrics;
+    \item operational cost and reliability metrics.
+\end{enumerate}
+
+\subsection{Outcome Metrics}
+
+Outcome metrics describe the terminal state:
+
+\begin{itemize}
+    \item winner and final rank;
+    \item game end reason;
+    \item final turn;
+    \item final cash;
+    \item final net worth;
+    \item bankruptcy status;
+    \item turn of bankruptcy;
+    \item number of opponents bankrupted;
+    \item final property count;
+    \item final complete groups;
+    \item final houses and hotels;
+    \item final mortgage liability.
+\end{itemize}
+
+These metrics are necessary but not enough. A model can win while being highly leveraged, and a model can lose despite strong early assets. Therefore, outcome metrics are interpreted alongside the trajectory.
+
+\subsection{Economic Trajectory Metrics}
+
+Economic trajectory metrics describe how a player constructs or loses economic power:
+
+\begin{itemize}
+    \item cash over time;
+    \item net worth over time;
+    \item property value over time;
+    \item building value over time;
+    \item rent collected and rent paid;
+    \item cumulative net rent;
+    \item acquisition count by turn;
+    \item monopoly completion time;
+    \item development timing;
+    \item mortgage and unmortgage sequences;
+    \item exposure to large rent payments;
+    \item liquidation actions under debt.
+\end{itemize}
+
+We emphasize observable quantities. Instead of declaring a move ``good'' or ``bad'' using an opaque heuristic, we report the state and downstream consequences: the model paid \$X, had \$Y cash afterward, completed or failed to complete a monopoly, later collected \$Z rent, or later entered liquidation.
+
+\subsection{Market and Negotiation Metrics}
+
+Monopoly is a trading game. Many decisive events occur through bilateral bargaining or auctions rather than dice alone. We therefore track:
+
+\begin{itemize}
+    \item trade proposals initiated;
+    \item trade responses, acceptances, rejections, and counteroffers;
+    \item accepted trade involvement;
+    \item trades that complete a monopoly for self;
+    \item trades that complete a monopoly for opponent;
+    \item repeated countertrade chains;
+    \item auction participation;
+    \item auction wins;
+    \item winning bid amount;
+    \item cash after winning bid;
+    \item whether the auctioned property completes or blocks a monopoly;
+    \item public negotiation messages attached to trades.
+\end{itemize}
+
+We do not claim that every overbid or underbid can be classified by a universal scalar formula. A bid's value depends on the player's cash, property set, opponent threats, board state, and future development capacity. The benchmark therefore presents bid context and uses qualitative case studies for ambiguous strategic judgments.
+
+\subsection{Liquidity and Collapse Metrics}
+
+A central hypothesis of \Bench\ is that many agent failures appear as economic collapses rather than isolated wrong actions. Liquidity and collapse metrics include:
+
+\begin{itemize}
+    \item cash buffer after optional actions;
+    \item number and size of large rent payments;
+    \item liquidation decisions under debt;
+    \item assets mortgaged during pressure;
+    \item houses or hotels sold during pressure;
+    \item whether liquidation preserved a path to survival;
+    \item bankruptcy creditor;
+    \item assets transferred at bankruptcy;
+    \item time between first severe liquidity event and bankruptcy.
+\end{itemize}
+
+These metrics allow analysis of economic drift. A model may appear strong after acquiring many assets but become fragile if it has insufficient liquid cash and faces developed opponent monopolies.
+
+\subsection{Social and Communication Metrics}
+
+\Bench\ records public messages and private rationales when enabled. This allows analysis of social strategy:
+
+\begin{itemize}
+    \item negotiation frequency;
+    \item public claims about trade fairness;
+    \item public claims about board state;
+    \item private rationale for trades;
+    \item public private mismatch;
+    \item bluffing or deception candidates;
+    \item collusion proposals;
+    \item coercive threats;
+    \item kingmaking candidates;
+    \item refusal patterns.
+\end{itemize}
+
+These labels require care. In this draft, deception, collusion, and kingmaking are treated as candidate labels requiring human review. Automatic scripts can surface examples, but final claims should be supported by inspected transcripts.
+
+\subsection{Cost and Reliability Metrics}
+
+Long horizon LLM agents can be expensive. Cost is therefore a first class metric:
+
+\begin{itemize}
+    \item calls and attempts;
+    \item input tokens;
+    \item output tokens;
+    \item reasoning tokens when available;
+    \item total cost;
+    \item cost per decision;
+    \item cost per turn;
+    \item latency per decision;
+    \item invalid attempt count;
+    \item retry count;
+    \item fallback count.
+\end{itemize}
+
+Reliability metrics are important, but they are not the main research claim. A model can produce valid actions and still make poor economic decisions. Conversely, a model can occasionally retry yet exhibit strong economic strategy. We therefore report reliability as an instrumentation and deployment dimension rather than as the central definition of intelligence.
+
+\begin{table*}[t]
+\caption{Metric taxonomy for \Bench. The benchmark emphasizes trajectory level economic behavior while still reporting cost and reliability as supporting dimensions.}
+\label{tab:metric_taxonomy}
+\centering
+\begin{tabularx}{\textwidth}{p{0.18\textwidth}X}
+\toprule
+\textbf{Metric class} & \textbf{Examples} \\
+\midrule
+Outcome & Winner, rank, final net worth, bankruptcy turn, final property count, final houses/hotels, final mortgage liability. \\
+Economic trajectory & Cash over time, net worth over time, rent collected and paid, monopoly completion, development timing, asset accumulation, mortgage trajectory. \\
+Market and negotiation & Trade proposals, accepted trades, counteroffers, auction wins, winning bids, cash after bid, monopoly completing trades, public negotiation messages. \\
+Liquidity and collapse & Large rent exposure, liquidation steps, debt pressure, bankruptcy creditor, time from liquidity shock to collapse. \\
+Social behavior & Public/private mismatch, bluffing candidates, false claims, collusion candidates, kingmaking candidates, coercive threats, exploitative bargaining. \\
+Operational & Model calls, tokens, cost, latency, invalid attempts, retries, fallbacks, replay status. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Targeted Micro Scenario Suite}
+\label{sec:micro}
+
+Full games are ecologically valid but noisy. A model may lose because it made one bad trade, because dice exposed it to high rent, because another model gave a third player a monopoly, or because a strong position emerged too late. To complement full games, \Bench\ includes a targeted micro scenario suite: frozen game states with a single decision point and a controlled legal action set.
+
+\subsection{Purpose}
+
+The micro suite is designed to answer questions that full games reveal but cannot isolate:
+
+\begin{itemize}
+    \item Does the model understand when an auctioned property completes a monopoly?
+    \item Does it preserve enough cash after a bid to build or survive rent exposure?
+    \item Does it reject trades that hand an opponent a dangerous monopoly?
+    \item Does it pursue trades that complete its own rent engine?
+    \item Does it liquidate assets in a way that preserves strategic value?
+    \item Does it stay in jail when the board ahead is dangerous?
+    \item Does it make false public claims during negotiation?
+    \item Does it show bias under controlled player descriptors?
+\end{itemize}
+
+\subsection{Scenario Categories}
+
+\begin{table}[t]
+\caption{Planned micro scenario categories. Counts are placeholders until the final scenario manifest is frozen.}
+\label{tab:micro_categories}
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.24\linewidth}Y>{\raggedleft\arraybackslash}p{0.13\linewidth}@{}}
+\toprule
+\textbf{Category} & \textbf{Capability tested} & \textbf{Count} \\
+\midrule
+Buy or auction & Acquisition discipline, property value, liquidity awareness & \todo{N} \\
+Auction bidding & Monopoly completion, block value, cash after bid & \todo{N} \\
+Trade proposal & Bargaining, monopoly construction, opponent modeling & \todo{N} \\
+Trade response & Exploit detection, surplus allocation, opponent threat & \todo{N} \\
+Building & Rent engine construction, house scarcity, cash buffer & \todo{N} \\
+Mortgage & Liquidity management, asset prioritization & \todo{N} \\
+Liquidation & Survival under debt, strategic asset preservation & \todo{N} \\
+Jail & Risk timing, late game defensive posture & \todo{N} \\
+Safety/social & Deception, collusion, false claims, kingmaking & \todo{N} \\
+Bias & Controlled descriptors and disparate treatment & \todo{N} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Scoring and Interpretation}
+
+The micro suite should not be reduced to a single hidden heuristic oracle. Some choices have clearly dominated alternatives, but many depend on context. Therefore, we propose a hybrid reporting structure:
+
+\begin{itemize}
+    \item \textbf{Objective state features:} cash, property ownership, monopoly status, rent exposure, bid amount, and legal actions.
+    \item \textbf{Rubric labels:} preferred, acceptable, risky, or trap action labels for scenarios where the intended behavior is clear.
+    \item \textbf{Explanation fields:} the model's private rationale and public message.
+    \item \textbf{Human review:} qualitative adjudication for ambiguous strategic, deceptive, collusive, or bias related cases.
+\end{itemize}
+
+For example, a high bid for Park Place may be reckless if it leaves the player unable to survive known rent exposure, but rational if it completes a monopoly, blocks an opponent, or converts idle cash into a decisive rent engine. The benchmark should expose these variables rather than hide them behind a universal scalar approximation.
+
+\subsection{Micro Suite Outputs}
+
+Each micro suite run should produce:
+
+\begin{itemize}
+    \item per scenario decision records;
+    \item category breakdowns;
+    \item model usage and cost;
+    \item invalid attempt and retry rates;
+    \item public/private message transcripts;
+    \item representative failure and success cases;
+    \item human review queues for ambiguous cases.
+\end{itemize}
+
+\todo{Insert final micro suite manifest and results once experiments are complete.}
+
+\section{Full Game Pilot Runs}
+\label{sec:pilot}
+
+This section reports initial full game case studies from two analysis bundles. These are not yet a statistically powered leaderboard. They are used to demonstrate the benchmark's ability to produce interpretable economic traces and to motivate the metric design.
+
+\subsection{Run A: GPT 5.5 Frontier Case Study}
+
+Run A ended with OpenAI GPT 5.5 as the apparent winner by bankruptcy at turn 191. The run contained 583 model calls, 604 attempts, 23 invalid attempts, 21 retries, and 2 fallbacks. Total reported cost was \$27.711730 across 3,524,545 total tokens. Replay reconciliation for this analysis bundle is pending: the deep analysis reports a completed game but also reports a replay mismatch at index 669. For this draft, we treat Run A as a strategic case study rather than a replay clean benchmark result.
+
+\begin{table}[t]
+\caption{Run A final player state from the deep analysis bundle. This case study is strategically rich but marked pending replay reconciliation.}
+\label{tab:run_a_final}
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Player} & \textbf{Cash} & \textbf{Net} & \textbf{Props} & \textbf{Houses} & \textbf{Hotels} \\
+\midrule
+GPT 5.5 & 718 & 9708 & 28 & 7 & 6 \\
+Claude Opus 4.8 & 0 & 0 & 0 & 0 & 0 \\
+Gemini 3.1 Pro & 0 & 0 & 0 & 0 & 0 \\
+Grok 4.3 & 0 & 0 & 0 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{Run A model usage. Costs are reported from OpenRouter accounting in the analysis artifacts.}
+\label{tab:run_a_usage}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Player} & \textbf{Calls} & \textbf{Cost} & \textbf{Tokens} & \textbf{Invalid} \\
+\midrule
+GPT 5.5 & 260 & \$15.906 & 1,382,717 & 7 \\
+Claude Opus 4.8 & 134 & \$9.492 & 1,254,003 & 6 \\
+Gemini 3.1 Pro & 121 & \$1.901 & 581,449 & 6 \\
+Grok 4.3 & 68 & \$0.412 & 306,376 & 4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The central economic pattern in Run A is negotiation dominated accumulation. GPT 5.5 ended with broad ownership, all color groups complete, significant development, and substantial leverage: 20 mortgaged properties and \$1,850 of mortgage liability. This is not a conservative cash rich victory. It appears to be a controlled risk strategy in which the model used trade pressure and broad acquisition to construct a dominant rent position.
+
+Rent flow was decisive. GPT 5.5 collected \$7,358 in rent and paid \$2,526, yielding net rent of \$4,832. The other players had negative net rent flows: Claude Opus 4.8 at \$-859, Gemini 3.1 Pro Preview at \$-1,846, and Grok 4.3 at \$-2,127.
+
+\begin{table}[t]
+\caption{Run A rent flow. Positive net rent indicates that rent extraction outweighed rent exposure.}
+\label{tab:run_a_rent}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Player} & \textbf{Collected} & \textbf{Paid} & \textbf{Net} \\
+\midrule
+GPT 5.5 & \$7358 & \$2526 & \$4832 \\
+Claude Opus 4.8 & \$2783 & \$3642 & \$-859 \\
+Gemini 3.1 Pro & \$84 & \$1930 & \$-1846 \\
+Grok 4.3 & \$205 & \$2332 & \$-2127 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The observed bankruptcy sequence was Grok 4.3 on turn 113, Gemini 3.1 Pro Preview on turn 126, and Claude Opus 4.8 on turn 190. The final collapse occurred after Claude landed on a high rent GPT 5.5 property and could not liquidate enough to survive.
+
+\todo{Insert detailed trade graph for Run A: proposals, accepted trades, counteroffers, and monopoly completing trades.}
+\todo{Insert case study paragraph using raw transcripts: one GPT trade chain, one liquidation decision, and one public/private mismatch candidate if available.}
+
+\subsection{Run B: Gemini 3 Flash Replay Clean Game}
+
+Run B is the cleanest current full game artifact. Gemini 3 Flash Preview won by bankruptcy on turn 273. Replay passed exactly with 4,102 original events and 4,102 replay events. The run contained 540 decisions, 549 OpenRouter attempts, 9 invalid attempts, and 0 fallbacks. Total reported cost was \$4.244752 across 2,945,246 total tokens.
+
+\begin{table}[t]
+\caption{Run B summary. This run is currently the strongest replay clean full game artifact.}
+\label{tab:run_b_summary}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Winner & Gemini 3 Flash Preview \\
+End reason & Bankruptcy \\
+Final turn & 273 \\
+Replay status & Passed \\
+Events replayed & 4102 / 4102 \\
+Decisions & 540 \\
+Attempts & 549 \\
+Invalid attempts & 9 \\
+Fallbacks & 0 \\
+Total cost & \$4.244752 \\
+Total tokens & 2,945,246 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{Run B model usage and final status. Claude had no invalid attempts but did not survive, illustrating that action reliability is separate from economic success.}
+\label{tab:run_b_usage}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Player} & \textbf{Dec.} & \textbf{Cost} & \textbf{Invalid} & \textbf{Final net} \\
+\midrule
+GPT 5.4 Mini & 86 & \$0.650 & 3 & 0 \\
+Claude Haiku 4.5 & 88 & \$1.383 & 0 & 0 \\
+Gemini 3 Flash & 190 & \$1.178 & 2 & 10071 \\
+Grok 4.3 & 176 & \$1.034 & 4 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Gemini's victory was associated with rent engine construction. It completed pink on turn 67, utilities on turn 122, green on turn 125, railroads on turn 144, and orange on turn 168. It ended with 18 properties, 31 houses, 4 complete groups, and 3 developed monopolies. It collected \$9,823 in rent and paid \$2,995, for net rent of \$6,828.
+
+\begin{table}[t]
+\caption{Run B rent flow. Gemini's net rent advantage was the dominant economic signal.}
+\label{tab:run_b_rent}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Player} & \textbf{Collected} & \textbf{Paid} & \textbf{Net} \\
+\midrule
+GPT 5.4 Mini & \$58 & \$316 & \$-258 \\
+Claude Haiku 4.5 & \$144 & \$2861 & \$-2717 \\
+Gemini 3 Flash & \$9823 & \$2995 & \$6828 \\
+Grok 4.3 & \$4703 & \$8556 & \$-3853 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This run illustrates the central value of trajectory analysis. Gemini did not merely have the highest final score; it built a sequence of asset positions that converted repeated opponent movement into compounding rent extraction. Grok survived until turn 272 but paid \$8,556 in rent, producing a negative net rent flow of \$3,853 and ultimately collapsed to bank and tax pressure.
+
+\todo{Insert Fig. 2: net worth by turn for Run B.}
+\todo{Insert Fig. 3: rent payments by turn with bankruptcy markers.}
+\todo{Insert Fig. 4: houses by turn or building value by turn.}
+
+\subsection{Cross Run Pattern}
+
+Across the two current full game traces, the winner was not simply the lowest cost model, the lowest invalid attempt model, or the player with the safest cash posture. The winner was the agent that converted asset control into durable rent pressure. In Run A, GPT 5.5 appears to have done this through aggressive acquisition, negotiation dominance, and leverage. In Run B, Gemini 3 Flash did it through set completion, development, and positive rent flow.
+
+This motivates a central empirical hypothesis for future experiments:
+
+\begin{quote}
+Winning LLM agents in \Bench\ are characterized less by isolated tactical correctness and more by the ability to convert ownership positions into rent engines while avoiding liquidity collapse.
+\end{quote}
+
+A second hypothesis concerns social market behavior:
+
+\begin{quote}
+Models differ in whether they treat Monopoly as a passive acquisition game or as an active negotiation economy. Trade intensity, counteroffer behavior, and willingness to pressure opponents may be predictive of downstream dominance.
+\end{quote}
+
+These hypotheses require repeated seeds, seat permutations, and micro scenario validation before they can be generalized beyond the pilot traces.
+
+\section{Descriptive Trace Analysis Rather Than a Hidden Heuristic Oracle}
+\label{sec:no_heuristic_oracle}
+
+A natural temptation is to define a Monopoly heuristic that labels each action as optimal, acceptable, or bad. We deliberately avoid making such a heuristic the core evaluator.
+
+The reason is not that heuristics are useless. Diagnostic scripts are valuable for computing context features: bid amount, cash after bid, whether the property completes a monopoly, opponent cash, rent exposure, number of houses available, and future liquidation risk. However, Monopoly decisions often have context dependent value. Paying \$500 above face value for Park Place may be reckless in one state and strategically rational in another. The difference depends on whether the purchase completes a monopoly, how much cash remains afterward, whether the player can build, whether opponents are likely to land there, whether the purchase blocks another monopoly, and whether the player can survive upcoming rent exposure.
+
+Therefore, \Bench\ uses descriptive trace analysis:
+
+\begin{itemize}
+    \item compute objective state features;
+    \item report the model's action and rationale;
+    \item report downstream events where relevant;
+    \item use scenario rubrics only when the strategic target is clear;
+    \item reserve ambiguous strategic judgments for human reviewed case studies.
+\end{itemize}
+
+This approach is more transparent than a complex private heuristic. It lets other researchers inspect the same state and disagree with our interpretation without losing access to the underlying evidence.
+
+\section{Experimental Protocol}
+\label{sec:protocol}
+
+\subsection{Full Game Protocol}
+
+A publication quality full game evaluation should use:
+
+\begin{itemize}
+    \item exact model identifiers;
+    \item fixed prompts and prompt versioning;
+    \item fixed temperature and reasoning settings;
+    \item fixed seed sets;
+    \item seat permutation or Latin square assignment;
+    \item replay verification after each run;
+    \item budget reporting;
+    \item cost and token accounting;
+    \item complete run artifact release.
+\end{itemize}
+
+For four player model comparisons, seating order is a confound. The same set of models should rotate through seats across seeds. A minimal publication protocol should report both aggregate performance and seat conditioned performance.
+
+\subsection{Micro Scenario Protocol}
+
+A publication quality micro suite should use:
+
+\begin{itemize}
+    \item frozen scenario manifests;
+    \item category labels and scenario ids;
+    \item identical prompts across models except model specific configuration;
+    \item deterministic legal action sets;
+    \item per scenario cost and latency;
+    \item category breakdowns;
+    \item human reviewed examples for ambiguous social labels.
+\end{itemize}
+
+\subsection{Claim Gating}
+
+Because LLM benchmarks can be fragile, claims should be gated by artifact quality. Table~\ref{tab:claim_gating} states which claims can be made from which evidence.
+
+\begin{table*}[t]
+\caption{Claim gating for \Bench\ experiments. This table is included to prevent pilot traces from being overinterpreted as global model rankings.}
+\label{tab:claim_gating}
+\centering
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
+\toprule
+\textbf{Claim type} & \textbf{Required evidence} \\
+\midrule
+Pipeline validity & A full run with complete artifacts, schema validation, and replay agreement. \\
+Single run case study & Complete or nearly complete run artifacts plus clearly stated caveats about replay, parsing, or missing data. \\
+Model strategic profile & Multiple decisions or trajectories showing repeated behavior, supported by trace evidence and examples. \\
+Category level micro result & Frozen micro scenario suite with per category statistics and representative examples. \\
+Leaderboard ranking & Repeated full games across fixed seeds and seat permutations, with confidence intervals and replay verified artifacts. \\
+Deception or collusion claim & Public messages, private rationales, actions, and human review or explicit transcript evidence. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Planned Figures and Tables}
+\label{sec:figures}
+
+The current analysis bundles already include many paper ready plots. The first paper should include the following figures:
+
+\begin{itemize}
+    \item \textbf{Figure 1: Architecture.} Engine, arena, telemetry, API, frontend, contracts.
+    \item \textbf{Figure 2: Net worth trajectory.} A full game trace showing economic divergence and collapse.
+    \item \textbf{Figure 3: Rent flow.} Rent collected and paid by player, preferably with net rent bars.
+    \item \textbf{Figure 4: Development timeline.} Houses/hotels or building value over time.
+    \item \textbf{Figure 5: Trade network.} Directed graph of trade proposals, accepted trades, and counteroffers.
+    \item \textbf{Figure 6: Auction behavior.} Winning bids, bid context, and cash after auction.
+    \item \textbf{Figure 7: Cost and latency.} Cost per model and latency distribution.
+    \item \textbf{Figure 8: Micro scenario category results.} Category scores once experiments are complete.
+\end{itemize}
+
+\todo{Move generated plots into Overleaf under figures/ and replace placeholders with includegraphics calls.}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{What the Pilot Runs Already Show}
+
+The pilot runs show that \Bench\ can expose meaningful economic behavior beyond final win or loss. In Run B, Gemini's victory is interpretable as a rent engine story: it completed multiple sets, built heavily, and generated a large positive net rent flow. In Run A, GPT 5.5's apparent victory is interpretable as a negotiation and leverage story: it initiated many trades, accumulated broad ownership, developed high rent properties, and survived with high mortgage liability.
+
+These are different strategic profiles. That distinction is the benchmark's value. A static reasoning score would not reveal whether one model is a relentless negotiator while another is a development focused rent extractor. A simple win rate would also hide how expensive the strategy was, how much risk it carried, and where opponents collapsed.
+
+\subsection{Why Full Games and Micro Scenarios Both Matter}
+
+Full games reveal emergent behavior. They show how agents act when no single decision is obviously the whole task. However, they are noisy because dice, seating, opponent choices, and trade chains interact. Micro scenarios isolate individual capabilities but can miss long horizon drift. A model may answer a liquidation scenario well in isolation yet still overextend across 100 turns.
+
+The intended evaluation strategy is therefore combined:
+
+\begin{itemize}
+    \item use full games to discover and demonstrate economic trajectories;
+    \item use micro scenarios to test specific tactical and social capabilities;
+    \item use transcript audits to interpret negotiation and deception;
+    \item use cost and reliability metrics to assess practical deployability.
+\end{itemize}
+
+\subsection{Economic Agency as the Core Object}
+
+In \Bench, economic agency covers these abilities:
+
+\begin{itemize}
+    \item accumulate useful assets;
+    \item convert assets into income;
+    \item preserve liquidity under uncertainty;
+    \item negotiate with strategic counterparties;
+    \item price auctions and trades under context;
+    \item recognize opponent threats;
+    \item liquidate without destroying future survival;
+    \item avoid bankruptcy cascades;
+    \item adapt across a long game.
+\end{itemize}
+
+This is broader than planning and narrower than general intelligence. It is a concrete, measurable class of behavior relevant to future agents that might manage businesses, portfolios, supply chains, real estate assets, or other resource constrained systems.
+
+\subsection{Reliability as Instrumentation Rather Than Headline}
+
+The legal action interface and retry system matter because they make the benchmark stable. They also provide useful secondary metrics. But the main paper should not be framed as a tool calling reliability paper. A model that never violates a schema may still fail economically. The more important question is what it does once it can act legally.
+
+That said, reliability remains relevant for deployment. If a model requires many retries, times out, or frequently falls back, it may be impractical even if its eventual choices are strong. Thus, reliability and cost should remain in the scorecard but should not replace economic trajectory analysis.
+
+\section{Limitations}
+\label{sec:limitations}
+
+\subsection{Monopoly Is Not a Real Economy}
+
+Monopoly is a stylized game. It omits many features of real markets, including production, heterogeneous preferences, legal contracts, credit markets, external shocks, regulatory constraints, and realistic information asymmetry. Results should not be interpreted as direct predictions of business performance. The benchmark is best understood as a controlled economic testbed.
+
+\subsection{Single Run Results Do Not Establish Model Rankings}
+
+The current pilot runs demonstrate the benchmark and provide case studies. They do not establish global model rankings. Monopoly is stochastic and multi agent. Robust rankings require repeated seeds, seat permutations, and confidence intervals.
+
+\subsection{Replay and Artifact Integrity Must Be Preserved}
+
+The value of \Bench\ depends on artifact integrity. Any run with replay mismatch, missing actions, or parser inconsistency should be marked clearly. Such runs can still be useful as qualitative case studies, but headline quantitative claims should use replay clean artifacts.
+
+\subsection{Strategic Judgment Is Context Dependent}
+
+Some decisions can be labeled clearly, especially in curated micro scenarios. Many full game decisions cannot. A high auction bid, aggressive trade, or low cash buffer may be good or bad depending on context. This is why the benchmark reports descriptive features and trace evidence rather than hiding judgments inside a scalar heuristic.
+
+\subsection{Social Behavior Labels Require Human Review}
+
+Deception, collusion, bluffing, and kingmaking are difficult to label automatically. Public private mismatch can be detected heuristically, but strong claims require transcript inspection and clear labeling rules.
+
+\subsection{Model Version Drift}
+
+API served model behavior can change over time. Publication runs should record exact model identifiers, routing metadata when available, dates, prompt versions, reasoning settings, and cost/pricing snapshots.
+
+\section{Ethical and Safety Considerations}
+\label{sec:ethics}
+
+\Bench\ intentionally studies competitive economic behavior, including negotiation, deception candidates, collusion candidates, and exploitative trades. This is valuable because future agents may operate in competitive economic settings. However, the benchmark should avoid encouraging harmful real world manipulation. The environment is fictional, bounded, and game based. Social behavior labels should be framed as measurement, not endorsement.
+
+If future versions include unrestricted negotiation, the benchmark should distinguish between competitive game behavior and deployable agent behavior. An optional ethical track may prohibit false factual claims, collusion, coercive threats, and kingmaking. This would allow separate measurement of raw competitive performance and safety constrained economic agency.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We introduced \Bench, a deterministic multi agent benchmark for evaluating LLMs as long horizon economic agents. Monopoly provides a compact environment in which asset accumulation, bargaining, auctions, rent extraction, leverage, liquidation, and bankruptcy interact over many turns. The benchmark records full decision trajectories, public and private communication, model usage, cost, and replay artifacts, enabling analysis beyond final win rate.
+
+Initial full game traces show that models can exhibit distinct economic profiles. One winner appears to dominate through aggressive trade and leverage; another wins through set completion, development, and rent engine construction. These early results motivate a broader evaluation program combining full game trajectories, targeted micro scenarios, transcript audits, and cost aware scorecards.
+
+The long term goal is not merely to determine which model plays Monopoly best. It is to build a reproducible instrument for studying whether language model agents can sustain coherent economic behavior under competition, uncertainty, bargaining pressure, and collapse risk.
+
+\section*{Acknowledgment}
+
+\todo{Acknowledge advisor, collaborators, compute/API funding if applicable, and any external feedback.}
+
+\begingroup
+\raggedright
+\begin{thebibliography}{00}
+
+\bibitem{agentbench}
+X. Liu, H. Yu, H. Zhang, Y. Xu, X. Lei, H. Lai, Y. Gu, H. Ding, K. Men, K. Yang, S. Zhang, X. Deng, A. Zeng, Z. Du, C. Zhang, S. Shen, T. Zhang, Y. Su, H. Sun, M. Huang, Y. Dong, and J. Tang, ``AgentBench: Evaluating LLMs as agents,'' arXiv:2308.03688, 2023.
+
+\bibitem{vendingbench}
+A. Backlund and L. Petersson, ``Vending-Bench: A benchmark for long-term coherence of autonomous agents,'' arXiv:2502.15840, 2025.
+
+\bibitem{vendingarena}
+Andon Labs, ``Vending-Bench Arena,'' 2026. [Online]. Available: \url{https://andonlabs.com/evals/vending-bench-arena}
+
+\bibitem{dsgbench}
+W. Tang, Y. Zhou, E. Xu, K. Cheng, M. Li, and L. Xiao, ``DSGBench: A diverse strategic game benchmark for evaluating LLM-based agents in complex decision-making environments,'' arXiv:2503.06047, 2025.
+
+\bibitem{cattletrade}
+R. M\"uller and C. M\"uller, ``Cattle Trade: A multi-agent benchmark for LLM bluffing, bidding, and bargaining,'' arXiv:2605.14537, 2026.
+
+\bibitem{m3bench}
+S. Xie, Z. Shi, H. Shen, G. Huang, Y. Ma, and X. Jing, ``M3-BENCH: Process-aware evaluation of LLM agents social behaviors in mixed-motive games,'' arXiv:2601.08462, 2026.
+
+\bibitem{bargaining}
+T. Xia, Z. He, T. Ren, Y. Miao, Z. Zhang, Y. Yang, and R. Wang, ``Measuring bargaining abilities of LLMs: A benchmark and a buyer-enhancement method,'' arXiv:2402.15813, 2024.
+
+\bibitem{taubench}
+S. Yao, N. Shinn, P. Razavi, and K. Narasimhan, ``\(\tau\)-bench: A benchmark for tool-agent-user interaction in real-world domains,'' arXiv:2406.12045, 2024.
+
+\bibitem{monopoly_drl}
+T. Bonjour, M. Haliem, A. Alsalem, S. Thomas, H. Li, V. Aggarwal, M. Kejriwal, and B. Bhargava, ``Decision making in Monopoly using a hybrid deep reinforcement learning approach,'' arXiv:2103.00683, 2021.
+
+\bibitem{monopoly_markov}
+B. Bernard, ``Monopoly: An analysis using Markov chains,'' 2017. [Online]. Available: \url{https://carlabernard.ch/beni/downloads/bernard_monopoly.pdf}
+
+\bibitem{hasbro_rules}
+Hasbro, ``Monopoly game rules,'' 2007. [Online]. Available: \url{https://www.hasbro.com/common/instruct/00009.pdf}
+
+\bibitem{beergame_site}
+MIT Information Theory Lab, ``Beer Game by AI agents,'' 2026. [Online]. Available: \url{https://infotheorylab.github.io/beer-game/}
+
+\bibitem{beergame_hbr}
+D. Simchi-Levi, D. G. H. [TODO], and [TODO], ``When supply chains become autonomous,'' \textit{Harvard Business Review}, Dec. 2025. [Online]. Available: \url{https://hbr.org/2025/12/when-supply-chains-become-autonomous}
+
+\end{thebibliography}
+\endgroup
+
+\appendices
+
+\section{Draft Notes for Authors}
+
+\textbf{Current draft status.} This is a starting IEEE conference draft. It intentionally includes placeholders for figures, micro suite counts, transcript examples, and final experiment results.
+
+\textbf{Immediate edits needed.}
+\begin{itemize}
+    \item Replace placeholder author block.
+    \item Decide final title.
+    \item Insert architecture figure.
+    \item Insert Run B plots from the replay clean analysis bundle.
+    \item Reconcile Run A replay mismatch before using it as headline quantitative evidence.
+    \item Add micro suite results after running exact model IDs.
+    \item Add transcript excerpts for trade, liquidation, and public/private mismatch examples.
+    \item Clean references and replace TODO author fields.
+\end{itemize}
+
+\textbf{Current paper stance on heuristic baselines.} This draft does not make heuristic bots or heuristic value models a core comparison. It uses descriptive scripts and state features instead. This can be softened later by adding simple baselines as appendices, but the main paper should not depend on a hidden Monopoly value oracle.
+
+\section{Candidate Case Study Slots}
+
+\begin{itemize}
+    \item GPT 5.5 repeated trade/countertrade chain that completed or consolidated a monopoly.
+    \item GPT 5.5 efficient auction acquisition compared with another model's expensive property purchase.
+    \item Gemini 3 Flash set completion and development path in Run B.
+    \item Grok rent exposure and collapse path in Run B.
+    \item Claude valid action reliability but weak economic outcome in Run B.
+    \item Any public/private mismatch where a model frames a trade as fair while privately describing exploitation.
+\end{itemize}
+
+\section{Candidate Submission Framing}
+
+A conservative first paper should avoid claiming definitive model rankings. The safer contribution is that \Bench\ is a reproducible instrument for studying long horizon economic agency, with pilot traces showing that models differ in negotiation intensity, rent engine construction, liquidity management, cost, and collapse dynamics.
+
+\end{document}
