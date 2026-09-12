@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Board } from '@/components/board/Board';
+import { BoardViewport } from '@/components/board3d/BoardViewport';
 import { NeoBadge } from '@/components/ui/NeoPrimitive';
 import { cn } from '@/components/ui/cn';
 import { getPlayerColor } from '@/domain/monopoly/colors';
@@ -22,6 +22,7 @@ import {
   type TraceFinding,
 } from '@/net/artifacts';
 import type { StateSnapshot } from '@/net/contracts';
+import { replayPresentation, type SavedReplayStep } from '@/net/replayPresentation';
 
 type SkipMode = 'all' | 'important' | 'trace' | 'failures' | 'negotiations' | 'auctions' | 'bankruptcies' | 'model';
 type InspectorTab = 'timeline' | 'findings' | 'review' | 'decision' | 'diff';
@@ -218,7 +219,7 @@ export const ReplayReviewPage = () => {
         safeLoadArtifact<Record<string, unknown>>(runId, 'artifact_replay_report'),
         safeLoadArtifact<Record<string, unknown>>(runId, 'replay_diff'),
         safeLoadArtifact<Record<string, unknown>>(runId, 'event_hashes'),
-        safeLoadArtifact<ReplayStep>(runId, 'replay_steps'),
+        safeLoadArtifact<SavedReplayStep>(runId, 'replay_steps'),
         safeLoadArtifact<ReplayFlag>(runId, 'replay_flags'),
         safeLoadArtifact<TraceFinding>(runId, 'trace_findings'),
         safeLoadArtifact<TraceFinding>(runId, 'failure_findings'),
@@ -228,7 +229,7 @@ export const ReplayReviewPage = () => {
         fetchReviewSummary(runId).catch(() => null),
       ]);
       if (!active) return;
-      const loadedSteps = asRows<ReplayStep>(replayStepsArtifact);
+      const loadedSteps = asRows<SavedReplayStep>(replayStepsArtifact).map(replayPresentation);
       setReplayReport(asContent<Record<string, unknown>>(replayReportArtifact));
       setStateReplayReport(asContent<Record<string, unknown>>(stateReplayReportArtifact));
       setArtifactReplayReport(asContent<Record<string, unknown>>(artifactReplayReportArtifact));
@@ -460,21 +461,7 @@ export const ReplayReviewPage = () => {
       </aside>
 
       <main className="relative flex min-h-[32rem] min-w-0 flex-1 items-center justify-start overflow-x-auto bg-neo-bg p-3 brutal-scroll lg:h-full lg:justify-center lg:overflow-hidden lg:p-4">
-        <Board
-          spaces={snapshot?.board ?? []}
-          players={snapshot?.players ?? []}
-          activePlayerId={selectedPlayerId ?? snapshot?.active_player_id ?? null}
-          highlightState={{ eventHighlight: selectedStep?.payload?.space_index && typeof selectedStep.payload.space_index === 'number' ? [selectedStep.payload.space_index] : null }}
-          className="aspect-square w-full min-w-[34rem] max-w-[min(100%,calc(100vh-2rem))] lg:min-w-0"
-          centerContent={
-            <div className="z-10 rotate-[-6deg] text-center">
-              <div className="text-4xl font-black uppercase leading-none tracking-normal">Replay</div>
-              <div className="mt-2 text-[11px] font-mono uppercase tracking-wide">
-                Step {selectedStep?.step_index ?? 0} / {steps.length}
-              </div>
-            </div>
-          }
-        />
+        <BoardViewport snapshot={snapshot} animate={false} resetKey={`${runId}:${selectedSnapshotName}`} highlightIndex={typeof selectedStep?.payload?.space_index === 'number' ? selectedStep.payload.space_index : null} />
       </main>
 
       <aside className="flex w-full flex-col border-t-2 border-black bg-white lg:h-full lg:w-[27rem] lg:border-l-2 lg:border-t-0">

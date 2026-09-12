@@ -102,6 +102,15 @@ try {
     }
   }
 
+  Invoke-Step -Name "Frontend: presentation tests" -ScriptBlock {
+    Push-Location frontend
+    try {
+      bun run test
+    } finally {
+      Pop-Location
+    }
+  }
+
   Invoke-Step -Name "Frontend: build" -ScriptBlock {
     Push-Location frontend
     try {

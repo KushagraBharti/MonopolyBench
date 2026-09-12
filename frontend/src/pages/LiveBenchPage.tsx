@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getApiBaseUrl, getWsUrl, WsClient } from '@/net/ws';
 import { useGameStore } from '@/state/store';
-import { Board } from '@/components/board/Board';
+import { BoardViewport } from '@/components/board3d/BoardViewport';
 import { BoardEffectsLayer } from '@/components/board/BoardEffectsLayer';
 import { PlayerStackPanel } from '@/components/panels/PlayerStackPanel';
 import { EventFeed } from '@/components/feed/EventFeed';
@@ -26,6 +26,7 @@ export const LiveBenchPage = () => {
   const runStatus = useGameStore((state) => state.runStatus);
   const logResetId = useGameStore((state) => state.logResetId);
   const latestEvent = useGameStore((state) => state.events[0]);
+  const events = useGameStore((state) => state.events);
   const apiBase = useMemo(() => getApiBaseUrl(), []);
   const highlightTimerRef = useRef<number | null>(null);
   const [rightTab, setRightTab] = useState<'dev' | 'feed'>('dev');
@@ -195,8 +196,7 @@ export const LiveBenchPage = () => {
           }}
         />
 
-        <Board spaces={snapshot?.board || []} className="relative z-10 aspect-square w-full min-w-[34rem] max-w-[min(100%,calc(100vh-2rem))] lg:min-w-0" />
-        <BoardEffectsLayer />
+        <BoardViewport snapshot={snapshot} events={events} resetKey={`${connection.status}:${logResetId}`} animate={isConnected} className="relative z-10" flatEffects={<BoardEffectsLayer />} />
       </main>
 
       <aside className="z-20 flex w-full flex-col border-t-2 border-black bg-white shadow-[-4px_0_16px_rgba(0,0,0,0.06)] lg:h-full lg:w-[21rem] lg:border-l-2 lg:border-t-0 2xl:w-[23rem]">

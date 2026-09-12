@@ -154,6 +154,10 @@ bun run dev
 
 Open `http://localhost:5173`.
 
+On Windows, after installing dependencies and Node.js, start both local services in the background with `pwsh -File scripts/start-local.ps1`. Existing listeners are preserved; logs go to `output/local-site/`.
+
+The live and replay boards offer **3D city** and **Classic** views. See [3D board integration](docs/board3d.md) for controls, asset preparation, and animation verification.
+
 Verify the repository:
 
 ```powershell
