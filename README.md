@@ -95,7 +95,7 @@ Batch evaluation supports fixed seed cohorts, stable model rosters, Latin-square
 - **API and streaming:** FastAPI, Uvicorn, WebSockets, orjson
 - **Model gateway:** OpenRouter
 - **Frontend:** React, TypeScript, Vite, Zustand, Tailwind CSS
-- **Tooling:** uv, Bun, Ruff, mypy
+- **Tooling:** uv, Node.js, npm, Ruff, mypy
 - **Artifact format:** JSON, JSONL, typed snapshots, event streams, and manifests
 
 OpenRouter is the only model gateway. Usage and cost reports use provider-returned actuals rather than locally estimated token counts.
@@ -122,7 +122,7 @@ MonopolyBench/
 
 ## Quick start
 
-Requirements: Python 3.10+, `uv`, Bun, and an OpenRouter API key.
+Requirements: Python 3.10+, `uv`, Node.js 22.12+ with npm, and an OpenRouter API key.
 
 ```bash
 OPENROUTER_API_KEY=...
@@ -135,7 +135,7 @@ cd python
 uv sync --all-packages
 
 cd ../frontend
-bun install
+npm ci
 ```
 
 Run the API:
@@ -149,13 +149,13 @@ Run the frontend:
 
 ```bash
 cd frontend
-bun run dev
+npm run dev
 ```
 
 Open `http://localhost:5173`.
 
 Verify the repository:
 
-```powershell
-pwsh -File scripts/verify.ps1
+```bash
+bash scripts/verify.sh
 ```

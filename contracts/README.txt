@@ -3,9 +3,8 @@ CONTRACTS QUICK COMMANDS
 Run validation (from repo root)
 1) node contracts/validate-contracts.mjs
 
-If validation dependencies are missing, install them with one of:
-- yarn
-- cd frontend && yarn
+If validation dependencies are missing, install them with:
+- cd frontend && npm ci
 
 Update workflow (schemas + types stay in sync)
 1) Edit JSON Schemas in contracts/schemas (versioned; update schema_version when you introduce a breaking change).

@@ -12,15 +12,15 @@ From repo root:
 
 ```bash
 cd frontend
-yarn
-yarn dev
+npm ci
+npm run dev
 ```
 
 ## Build
 ```bash
 cd frontend
-yarn build
+npm run build
 ```
 
 ## Package manager
-This repo uses Yarn (Corepack) for the frontend. Do not use npm (`package-lock.json` is intentionally not tracked).
+Use Node.js 22.12+ and npm. Commit `package-lock.json` when dependencies change; use `npm ci` to install the locked dependencies and `npm install` when updating them.

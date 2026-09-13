@@ -15,7 +15,7 @@ uv sync --all-packages
 ## Tests
 From repo root, the canonical verification entrypoint is:
 ```bash
-pwsh -File scripts/verify.ps1
+bash scripts/verify.sh
 ```
 
 Or run per-package:

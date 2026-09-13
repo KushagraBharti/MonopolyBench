@@ -30,7 +30,7 @@ trap on_error ERR
 step "Tooling: verify prerequisites"
 require_cmd node
 require_cmd uv
-require_cmd yarn
+require_cmd npm
 
 step "Contracts: validate examples"
 node contracts/validate-contracts.mjs
@@ -54,10 +54,10 @@ step "Python: telemetry tests"
 (cd python/packages/telemetry && uv run pytest)
 
 step "Frontend: lint"
-(cd frontend && yarn lint)
+(cd frontend && npm run lint)
 
 step "Frontend: build"
-(cd frontend && yarn build)
+(cd frontend && npm run build)
 
 echo ""
 echo "All checks passed."

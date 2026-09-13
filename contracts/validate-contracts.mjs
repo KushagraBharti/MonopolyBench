@@ -51,8 +51,7 @@ const formatsDependency = await resolveDependency("ajv-formats");
 
 if (!ajvDependency || !formatsDependency) {
   console.error("Missing dependencies for contract validation.");
-  console.error("Fix (repo root): yarn");
-  console.error("Fix (frontend only): cd frontend && yarn");
+  console.error("Fix (repo root): npm ci --prefix frontend");
   process.exit(1);
 }
 
