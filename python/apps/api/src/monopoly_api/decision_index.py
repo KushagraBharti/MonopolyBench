@@ -74,7 +74,12 @@ class DecisionIndex:
         if entry.get("phase") == "decision_resolved":
             summary.retry_used = entry.get("retry_used", summary.retry_used)
             summary.fallback_used = entry.get("fallback_used", summary.fallback_used)
-            self._resolved_entries[decision_id] = entry
+            # Attempts can contain large provider responses. Bundle requests load
+            # those artifacts on demand; retain only the resolved summary here.
+            self._resolved_entries[decision_id] = {key: entry.get(key) for key in (
+                "final_action", "retry_used", "fallback_used", "fallback_reason",
+                "request_start_ms", "response_end_ms", "latency_ms",
+            )}
 
     def recent(self, limit: int = 50) -> list[dict[str, Any]]:
         self._ensure_loaded()
