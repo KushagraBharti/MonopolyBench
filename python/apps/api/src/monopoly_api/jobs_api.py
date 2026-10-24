@@ -19,7 +19,7 @@ from monopoly_arena.job_store import JobStore
 from monopoly_telemetry.execution_cost import execution_cost
 from monopoly_telemetry.inventory import safe_path
 from .auth import Auth, COOKIE, SESSION_SECONDS
-from .live import live
+from .live import live, LiveHub
 from .paths import resolve_repo_root
 
 
@@ -52,6 +52,7 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
     app = FastAPI(title="MonopolyBench cloud", docs_url=None, redoc_url=None, openapi_url=None)
     app.middleware("http")(auth.middleware)
     app.state.store = store
+    hub = LiveHub(store)
 
     @app.exception_handler(KeyError)
     async def missing(_: Request, exc: KeyError):
@@ -296,7 +297,7 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
 
     @app.websocket("/api/jobs/{job_id}/ws")
     async def websocket(websocket: WebSocket, job_id: str):
-        await live(websocket, job_id, store, auth)
+        await live(websocket, job_id, store, auth, hub)
 
     dist = resolve_repo_root() / "frontend" / "dist"
     if (dist / "assets").exists():

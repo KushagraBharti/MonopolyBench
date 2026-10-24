@@ -36,7 +36,7 @@ class Auth:
         try:
             expires, signature = cookie.split(".")
             return int(expires) > time.time() and hmac.compare_digest(signature, self.sign(expires))
-        except ValueError:
+        except (ValueError, TypeError):
             return False
 
     def login(self, password: str) -> str:

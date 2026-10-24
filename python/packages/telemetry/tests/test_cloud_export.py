@@ -16,6 +16,12 @@ def test_byok_cost_keeps_missing_unknown_and_zero_distinct():
     assert call_cost({}, unknown=True)["cost_status"] == "unknown"
 
 
+@pytest.mark.parametrize("usage", [{"cost": "unavailable"}, {"cost": True}, {"cost": float("nan")}, {"cost": 0, "is_byok": True, "cost_details": []}])
+def test_malformed_cost_is_missing_without_breaking_the_decision(usage):
+    cost = call_cost(usage)
+    assert cost["cost_status"] == "missing" and cost["total_cost"] is None
+
+
 def test_package_round_trip_and_tamper_detection(tmp_path):
     source = tmp_path / "source"
     (source / "run").mkdir(parents=True)

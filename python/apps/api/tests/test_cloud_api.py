@@ -86,6 +86,17 @@ def test_live_committed_snapshot_batch_and_export_range(cloud, monkeypatch, tmp_
         assert message["snapshot"] == snapshot
         assert message["events"] == [{"seq": 1}, {"seq": 2}]
         assert message["commit_seq"] == 1 and message["reset"]
+    store.execute("UPDATE jobs SET status='recovering' WHERE job_id=?", (job_id,))
+    recovered = Journal(store, job_id, store.claim(job_id))
+    recovered.recover()
+    with recovered.transition("advance", snapshot={**snapshot, "turn_index": 3}):
+        recovered.write(store.root / "runs/live-test/events.jsonl", b'{"seq":3}\n', append=True)
+    with client.websocket_connect(f"wss://testserver/api/jobs/{job_id}/ws?after=1&generation=0") as socket:
+        assert socket.receive_json()["type"] == "HELLO"
+        message = socket.receive_json()
+        assert message["events"] == [{"seq": 3}]
+        assert message["commit_seq"] == 2 and message["reset"]
+        assert message["snapshot"]["turn_index"] == 3
     package = tmp_path / "package.zip"
     package.write_bytes(bytes(range(100)))
     store.execute("INSERT INTO exports VALUES(?,?,?,?,?,?,?,?,?)", ("export-test", "job", job_id, 1, "completed", str(package), 100, "hash", 0))
@@ -122,3 +133,25 @@ def test_decision_pages_and_artifacts_only_expose_committed_bytes(cloud, monkeyp
     assert bundle["attempts"][0]["system_prompt"] == "committed prompt"
     assert client.get(base + "/decisions/unpublished").status_code == 404
     assert client.get(base + "/artifacts?path=decisions.jsonl").content == committed
+
+
+def test_shared_tailer_disconnects_only_slow_viewer(cloud):
+    import asyncio
+    from monopoly_api.live import LiveHub
+    _, store = cloud
+    async def check():
+        hub = LiveHub(store)
+        job = {"job_id": "viewed", "run_id": "viewed"}
+        first, slow, _ = hub.subscribe(job)
+        second, fast, _ = hub.subscribe(job)
+        assert first is second
+        for i in range(40):
+            first.publish({"commit_seq": i})
+            assert fast.get_nowait() == {"commit_seq": i}
+        assert slow.qsize() == 1 and slow.get_nowait() is None
+        assert slow not in first.viewers and fast in first.viewers
+        await hub.unsubscribe(first, slow)
+        assert hub.tailers["viewed"] is first
+        await hub.unsubscribe(second, fast)
+        assert not hub.tailers and first.task.done()
+    asyncio.run(check())

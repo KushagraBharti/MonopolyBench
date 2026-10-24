@@ -170,7 +170,8 @@ def mock_transport():
     return httpx.MockTransport(response)
 
 
-def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch):
+@pytest.mark.parametrize("analysis_fails", [False, True])
+def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch, analysis_fails):
     store, job, execution = setup_job(tmp_path, monkeypatch)
     original = OpenRouterClient.__init__
     def init(self, **kwargs):
@@ -189,13 +190,31 @@ def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch):
     runner = make_runner(store, job, client, build_run_files(store.root / "runs", job["run_id"]), recover=True)
     assert runner._engine.is_game_over()
     asyncio.run(client.aclose())
+    if analysis_fails:
+        import importlib.util
+        original_spec = importlib.util.spec_from_file_location
+        def spec(name, location):
+            result = original_spec(name, location)
+            original_exec = result.loader.exec_module
+            def load(module):
+                original_exec(module)
+                def fail(_):
+                    raise RuntimeError("analysis unavailable")
+                module.generate_analysis = fail
+            result.loader.exec_module = load
+            return result
+        monkeypatch.setattr(importlib.util, "spec_from_file_location", spec)
     from monopoly_arena.finalizer import finalize
     asyncio.run(finalize(store, job["job_id"]))
-    assert store.job(job["job_id"])["status"] == "completed", store.job(job["job_id"])["pause_reason"]
+    final = store.job(job["job_id"])
+    assert final["status"] == ("failed" if analysis_fails else "completed"), final["pause_reason"]
+    assert final["replay_status"] == "passed"
+    assert final["analysis_status"] == ("failed" if analysis_fails else "completed")
     from monopoly_telemetry.export import unpack_verified
     package = store.rows("SELECT * FROM exports")[0]
     unpack_verified(Path(package["path"]), tmp_path / "exported")
-    assert (tmp_path / "exported" / "analysis" / "manifest.json").exists()
+    assert (tmp_path / "exported" / ("cloud/analysis_error.json" if analysis_fails else "analysis/manifest.json")).exists()
+    assert json.loads((tmp_path / "exported/cloud/ledger.json").read_text())["jobs"][0]["replay_status"] == "passed"
 
 
 def test_campaign_freeze_and_amend(tmp_path, monkeypatch):
@@ -449,6 +468,26 @@ def test_resume_waits_for_old_writer_and_preserves_cancel(tmp_path, monkeypatch)
     store.pause(job_id, "provider_unavailable")
     assert store.job(job_id)["status"] == "cancelled"
     assert not store.rows("SELECT * FROM pauses WHERE job_id=?", (job_id,))
+
+
+@pytest.mark.parametrize("cancelled", [False, True])
+def test_worker_disk_full_pauses_without_overwriting_cancellation(tmp_path, monkeypatch, cancelled):
+    import errno
+    from monopoly_arena.worker import main
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    monkeypatch.setenv("MB_DATA_DIR", str(store.root))
+    monkeypatch.setattr("sys.argv", ["worker", "--job", job["job_id"], "--execution", execution])
+    async def fail(*args):
+        if cancelled:
+            store.execute("UPDATE jobs SET status='cancelled' WHERE job_id=?", (job["job_id"],))
+        raise OSError(errno.ENOSPC, "disk full")
+    monkeypatch.setattr("monopoly_arena.worker.play", fail)
+    main()
+    current = store.job(job["job_id"])
+    assert current["status"] == ("cancelled" if cancelled else "paused")
+    if not cancelled:
+        assert current["pause_reason"] == "storage"
+    assert store.rows("SELECT ended_at FROM executions WHERE execution_id=?", (execution,))[0]["ended_at"]
 
 
 def test_finalizer_skips_locked_oldest_job(tmp_path, monkeypatch):

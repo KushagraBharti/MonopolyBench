@@ -222,8 +222,8 @@ class Journal:
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     if destination.exists():
                         destination = destination.with_name(destination.name + "-" + hashlib.sha256(path.read_bytes()).hexdigest())
-                    os.replace(path, destination)
-                    fsync_directory(destination.parent)
+                    atomic_write(destination, path.read_bytes())
+                    path.unlink()
                     fsync_directory(path.parent)
                     continue
                 if path.is_file() and path.name != ".writer.lock" and "interrupted" not in path.parts and path.relative_to(self.root).as_posix() not in tracked:

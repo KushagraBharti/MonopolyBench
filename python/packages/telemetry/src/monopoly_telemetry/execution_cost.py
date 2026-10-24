@@ -2,17 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 import json
+import math
 from pathlib import Path
 
 
 def call_cost(usage: dict[str, Any] | None, *, unknown: bool = False) -> dict[str, Any]:
-    usage = usage or {}
-    charge: Any = usage.get("cost")
-    upstream: Any = (usage.get("cost_details") or {}).get("upstream_inference_cost")
-    byok = usage.get("is_byok")
-    known = isinstance(charge, (int, float)) and (byok is not True or isinstance(upstream, (int, float)))
+    usage = usage if isinstance(usage, dict) else {}
+    def number(value: Any) -> int | float | None:
+        return value if type(value) in {int, float} and math.isfinite(value) else None
+    charge = number(usage.get("cost"))
+    details = usage.get("cost_details")
+    upstream = number(details.get("upstream_inference_cost")) if isinstance(details, dict) else None
+    byok = usage.get("is_byok") if type(usage.get("is_byok")) is bool else None
+    known = charge is not None and (byok is not True or upstream is not None)
     return {"is_byok": byok, "usage_cost": charge, "upstream_cost": upstream,
-            "total_cost": charge + upstream if known and byok else charge if known else None,
+            "total_cost": charge + upstream if charge is not None and upstream is not None and byok else charge if known else None,
             "cost_status": "unknown" if unknown else "known" if known else "missing"}
 
 

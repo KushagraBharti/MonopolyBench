@@ -26,6 +26,8 @@ async def finalize(store: JobStore, job_id: str) -> None:
         return
     files = build_run_files(store.root / "runs", job["run_id"])
     completed = job["status"] == "finalizing"
+    replay_status = job["replay_status"] or "unavailable"
+    analysis_status = job["analysis_status"] or "unavailable"
     if completed:
         client = CloudClient(store, job_id)
         client.observation_scope = "end"
@@ -41,12 +43,15 @@ async def finalize(store: JobStore, job_id: str) -> None:
             for path in (files.state_replay_report_path, files.artifact_replay_report_path):
                 report = json.loads(path.read_text())
                 if report.get("status") not in {"pass", "passed", "ok"}:
+                    replay_status = "failed"
                     raise ValueError(f"Replay verification failed: {path.name}")
+            replay_status = "passed"
         except Exception as exc:
             completed = False
             store.execute("UPDATE jobs SET status='failed',pause_reason=? WHERE job_id=?", (f"Finalization: {exc}", job_id))
         finally:
             await client.aclose()
+    store.execute("UPDATE jobs SET replay_status=? WHERE job_id=?", (replay_status, job_id))
     directory = store.root / "jobs" / job_id
     calls = store.rows("SELECT * FROM calls WHERE job_id=?", (job_id,))
     atomic_write(directory / "execution_cost.json", encode(execution_cost_report(directory, calls)).encode())
@@ -82,8 +87,10 @@ async def finalize(store: JobStore, job_id: str) -> None:
                 module.SAVED_ROOT = staging.parent
                 module.GLOBAL_ARCHIVE_ROOT = staging.parent / "archive"
                 module.generate_analysis(staging)
+                analysis_status = "completed"
             except Exception as exc:
                 completed = False
+                analysis_status = "failed"
                 store.execute("UPDATE jobs SET status='failed',analysis_status='failed',pause_reason=? WHERE job_id=?", (f"Analysis: {exc}", job_id))
                 atomic_write(staging / "cloud" / "analysis_error.json", encode({"error": str(exc)}).encode())
                 if (directory / "journal.jsonl").exists():
@@ -91,8 +98,9 @@ async def finalize(store: JobStore, job_id: str) -> None:
         if not (staging / "saved_game_manifest.json").exists():
             atomic_write(staging / "saved_game_manifest.json", encode({"run_id": job["run_id"], "kind": job["kind"], "status": "completed" if completed else store.job(job_id)["status"]}).encode())
         ended_at = time.time()
+        store.execute("UPDATE jobs SET analysis_status=? WHERE job_id=?", (analysis_status, job_id))
         final_status = "completed" if completed else store.job(job_id)["status"]
-        frozen["jobs"] = [{**store.job(job_id), "status": final_status, "ended_at": ended_at, "export_status": "ready", "replay_status": "passed" if completed else "failed", "analysis_status": "completed" if completed else "unavailable"}]
+        frozen["jobs"] = [{**store.job(job_id), "status": final_status, "ended_at": ended_at, "export_status": "ready", "replay_status": replay_status, "analysis_status": analysis_status}]
         atomic_write(staging / "cloud" / "ledger.json", encode(frozen).encode())
         manifest = write_inventory(staging)
         export_id = job_id + "-1"
@@ -100,7 +108,7 @@ async def finalize(store: JobStore, job_id: str) -> None:
         package_zip(staging, destination)
         with store.connect() as db:
             db.execute("INSERT INTO exports VALUES(?,?,?,?,?,?,?,?,?)", (export_id, "job", job_id, 1, "completed" if completed else "diagnostic", str(destination), destination.stat().st_size, manifest["tree_sha256"], time.time()))
-            db.execute("UPDATE jobs SET status=?,export_status='ready',replay_status=?,analysis_status=?,ended_at=? WHERE job_id=?", (final_status, "passed" if completed else "failed", "completed" if completed else "unavailable", ended_at, job_id))
+            db.execute("UPDATE jobs SET status=?,export_status='ready',replay_status=?,analysis_status=?,ended_at=? WHERE job_id=?", (final_status, replay_status, analysis_status, ended_at, job_id))
         if completed:
             atomic_write(directory / "journal_index.jsonl", (staging / "cloud" / "journal_index.jsonl").read_bytes())
             (directory / "journal.jsonl").unlink(missing_ok=True)

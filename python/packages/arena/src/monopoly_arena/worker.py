@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import errno
 from contextlib import contextmanager
 import json
 import os
@@ -153,7 +154,10 @@ def main() -> None:
             except OperationalPause as exc:
                 store.pause(args.job, exc.reason, str(exc))
             except Exception as exc:
-                store.execute("UPDATE jobs SET status='failed',pause_reason=?,ended_at=? WHERE job_id=? AND status NOT IN ('cancelled','completed')", (f"{type(exc).__name__}: {exc}", time.time(), args.job))
+                if isinstance(exc, OSError) and exc.errno in {errno.ENOSPC, errno.EDQUOT}:
+                    store.pause(args.job, "storage", str(exc))
+                else:
+                    store.execute("UPDATE jobs SET status='failed',pause_reason=?,ended_at=? WHERE job_id=? AND status NOT IN ('cancelled','completed')", (f"{type(exc).__name__}: {exc}", time.time(), args.job))
                 store.audit("worker_failed", {"job_id": args.job, "error": str(exc)})
             finally:
                 store.execute("UPDATE executions SET ended_at=?,exit_status=? WHERE execution_id=?", (time.time(), store.job(args.job)["status"], args.execution))
