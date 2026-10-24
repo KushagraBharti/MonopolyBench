@@ -101,6 +101,9 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         commits = store.rows("SELECT * FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
         job["snapshot"] = json.loads((store.root / commits[0]["snapshot_path"]).read_text()) if commits and commits[0]["snapshot_path"] else None
         job["commit_seq"] = commits[0]["commit_seq"] if commits else 0
+        now = time.time()
+        job["elapsed_seconds"] = max(0, (job["ended_at"] or now) - job["started_at"]) if job["started_at"] else None
+        job["progress_age_seconds"] = max(0, now - job["last_progress_at"]) if job["last_progress_at"] else None
         job["slow"] = job["status"] == "running" and time.time() - (job["last_progress_at"] or job["started_at"] or job["created_at"]) > 300
         return job
 
@@ -307,6 +310,11 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
     def frontend(path: str):
         if path.startswith("api/") or not (dist / "index.html").exists():
             raise HTTPException(404)
+        if Path(path).suffix in {".png", ".svg", ".ico", ".webmanifest"}:
+            asset = dist / path
+            if not asset.resolve().is_relative_to(dist.resolve()) or not asset.is_file():
+                raise HTTPException(404)
+            return FileResponse(asset)
         return FileResponse(dist / "index.html")
 
     return app

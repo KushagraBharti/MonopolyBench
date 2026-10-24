@@ -17,6 +17,9 @@ export interface CloudJob {
   job_id: string; run_id: string; kind: 'smoke' | 'campaign'; status: JobStatus
   campaign_id: string | null; config: CloudConfig; snapshot: StateSnapshot | null
   commit_seq: number; created_at: number; started_at: number | null; last_progress_at: number | null
+  ended_at: number | null; outcome: { winner_player_id?: string; reason?: string } | null
+  elapsed_seconds: number | null; progress_age_seconds: number | null
+  rerun_of_job_id: string | null
   pause_reason: string | null; replay_status: string | null; export_status: string | null
   recovered: boolean; repaired: boolean; allowed_actions: string[]; cost: ExecutionCost
   slow: boolean

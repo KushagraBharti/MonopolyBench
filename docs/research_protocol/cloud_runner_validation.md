@@ -9,16 +9,18 @@ finalizer scheduling, atomic campaign freeze, serialized export revisions, and
 decision pagination beyond 300 decisions. Readers expose committed JSONL bytes;
 pending response artifacts remain hidden from the decision inspector.
 
-- Full repository verification: contracts, Ruff, mypy, engine, API, arena,
-  telemetry, frontend lint and frontend build passed.
-- Microbench tests, which the repository verification script omits, passed.
+- Full repository verification: contracts, Ruff, mypy, 233 engine/API/arena/
+  telemetry tests, frontend lint and frontend build passed.
+- All 20 microbench tests, which the repository verification script omits,
+  passed (253 Python tests in total).
 - A five-process smoke batch passed, including one killed worker and verified
   package round trips.
 - A five-process uncapped mock batch ended by bankruptcy at turns 160, 143,
-  153, 94 and 138. One worker was killed, repaired and recovered. Both replay
+  153, 94 and 138. One worker was killed and recovered; this interruption did
+  not require canonical byte repair. Both replay
   verdicts passed for every game. All five exported packages verified.
 - The uncapped batch recorded 1,691 physical mock completion calls and
-  54,435,513 compressed package bytes. These are fixture measurements, not
+  54,883,635 compressed package bytes. These are fixture measurements, not
   real-model cost or performance predictions.
 - Unit/integration coverage includes journal prefixes and contradictions,
   all transition kinds, initial/corrective response reuse, interruption limits,
@@ -38,6 +40,12 @@ deployment check.
 Container runtime checks also passed: health 200, unauthenticated jobs 401,
 password login 200, authenticated status and export-token reads, and SIGTERM
 shutdown with exit code 0. No provider key was supplied to the container.
+
+The browser pass uses Chromium against the container with a copied mock data
+volume. It exercises password login, five completed cards, modal dismissal,
+job-scoped decision pagination, board geometry, static image responses, and a
+390-pixel mobile viewport. The decision inspector and live feeds have bounded
+heights; dashboard styles do not override the existing game panel controls.
 
 Not exercised here: Railway deploy/redeploy, backup restoration, real provider
 compatibility, BYOK billing, Windows/macOS export execution, and real-model soak
