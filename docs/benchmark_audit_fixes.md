@@ -35,13 +35,15 @@ standard rules. Changing them requires another treatment version.
   fails the run visibly instead of manufacturing a winner. Baselines are simple
   comparison policies, not economically optimal opponents.
 - Both micro runners validate economic actions through reconstructed public
-  engine state. This reconstruction supports legality, not unseen decks or
+  engine state and the action schema. This reconstruction supports legality, not unseen decks or
   counterfactual stochastic continuation. The scorer also rejects illegal actions.
 - Wording criteria are reported separately from action quality. Cash calculations
   include development, financing, and accepted trades; a proposed trade never
   counts as a realized monopoly. Bids report cash reserved, not a realized purchase.
 - Eleven legacy fixtures have illegal reference actions and are quarantined by
-  the microbench runner before any provider request. The originals are retained;
+  the microbench runner before any provider request. Suite and batch selections
+  are screened in full before constructing a client; invalid selections fail
+  upfront with their fixture IDs. The originals are retained;
   see `audit_quarantined_fixtures.json`. They require separately reviewed replacement
   scenarios, not retrospective changes designed to make their scores look good.
 - Related-fixture comparisons explicitly lack validated causal interpretation.
@@ -77,7 +79,10 @@ standard rules. Changing them requires another treatment version.
 - Each applied action has a durable commit containing the exact action, resolved
   decision and emitted events before those records are appended separately.
   Recovery restores missing committed tails idempotently and rejects contradictory
-  or malformed records. It does not guess damaged bytes or missing model decisions.
+  or malformed records. It validates all planned repairs before writing, rejects
+  interior gaps, and checks run identity/treatment before repair. Exact committed
+  turn boundaries resume without advancing ahead of saved events; pending starts
+  are not logged twice. It does not guess damaged bytes or missing model decisions.
 - Calls record intent, physical call ID and result before optional metadata lookup.
   The production client defaults to no hidden transport retries. Durable responses
   are reused for an identical request; an interrupted call with unknown outcome

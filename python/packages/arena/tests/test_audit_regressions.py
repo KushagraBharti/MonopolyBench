@@ -193,3 +193,55 @@ def test_terminal_run_can_repeat_finalization_without_provider_calls(completed_r
     assert _completed_run_exists(files.run_dir)
     assert files.actions_path.read_bytes() == original_actions
     assert files.events_path.read_bytes() == original_events
+
+
+@pytest.mark.parametrize("mode", ["deleted", "empty", "only_starts"])
+def test_replay_requires_resolved_decisions_even_when_file_is_empty(completed_run, mode):
+    files = completed_run
+    if mode == "deleted":
+        files.decisions_path.unlink()
+    elif mode == "empty":
+        files.decisions_path.write_text("")
+    else:
+        starts = [row for row in load_jsonl(files.decisions_path) if row["phase"] != "decision_resolved"]
+        files.decisions_path.write_text("".join(json.dumps(row) + "\n" for row in starts))
+    assert build_replay_verification_report(files)["status"] != "passed"
+
+
+@pytest.mark.parametrize("boundary", ["turn_end", "pending_decision"])
+def test_recovery_resumes_exact_committed_turn_boundary(completed_run, boundary):
+    import shutil
+    files = completed_run
+    original_events = load_jsonl(files.events_path)
+    cutoff = next(event["seq"] for event in original_events if event["type"] == "TURN_ENDED")
+    pending_id = None
+    if boundary == "pending_decision":
+        pending_event = next(event for event in original_events
+                             if event["seq"] > cutoff and event["type"] == "LLM_DECISION_REQUESTED")
+        cutoff = pending_event["seq"]
+        pending_id = pending_event["payload"]["decision_id"]
+    actions = load_jsonl(files.actions_path)
+    decisions = load_jsonl(files.decisions_path)
+    committed_ids = {row["decision_id"] for row in decisions if row.get("phase") == "decision_resolved"
+                     and row["emitted_event_seq_end"] <= cutoff}
+    files.actions_path.write_text("".join(json.dumps(row) + "\n" for row in actions if row["decision_id"] in committed_ids))
+    files.decisions_path.write_text("".join(json.dumps(row) + "\n" for row in decisions
+        if row["decision_id"] in committed_ids or (row["decision_id"] == pending_id and row["phase"] == "decision_started")))
+    files.events_path.write_text("".join(json.dumps(row) + "\n" for row in original_events if row["seq"] <= cutoff))
+    for path in (files.run_dir / "commits").glob("*.json"):
+        if json.loads(path.read_text())["action"]["decision_id"] not in committed_ids:
+            path.unlink()
+    shutil.rmtree(files.snapshots_dir)
+    files.snapshots_dir.mkdir()
+    config = json.loads(files.run_config_path.read_text())
+    players = [build_single_player_config(player_id=p["player_id"], name=p["name"],
+               openrouter_model_id=p["openrouter_model_id"]) for p in config["players"]]
+    runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=object(),
+                       run_files=files, max_turns=5, event_delay_s=0,
+                       baseline_strategies=config["baseline_strategies"],
+                       resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(runner.run())
+    assert load_jsonl(files.events_path) == original_events
+    starts = [row["decision_id"] for row in load_jsonl(files.decisions_path) if row["phase"] == "decision_started"]
+    assert len(starts) == len(set(starts))
+    assert _completed_run_exists(files.run_dir)

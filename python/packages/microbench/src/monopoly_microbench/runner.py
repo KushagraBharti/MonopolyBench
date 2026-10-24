@@ -23,7 +23,7 @@ from monopoly_telemetry import (
 from monopoly_telemetry.writer_jsonl import append_jsonl
 
 from .artifacts import batch_dir, compact_result_for_jsonl, micro_run_files
-from .catalog import get_suite, load_scenario
+from .catalog import get_suite, list_scenarios, load_scenario
 from .paths import default_runs_dir
 from .scorer import score_action
 
@@ -207,6 +207,22 @@ async def run_scenario(
     return result
 
 
+def _preflight_selection(scenario_ids: list[str]) -> None:
+    """Reject an invalid selection before any provider client is constructed."""
+    catalog = {scenario["scenario_id"]: scenario for scenario in list_scenarios()}
+    failures: dict[str, list[str]] = {}
+    for scenario_id in scenario_ids:
+        if scenario_id not in catalog:
+            failures[scenario_id] = ["Unknown fixture"]
+            continue
+        scenario = catalog[scenario_id]
+        errors = validate_fixture_action(scenario["decision_point"], scenario["reference_policy"]["action"])
+        if errors:
+            failures[scenario_id] = errors
+    if failures:
+        raise ValueError(f"Quarantined/invalid fixture selection; no model calls were made: {failures}")
+
+
 async def run_suite(
     suite_id: str,
     *,
@@ -217,6 +233,7 @@ async def run_suite(
     openrouter_factory: Callable[[], Any] = OpenRouterClient,
 ) -> list[dict[str, Any]]:
     suite = get_suite(suite_id)
+    _preflight_selection(suite["scenario_ids"])
     results: list[dict[str, Any]] = []
     for scenario_id in suite["scenario_ids"]:
         results.append(
@@ -246,9 +263,10 @@ async def run_batch(
 ) -> dict[str, Any]:
     root = runs_dir or default_runs_dir()
     batch_id = f"micro-batch-{suite_id}-{int(time.time() * 1000)}"
-    out_dir = batch_dir(root, batch_id)
     suite = get_suite(suite_id)
     selected = scenario_ids or suite["scenario_ids"]
+    _preflight_selection(selected)
+    out_dir = batch_dir(root, batch_id)
     config = {
         "batch_id": batch_id,
         "suite_id": suite_id,
@@ -319,9 +337,10 @@ async def run_batch_with_progress(
 ) -> dict[str, Any]:
     root = runs_dir or default_runs_dir()
     batch_id = f"micro-batch-{suite_id}-{int(time.time() * 1000)}"
-    out_dir = batch_dir(root, batch_id)
     suite = get_suite(suite_id)
     selected = scenario_ids or suite["scenario_ids"]
+    _preflight_selection(selected)
+    out_dir = batch_dir(root, batch_id)
     config = {
         "batch_id": batch_id,
         "suite_id": suite_id,

@@ -11,6 +11,8 @@ from monopoly_engine import Engine
 from monopoly_engine.board import SPACE_INDEX_BY_KEY, normalize_space_key
 from monopoly_engine.models import AuctionState, PlayerState, TradeBundle, TradeExchange, TradeThread
 
+from .action_validation import validate_action_payload
+
 
 def fixture_engine(decision: dict[str, Any]) -> Engine:
     state = decision["state"]
@@ -59,6 +61,9 @@ def fixture_engine(decision: dict[str, Any]) -> Engine:
 
 def validate_fixture_action(decision: dict[str, Any], action: dict[str, Any]) -> list[str]:
     try:
+        valid, errors = validate_action_payload(action)
+        if not valid:
+            return errors
         return fixture_engine(decision).validate_action_for_decision(action, decision)
     except (ValueError, KeyError, TypeError, StopIteration) as exc:
         return [f"Invalid fixture/action state: {exc}"]

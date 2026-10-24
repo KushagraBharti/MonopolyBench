@@ -91,7 +91,7 @@ def build_replay_verification_reports(run_files: RunFiles) -> dict[str, dict[str
     if context["missing_actions"] or context["extra_actions"]:
         return _failed_reports(context, "Decision/action identities do not reconcile")
     resolved = [d.get("decision_id") for d in decisions if d.get("phase") == "decision_resolved"]
-    if decisions and resolved != action_ids:
+    if resolved != action_ids:
         return _failed_reports(context, "Resolved decisions do not match actions in order")
     resolved_rows = [d for d in decisions if d.get("phase") == "decision_resolved"]
     for row, action in zip(resolved_rows, actions):

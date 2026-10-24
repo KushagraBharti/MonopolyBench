@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from monopoly_engine import create_initial_state
 from monopoly_telemetry import init_run_files
+from monopoly_telemetry.commit import write_commit
 
 from monopoly_api.player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name
 from monopoly_api.run_manager import RunManager
@@ -209,3 +212,18 @@ def test_recover_run_restores_logged_configuration(tmp_path) -> None:
         await manager.stop_run()
 
     asyncio.run(run_test())
+
+
+@pytest.mark.parametrize("mismatch", ["identity", "treatment"])
+def test_rejected_recovery_does_not_repair_journals(tmp_path, mismatch):
+    files = init_run_files(tmp_path, "rejected")
+    files.write_run_config({"run_id": "wrong" if mismatch == "identity" else "rejected",
+                            "treatment_fingerprint": "old-treatment" if mismatch == "treatment" else None})
+    write_commit(files, {"decision_id": "d1"}, {"decision_id": "d1", "phase": "decision_resolved"},
+                 [{"seq": 1, "type": "EXPECTED"}])
+    paths = [files.actions_path, files.decisions_path, files.events_path]
+    before = {path: path.read_bytes() if path.exists() else None for path in paths}
+    manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+    with pytest.raises(ValueError):
+        asyncio.run(manager.recover_run("rejected"))
+    assert {path: path.read_bytes() if path.exists() else None for path in paths} == before

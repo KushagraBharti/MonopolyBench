@@ -2253,6 +2253,10 @@ class Engine:
 
     def _continue_after_debt(self, payer: PlayerState, events: list[Event],
                              *, rolled_double: bool = False) -> DecisionPoint | None:
+        if self._should_end_game():
+            self._debt_continuation = None
+            self._finish_game(events)
+            return None
         context = self._debt_continuation
         if context and context["kind"] == "birthday":
             decision = self._collect_birthday(events)

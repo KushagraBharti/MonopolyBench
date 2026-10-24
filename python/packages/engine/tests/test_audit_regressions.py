@@ -92,3 +92,23 @@ def test_terminal_replay_rejects_extra_actions():
     with pytest.raises(ValueError, match="Extra action"):
         replay_actions(seed=1, players=[{"player_id": "p0", "name": "P0"}], run_id="audit",
                        max_turns=0, actions=[{"decision_id": "impossible"}])
+
+
+def test_last_birthday_debtor_bankruptcy_emits_no_unanswered_decision():
+    game = engine()
+    recipient, debtor = game.state.players[:2]
+    for player in game.state.players[2:]:
+        player.bankrupt = True
+    debtor.cash = 0
+    events = []
+    decision, _ = game._apply_card_effect(
+        "COMMUNITY_CHEST", "BIRTHDAY_COLLECT_10_FROM_EACH_PLAYER", recipient, events,
+        turn_index=0, rolled_double=False,
+    )
+    game._activate_debt_decision(decision, events)
+    _, terminal_events, next_decision, snapshot = game.apply_action(action(decision, "declare_bankruptcy"))
+    assert snapshot["phase"] == "GAME_OVER"
+    assert next_decision is None
+    assert game.advance_until_decision()[2] is None
+    assert not any(event["type"] == "LLM_DECISION_REQUESTED" for event in terminal_events)
+    assert terminal_events[-1]["type"] == "GAME_ENDED"

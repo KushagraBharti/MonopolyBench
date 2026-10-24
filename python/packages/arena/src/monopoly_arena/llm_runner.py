@@ -9,6 +9,7 @@ from typing import Any, AsyncIterable, Awaitable, Callable
 
 from monopoly_engine import Engine, canonical_event_lines
 from monopoly_engine.board import normalize_space_key
+from monopoly_engine.replay import load_jsonl
 from monopoly_telemetry import (
     RunFiles,
     build_summary,
@@ -168,8 +169,11 @@ class LlmRunner:
             replayed_events.extend(action_events)
             self._applied_decision_ids.add(str(decision["decision_id"]))
 
-        pending_decision: dict[str, Any] | None = None
-        if not self._engine.is_game_over():
+        # A durable commit may end exactly at TURN_ENDED. Do not generate the
+        # next turn until the normal event stream can persist its events.
+        at_committed_boundary = canonical_event_lines(replayed_events) == canonical_event_lines(expected_events)
+        _, _, pending_decision, _ = self._engine.advance_until_decision(max_steps=0)
+        if not self._engine.is_game_over() and not at_committed_boundary:
             _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
             replayed_events.extend(tail_events)
 
@@ -188,7 +192,7 @@ class LlmRunner:
                 "Interrupted-run event replay mismatch at index "
                 f"{mismatch_index} (replayed={len(replayed_lines)}, recorded={len(expected_lines)})."
             )
-        if pending_decision is None and not self._engine.is_game_over():
+        if pending_decision is None and not self._engine.is_game_over() and not at_committed_boundary:
             raise ValueError("Interrupted run has no recoverable pending decision.")
 
         for event in replayed_events:
@@ -329,7 +333,18 @@ class LlmRunner:
         self,
         on_decision: DecisionCallback | None = None,
     ) -> AsyncIterable[dict[str, Any]]:
+        recovered_start_exists = (
+            self._recovered_pending_decision_id is not None
+            and self._run_files is not None
+            and any(row.get("phase") == "decision_started"
+                    and row.get("decision_id") == self._recovered_pending_decision_id
+                    for row in load_jsonl(self._run_files.decisions_path))
+        )
+
         async def write_decision(entry: dict[str, Any]) -> None:
+            if (recovered_start_exists and entry.get("phase") == "decision_started"
+                    and entry.get("decision_id") == self._recovered_pending_decision_id):
+                return
             if on_decision is not None:
                 await on_decision(entry)
             elif self._run_files is not None:

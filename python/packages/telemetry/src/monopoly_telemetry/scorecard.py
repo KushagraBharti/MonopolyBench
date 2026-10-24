@@ -765,8 +765,7 @@ def _rank_players(by_player: dict[str, dict[str, Any]], run_metrics: dict[str, A
     )
     for index, player in enumerate(ranked, start=1):
         player["final_rank"] = (ranked[index - 2]["final_rank"] if index > 1
-                                and player["final_net_worth_estimate"] == ranked[index - 2]["final_net_worth_estimate"]
-                                and player["winner"] == ranked[index - 2]["winner"] else index)
+                                and player["final_net_worth_estimate"] == ranked[index - 2]["final_net_worth_estimate"] else index)
     run_metrics["rankings"] = [
         {
             "player_id": player["player_id"],
