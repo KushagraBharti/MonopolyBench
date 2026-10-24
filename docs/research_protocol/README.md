@@ -1,5 +1,13 @@
 # MonopolyBench Research Protocol
 
+> Status update (2026-09-13): this directory preserves the earlier E1/E2 program.
+> The active roadmap is now the [two-paper plan](../two_paper_plan.md), with one
+> controlled evaluation campaign after benchmark validation. The specifications
+> below describe the historical program, not mandatory stages of the new plan.
+> Existing code gates and generated readiness reports have not been changed or
+> satisfied by this planning update. Adapt and test a new campaign contract before
+> execution; preserve these artifacts as historical evidence.
+
 This directory defines the experimental program that follows the eight-game
 exploratory corpus. It is an experiment and analysis contract, not manuscript text.
 
