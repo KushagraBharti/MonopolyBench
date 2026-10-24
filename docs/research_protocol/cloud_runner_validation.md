@@ -43,6 +43,12 @@ Container runtime checks also passed: health 200, unauthenticated jobs 401,
 password login 200, authenticated status and export-token reads, and SIGTERM
 shutdown with exit code 0. No provider key was supplied to the container.
 
+A separate container with a loopback-only mock gateway passed the complete API
+flow: all four preflight routes, preparation, idempotent repeated launch, two
+concurrent smoke jobs through supervisor/worker/finalizer, passing replay and
+analysis, export-token downloads, and local inventory verification. It used a
+dummy mock key and made no paid requests.
+
 The browser pass uses Chromium against the container with a copied mock data
 volume. It exercises password login, five completed cards, modal dismissal,
 job-scoped decision pagination, board geometry, static image responses, and a
