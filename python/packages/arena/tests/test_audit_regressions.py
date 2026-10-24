@@ -130,6 +130,30 @@ def test_complete_record_reconciliation_rejects_corruption(completed_run, corrup
     assert not _completed_run_exists(files.run_dir)
 
 
+@pytest.mark.parametrize("corruption", ["missing_marker", "false_marker", "empty_manifest", "unhashed_manifest", "missing_entry"])
+def test_completion_requires_final_marker_and_complete_hashed_inventory(completed_run, corruption):
+    files = completed_run
+    marker = files.run_dir / "completion.json"
+    if corruption == "missing_marker":
+        marker.unlink()
+    elif corruption == "false_marker":
+        value = json.loads(marker.read_text())
+        value["complete"] = False
+        marker.write_text(json.dumps(value))
+    else:
+        manifest = json.loads(files.artifact_manifest_path.read_text())
+        if corruption == "empty_manifest":
+            manifest["artifacts"] = []
+        elif corruption == "unhashed_manifest":
+            for entry in manifest["artifacts"]:
+                entry.pop("sha256", None)
+        else:
+            manifest["artifacts"] = [entry for entry in manifest["artifacts"]
+                                     if not entry["relative_path"].startswith("state/")]
+        files.artifact_manifest_path.write_text(json.dumps(manifest))
+    assert not _completed_run_exists(files.run_dir)
+
+
 def test_saved_response_is_reused_without_second_call(tmp_path):
     class Client:
         calls = 0

@@ -1012,6 +1012,10 @@ def _completed_run_exists(run_dir: Path) -> bool:
         "trace_summary.json",
         "failure_summary.json",
         "artifact_manifest.json",
+        "completion.json",
+        "run_config.json",
+        "usage.json",
+        "cost_report.json",
     ]
     try:
         from monopoly_engine.replay import load_jsonl
@@ -1031,6 +1035,10 @@ def _completed_run_exists(run_dir: Path) -> bool:
                     return False
                 if isinstance(value, dict) and value.get("run_id", run_dir.name) != run_dir.name:
                     return False
+        completion = json.loads((run_dir / "completion.json").read_text(encoding="utf-8"))
+        if (completion.get("run_id") != run_dir.name or completion.get("complete") is not True
+                or completion.get("finalized") is not True or completion.get("replay_status") != "passed"):
+            return False
         report = build_replay_verification_report(build_run_files(run_dir.parent, run_dir.name))
         if report.get("status") != "passed":
             return False
@@ -1042,15 +1050,29 @@ def _completed_run_exists(run_dir: Path) -> bool:
                 or summary.get("turn_count") != terminal.get("turn_index")):
             return False
         manifest = json.loads((run_dir / "artifact_manifest.json").read_text(encoding="utf-8"))
+        inventoried: set[str] = set()
+        excluded = {"artifact_manifest.json", "completion.json"}
         for artifact in manifest["artifacts"]:
-            if artifact.get("sha256"):
-                path = (run_dir / artifact["relative_path"]).resolve()
-                if not path.is_relative_to(run_dir.resolve()):
+            relative_path = artifact["relative_path"]
+            path = (run_dir / relative_path).resolve()
+            if not path.is_relative_to(run_dir.resolve()):
+                return False
+            if artifact.get("exists") is True:
+                if relative_path in inventoried or relative_path in excluded:
                     return False
-                if hashlib.sha256(path.read_bytes()).hexdigest() != artifact["sha256"]:
+                data = path.read_bytes()
+                if (hashlib.sha256(data).hexdigest() != artifact.get("sha256")
+                        or len(data) != artifact.get("bytes")):
                     return False
+                inventoried.add(relative_path)
+            elif artifact.get("exists") is not False or path.exists():
+                return False
+        actual_files = {str(path.relative_to(run_dir)) for path in run_dir.rglob("*")
+                        if path.is_file() and str(path.relative_to(run_dir)) not in excluded}
+        if inventoried != actual_files:
+            return False
         return True
-    except (ValueError, OSError, TypeError, KeyError):
+    except (ValueError, OSError, TypeError, KeyError, AttributeError):
         return False
 
 

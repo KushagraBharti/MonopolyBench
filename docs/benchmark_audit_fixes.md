@@ -72,7 +72,8 @@ standard rules. Changing them requires another treatment version.
   identities, order and payloads reconcile independently; extra actions after game
   end fail. State-event and full-event provenance checks remain distinct scopes.
 - Completion parses required artifacts, reruns replay, checks summary versus the
-  terminal event, and verifies inventoried file hashes. An empty filename is not
+  terminal event, requires the final completion marker, and verifies a complete
+  inventory with file hashes and sizes. Missing inventory entries or hashes fail
   completion. Inventory includes prompts, calls, commit journals and snapshots.
 - Canonical appends flush/fsync. Snapshot and JSON replacement uses a temporary
   file, fsync and atomic replacement. Quality write errors propagate.
