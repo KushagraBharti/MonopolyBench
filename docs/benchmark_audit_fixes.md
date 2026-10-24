@@ -8,7 +8,8 @@ Do not pool v2 and historical results as a homogeneous experimental cohort.
 ## Findings 1–8: engine and observations
 
 - Current trade offers carry their author's player ID. Legacy snapshots use the
-  most recent exchange author before falling back to the thread initiator.
+  party opposite the most recent historical offer author, because history holds
+  previous offers. Empty history falls back to the thread initiator.
 - Build plans are ordered purchases. Every entry must preserve even development
   and bank inventory; interleave houses across a color group. Future hotel
   conversions cannot finance an earlier shortage of physical houses.
@@ -58,8 +59,9 @@ standard rules. Changing them requires another treatment version.
 - Invalid-output fallback tries mortgage/building sale before bankruptcy.
 - Usage v2 preserves unknown cost as null, distinguishes upstream inference cost
   from gateway charges, and adds upstream cost only for explicit BYOK or a zero
-  gateway charge. Known subtotals require coverage interpretation; they are not
-  estimates for missing calls. Durable calls without resolved decisions remain
+  gateway charge. Decision, player, model and run costs remain null when any
+  contributing call cost is missing. Campaign statistics exclude unknown costs
+  from numeric averages and report unknown counts. Durable calls without resolved decisions remain
   accounted for, including interrupted/unknown calls.
 - Campaign leaderboard inference resamples seed means, labels small block counts,
   and provides no singleton interval. Ordinary ungrouped summaries are descriptive.
@@ -102,6 +104,9 @@ standard rules. Changing them requires another treatment version.
 - Changing a model clears an inherited provider pin unless explicitly overridden.
   Preflight uses automatic tool choice as production does. Returned model/provider
   metadata remains evidence to inspect; this does not certify every external route.
+- API run IDs include provider, reasoning and executable treatment. Starting an
+  already recorded run is rejected before stopping another active run or appending
+  any evidence; interrupted runs use recovery.
 
 Recovery is conservative, not a general cloud supervisor. Uncommitted or malformed
 tails, unknown in-flight calls, concurrent writers and treatment changes require

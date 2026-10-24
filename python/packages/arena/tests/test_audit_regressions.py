@@ -175,18 +175,19 @@ def test_saved_response_is_reused_without_second_call(tmp_path):
         asyncio.run(resolver._call_completion(decision, 0, {"model": "changed"}))
 
 
-@pytest.mark.parametrize("exchange_index", [1, 2, 3, 4])
+@pytest.mark.parametrize("exchange_index", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("legacy", [False, True])
 def test_offer_description_matches_executed_cash_properties_and_cards(exchange_index, legacy):
     game = Engine(seed=1, run_id="orientation", players=[{"player_id": f"p{i}", "name": f"P{i}"} for i in range(4)])
-    author, recipient = (game.state.players[0], game.state.players[1]) if exchange_index % 2 else (game.state.players[1], game.state.players[0])
+    author, recipient = (game.state.players[0], game.state.players[1]) if exchange_index % 2 == 0 else (game.state.players[1], game.state.players[0])
     game.state.board[1].owner_id = author.player_id
     game.state.board[3].owner_id = recipient.player_id
     author.get_out_of_jail_cards = 1
     game._jail_card_sources[author.player_id] = ["CHANCE"]
     offer = TradeExchange(author.player_id, TradeBundle(30, [SPACE_KEY_BY_INDEX[1]], 1),
                           TradeBundle(40, [SPACE_KEY_BY_INDEX[3]], 0))
-    thread = TradeThread("p0", "p1", 20, exchange_index, [offer], offer, "p0", False)
+    history = [TradeExchange(f"p{i % 2}", TradeBundle(0, [], 0), TradeBundle(0, [], 0)) for i in range(exchange_index)]
+    thread = TradeThread("p0", "p1", 20, exchange_index, history, offer, "p0", False)
     snapshot = thread.to_snapshot()
     if legacy:
         del snapshot["current_offer"]["from_player_id"]
@@ -200,6 +201,46 @@ def test_offer_description_matches_executed_cash_properties_and_cards(exchange_i
     assert game.state.board[1].owner_id == recipient.player_id
     assert game.state.board[3].owner_id == author.player_id
     assert recipient.get_out_of_jail_cards == 1 and author.get_out_of_jail_cards == 0
+
+
+def test_legacy_counter_history_keeps_prompt_normalized_and_fixture_author_consistent():
+    from monopoly_arena.fixture_validation import fixture_engine
+    game = Engine(seed=1, run_id="counter", players=[{"player_id": f"p{i}", "name": f"P{i}"} for i in range(4)])
+    bundle = {"cash": 20, "properties": [], "get_out_of_jail_cards": 0}
+    request = {**bundle, "cash": 10}
+    game._start_trade(game.state.players[0], {"args": {"to_player_id": "p1", "offer": bundle, "request": request}}, [], rolled_double=False)
+    for counter_index in range(1, 5):
+        author = game.state.players[counter_index % 2]
+        decision = game._apply_trade_counter(author, game.state.trade, {"args": {"offer": bundle, "request": request}}, [])
+        trade = decision["state"]["trade"]
+        del trade["current_offer"]["from_player_id"]
+        trade["history"] = trade.pop("history_last_2", trade.get("history", []))
+        trade["history"][-1]["unrelated_metadata"] = "must not enter prompt"
+        trade["history"].append("invalid history entry")
+        focus = build_trade_response_decision_focus(decision)["scenario"]
+        assert focus["current_offer"]["from_player_id"] == author.player_id
+        assert focus["current_offer"]["if_you_accept"]["you_give"] == request
+        assert all(set(row) == {"from_player_id", "offer", "request"} for row in focus["history"])
+        assert fixture_engine(decision).state.trade.current_offer.from_player_id == author.player_id
+
+
+def test_campaign_cost_statistics_exclude_unknown_and_count_it():
+    from monopoly_arena.long_campaign import _leaderboard_payload, _statistics_payload, _baseline_comparison_payload
+    entries = [{"status": "completed", "seed": i, "summary": {"turn_count": 5},
+                "players": [{"actor_id": "a", "total_cost": cost}],
+                "run_metrics": {"usage_metrics": {"total_cost": cost}}}
+               for i, cost in enumerate([None, 0.0, 2.0])]
+    config = {"campaign_id": "cost-test"}
+    row = _leaderboard_payload(config, entries)["rows"][0]
+    assert row["total_cost"]["count"] == 2
+    assert row["average_cost_per_game"] == 1.0
+    assert row["unknown_cost_count"] == 1
+    stats = _statistics_payload(config, {"run_matrix": entries}, entries)["run_level"]
+    assert stats["total_cost"]["count"] == 2 and stats["total_cost"]["mean"] == 1.0
+    assert stats["unknown_cost_count"] == 1
+    comparison = _baseline_comparison_payload(config, entries, {"rows": [row]})["rows"][0]
+    assert comparison["net_worth_per_dollar"] is None
+    assert comparison["unknown_cost_count"] == 1
 
 
 def test_terminal_run_can_repeat_finalization_without_provider_calls(completed_run):

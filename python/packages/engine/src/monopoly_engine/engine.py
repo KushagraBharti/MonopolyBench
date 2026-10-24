@@ -781,7 +781,7 @@ class Engine:
                 "space_index": (
                     decision_space_index if decision_space_index is not None else player.position
                 ),
-                "player_id": player.player_id,
+                "player_id": decision["player_id"],
             }
             events.append(
                 self._build_event(
@@ -789,7 +789,7 @@ class Engine:
                     self._actor_engine(),
                     {
                         "decision_id": decision["decision_id"],
-                        "player_id": player.player_id,
+                        "player_id": decision["player_id"],
                         "decision_type": decision["decision_type"],
                     },
                     turn_index=turn_index,

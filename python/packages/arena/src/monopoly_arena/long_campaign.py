@@ -1395,7 +1395,7 @@ def _leaderboard_payload(
     for actor_id, actor_rows in sorted(by_actor.items()):
         net_worth = [_number(row.get("final_net_worth_estimate")) for row in actor_rows]
         ranks = [_number(row.get("final_rank")) for row in actor_rows]
-        costs = [_number(row.get("total_cost")) for row in actor_rows]
+        costs = [float(row["total_cost"]) for row in actor_rows if isinstance(row.get("total_cost"), (int, float))]
         tokens = [_number(row.get("total_tokens")) for row in actor_rows]
         fallbacks = [_number(row.get("fallback_rate")) for row in actor_rows]
         retries = [_number(row.get("retry_rate")) for row in actor_rows]
@@ -1424,6 +1424,7 @@ def _leaderboard_payload(
             "final_rank": _numeric_stats(ranks),
             "turns_survived": _numeric_stats(turns),
             "total_cost": _numeric_stats(costs),
+            "unknown_cost_count": len(actor_rows) - len(costs),
             "total_tokens": _numeric_stats(tokens),
             "fallback_rate": _numeric_stats(fallbacks),
             "retry_rate": _numeric_stats(retries),
@@ -1472,8 +1473,9 @@ def _statistics_payload(
     ]
     run_turns = [_number(entry["summary"].get("turn_count")) for entry in completed]
     run_costs = [
-        _number(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")))
+        float(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")))
         for entry in completed
+        if isinstance(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")), (int, float))
     ]
     run_decisions = [
         _number(_nested(entry, ("run_metrics", "decision_stats", "total_resolved")))
@@ -1497,6 +1499,7 @@ def _statistics_payload(
             "resolved_decision_count": _numeric_stats(run_decisions),
             "fallback_rate": _numeric_stats(run_fallbacks),
             "total_cost": _numeric_stats(run_costs),
+            "unknown_cost_count": len(completed) - len(run_costs),
         },
         "by_seed": _by_seed_stats(run_entries),
         "seat_effects": _seat_effect_stats(run_entries),
@@ -1529,7 +1532,7 @@ def _baseline_comparison_payload(
     rows: list[dict[str, Any]] = []
     for row in leaderboard.get("rows", []):
         avg_net_worth = _number(row.get("average_final_net_worth"))
-        total_cost = _nested(row, ("total_cost", "mean"))
+        total_cost = _nested(row, ("total_cost", "mean")) if not row.get("unknown_cost_count") else None
         baseline_normalized = (
             round(avg_net_worth / baseline_mean, 6)
             if isinstance(baseline_mean, (int, float)) and baseline_mean != 0
@@ -1546,6 +1549,7 @@ def _baseline_comparison_payload(
                 "average_final_rank": row.get("average_final_rank"),
                 "baseline_normalized_net_worth": baseline_normalized,
                 "average_total_cost": total_cost,
+                "unknown_cost_count": row.get("unknown_cost_count", 0),
                 "net_worth_per_dollar": (
                     round(avg_net_worth / float(total_cost), 6)
                     if isinstance(total_cost, (int, float))
@@ -1945,6 +1949,7 @@ def _leaderboard_csv_rows(leaderboard: dict[str, Any]) -> list[dict[str, Any]]:
                 "average_final_net_worth": row.get("average_final_net_worth"),
                 "average_final_rank": row.get("average_final_rank"),
                 "average_cost_per_game": row.get("average_cost_per_game"),
+                "unknown_cost_count": row.get("unknown_cost_count", 0),
                 "average_tokens_per_game": row.get("average_tokens_per_game"),
             }
         )
@@ -2092,6 +2097,7 @@ def _leaderboard_markdown_table(leaderboard: dict[str, Any]) -> str:
                 row.get("average_final_net_worth"),
                 row.get("average_final_rank"),
                 row.get("average_cost_per_game"),
+                row.get("unknown_cost_count", 0),
             )
         )
     return _markdown_table(
@@ -2104,7 +2110,8 @@ def _leaderboard_markdown_table(leaderboard: dict[str, Any]) -> str:
             "Win Rate",
             "Avg Net Worth",
             "Avg Rank",
-            "Avg Cost",
+            "Avg Known Cost",
+            "Games with Unknown Cost",
         ),
     )
 

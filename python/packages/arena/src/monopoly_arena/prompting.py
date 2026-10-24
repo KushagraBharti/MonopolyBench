@@ -18,6 +18,7 @@ from monopoly_engine.board import (
 )
 
 from .player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig
+from .trade_offer import current_offer_author
 
 
 PROMPT_SCHEMA_VERSION = "v2"
@@ -1058,9 +1059,9 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
         counterparty if actor_id == initiator else initiator if initiator else counterparty
     )
     history: list[dict[str, Any]] = []
-    trade_history = trade.get("history")
+    trade_history = trade.get("history") or trade.get("history_last_2")
     if not isinstance(trade_history, list):
-        trade_history = trade.get("history_last_2", [])
+        trade_history = []
     for entry in trade_history:
         if not isinstance(entry, dict):
             continue
@@ -1072,12 +1073,7 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
             }
         )
     current_offer_payload = trade.get("current_offer", {})
-    current_offer_from = current_offer_payload.get("from_player_id")
-    if not isinstance(current_offer_from, str):
-        current_offer_from = initiator
-        history = trade.get("history") or trade.get("history_last_2") or []
-        if history and isinstance(history[-1].get("from_player_id"), str):
-            current_offer_from = history[-1]["from_player_id"]
+    current_offer_from = current_offer_author(trade)
     raw_offer = current_offer_payload.get("offer")
     raw_request = current_offer_payload.get("request")
     if actor_id == current_offer_from:

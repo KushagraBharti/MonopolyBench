@@ -49,6 +49,20 @@ def test_birthday_finances_other_player_and_resumes_turn_owner():
     assert game.state.turn_index == 0
 
 
+def test_jail_exit_birthday_request_names_the_debtor():
+    game = engine()
+    drawer, debtor = game.state.players[:2]
+    drawer.position, drawer.in_jail = 10, True
+    debtor.cash = 5
+    game._community_chest_deck = ["BIRTHDAY_COLLECT_10_FROM_EACH_PLAYER"]
+    game._rng.roll_dice = lambda: (3, 4)
+    _, _, jail_decision, _ = game.advance_until_decision()
+    _, events, debt, _ = game.apply_action(action(jail_decision, "pay_jail_fine"))
+    assert debt["player_id"] == debtor.player_id
+    requested = [event for event in events if event["type"] == "LLM_DECISION_REQUESTED"]
+    assert requested[-1]["payload"]["player_id"] == debt["player_id"]
+
+
 def test_mixed_house_hotel_plan_cannot_borrow_future_bank_inventory():
     game = engine()
     player = game.state.players[0]

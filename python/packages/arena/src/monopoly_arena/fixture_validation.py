@@ -12,6 +12,7 @@ from monopoly_engine.board import SPACE_INDEX_BY_KEY, normalize_space_key
 from monopoly_engine.models import AuctionState, PlayerState, TradeBundle, TradeExchange, TradeThread
 
 from .action_validation import validate_action_payload
+from .trade_offer import current_offer_author
 
 
 def fixture_engine(decision: dict[str, Any]) -> Engine:
@@ -49,8 +50,9 @@ def fixture_engine(decision: dict[str, Any]) -> Engine:
     trade = state.get("trade")
     if trade:
         offer = trade["current_offer"]
-        history = trade.get("history") or trade.get("history_last_2") or []
-        author = offer.get("from_player_id") or (history[-1]["from_player_id"] if history else trade["initiator_player_id"])
+        author = current_offer_author(trade)
+        if author is None:
+            raise ValueError("Trade has no identifiable offer author")
         exchange = TradeExchange(author, TradeBundle(**offer["offer"]), TradeBundle(**offer["request"]))
         engine.state.trade = TradeThread(
             trade["initiator_player_id"], trade["counterparty_player_id"], trade["max_exchanges"],

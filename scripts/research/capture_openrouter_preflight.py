@@ -221,7 +221,7 @@ def main() -> int:
         "prompt_pipeline": {
             "status": "unchanged",
             "note": (
-                "This script sends a separate preflight-only forced tool call to each route. "
+                "This script sends a separate preflight-only request with automatic tool selection to each route. "
                 "It never constructs or changes a MonopolyBench game prompt."
             ),
         },

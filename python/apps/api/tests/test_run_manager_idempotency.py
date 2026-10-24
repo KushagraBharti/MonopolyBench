@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 
 import pytest
 
@@ -227,3 +228,31 @@ def test_rejected_recovery_does_not_repair_journals(tmp_path, mismatch):
     with pytest.raises(ValueError):
         asyncio.run(manager.recover_run("rejected"))
     assert {path: path.read_bytes() if path.exists() else None for path in paths} == before
+
+
+def test_repeated_start_after_stop_preserves_saved_run(tmp_path):
+    async def run_test():
+        manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+        players = _make_players()
+        run_id = await manager.start_run(seed=5, players=players)
+        files = init_run_files(tmp_path, run_id)
+        files.write_event({"seq": 1, "type": "ORIGINAL"})
+        before = files.events_path.read_bytes()
+        await manager.stop_run()
+        with pytest.raises(ValueError, match="already exists"):
+            await manager.start_run(seed=5, players=players)
+        assert files.events_path.read_bytes() == before
+        assert not manager.get_status()["running"]
+    asyncio.run(run_test())
+
+
+@pytest.mark.parametrize("changed", ["provider", "reasoning", "treatment"])
+def test_api_run_identity_includes_full_treatment(monkeypatch, changed):
+    players = _make_players()
+    kwargs = {"seed": 5, "players": players, "max_turns": 5, "max_trade_exchanges": 20, "max_auction_actions": 200}
+    original = RunManager._generate_run_id(**kwargs)
+    if changed == "treatment":
+        monkeypatch.setattr("monopoly_api.run_manager.treatment_fingerprint", lambda: "different-source")
+    else:
+        players[0] = replace(players[0], **{changed: {"only": ["openai"]} if changed == "provider" else {"effort": "high"}})
+    assert RunManager._generate_run_id(**kwargs) != original

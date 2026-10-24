@@ -5,6 +5,7 @@ import pytest
 from monopoly_telemetry import init_run_files
 from monopoly_telemetry.commit import repair_committed_tails, write_commit
 from monopoly_telemetry.scorecard import _rank_players
+from monopoly_telemetry.usage import _decision_usage_rows, _aggregate_usage
 
 
 def test_net_worth_ranks_tie_independently_of_winner_and_cash():
@@ -50,3 +51,18 @@ def test_missing_interior_commit_record_is_not_appended_out_of_order(tmp_path, j
     with pytest.raises(ValueError, match="append tail"):
         repair_committed_tails(files)
     assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("costs", [[2.0, None], [None, 2.0], [0.0, 2.0]])
+@pytest.mark.parametrize("same_decision", [False, True])
+def test_unknown_cost_propagates_through_decision_player_model_and_run(costs, same_decision):
+    attempts = [{"decision_id": "d" if same_decision else f"d{i}", "player_id": "p", "openrouter_model_id": "m",
+                 "cost": cost, "accounting_status": "actual_openrouter_usage"} for i, cost in enumerate(costs)]
+    decisions = _decision_usage_rows(attempts)
+    report = _aggregate_usage("cost", attempts, decisions)
+    expected = None if None in costs else sum(costs)
+    assert report["totals"]["cost"] == expected
+    assert report["by_player"]["p"]["cost"] == expected
+    assert report["by_model"]["m"]["cost"] == expected
+    if same_decision:
+        assert decisions[0]["cost"] == expected

@@ -304,6 +304,12 @@ def _accumulate_group(target: dict[str, dict[str, Any]], key: str, row: dict[str
     current["decision_count"] += 1
     for field in _numeric_fields():
         value = row.get(field)
+        if field == "cost":
+            if not isinstance(value, (int, float)) or (current["decision_count"] > 1 and current[field] is None):
+                current[field] = None
+            else:
+                current[field] = (current[field] or 0) + value
+            continue
         if isinstance(value, (int, float)):
             current[field] = (current[field] or 0) + value
 
@@ -315,6 +321,7 @@ def _totals(rows: list[dict[str, Any]]) -> dict[str, Any]:
             value = row.get(field)
             if isinstance(value, (int, float)):
                 totals[field] = (totals[field] or 0) + value
+    totals["cost"] = _sum_optional_float(rows, "cost")
     return totals
 
 
@@ -365,6 +372,8 @@ def _sum_optional_float(rows: list[dict[str, Any]], field: str) -> float | None:
         value = row.get(field)
         if isinstance(value, (int, float)):
             values.append(float(value))
+        else:
+            return None
     return round(sum(values), 10) if values else None
 
 
