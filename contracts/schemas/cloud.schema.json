@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cloud.schema.json",
+  "title": "Cloud runner v1 contracts",
+  "$defs": {
+    "job": {
+      "type": "object",
+      "required": [
+        "job_id",
+        "run_id",
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "smoke",
+            "campaign"
+          ]
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "paused",
+            "recovering",
+            "finalizing",
+            "completed",
+            "failed",
+            "cancelled"
+          ]
+        }
+      }
+    },
+    "live": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "type",
+        "job_id",
+        "run_id"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "v2"
+        },
+        "type": {
+          "enum": [
+            "HELLO",
+            "SNAPSHOT",
+            "EVENT"
+          ]
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "commit_seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recovery_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "snapshot": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "call": {
+      "type": "object",
+      "required": [
+        "call_id",
+        "decision_id",
+        "resolver_stage",
+        "payload",
+        "payload_raw",
+        "payload_sha256"
+      ],
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "decision_id": {
+          "type": "string"
+        },
+        "resolver_stage": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "payload": {
+          "type": "object"
+        },
+        "payload_raw": {
+          "type": "string"
+        },
+        "payload_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "commit": {
+      "type": "object",
+      "required": [
+        "job_id",
+        "commit_seq",
+        "journal_seq",
+        "offsets_json",
+        "recovery_generation"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "commit_seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "journal_seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "offsets_json": {
+          "type": "string"
+        },
+        "recovery_generation": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "journal": {
+      "type": "object",
+      "required": [
+        "journal_seq",
+        "kind",
+        "targets",
+        "recovery_generation"
+      ],
+      "properties": {
+        "journal_seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "type": "string"
+        },
+        "recovery_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "offset",
+              "length",
+              "sha256",
+              "data",
+              "append"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "data": {
+                "type": "string"
+              },
+              "append": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "repair": {
+      "type": "object",
+      "required": [
+        "commit_seq",
+        "files"
+      ],
+      "properties": {
+        "commit_seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "start",
+              "end",
+              "sha256"
+            ]
+          }
+        }
+      }
+    },
+    "executionManifest": {
+      "type": "object",
+      "required": [
+        "git_sha",
+        "image_digest",
+        "execution_policy_version",
+        "python",
+        "endpoints",
+        "prompt_sha256",
+        "kind"
+      ],
+      "properties": {
+        "git_sha": {
+          "type": "string"
+        },
+        "image_digest": {
+          "type": "string"
+        },
+        "execution_policy_version": {
+          "const": "execution_policy_v1"
+        },
+        "python": {
+          "type": "string"
+        },
+        "endpoints": {
+          "type": "object"
+        },
+        "prompt_sha256": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "smoke",
+            "campaign"
+          ]
+        }
+      }
+    },
+    "storageManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "manifest_version",
+        "files",
+        "tree_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "v1"
+        },
+        "manifest_version": {
+          "const": "storage_manifest_v1"
+        },
+        "tree_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "bytes",
+              "sha256",
+              "role"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "role": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

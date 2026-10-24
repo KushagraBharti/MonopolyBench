@@ -35,6 +35,7 @@ export const getApiBaseUrl = (): string => {
   if (envBase) {
     return envBase.replace(/\/$/, '')
   }
+  if (import.meta.env.VITE_MB_MODE === 'cloud') return `${window.location.origin}/api`
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
   const hostname = window.location.hostname || '127.0.0.1'
   const isViteDevPort = /^51\d{2}$/.test(window.location.port)

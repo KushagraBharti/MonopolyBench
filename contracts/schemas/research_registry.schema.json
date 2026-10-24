@@ -175,6 +175,136 @@
         "prompt_pipeline": { "$ref": "#/$defs/promptPipelineMarker" }
       }
     },
+    "campaignConfigV2": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "campaign_config_version",
+        "campaign_id",
+        "benchmark_id",
+        "seed_cohort",
+        "model_roster",
+        "repetitions_per_seed",
+        "seat_permutation",
+        "max_turns",
+        "prompt_pipeline",
+        "execution_policy_version",
+        "execution_order_seed",
+        "rerun_policy",
+        "billing",
+        "seeds"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "v2"
+        },
+        "campaign_config_version": {
+          "type": "string",
+          "const": "long_horizon_campaign_config_v2"
+        },
+        "campaign_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "benchmark_id": {
+          "type": "string",
+          "const": "monopoly-long-v1"
+        },
+        "seed_cohort": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model_roster": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repetitions_per_seed": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seat_permutation": {
+          "const": "cyclic_4"
+        },
+        "max_turns": {
+          "type": "null"
+        },
+        "max_trade_exchanges": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_auction_actions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cost_budget": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minimum_available_credits": {
+          "type": "number",
+          "minimum": 0
+        },
+        "execution_preflight_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maximum_preflight_age_hours": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "require_preflight_authorization": {
+          "type": "boolean"
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "execution_order_seed": {
+          "type": "integer"
+        },
+        "budget_policy": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "resume": {
+          "type": "boolean"
+        },
+        "continue_on_failure": {
+          "type": "boolean"
+        },
+        "replay_after_run": {
+          "type": "boolean"
+        },
+        "build_scorecard_after_run": {
+          "type": "boolean"
+        },
+        "build_trace_after_run": {
+          "type": "boolean"
+        },
+        "build_failure_taxonomy_after_run": {
+          "type": "boolean"
+        },
+        "prompt_pipeline": {
+          "$ref": "#/$defs/promptPipelineMarker"
+        },
+        "execution_policy_version": {
+          "const": "execution_policy_v1"
+        },
+        "seeds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "uniqueItems": true
+        }
+      }
+    },
     "campaignConfig": {
       "type": "object",
       "additionalProperties": true,

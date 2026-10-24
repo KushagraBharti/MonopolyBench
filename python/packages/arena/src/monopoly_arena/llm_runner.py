@@ -54,7 +54,7 @@ class LlmRunner:
         run_id: str,
         openrouter: OpenRouterClient,
         run_files: RunFiles | None = None,
-        max_turns: int = 200,
+        max_turns: int | None = 200,
         event_delay_s: float = 0.25,
         start_ts_ms: int = 0,
         ts_step_ms: int = 250,
@@ -64,8 +64,10 @@ class LlmRunner:
         baseline_strategies: dict[str, str] | None = None,
         resume_actions: list[dict[str, Any]] | None = None,
         resume_events: list[dict[str, Any]] | None = None,
+        resume_at_boundary: bool = False,
     ) -> None:
         self.run_id = run_id
+        self._resume_at_boundary = resume_at_boundary
         if len(players) != EXPECTED_PLAYER_COUNT:
             raise ValueError(f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.")
         self._seed = seed
@@ -145,7 +147,8 @@ class LlmRunner:
         expected_events: list[dict[str, Any]],
     ) -> None:
         replayed_events: list[dict[str, Any]] = []
-        max_auto_steps = max(1, self._max_turns + len(self._players) + 1)
+        from monopoly_engine.replay import UNCAPPED_MAX_AUTO_STEPS
+        max_auto_steps = UNCAPPED_MAX_AUTO_STEPS if self._max_turns is None else max(1, self._max_turns + len(self._players) + 1)
 
         for entry in actions:
             _, decision_events, decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
@@ -167,7 +170,13 @@ class LlmRunner:
             self._applied_decision_ids.add(str(decision["decision_id"]))
 
         pending_decision: dict[str, Any] | None = None
-        if not self._engine.is_game_over():
+        if self._resume_at_boundary:
+            while not self._engine.is_game_over() and len(replayed_events) < len(expected_events):
+                _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=1)
+                replayed_events.extend(tail_events)
+                if not tail_events or pending_decision is not None:
+                    break
+        elif not self._engine.is_game_over():
             _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
             replayed_events.extend(tail_events)
 
@@ -186,12 +195,12 @@ class LlmRunner:
                 "Interrupted-run event replay mismatch at index "
                 f"{mismatch_index} (replayed={len(replayed_lines)}, recorded={len(expected_lines)})."
             )
-        if pending_decision is None:
+        if pending_decision is None and not self._engine.is_game_over() and not self._resume_at_boundary:
             raise ValueError("Interrupted run has no recoverable pending decision.")
 
         for event in replayed_events:
             self._prompt_memory.update(event)
-        self._recovered_pending_decision_id = str(pending_decision["decision_id"])
+        self._recovered_pending_decision_id = str(pending_decision["decision_id"]) if pending_decision else None
 
     async def run(
         self,

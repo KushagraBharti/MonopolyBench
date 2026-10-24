@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .writer_jsonl import append_jsonl
+from .writer_jsonl import append_jsonl, atomic_write
 
 
 @dataclass
@@ -65,6 +65,9 @@ class RunFiles:
     review_summary_path: Path
     model_cards_dir: Path
 
+    def _write_text(self, path: Path, text: str, encoding: str = "utf-8") -> None:
+        atomic_write(path, text.encode(encoding))
+
     def write_event(self, event: dict[str, Any]) -> None:
         append_jsonl(self.events_path, event)
 
@@ -74,7 +77,7 @@ class RunFiles:
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(snapshot, separators=(",", ":"), ensure_ascii=True)
         if not canonical_path.exists():
-            canonical_path.write_text(payload, encoding="utf-8")
+            self._write_text(canonical_path, payload, encoding="utf-8")
             return canonical_path
 
         existing = canonical_path.read_text(encoding="utf-8")
@@ -84,19 +87,19 @@ class RunFiles:
         phase = str(snapshot.get("phase") or "UNKNOWN")
         variant_kind = "decision" if phase == "AWAITING_DECISION" else "snapshot"
         variant_path = _next_snapshot_variant_path(self.snapshots_dir, int(turn_index), variant_kind)
-        variant_path.write_text(payload, encoding="utf-8")
+        self._write_text(variant_path, payload, encoding="utf-8")
         return variant_path
 
     def write_summary(self, summary: dict[str, Any]) -> None:
         self.summary_path.parent.mkdir(parents=True, exist_ok=True)
-        self.summary_path.write_text(
+        self._write_text(self.summary_path,
             json.dumps(summary, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
 
     def write_json_artifact(self, path: Path, payload: dict[str, Any] | list[Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
+        self._write_text(path,
             json.dumps(payload, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
@@ -162,24 +165,24 @@ class RunFiles:
         parsed: dict[str, Any] | None,
     ) -> None:
         if system_prompt is not None:
-            (self.prompts_dir / f"{prefix}_system.txt").write_text(system_prompt, encoding="utf-8")
+            self._write_text((self.prompts_dir / f"{prefix}_system.txt"), system_prompt, encoding="utf-8")
         if user_payload is not None:
-            (self.prompts_dir / f"{prefix}_user.json").write_text(
+            self._write_text((self.prompts_dir / f"{prefix}_user.json"),
                 json.dumps(user_payload, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if tools is not None:
-            (self.prompts_dir / f"{prefix}_tools.json").write_text(
+            self._write_text((self.prompts_dir / f"{prefix}_tools.json"),
                 json.dumps(tools, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if response is not None:
-            (self.prompts_dir / f"{prefix}_response.json").write_text(
+            self._write_text((self.prompts_dir / f"{prefix}_response.json"),
                 json.dumps(response, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if parsed is not None:
-            (self.prompts_dir / f"{prefix}_parsed.json").write_text(
+            self._write_text((self.prompts_dir / f"{prefix}_parsed.json"),
                 json.dumps(parsed, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
@@ -197,9 +200,9 @@ class RunFiles:
         prefix = _prompt_file_prefix(decision_id, attempt_index=attempt_index)
         self.quality_dir.mkdir(parents=True, exist_ok=True)
         if request_text is not None:
-            (self.quality_dir / f"{prefix}_request.txt").write_text(request_text, encoding="utf-8")
+            self._write_text((self.quality_dir / f"{prefix}_request.txt"), request_text, encoding="utf-8")
         if response_text is not None:
-            (self.quality_dir / f"{prefix}_response.txt").write_text(response_text, encoding="utf-8")
+            self._write_text((self.quality_dir / f"{prefix}_response.txt"), response_text, encoding="utf-8")
 
     def write_artifact_manifest(self) -> None:
         self.write_json_artifact(self.artifact_manifest_path, build_artifact_manifest(self))

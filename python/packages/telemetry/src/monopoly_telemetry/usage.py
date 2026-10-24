@@ -10,11 +10,22 @@ from .run_files import RunFiles
 USAGE_ACCOUNTING_VERSION = "usage_accounting_v1"
 
 
-def build_usage_report(run_files: RunFiles) -> dict[str, Any]:
+def build_usage_report(run_files: RunFiles, *, byok_aware: bool = False) -> dict[str, Any]:
     decisions = _read_jsonl(run_files.decisions_path)
     attempt_rows = _attempt_usage_rows(decisions)
+    if byok_aware:
+        from .execution_cost import call_cost
+        raw_attempts = [attempt for decision in decisions if decision.get("phase") == "decision_resolved" for attempt in decision.get("attempts", [])]
+        for row, attempt in zip(attempt_rows, raw_attempts):
+            cost = call_cost((attempt.get("raw_response") or {}).get("usage"))
+            row["cost"] = cost["total_cost"]
+            row["cost_status"] = cost["cost_status"]
     decision_rows = _decision_usage_rows(attempt_rows)
-    return _aggregate_usage(run_files.run_id, attempt_rows, decision_rows)
+    report = _aggregate_usage(run_files.run_id, attempt_rows, decision_rows)
+    if byok_aware:
+        report["source"] = "openrouter_and_byok_actuals"
+        report["missing_cost_attempt_count"] = sum(row["cost_status"] != "known" for row in attempt_rows)
+    return report
 
 
 def write_usage_artifacts(run_files: RunFiles) -> dict[str, Any]:

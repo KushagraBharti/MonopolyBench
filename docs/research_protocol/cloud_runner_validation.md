@@ -1,0 +1,38 @@
+# Cloud runner code validation
+
+Local validation on 2026-10-24:
+
+- Full repository verification: contracts, Ruff, mypy, engine, API, arena,
+  telemetry, frontend lint and frontend build passed.
+- Microbench tests, which the repository verification script omits, passed.
+- A five-process smoke batch passed, including one killed worker and verified
+  package round trips.
+- A five-process uncapped mock batch ended by bankruptcy at turns 160, 143,
+  153, 94 and 138. One worker was killed, repaired and recovered. Both replay
+  verdicts passed for every game. All five exported packages verified.
+- The uncapped batch recorded 1,691 physical mock completion calls and
+  54,435,513 compressed package bytes. These are fixture measurements, not
+  real-model cost or performance predictions.
+- Unit/integration coverage includes journal prefixes and contradictions,
+  all transition kinds, initial/corrective response reuse, interruption limits,
+  persisted outage budgets, five-slot scheduling, live writer locks, exact local
+  event/action/prompt/snapshot preservation, account pauses, auth and export scope,
+  path rejection, BYOK cost states, and package integrity.
+
+The mock policy deliberately concentrates property ownership and builds houses
+to exercise terminal bankruptcy. It is a test fixture, not a research player.
+
+The image builds with the locked Python workspace and a cloud frontend. This
+workspace's proxy requires its CA bundle as a BuildKit `build_ca` secret for
+dependency downloads; certificate verification stays enabled. Railway's schema
+URL returned HTTP 403 here, so live platform configuration validation remains a
+deployment check.
+
+Container runtime checks also passed: health 200, unauthenticated jobs 401,
+password login 200, authenticated status and export-token reads, and SIGTERM
+shutdown with exit code 0. No provider key was supplied to the container.
+
+Not exercised here: Railway deploy/redeploy, backup restoration, real provider
+compatibility, BYOK billing, Windows/macOS export execution, and real-model soak
+performance. The draft campaign remains unfrozen with no seed draw. Follow the
+release acceptance steps in `deploy/README.md` before paper games.

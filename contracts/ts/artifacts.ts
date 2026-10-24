@@ -231,6 +231,7 @@ export interface RunListItem {
   summary_exists?: boolean;
   scorecard_exists?: boolean;
   replay_report_exists?: boolean;
+  replay_status?: string | null;
   state_replay_report_exists?: boolean;
   artifact_replay_report_exists?: boolean;
 }

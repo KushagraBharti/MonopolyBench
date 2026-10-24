@@ -80,6 +80,8 @@ EXPECTED_RUN_TOP_LEVEL = [
 STANDARD_ANALYSIS_DIR_NAME = "analysis"
 
 ROOT_PRESERVE_NAMES = {
+    "cloud",
+    "storage_manifest.json",
     "run",
     "quality_check",
     STANDARD_ANALYSIS_DIR_NAME,

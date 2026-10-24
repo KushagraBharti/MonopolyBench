@@ -874,7 +874,7 @@ class SharedDecisionResolver:
                 response_text=response_text,
             )
         except OSError:
-            return
+            raise
 
 
 def _now_ms() -> int:

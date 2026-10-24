@@ -466,6 +466,7 @@ class RunManager:
                         "summary_exists": bool(summary),
                         "scorecard_exists": bool(scorecard),
                         "replay_report_exists": (path / "replay_report.json").exists(),
+                        "replay_status": _read_json(path / "replay_report.json").get("status"),
                         "state_replay_report_exists": (path / "state_replay_report.json").exists(),
                         "artifact_replay_report_exists": (path / "artifact_replay_report.json").exists(),
                     }
@@ -958,21 +959,8 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        return rows
-    for line in lines:
-        if not line.strip():
-            continue
-        try:
-            parsed = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            rows.append(parsed)
-    return rows
+    from monopoly_telemetry.writer_jsonl import read_jsonl_strict
+    return read_jsonl_strict(path)
 
 
 def _recovery_player_configs(
