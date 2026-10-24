@@ -20,6 +20,7 @@ from monopoly_telemetry.execution_cost import execution_cost
 from monopoly_telemetry.inventory import safe_path
 from .auth import Auth, COOKIE, SESSION_SECONDS
 from .live import live, LiveHub
+from .cloud_readers import CloudReaders
 from .paths import resolve_repo_root
 
 
@@ -53,6 +54,7 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
     app.middleware("http")(auth.middleware)
     app.state.store = store
     hub = LiveHub(store)
+    readers = CloudReaders(store)
 
     @app.exception_handler(KeyError)
     async def missing(_: Request, exc: KeyError):
@@ -234,29 +236,13 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
             raise HTTPException(409, "Package is not ready")
         return download(rows[0]["export_id"])
 
-    def decision_index(job_id: str):
-        from monopoly_telemetry.run_files import build_run_files
-        from .decision_index import DecisionIndex
-        job = store.job(job_id)
-        commits = store.rows("SELECT offsets_json FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
-        name = f"runs/{job['run_id']}/decisions.jsonl"
-        end = json.loads(commits[0]["offsets_json"]).get(name, {}).get("bytes", 0) if commits else 0
-        rows = []
-        if end:
-            with (store.root / name).open("rb") as handle:
-                rows = [json.loads(line) for line in handle.read(end).splitlines()]
-        files = build_run_files(store.root / "runs", job["run_id"])
-        prompts = [files.run_dir / entry["path"] for entry in artifacts(job_id) if entry["path"].startswith("prompts/")]
-        return DecisionIndex(files, entries=rows, prompt_paths=prompts)
-
     @app.get("/api/jobs/{job_id}/decisions")
     def decisions(job_id: str, cursor: int = 0):
-        rows = decision_index(job_id).ordered()
-        return rows[max(0, cursor):max(0, cursor)+50]
+        return readers.decisions(store.job(job_id), max(0, cursor))
 
     @app.get("/api/jobs/{job_id}/decisions/{decision_id}")
     def decision_bundle(job_id: str, decision_id: str):
-        bundle = decision_index(job_id).get_bundle(decision_id)
+        bundle = readers.bundle(store.job(job_id), decision_id)
         if bundle is None:
             raise KeyError(decision_id)
         return bundle
@@ -270,25 +256,12 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
     def artifacts(job_id: str, path: str | None = None):
         job = store.job(job_id)
         directory = store.root / "runs" / job["run_id"]
-        job_directory = store.root / "jobs" / job_id
-        frozen_inventory = job_directory / "artifact_inventory.json"
-        names: set[str] = set()
-        if frozen_inventory.exists():
-            names = {entry["path"] for entry in json.loads(frozen_inventory.read_text())["files"]}
-        elif (job_directory / "journal.jsonl").exists():
-            commits = store.rows("SELECT commit_seq FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
-            committed = commits[0]["commit_seq"] if commits else 0
-            data = (job_directory / "journal.jsonl").read_bytes()
-            prefix = f"runs/{job['run_id']}/"
-            for line in data[:data.rfind(b"\n")+1].splitlines():
-                record = json.loads(line)
-                if record["journal_seq"] <= committed:
-                    names.update(target["path"][len(prefix):] for target in record["targets"] if target["path"].startswith(prefix))
-        entries = {name: directory / name for name in names if name != ".writer.lock"}
+        published = readers.artifacts(job)
+        entries = {entry["path"]: directory / entry["path"] for entry in published}
         commits = store.rows("SELECT offsets_json FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
         offsets = json.loads(commits[0]["offsets_json"]) if commits else {}
         if path is None:
-            return [{"path": name, "bytes": offsets.get(f"runs/{job['run_id']}/{name}", {}).get("bytes", p.stat().st_size)} for name, p in entries.items()]
+            return published
         safe_path(path)
         if path not in entries or not entries[path].resolve().is_relative_to(directory.resolve()):
             raise KeyError(path)

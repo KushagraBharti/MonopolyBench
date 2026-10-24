@@ -155,3 +155,49 @@ def test_shared_tailer_disconnects_only_slow_viewer(cloud):
         await hub.unsubscribe(second, fast)
         assert not hub.tailers and first.task.done()
     asyncio.run(check())
+
+
+def test_decision_cache_tails_new_commits_without_rescanning_journal(cloud, monkeypatch, tmp_path):
+    import json
+    from pathlib import Path
+    from monopoly_arena.cloud_campaign import run_config
+    from monopoly_arena.journal import Journal, JournalRunFiles
+    from monopoly_api.cloud_readers import CloudReaders
+    _, store = cloud
+    identity = tmp_path / "build.json"
+    identity.write_text(json.dumps({"git_sha": "test", "image_digest": "test"}))
+    monkeypatch.setenv("MB_BUILD_INFO", str(identity))
+    job = store.create_job(run_config(42, "indexed", max_turns=5), kind="smoke", key="indexed")
+    journal = Journal(store, job["job_id"], store.claim(job["job_id"]))
+    files = JournalRunFiles.create(journal, job["run_id"])
+    with journal.transition("decision"):
+        files.write_decision({"decision_id": "first", "phase": "decision_started"})
+        journal.write(files.prompts_dir / "decision_first_system.txt", b"x" * 100_000)
+    first_end = journal.path.stat().st_size
+    positions = []
+    original_open = Path.open
+    class TrackedReader:
+        def __init__(self, handle):
+            self.handle = handle
+        def __getattr__(self, name):
+            return getattr(self.handle, name)
+        def seek(self, offset):
+            positions.append(offset)
+            return self.handle.seek(offset)
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            self.handle.close()
+    def opened(path, mode="r", *args, **kwargs):
+        handle = original_open(path, mode, *args, **kwargs)
+        return TrackedReader(handle) if path == journal.path and mode == "rb" else handle
+    monkeypatch.setattr(Path, "open", opened)
+    readers = CloudReaders(store)
+    assert readers.decisions(job, 0)[0]["decision_id"] == "first"
+    assert readers.bundle(job, "first")["attempts"][0]["system_prompt"] == "x" * 100_000
+    readers.artifacts(job)
+    assert positions == [0]
+    files.write_decision({"decision_id": "second", "phase": "decision_started"})
+    assert [r["decision_id"] for r in readers.decisions(job, 0)] == ["first", "second"]
+    readers.bundle(job, "first")
+    assert positions == [0, first_end]

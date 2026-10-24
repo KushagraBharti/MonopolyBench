@@ -191,13 +191,13 @@ class DecisionIndex:
         base_prefix = self._prompt_prefixes.get(decision_id, f"decision_{safe}")
         attempts: dict[int, dict[str, Any]] = {}
         for path in self._prompt_paths if self._prompt_paths is not None else prompts_dir.iterdir():
-            if not path.is_file():
-                continue
             name = path.name
             if not name.startswith(base_prefix):
                 continue
             suffix = name[len(base_prefix):]
             if not suffix.startswith("_"):
+                continue
+            if not path.is_file():
                 continue
             attempt_index = 0
             remainder = suffix[1:]

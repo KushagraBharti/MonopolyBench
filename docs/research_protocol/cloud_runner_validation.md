@@ -7,12 +7,14 @@ appends, missing journal records, repair attribution after restart, interrupted
 atomic-write temporary files, pause/resume ownership, preflight cancellation,
 finalizer scheduling, atomic campaign freeze, serialized export revisions, and
 decision pagination beyond 300 decisions. Readers expose committed JSONL bytes;
-pending response artifacts remain hidden from the decision inspector.
+pending response artifacts remain hidden from the decision inspector. The
+bounded reader cache tails only newly committed journal/decision records; a
+regression verifies that repeated list/bundle requests do not rescan old payloads.
 
-- Full repository verification: contracts, Ruff, mypy, 233 engine/API/arena/
+- Full repository verification: contracts, Ruff, mypy, 234 engine/API/arena/
   telemetry tests, frontend lint and frontend build passed.
 - All 20 microbench tests, which the repository verification script omits,
-  passed (253 Python tests in total).
+  passed (254 Python tests in total).
 - A five-process smoke batch passed, including one killed worker and verified
   package round trips.
 - A five-process uncapped mock batch ended by bankruptcy at turns 160, 143,
