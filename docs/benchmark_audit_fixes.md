@@ -67,6 +67,9 @@ standard rules. Changing them requires another treatment version.
   and provides no singleton interval. Ordinary ungrouped summaries are descriptive.
   Cyclic rotation balances absolute seats, not all relative opponent positions.
   Reused seeds do not imply identical future draws after strategies diverge.
+- Campaign cell identity includes resolved actor/model/provider/reasoning settings
+  and game limits, while excluding budgets, preflight paths and execution controls.
+  Raising a budget does not turn completed cells into new paid games.
 
 ## Findings 20–32: integrity and local recovery
 
@@ -77,19 +80,24 @@ standard rules. Changing them requires another treatment version.
   terminal event, requires the final completion marker, and verifies a complete
   inventory with file hashes and sizes. Missing inventory entries or hashes fail
   completion. Inventory includes prompts, calls, commit journals and snapshots.
+  The human review queue, labels and label summary are mutable annotations outside
+  this execution-integrity check, so post-hoc reviews do not invalidate a game.
 - Canonical appends flush/fsync. Snapshot and JSON replacement uses a temporary
   file, fsync and atomic replacement. Quality write errors propagate.
 - Each applied action has a durable commit containing the exact action, resolved
   decision and emitted events before those records are appended separately.
   Recovery restores missing committed tails idempotently and rejects contradictory
   or malformed records. It validates all planned repairs before writing, rejects
-  interior gaps, and checks run identity/treatment before repair. Exact committed
+  interior gaps and unknown action/resolved-decision records, and checks run
+  identity/treatment before repair. Exact committed
   turn boundaries resume without advancing ahead of saved events; pending starts
   are not logged twice. It does not guess damaged bytes or missing model decisions.
 - Calls record intent, physical call ID and result before optional metadata lookup.
   The production client defaults to no hidden transport retries. Durable responses
-  are reused for an identical request; an interrupted call with unknown outcome
-  fails closed pending billing reconciliation. Custom clients that retry internally
+  are reused for an identical request. Known pre-submission/auth/rate-limit
+  rejections may retry on recovery with a new call ID; each earlier record remains
+  intact and accounted for. An interrupted call with unknown outcome fails closed
+  pending billing reconciliation. Custom clients that retry internally
   are outside this physical-call accounting guarantee.
 - Conflicting prompt/response artifacts are archived by content hash. Completed
   source trajectories can re-enter finalization; a summary file alone does not

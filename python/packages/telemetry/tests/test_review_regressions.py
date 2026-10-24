@@ -66,3 +66,24 @@ def test_unknown_cost_propagates_through_decision_player_model_and_run(costs, sa
     assert report["by_model"]["m"]["cost"] == expected
     if same_decision:
         assert decisions[0]["cost"] == expected
+
+
+@pytest.mark.parametrize("journal", ["actions", "decisions"])
+def test_unknown_record_rejects_repair_before_any_bytes_change(tmp_path, journal):
+    files = init_run_files(tmp_path, "unknown")
+    for index in (1, 2):
+        write_commit(files, {"decision_id": f"d{index}"},
+                     {"decision_id": f"d{index}", "phase": "decision_resolved"},
+                     [{"seq": index, "type": "EXPECTED"}])
+    files.write_action({"decision_id": "d1"})
+    files.write_decision({"decision_id": "d1", "phase": "decision_resolved"})
+    files.write_event({"seq": 1, "type": "EXPECTED"})
+    if journal == "actions":
+        files.write_action({"decision_id": "unknown"})
+    else:
+        files.write_decision({"decision_id": "unknown", "phase": "decision_resolved"})
+    paths = [files.actions_path, files.decisions_path, files.events_path]
+    before = {path: path.read_bytes() for path in paths}
+    with pytest.raises(ValueError, match="Unknown"):
+        repair_committed_tails(files)
+    assert {path: path.read_bytes() for path in paths} == before

@@ -20,6 +20,7 @@ class OpenRouterResult:
     request_id: str | None
     request_payload_raw: str | None = None
     response_text: str | None = None
+    call_id: str | None = None
 
 
 class OpenRouterClient:

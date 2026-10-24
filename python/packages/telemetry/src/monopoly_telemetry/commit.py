@@ -49,6 +49,8 @@ def repair_committed_tails(files: RunFiles) -> None:
             if len(indexed) != len(rows) or len(set(expected_ids)) != len(expected_ids):
                 raise ValueError(f"Duplicate records in {path.name} or its commits")
             expected_keys = set(expected_ids)
+            if commits and key == "decision_id" and set(indexed) - expected_keys:
+                raise ValueError(f"Unknown committed record in {path.name}")
             present_ids = [row[key] for row in rows if row[key] in expected_keys]
             if present_ids != expected_ids[:len(present_ids)]:
                 raise ValueError(f"Missing or reordered record in {path.name} is not an append tail")

@@ -175,6 +175,153 @@ def test_saved_response_is_reused_without_second_call(tmp_path):
         asyncio.run(resolver._call_completion(decision, 0, {"model": "changed"}))
 
 
+@pytest.mark.parametrize("status,error", [(None, "no_api_key"), (401, "http_4xx"), (402, "http_4xx"), (429, "http_429")])
+def test_rejected_call_can_resume_without_erasing_or_double_counting_calls(tmp_path, status, error):
+    from monopoly_telemetry.usage import write_usage_artifacts
+    class Client:
+        calls = 0
+
+        async def create_chat_completion(self, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return OpenRouterResult(False, status, None, "Known rejection", error, None)
+            return OpenRouterResult(True, 200, {"id": "generation", "usage": {"cost": 0.2}}, None, None, "request")
+
+    files = init_run_files(tmp_path, "recover-call")
+    client = Client()
+    resolver = SharedDecisionResolver(openrouter=client, run_files=files,
+        prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()), space_key_by_index=build_space_key_by_index())
+    decision = {"decision_id": "d", "player_id": "p", "turn_index": 0, "decision_type": "BUY_OR_AUCTION_DECISION"}
+    first = asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    first_path = next((files.run_dir / "calls").glob("*.json"))
+    original = first_path.read_bytes()
+    second = asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    third = asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    assert not first.ok and second.ok and third == second and client.calls == 2
+    assert first_path.read_bytes() == original
+    assert first.call_id != second.call_id
+    files.write_decision({"phase": "decision_resolved", **decision, "openrouter_model_id": "test",
+                          "attempts": [{"raw_response": second.response_json, "call_id": second.call_id}]})
+    usage = write_usage_artifacts(files)
+    assert usage["attempt_count"] == 2
+    attempts = load_jsonl(files.usage_attempts_path)
+    assert {row["call_id"] for row in attempts} == {first.call_id, second.call_id}
+    assert [row["cost"] for row in attempts if row["cost"] is not None] == [0.2]
+
+
+@pytest.mark.parametrize("status,error", [(None, "total_timeout"), (None, "network_error"), (503, "http_5xx")])
+def test_unknown_call_outcome_still_blocks_resubmission(tmp_path, status, error):
+    class Client:
+        calls = 0
+        async def create_chat_completion(self, **kwargs):
+            self.calls += 1
+            return OpenRouterResult(False, status, None, "Outcome not known", error, None)
+    files = init_run_files(tmp_path, "unknown-call")
+    client = Client()
+    resolver = SharedDecisionResolver(openrouter=client, run_files=files,
+        prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()), space_key_by_index=build_space_key_by_index())
+    decision = {"decision_id": "d", "player_id": "p", "turn_index": 0, "decision_type": "BUY_OR_AUCTION_DECISION"}
+    asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    with pytest.raises(RuntimeError, match="unknown outcome"):
+        asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    assert client.calls == 1
+
+
+def test_human_reviews_do_not_invalidate_completed_campaign_cell(completed_run):
+    from monopoly_telemetry.review import append_review_label
+    from monopoly_telemetry.writer_jsonl import append_jsonl
+    from monopoly_arena.long_campaign import _run_campaign_row
+    files = completed_run
+    original = {path: path.read_bytes() for path in (files.events_path, files.actions_path, files.decisions_path)}
+    append_review_label(files, {"notes": "Reviewed the action", "selected_labels": ["legal"]})
+    append_jsonl(files.review_queue_path, {"queue_item_id": "manual", "decision_id": "d"})
+    assert _completed_run_exists(files.run_dir)
+    def no_client():
+        raise AssertionError("A completed reviewed cell must not run again")
+    result = asyncio.run(_run_campaign_row({"run_id": files.run_id, "runnable_with_long_runner": True},
+        runs_root=files.run_dir.parent, openrouter_factory=no_client, resume=True))
+    assert result["status"] == "resumed_completed"
+    assert {path: path.read_bytes() for path in original} == original
+    # Annotation exclusions must not exempt execution evidence from integrity checks.
+    with files.actions_path.open("a") as handle:
+        handle.write('{}\n')
+    assert not _completed_run_exists(files.run_dir)
+
+
+def test_campaign_identity_ignores_execution_controls_but_tracks_model_treatment():
+    from copy import deepcopy
+    from monopoly_arena.long_campaign import _run_id
+    config = {"benchmark_id": "b", "campaign_id": "c", "max_turns": 5, "max_trade_exchanges": 20,
+              "max_auction_actions": 200, "cost_budget": 1, "execution_preflight_path": "old.json"}
+    actors = [{"seat_index": 0, "actor_id": "a", "roster_slot_index": 0, "actor_type": "llm",
+               "roster_actor_ref": "a#0", "openrouter_model_id": "model/one", "provider": {"only": ["p"]}}]
+    def identity(cfg, cells):
+        return (_run_id(campaign_id="c", seed=7, repetition_index=0, permutation_id="fixed", max_turns=5,
+                        actors=cells, run_index=0, treatment_config=cfg), _resume_key(cfg, 7, 0, "fixed", cells))
+    original = identity(config, actors)
+    operational = {**config, "cost_budget": 50, "execution_preflight_path": "new.json", "dry_run": False,
+                   "concurrency": 2, "maximum_preflight_age_hours": 5, "execution_order_seed": 99}
+    assert identity(operational, actors) == original
+    assert all(a != b for a, b in zip(identity({**config, "max_trade_exchanges": 21}, actors), original))
+    for key, value in [("provider", {"only": ["new"]}), ("reasoning", {"effort": "high"}),
+                       ("openrouter_model_id", "model/two"), ("display_name", "New Name")]:
+        changed = deepcopy(actors)
+        changed[0][key] = value
+        assert all(a != b for a, b in zip(identity(config, changed), original))
+
+
+def test_five_turn_run_recovers_after_known_rate_limit_with_full_call_accounting(tmp_path):
+    class Client:
+        def __init__(self, reject_once=False):
+            self.reject_once = reject_once
+            self.runner = None
+            self.calls = 0
+
+        async def create_chat_completion(self, **kwargs):
+            self.calls += 1
+            if self.reject_once:
+                self.reject_once = False
+                return OpenRouterResult(False, 429, None, "Rate limited", "http_429", "rejected")
+            decision = self.runner._engine._pending_decision
+            selected = choose_baseline_action(decision, "always_buy")
+            args = {**selected.get("args", {}), "public_message": "", "private_thought": "Legal baseline move"}
+            return OpenRouterResult(True, 200, {
+                "id": f"generation-{self.calls}", "usage": {"cost": 0.001},
+                "choices": [{"message": {"role": "assistant", "tool_calls": [{
+                    "id": f"tool-{self.calls}", "type": "function", "function": {
+                        "name": selected["action"], "arguments": json.dumps(args)}}]}}],
+            }, None, None, f"request-{self.calls}")
+
+        async def aclose(self):
+            pass
+
+    files = init_run_files(tmp_path, "recovered-five-turn")
+    players = [build_single_player_config(player_id=f"p{i}", name=f"P{i}", openrouter_model_id="test/model")
+               for i in range(4)]
+    first = Client(reject_once=True)
+    first.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=first,
+                             run_files=files, max_turns=5, event_delay_s=0)
+    with pytest.raises(RuntimeError):
+        asyncio.run(first.runner.run())
+    assert load_jsonl(files.actions_path) == []
+    original_call = next((files.run_dir / "calls").glob("*.json"))
+    original_bytes = original_call.read_bytes()
+    recovered = Client()
+    recovered.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=recovered,
+        run_files=files, max_turns=5, event_delay_s=0,
+        resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(recovered.runner.run())
+    assert recovered.runner.get_snapshot()["turn_index"] == 5
+    assert _completed_run_exists(files.run_dir)
+    assert original_call.read_bytes() == original_bytes
+    actions = load_jsonl(files.actions_path)
+    usage = json.loads(files.usage_path.read_text())
+    assert usage["attempt_count"] == len(actions) + 1 == recovered.calls + 1
+    assert len(list((files.run_dir / "calls").glob("*.json"))) == usage["attempt_count"]
+    starts = [row["decision_id"] for row in load_jsonl(files.decisions_path) if row["phase"] == "decision_started"]
+    assert len(starts) == len(set(starts)) == len(actions)
+
+
 @pytest.mark.parametrize("exchange_index", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("legacy", [False, True])
 def test_offer_description_matches_executed_cash_properties_and_cards(exchange_index, legacy):

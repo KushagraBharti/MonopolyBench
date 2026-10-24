@@ -1052,8 +1052,12 @@ def _completed_run_exists(run_dir: Path) -> bool:
         manifest = json.loads((run_dir / "artifact_manifest.json").read_text(encoding="utf-8"))
         inventoried: set[str] = set()
         excluded = {"artifact_manifest.json", "completion.json"}
+        # Human review is post-hoc annotation, not frozen execution evidence.
+        mutable_review_files = {"review_queue.jsonl", "reviews/review_labels.jsonl", "reviews/review_summary.json"}
         for artifact in manifest["artifacts"]:
             relative_path = artifact["relative_path"]
+            if Path(relative_path).as_posix() in mutable_review_files:
+                continue
             path = (run_dir / relative_path).resolve()
             if not path.is_relative_to(run_dir.resolve()):
                 return False
@@ -1068,7 +1072,8 @@ def _completed_run_exists(run_dir: Path) -> bool:
             elif artifact.get("exists") is not False or path.exists():
                 return False
         actual_files = {str(path.relative_to(run_dir)) for path in run_dir.rglob("*")
-                        if path.is_file() and str(path.relative_to(run_dir)) not in excluded}
+                        if path.is_file() and str(path.relative_to(run_dir)) not in excluded
+                        and path.relative_to(run_dir).as_posix() not in mutable_review_files}
         if inventoried != actual_files:
             return False
         return True
@@ -1635,6 +1640,22 @@ def _baseline_strategies(actors: list[dict[str, Any]]) -> dict[str, str]:
     }
 
 
+def _cell_treatment_config(config: dict[str, Any] | None) -> dict[str, Any]:
+    config = config or {}
+    return {
+        "max_trade_exchanges": int(config.get("max_trade_exchanges") or 20),
+        "max_auction_actions": int(config.get("max_auction_actions") or 200),
+    }
+
+
+def _actor_treatment(actor: dict[str, Any]) -> dict[str, Any]:
+    # Resolve model behavior at the cell, independently of budget/roster metadata.
+    return {key: actor.get(key) for key in (
+        "seat_index", "player_id", "actor_id", "roster_slot_index", "actor_type",
+        "openrouter_model_id", "reasoning", "provider", "baseline_id", "system_prompt", "display_name",
+    )}
+
+
 def _run_id(
     *,
     campaign_id: str,
@@ -1650,22 +1671,14 @@ def _run_id(
     digest = _sha256_short(
         {
             "campaign_id": campaign_id,
-            "treatment_config": treatment_config,
+            "treatment_config": _cell_treatment_config(treatment_config),
             "treatment_fingerprint": treatment_fingerprint(),
             "treatment_version": "audit_corrected_v2",
             "seed": seed,
             "repetition_index": repetition_index,
             "permutation_id": permutation_id,
             "max_turns": max_turns,
-            "actors": [
-                {
-                    "seat_index": actor["seat_index"],
-                    "actor_id": actor["actor_id"],
-                    "roster_slot_index": actor["roster_slot_index"],
-                    "actor_type": actor["actor_type"],
-                }
-                for actor in actors
-            ],
+            "actors": [_actor_treatment(actor) for actor in actors],
         }
     )
     return f"{_safe_id(campaign_id)}-{run_index:04d}-{seed}-{digest}"
@@ -1682,7 +1695,7 @@ def _resume_key(
     return _sha256_short(
         {
             "benchmark_id": config["benchmark_id"],
-            "treatment_config": config,
+            "treatment_config": _cell_treatment_config(config),
             "treatment_version": "audit_corrected_v2",
             "treatment_fingerprint": treatment_fingerprint(),
             "campaign_id": config["campaign_id"],
@@ -1690,14 +1703,7 @@ def _resume_key(
             "repetition_index": repetition_index,
             "permutation_id": permutation_id,
             "max_turns": config["max_turns"],
-            "actors": [
-                {
-                    "seat_index": actor["seat_index"],
-                    "roster_actor_ref": actor["roster_actor_ref"],
-                    "actor_type": actor["actor_type"],
-                }
-                for actor in actors
-            ],
+            "actors": [_actor_treatment(actor) for actor in actors],
         },
         length=16,
     )

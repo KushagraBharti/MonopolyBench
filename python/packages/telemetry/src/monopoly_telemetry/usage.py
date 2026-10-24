@@ -31,10 +31,11 @@ def write_usage_artifacts(run_files: RunFiles) -> dict[str, Any]:
 
 def _all_attempt_usage_rows(run_files: RunFiles, decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = _attempt_usage_rows(decisions)
-    accounted = {(row["decision_id"], row["attempt_index"]) for row in rows}
+    accounted_calls = {row["call_id"] for row in rows if row.get("call_id")}
+    legacy_accounted = {(row["decision_id"], row["attempt_index"]) for row in rows if not row.get("call_id")}
     for path in sorted((run_files.run_dir / "calls").glob("*.json")):
         call = json.loads(path.read_text(encoding="utf-8"))
-        if (call["decision_id"], call["attempt_index"]) in accounted:
+        if call["call_id"] in accounted_calls or (call["decision_id"], call["attempt_index"]) in legacy_accounted:
             continue
         result = _dict(call.get("result"))
         raw = _dict(result.get("response_json"))
@@ -74,6 +75,7 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "openrouter_model_id": decision.get("openrouter_model_id"),
                     "model_display_name": decision.get("model_display_name"),
                     "openrouter_request_id": attempt.get("openrouter_request_id"),
+                    "call_id": attempt.get("call_id"),
                     "openrouter_status_code": attempt.get("openrouter_status_code"),
                     "generation_id": raw.get("id"),
                     "finish_reason": _finish_reason(raw),

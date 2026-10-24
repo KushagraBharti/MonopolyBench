@@ -46,6 +46,7 @@ class DecisionResolutionAttempt:
     latency_ms: int | None
     outcome: str | None = None
     reason: str | None = None
+    call_id: str | None = None
 
 
 @dataclass(slots=True)
@@ -399,12 +400,24 @@ class SharedDecisionResolver:
         if self._run_files is not None:
             key = hashlib.sha256(f'{decision["decision_id"]}:{attempt}'.encode()).hexdigest()
             path = self._run_files.run_dir / "calls" / f"{key}.json"
-            if path.exists():
+            physical_attempt = 0
+            while path.exists():
                 saved = json.loads(path.read_text(encoding="utf-8"))
                 if saved["request_hash"] != request_hash:
                     raise RuntimeError("Recovered request differs from durable call intent")
                 if saved.get("status") == "received":
-                    return OpenRouterResult(**saved["result"])
+                    cached = OpenRouterResult(**saved["result"])
+                    if cached.ok:
+                        return replace(cached, call_id=saved["call_id"])
+                    known_rejection = cached.error_type == "no_api_key" or cached.status_code in {
+                        400, 401, 402, 403, 404, 405, 413, 415, 422, 429,
+                    }
+                    if known_rejection:
+                        # Keep each rejected call intact. Recovery can submit a new
+                        # physical call, while successful and unknown calls cannot.
+                        physical_attempt += 1
+                        path = self._run_files.run_dir / "calls" / f"{key}-{physical_attempt}.json"
+                        continue
                 raise RuntimeError("Interrupted call has unknown outcome; reconcile billing before resubmission")
             self._run_files.write_json_artifact(path, record)
         try:
@@ -412,6 +425,7 @@ class SharedDecisionResolver:
         except asyncio.TimeoutError:
             result = OpenRouterResult(False, None, None, "Total request deadline exceeded", "total_timeout", None)
         if path is not None and self._run_files is not None:
+            result = replace(result, call_id=record["call_id"])
             record.update(status="received", result=asdict(result))
             self._run_files.write_json_artifact(path, record)
         return result
@@ -514,6 +528,7 @@ class SharedDecisionResolver:
                 "outcome": attempt.outcome,
                 "reason": attempt.reason,
                 "openrouter_request_id": attempt.openrouter_request_id,
+                "call_id": attempt.call_id,
                 "openrouter_status_code": attempt.openrouter_status_code,
                 "error_type": attempt.error_type,
                 "error_message": attempt.error_message,
@@ -601,6 +616,7 @@ class SharedDecisionResolver:
             parsed_tool_calls=tool_calls,
             validation_errors=errors,
             openrouter_request_id=result.request_id,
+            call_id=result.call_id,
             openrouter_status_code=result.status_code,
             error_type=result.error_type,
             error_message=result.error,
