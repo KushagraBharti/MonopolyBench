@@ -12,6 +12,7 @@ from .llm_runner import LlmRunner
 from .openrouter_client import OpenRouterClient
 from .paths import default_players_config_path, resolve_repo_root, resolve_repo_path
 from .player_config import PlayerConfig, build_player_configs
+from .treatment import treatment_fingerprint
 
 
 def _generate_run_id(
@@ -20,6 +21,7 @@ def _generate_run_id(
     *,
     max_trade_exchanges: int,
     max_auction_actions: int,
+    max_turns: int = 200,
 ) -> str:
     players_blob = [
         {
@@ -27,12 +29,16 @@ def _generate_run_id(
             "name": player.name,
             "openrouter_model_id": player.openrouter_model_id,
             "system_prompt": player.system_prompt,
+            "provider": player.provider,
+            "reasoning": player.reasoning,
         }
         for player in players
     ]
     seed_blob = json.dumps(
         {
             "seed": seed,
+            "max_turns": max_turns,
+            "treatment_fingerprint": treatment_fingerprint(),
             "players": players_blob,
             "max_trade_exchanges": max_trade_exchanges,
             "max_auction_actions": max_auction_actions,
@@ -52,8 +58,11 @@ async def _run(args: argparse.Namespace) -> int:
         players,
         max_trade_exchanges=args.max_trade_exchanges,
         max_auction_actions=args.max_auction_actions,
+        max_turns=args.max_turns,
     )
     run_files = init_run_files(runs_dir, run_id)
+    if run_files.events_path.exists() or run_files.run_config_path.exists():
+        raise ValueError("Run already exists; use recovery or a distinct run id")
 
     runner = LlmRunner(
         seed=args.seed,

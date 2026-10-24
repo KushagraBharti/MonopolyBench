@@ -11,6 +11,7 @@ from typing import Any, Awaitable, Callable
 
 from monopoly_arena import OpenRouterClient, build_single_player_config
 from monopoly_arena.decision_resolver import SharedDecisionResolver
+from monopoly_arena.fixture_validation import validate_fixture_action
 from monopoly_arena.prompting import PromptMemory, build_space_key_by_index
 from monopoly_telemetry import (
     build_experiment_manifest,
@@ -44,6 +45,9 @@ async def run_scenario(
     openrouter_factory: Callable[[], Any] = OpenRouterClient,
 ) -> dict[str, Any]:
     scenario = load_scenario(config.scenario_id)
+    fixture_errors = validate_fixture_action(scenario["decision_point"], scenario["reference_policy"]["action"])
+    if fixture_errors:
+        raise ValueError(f"Quarantined legacy fixture {config.scenario_id}: {fixture_errors}")
     decision = json.loads(json.dumps(scenario["decision_point"]))
     focal_player_id = scenario["focal_player_id"]
     focal_name = next(
@@ -81,6 +85,7 @@ async def run_scenario(
     run_files.write_snapshot(decision["state"])
 
     resolver = SharedDecisionResolver(
+        rules_validator=validate_fixture_action,
         openrouter=openrouter_factory(),
         run_files=run_files,
         prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()),

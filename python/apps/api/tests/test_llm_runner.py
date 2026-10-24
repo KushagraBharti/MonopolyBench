@@ -1,5 +1,6 @@
 import asyncio
 import json
+import pytest
 from typing import Any, Callable
 
 from monopoly_arena import OpenRouterResult
@@ -1165,116 +1166,23 @@ def test_two_llms_deterministic_replay() -> None:
     assert events_a == events_b
 
 
-def test_openrouter_http_429_fallback_reason(tmp_path) -> None:
-    players = _make_players()
-    run_files = init_run_files(tmp_path, "run-http-429")
-    runner = LlmRunner(
-        seed=123,
-        players=players,
-        run_id="run-http-429",
-        openrouter=ErrorOpenRouter("http_429", 429),
-        run_files=run_files,
-        event_delay_s=0,
-        max_turns=8,
-    )
-    events: list[dict[str, Any]] = []
-
-    async def on_event(event: dict[str, Any]) -> None:
-        events.append(event)
-
-    asyncio.run(runner.run(on_event=on_event))
-
-    entries = [
-        json.loads(line)
-        for line in run_files.decisions_path.read_text(encoding="utf-8").strip().splitlines()
-        if line.strip()
-    ]
-    resolved = next(entry for entry in entries if entry["phase"] == "decision_resolved")
-    assert resolved["fallback_reason"] == "openrouter_http_429"
-
-    response_events = [event for event in events if event["type"] == "LLM_DECISION_RESPONSE"]
-    assert response_events
-    assert response_events[0]["payload"]["error"] == "fallback:openrouter_http_429"
-
-
-def test_openrouter_http_5xx_fallback_reason(tmp_path) -> None:
-    players = _make_players()
-    run_files = init_run_files(tmp_path, "run-http-5xx")
-    runner = LlmRunner(
-        seed=123,
-        players=players,
-        run_id="run-http-5xx",
-        openrouter=ErrorOpenRouter("http_5xx", 503),
-        run_files=run_files,
-        event_delay_s=0,
-        max_turns=8,
-    )
-    asyncio.run(runner.run())
-
-    entries = [
-        json.loads(line)
-        for line in run_files.decisions_path.read_text(encoding="utf-8").strip().splitlines()
-        if line.strip()
-    ]
-    resolved = next(entry for entry in entries if entry["phase"] == "decision_resolved")
-    assert resolved["fallback_reason"] == "openrouter_http_5xx"
-
-
-def test_openrouter_http_4xx_fallback_reason(tmp_path) -> None:
-    players = _make_players()
-    run_files = init_run_files(tmp_path, "run-http-4xx")
-    runner = LlmRunner(
-        seed=123,
-        players=players,
-        run_id="run-http-4xx",
-        openrouter=ErrorOpenRouter("http_4xx", 401),
-        run_files=run_files,
-        event_delay_s=0,
-        max_turns=8,
-    )
-    events: list[dict[str, Any]] = []
-
-    async def on_event(event: dict[str, Any]) -> None:
-        events.append(event)
-
-    asyncio.run(runner.run(on_event=on_event))
-
-    entries = [
-        json.loads(line)
-        for line in run_files.decisions_path.read_text(encoding="utf-8").strip().splitlines()
-        if line.strip()
-    ]
-    resolved = next(entry for entry in entries if entry["phase"] == "decision_resolved")
-    assert resolved["fallback_used"] is True
-    assert resolved["fallback_reason"] == "openrouter_http_4xx"
-
-    response_events = [event for event in events if event["type"] == "LLM_DECISION_RESPONSE"]
-    assert response_events
-    assert response_events[0]["payload"]["valid"] is False
-    assert response_events[0]["payload"]["error"].startswith("fallback:")
-
-
-def test_openrouter_network_error_fallback_reason(tmp_path) -> None:
-    players = _make_players()
-    run_files = init_run_files(tmp_path, "run-network-error")
-    runner = LlmRunner(
-        seed=123,
-        players=players,
-        run_id="run-network-error",
-        openrouter=ErrorOpenRouter("network_error"),
-        run_files=run_files,
-        event_delay_s=0,
-        max_turns=8,
-    )
-    asyncio.run(runner.run())
-
-    entries = [
-        json.loads(line)
-        for line in run_files.decisions_path.read_text(encoding="utf-8").strip().splitlines()
-        if line.strip()
-    ]
-    resolved = next(entry for entry in entries if entry["phase"] == "decision_resolved")
-    assert resolved["fallback_reason"] == "openrouter_network_error"
+@pytest.mark.parametrize("error_type,status", [
+    ("http_429", 429), ("http_5xx", 503), ("http_4xx", 401), ("network_error", None),
+])
+def test_infrastructure_failure_preserves_pending_decision_without_action(tmp_path, error_type, status):
+    run_files = init_run_files(tmp_path, "infrastructure-failure")
+    runner = LlmRunner(seed=123, players=_make_players(), run_id=run_files.run_id,
+                       openrouter=ErrorOpenRouter(error_type, status), run_files=run_files,
+                       event_delay_s=0, max_turns=5)
+    with pytest.raises(RuntimeError, match="Infrastructure failure"):
+        asyncio.run(runner.run())
+    assert not run_files.actions_path.exists()
+    assert not run_files.summary_path.exists()
+    events = [json.loads(line) for line in run_files.events_path.read_text().splitlines()]
+    assert not any(event["type"] in {"LLM_DECISION_RESPONSE", "GAME_ENDED"} for event in events)
+    calls = list((run_files.run_dir / "calls").glob("*.json"))
+    assert len(calls) == 1
+    assert json.loads(calls[0].read_text())["result"]["error_type"] == error_type
 
 
 def test_reasoning_effort_and_free_model_propagate(tmp_path) -> None:

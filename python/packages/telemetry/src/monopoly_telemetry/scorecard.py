@@ -8,7 +8,7 @@ from typing import Any
 from .run_files import RunFiles
 
 
-SCORECARD_VERSION = "scorecard_v1"
+SCORECARD_VERSION = "scorecard_v2"
 DEFAULT_STARTING_CASH = 1500
 
 
@@ -126,6 +126,13 @@ def _build_scorecard_from_logs(
                     pending_purchase_by_player[player_id].pop(0)
                 _add_player_metric(by_player, player_id, "properties_won_by_auction", 1)
             if reason.startswith("BANKRUPTCY"):
+                if reason == "BANKRUPTCY_ASSETS_TO_BANK":
+                    bankruptcy_asset_bank_by_turn.add(_int(event.get("turn_index")))
+                    for index, owner in list(owner_by_index.items()):
+                        if owner == player_id:
+                            owner_by_index[index] = None
+                            mortgaged_by_index[index] = False
+                            buildings_by_index[index] = {"houses": 0, "hotels": 0}
                 run_metrics["total_bankruptcies"] += 1 if reason == "BANKRUPTCY" else 0
                 turn_index = _optional_int(event.get("turn_index"))
                 if reason == "BANKRUPTCY_CASH" and delta > 0 and isinstance(player_id, str) and turn_index is not None:
@@ -274,6 +281,15 @@ def _build_scorecard_from_logs(
     _apply_final_summary_metrics(by_player, summary, owner_by_index, mortgaged_by_index, buildings_by_index, board)
     _rank_players(by_player, run_metrics)
     _apply_score_matrix(by_player, run_metrics)
+    run_metrics["score_matrix"]["interpretation"] = "legacy_descriptive_composite_not_validated_for_ranking"
+    run_metrics["rank_definition"] = "terminal_net_worth_competition_rank_with_ties_not_elimination_order"
+    terminal = next((snapshot for snapshot in reversed(snapshots) if snapshot.get("phase") == "GAME_OVER"), None)
+    if terminal is not None and events:
+        for player_id, metrics in by_player.items():
+            holdings = [space for space in terminal["board"] if space.get("owner_id") == player_id]
+            if metrics["final_property_count"] != len(holdings):
+                raise ValueError(f"Derived holdings disagree with terminal state for {player_id}")
+        run_metrics["terminal_holdings_reconciled"] = True
 
     players_list = [by_player[player_id] for player_id in sorted(by_player)]
     return {
@@ -612,14 +628,14 @@ def _apply_usage_metrics(
         usage_metrics["total_input_tokens"] + usage_metrics["total_output_tokens"]
     )
     total_cost = totals.get("cost")
-    usage_metrics["total_cost"] = float(total_cost) if isinstance(total_cost, (int, float)) else 0.0
+    usage_metrics["total_cost"] = float(total_cost) if isinstance(total_cost, (int, float)) else None
     total_decisions = _int(run_metrics["decision_stats"].get("total_resolved"))
     final_turn = _int(run_metrics.get("final_turn_index"))
-    if total_decisions:
+    if total_decisions and usage_metrics["total_cost"] is not None:
         usage_metrics["cost_per_decision"] = round(usage_metrics["total_cost"] / total_decisions, 10)
-    if final_turn:
+    if final_turn and usage_metrics["total_cost"] is not None:
         usage_metrics["cost_per_turn"] = round(usage_metrics["total_cost"] / final_turn, 10)
-    if by_player:
+    if by_player and usage_metrics["total_cost"] is not None:
         usage_metrics["cost_per_completed_game"] = round(usage_metrics["total_cost"], 10)
 
     usage_by_player = _dict(usage.get("by_player"))
@@ -633,9 +649,9 @@ def _apply_usage_metrics(
         player["total_cached_tokens"] = _int(row.get("cached_tokens"))
         player["total_tokens"] = _int(row.get("total_tokens")) or prompt_tokens + completion_tokens
         cost = row.get("cost")
-        player["total_cost"] = float(cost) if isinstance(cost, (int, float)) else 0.0
+        player["total_cost"] = float(cost) if isinstance(cost, (int, float)) else None
         decision_count = _int(player.get("decision_count")) or _int(row.get("decision_count"))
-        if decision_count:
+        if decision_count and player["total_cost"] is not None:
             player["cost_per_decision"] = round(player["total_cost"] / decision_count, 10)
 
 
@@ -680,7 +696,10 @@ def _apply_final_summary_metrics(
             player["primary_score"] = summary_player.get("net_worth_estimate")
             player["bankrupt"] = bool(summary_player.get("bankrupt", player.get("bankrupt", False)))
             player["turns_played"] = _int(summary_player.get("turns_played"))
-            player["turns_survived"] = _int(summary_player.get("turns_played"))
+            player["turns_survived"] = (player.get("bankruptcy_turn")
+                                         if player.get("bankruptcy_turn") is not None
+                                         else _int(summary.get("turn_count")))
+            player["survival_censored"] = not player["bankrupt"]
         player["winner"] = player_id == winner_id
         if player["winner"]:
             player["bankrupt"] = False
@@ -707,7 +726,15 @@ def _apply_final_summary_metrics(
         player["final_liquid_net_worth_estimate"] = (
             None
             if player["final_cash"] is None
-            else player["final_cash"] + player["final_mortgage_liability_estimate"]
+            else player["final_cash"] - player["final_mortgage_liability_estimate"]
+        )
+        player["final_liquid_net_worth_definition"] = "cash_minus_mortgage_principal_not_liquidation_capacity"
+        developed_groups = {board["color_group_by_index"].get(index) for index, buildings in buildings_by_index.items()
+                            if buildings.get("houses", 0) or buildings.get("hotels", 0)}
+        player["immediate_mortgage_capacity"] = sum(
+            board["price_by_index"].get(index, 0) // 2 for index in owned
+            if not mortgaged_by_index.get(index, False)
+            and board["color_group_by_index"].get(index) not in developed_groups
         )
         player["final_complete_color_group_count"] = _complete_color_group_count(player_id, owner_by_index, board)
         player["final_developed_monopoly_count"] = _developed_monopoly_count(
@@ -721,7 +748,7 @@ def _apply_final_summary_metrics(
         if turns_survived and isinstance(player.get("total_cost"), (int, float)):
             player["cost_per_turn_survived"] = round(float(player["total_cost"]) / turns_survived, 10)
         net_worth = player.get("final_net_worth_estimate")
-        if isinstance(net_worth, (int, float)) and net_worth:
+        if isinstance(net_worth, (int, float)) and net_worth and isinstance(player.get("total_cost"), (int, float)):
             player["cost_per_net_worth_point"] = round(float(player["total_cost"]) / float(net_worth), 10)
 
 
@@ -737,7 +764,9 @@ def _rank_players(by_player: dict[str, dict[str, Any]], run_metrics: dict[str, A
         reverse=True,
     )
     for index, player in enumerate(ranked, start=1):
-        player["final_rank"] = index
+        player["final_rank"] = (ranked[index - 2]["final_rank"] if index > 1
+                                and player["final_net_worth_estimate"] == ranked[index - 2]["final_net_worth_estimate"]
+                                and player["winner"] == ranked[index - 2]["winner"] else index)
     run_metrics["rankings"] = [
         {
             "player_id": player["player_id"],

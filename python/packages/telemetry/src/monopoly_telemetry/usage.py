@@ -7,19 +7,19 @@ from typing import Any
 from .run_files import RunFiles
 
 
-USAGE_ACCOUNTING_VERSION = "usage_accounting_v1"
+USAGE_ACCOUNTING_VERSION = "usage_accounting_v2"
 
 
 def build_usage_report(run_files: RunFiles) -> dict[str, Any]:
     decisions = _read_jsonl(run_files.decisions_path)
-    attempt_rows = _attempt_usage_rows(decisions)
+    attempt_rows = _all_attempt_usage_rows(run_files, decisions)
     decision_rows = _decision_usage_rows(attempt_rows)
     return _aggregate_usage(run_files.run_id, attempt_rows, decision_rows)
 
 
 def write_usage_artifacts(run_files: RunFiles) -> dict[str, Any]:
     decisions = _read_jsonl(run_files.decisions_path)
-    attempt_rows = _attempt_usage_rows(decisions)
+    attempt_rows = _all_attempt_usage_rows(run_files, decisions)
     decision_rows = _decision_usage_rows(attempt_rows)
     report = _aggregate_usage(run_files.run_id, attempt_rows, decision_rows)
     _write_jsonl(run_files.usage_attempts_path, attempt_rows)
@@ -27,6 +27,27 @@ def write_usage_artifacts(run_files: RunFiles) -> dict[str, Any]:
     run_files.write_json_artifact(run_files.usage_path, report)
     run_files.write_json_artifact(run_files.cost_report_path, _cost_report(report))
     return report
+
+
+def _all_attempt_usage_rows(run_files: RunFiles, decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = _attempt_usage_rows(decisions)
+    accounted = {(row["decision_id"], row["attempt_index"]) for row in rows}
+    for path in sorted((run_files.run_dir / "calls").glob("*.json")):
+        call = json.loads(path.read_text(encoding="utf-8"))
+        if (call["decision_id"], call["attempt_index"]) in accounted:
+            continue
+        result = _dict(call.get("result"))
+        raw = _dict(result.get("response_json"))
+        normalized = _normalize_usage(_dict(raw.get("usage")), raw)
+        rows.append({**normalized, "run_id": run_files.run_id, "decision_id": call["decision_id"],
+                     "attempt_index": call["attempt_index"], "player_id": call.get("player_id"),
+                     "turn_index": call.get("turn_index"), "decision_type": call.get("decision_type"),
+                     "openrouter_model_id": call["request"].get("model"), "call_id": call["call_id"],
+                     "call_status": call["status"], "input_tokens": normalized["prompt_tokens"],
+                     "output_tokens": normalized["completion_tokens"],
+                     "accounting_status": "actual_openrouter_usage" if normalized["usage_seen"] else "missing_openrouter_usage",
+                     "error_type": result.get("error_type"), "applied": False})
+    return rows
 
 
 def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -71,6 +92,10 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "cache_read_tokens": normalized["cache_read_tokens"],
                     "cache_write_tokens": normalized["cache_write_tokens"],
                     "cost": normalized["cost"],
+                    "gateway_charge": normalized["gateway_charge"],
+                    "upstream_inference_cost": normalized["upstream_inference_cost"],
+                    "cost_status": normalized["cost_status"],
+                    "raw_usage": usage,
                     "latency_ms": attempt.get("latency_ms"),
                     "retry_used": bool(decision.get("retry_used")),
                     "fallback_used": bool(decision.get("fallback_used")),
@@ -145,6 +170,8 @@ def _aggregate_usage(
         "attempt_count": len(attempt_rows),
         "decision_count": len(decision_rows),
         "missing_usage_attempt_count": sum(1 for row in attempt_rows if row["accounting_status"] == "missing_openrouter_usage"),
+        "missing_cost_attempt_count": sum(row.get("cost") is None for row in attempt_rows),
+        "cost_coverage": "complete" if all(row.get("cost") is not None for row in attempt_rows) else "partial_or_missing",
         "totals": _totals(decision_rows),
         "by_model": by_model,
         "by_player": by_player,
@@ -193,6 +220,16 @@ def _normalize_usage(usage: dict[str, Any], raw: dict[str, Any]) -> dict[str, An
     ):
         total_tokens = int(prompt_tokens) + int(completion_tokens)
     accounting_source = "missing"
+    gateway_charge = float(cost) if isinstance(cost, (int, float)) else None
+    details = _dict(usage.get("cost_details"))
+    upstream = details.get("upstream_inference_cost", generation_data.get("upstream_inference_cost"))
+    byok = usage.get("is_byok", raw.get("is_byok", generation_data.get("is_byok")))
+    # Upstream cost is already included for credit-billed calls. It is additive
+    # only with explicit BYOK evidence, or a zero gateway charge.
+    if isinstance(upstream, (int, float)) and (byok is True or gateway_charge == 0):
+        cost = gateway_charge + float(upstream) if gateway_charge is not None else None
+    elif byok is True:
+        cost = None  # A known gateway fee does not reveal the missing upstream bill.
     if usage and generation_data:
         accounting_source = "chat_completion_usage_with_generation_backfill"
     elif usage:
@@ -231,6 +268,9 @@ def _normalize_usage(usage: dict[str, Any], raw: dict[str, Any]) -> dict[str, An
         "cache_read_tokens": _optional_int(prompt_details.get("cache_read_tokens") or usage.get("cache_read_tokens")),
         "cache_write_tokens": _optional_int(prompt_details.get("cache_write_tokens") or usage.get("cache_write_tokens")),
         "cost": float(cost) if isinstance(cost, (int, float)) else None,
+        "gateway_charge": gateway_charge,
+        "upstream_inference_cost": upstream,
+        "cost_status": "known" if isinstance(cost, (int, float)) else "unknown",
     }
 
 
@@ -265,7 +305,7 @@ def _accumulate_group(target: dict[str, dict[str, Any]], key: str, row: dict[str
     for field in _numeric_fields():
         value = row.get(field)
         if isinstance(value, (int, float)):
-            current[field] += value
+            current[field] = (current[field] or 0) + value
 
 
 def _totals(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -274,12 +314,12 @@ def _totals(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for field in _numeric_fields():
             value = row.get(field)
             if isinstance(value, (int, float)):
-                totals[field] += value
+                totals[field] = (totals[field] or 0) + value
     return totals
 
 
 def _zero_totals() -> dict[str, Any]:
-    return {field: 0.0 if field == "cost" else 0 for field in _numeric_fields()}
+    return {field: None for field in _numeric_fields()}
 
 
 def _numeric_fields() -> tuple[str, ...]:

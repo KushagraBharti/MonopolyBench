@@ -61,6 +61,7 @@ export interface TradeState {
   history?: TradeExchange[];
   history_last_2: TradeExchange[];
   current_offer: {
+    from_player_id?: string;
     offer: TradeBundle;
     request: TradeBundle;
   };

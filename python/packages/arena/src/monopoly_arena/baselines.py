@@ -87,7 +87,7 @@ def _trade_response_action(decision: dict[str, Any], baseline_id: str) -> dict[s
 
 def _trade_propose_action(decision: dict[str, Any], baseline_id: str) -> dict[str, Any]:
     legal = _legal_actions(decision)
-    if "end_turn" in legal and baseline_id in {BASELINE_NO_TRADE, BASELINE_CASH_CONSERVATIVE}:
+    if "end_turn" in legal:
         return _action(decision, "end_turn", {}, baseline_id)
     if "propose_trade" in legal and baseline_id not in {BASELINE_NO_TRADE, BASELINE_CASH_CONSERVATIVE}:
         target = _first_trade_target(decision)
@@ -142,10 +142,6 @@ def _post_turn_action(decision: dict[str, Any], baseline_id: str) -> dict[str, A
         space_key = _first_space_key(decision, options.get("unmortgageable_space_indices"))
         if space_key:
             return _action(decision, "unmortgage_property", {"space_key": space_key}, baseline_id)
-    if baseline_id not in {BASELINE_NO_TRADE, BASELINE_CASH_CONSERVATIVE} and "propose_trade" in legal:
-        target = _first_trade_target(decision)
-        if target is not None and baseline_id == BASELINE_BUILDER:
-            return _action(decision, "propose_trade", _empty_trade_args(to_player_id=target), baseline_id)
     if "end_turn" in legal:
         return _action(decision, "end_turn", {}, baseline_id)
     return _construct_action(decision, legal[0], baseline_id)
@@ -186,6 +182,8 @@ def _construct_action(
 def _constructible_actions(decision: dict[str, Any], legal: list[str]) -> list[str]:
     constructible: list[str] = []
     for action_name in legal:
+        if action_name in {"propose_trade", "counter_trade"}:
+            continue  # These policies do not construct economically meaningful offers.
         if action_name == "bid_auction" and (_min_next_bid(decision) is None or _player_cash(decision) < (_min_next_bid(decision) or 0)):
             continue
         if action_name in {"mortgage_property", "unmortgage_property"} and not _has_space_arg(decision, action_name):

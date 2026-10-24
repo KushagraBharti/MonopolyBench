@@ -111,15 +111,27 @@ class RunManager:
             run_files = self._resolve_run_files(run_id)
             if run_files is None:
                 raise FileNotFoundError(f"Run '{run_id}' was not found.")
-            if run_files.summary_path.exists():
+            if (run_files.run_dir / "completion.json").exists() and _read_json(run_files.run_dir / "completion.json").get("complete"):
                 raise ValueError("Completed runs cannot be recovered as interrupted runs.")
 
+            from monopoly_telemetry.commit import repair_committed_tails
+            repair_committed_tails(run_files)
+
             run_config = _read_json(run_files.run_config_path)
+            from monopoly_arena.treatment import treatment_fingerprint
+            fingerprint = run_config.get("treatment_fingerprint")
+            if fingerprint and fingerprint != treatment_fingerprint():
+                raise ValueError("Cannot resume under a different executable treatment")
             if run_config.get("run_id") != run_id:
                 raise ValueError("Run configuration does not match the requested run id.")
-            events = _read_jsonl(run_files.events_path)
-            actions = _read_jsonl(run_files.actions_path)
-            decisions = _read_jsonl(run_files.decisions_path)
+            from monopoly_engine.replay import load_jsonl
+            events = load_jsonl(run_files.events_path)
+            actions = load_jsonl(run_files.actions_path)
+            decisions = load_jsonl(run_files.decisions_path)
+            recovery_prompts = _read_json(run_files.run_dir / "recovery_prompts.json")
+            for entry in run_config.get("players", []):
+                if entry.get("player_id") in recovery_prompts:
+                    entry["system_prompt"] = recovery_prompts[entry["player_id"]]
             if not events:
                 raise ValueError("Interrupted run has no recorded events.")
             players = _recovery_player_configs(run_config, decisions)
@@ -1009,6 +1021,8 @@ def _recovery_player_configs(
             raise ValueError(f"Interrupted run player '{player_id}' used multiple system prompts.")
         if observed_prompts:
             system_prompt = next(iter(observed_prompts))
+        elif isinstance(entry.get("system_prompt"), str) and entry["system_prompt"]:
+            system_prompt = entry["system_prompt"]
         elif player_id in baseline_players:
             system_prompt = DEFAULT_SYSTEM_PROMPT
         else:

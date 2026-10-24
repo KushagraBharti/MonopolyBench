@@ -329,6 +329,7 @@ def _build_run_matrix(
                     max_turns=int(config["max_turns"]),
                     actors=row_actors,
                     run_index=run_index,
+                    treatment_config=config,
                 )
                 rows.append(
                     {
@@ -824,9 +825,11 @@ async def _run_campaign_row(
             campaign_row_ended_at_utc=_utc_now(),
         )
 
+    complete = _completed_run_exists(run_dir)
     return _campaign_result_entry(
         row,
-        status="completed",
+        status="completed" if complete else "failed",
+        error=None if complete else "Finalized artifacts failed completion validation",
         run_dir=run_dir,
         campaign_row_started_at_utc=campaign_row_started_at_utc,
         campaign_row_ended_at_utc=_utc_now(),
@@ -1008,8 +1011,47 @@ def _completed_run_exists(run_dir: Path) -> bool:
         "artifact_replay_report.json",
         "trace_summary.json",
         "failure_summary.json",
+        "artifact_manifest.json",
     ]
-    return all((run_dir / name).exists() for name in required)
+    try:
+        from monopoly_engine.replay import load_jsonl
+        from monopoly_telemetry import build_run_files
+        from .replay_verification import build_replay_verification_report
+
+        for name in required:
+            path = run_dir / name
+            if not path.is_file() or path.stat().st_size == 0:
+                return False
+            if name.endswith(".jsonl"):
+                if not load_jsonl(path):
+                    return False
+            else:
+                value = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(value, (dict, list)) or not value:
+                    return False
+                if isinstance(value, dict) and value.get("run_id", run_dir.name) != run_dir.name:
+                    return False
+        report = build_replay_verification_report(build_run_files(run_dir.parent, run_dir.name))
+        if report.get("status") != "passed":
+            return False
+        events = load_jsonl(run_dir / "events.jsonl")
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        terminal = events[-1]
+        if (summary.get("winner_player_id") != terminal["payload"].get("winner_player_id")
+                or summary.get("reason") != terminal["payload"].get("reason")
+                or summary.get("turn_count") != terminal.get("turn_index")):
+            return False
+        manifest = json.loads((run_dir / "artifact_manifest.json").read_text(encoding="utf-8"))
+        for artifact in manifest["artifacts"]:
+            if artifact.get("sha256"):
+                path = (run_dir / artifact["relative_path"]).resolve()
+                if not path.is_relative_to(run_dir.resolve()):
+                    return False
+                if hashlib.sha256(path.read_bytes()).hexdigest() != artifact["sha256"]:
+                    return False
+        return True
+    except (ValueError, OSError, TypeError, KeyError):
+        return False
 
 
 def _run_dir_is_empty(run_dir: Path) -> bool:
@@ -1340,6 +1382,10 @@ def _leaderboard_payload(
         bankruptcies = sum(1 for row in actor_rows if row.get("bankrupt"))
         metadata = actor_rows[0]
         row_payload = {
+            "seed_block_inference": {
+                metric: _seed_block_stats(actor_rows, metric)
+                for metric in ("final_net_worth_estimate", "final_rank", "turns_survived")
+            },
             "actor_id": actor_id,
             "actor_type": metadata.get("actor_type"),
             "display_name": metadata.get("display_name"),
@@ -1572,10 +1618,15 @@ def _run_id(
     max_turns: int,
     actors: list[dict[str, Any]],
     run_index: int,
+    treatment_config: dict[str, Any] | None = None,
 ) -> str:
+    from .treatment import treatment_fingerprint
     digest = _sha256_short(
         {
             "campaign_id": campaign_id,
+            "treatment_config": treatment_config,
+            "treatment_fingerprint": treatment_fingerprint(),
+            "treatment_version": "audit_corrected_v2",
             "seed": seed,
             "repetition_index": repetition_index,
             "permutation_id": permutation_id,
@@ -1601,9 +1652,13 @@ def _resume_key(
     permutation_id: str,
     actors: list[dict[str, Any]],
 ) -> str:
+    from .treatment import treatment_fingerprint
     return _sha256_short(
         {
             "benchmark_id": config["benchmark_id"],
+            "treatment_config": config,
+            "treatment_version": "audit_corrected_v2",
+            "treatment_fingerprint": treatment_fingerprint(),
             "campaign_id": config["campaign_id"],
             "seed": seed,
             "repetition_index": repetition_index,
@@ -2114,6 +2169,20 @@ def _format_markdown_cell(value: Any) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
 
+def _seed_block_stats(rows: list[dict[str, Any]], metric: str) -> dict[str, Any]:
+    blocks: dict[int, list[float]] = {}
+    for row in rows:
+        value, seed = row.get(metric), row.get("seed")
+        if isinstance(seed, int) and isinstance(value, (float, int)) and math.isfinite(value):
+            blocks.setdefault(seed, []).append(float(value))
+    means = [mean(values) for _, values in sorted(blocks.items())]
+    return {"unit": "seed_block", "block_count": len(means),
+            "estimand": "equally_weighted_mean_of_seed_means",
+            "mean": mean(means) if means else None, "ci95": _bootstrap_mean_ci(means),
+            "limited_blocks": len(means) < 10,
+            "pairing": "seed_reuse_does_not_imply_identical_future_draws"}
+
+
 def _numeric_stats(values: list[float]) -> dict[str, Any]:
     filtered = [value for value in values if math.isfinite(value)]
     if not filtered:
@@ -2133,7 +2202,8 @@ def _numeric_stats(values: list[float]) -> dict[str, Any]:
         "min": round(min(filtered), 6),
         "max": round(max(filtered), 6),
         "stdev": round(stdev(filtered), 6) if len(filtered) > 1 else 0.0,
-        "ci95": _bootstrap_mean_ci(filtered),
+        "ci95": None,
+        "inference_note": "descriptive_only_use_seed_block_inference",
     }
 
 
@@ -2146,12 +2216,11 @@ def _bootstrap_mean_ci(values: list[float]) -> dict[str, Any]:
             "resamples": 0,
         }
     if len(values) == 1:
-        value = round(values[0], 6)
         return {
-            "method": "deterministic_bootstrap_mean",
-            "lower": value,
-            "upper": value,
-            "resamples": 1,
+            "method": "insufficient_independent_observations",
+            "lower": None,
+            "upper": None,
+            "resamples": 0,
         }
     resamples = 500
     rng = random.Random(

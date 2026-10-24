@@ -442,6 +442,8 @@ def _counterfactual_pair_row(
     pair_labels = [label for label in labels if label.get("counterfactual_pair_id") == pair["pair_id"]]
     return {
         **pair,
+        "causal_interpretation_validated": False,
+        "interpretation": "related_fixtures_require_controlled_difference_review",
         "models_with_both_results": len(per_model),
         "average_score_delta": _mean_or_none([float(row["score_delta"]) for row in per_model]),
         "average_absolute_score_delta": _mean_or_none([float(row["absolute_score_delta"]) for row in per_model]),
@@ -494,6 +496,7 @@ def _micro_campaign_row(
     campaign_labels = [label for label in labels if label.get("campaign_id") == campaign["campaign_id"]]
     return {
         **campaign,
+        "interpretation": "independent_fixture_aggregation_not_continuous_strategy",
         "models_with_any_results": len(per_model),
         "models_with_complete_sequence": sum(1 for row in per_model if row["complete_sequence"]),
         "average_sequence_score": _mean_or_none(

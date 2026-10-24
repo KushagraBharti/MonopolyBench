@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import asyncio
+import hashlib
+import uuid
 import time
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
@@ -225,7 +228,7 @@ class SharedDecisionResolver:
             create_kwargs["reasoning"] = player_config.reasoning
         if player_config.provider is not None:
             create_kwargs["provider"] = player_config.provider
-        result = await self._openrouter.create_chat_completion(**create_kwargs)
+        result = await self._call_completion(decision, 0, create_kwargs)
         response_end_ms = _now_ms()
         result = await self._with_generation_metadata(result)
         request_payload_raw = result.request_payload_raw or self._build_request_payload_raw(
@@ -275,7 +278,7 @@ class SharedDecisionResolver:
                 sequence_meta=outcome_sequence_meta,
             )
             write_artifacts(outcome)
-            return outcome
+            raise RuntimeError(f"Infrastructure failure; no game action applied: {result.error_type}: {result.error}")
 
         if errors:
             retry_bundle = build_prompt_bundle(
@@ -298,7 +301,7 @@ class SharedDecisionResolver:
                 retry_kwargs["reasoning"] = player_config.reasoning
             if player_config.provider is not None:
                 retry_kwargs["provider"] = player_config.provider
-            retry_result = await self._openrouter.create_chat_completion(**retry_kwargs)
+            retry_result = await self._call_completion(decision, 1, retry_kwargs)
             retry_end_ms = _now_ms()
             retry_result = await self._with_generation_metadata(retry_result)
             retry_request_payload_raw = retry_result.request_payload_raw or self._build_request_payload_raw(
@@ -350,7 +353,7 @@ class SharedDecisionResolver:
                     sequence_meta=outcome_sequence_meta,
                 )
                 write_artifacts(outcome)
-                return outcome
+                raise RuntimeError(f"Infrastructure failure; no game action applied: {retry_result.error_type}: {retry_result.error}")
             if retry_errors:
                 outcome = self._build_decision_outcome(
                     action=self._fallback_action(decision),
@@ -384,6 +387,35 @@ class SharedDecisionResolver:
         write_artifacts(outcome)
         return outcome
 
+    async def _call_completion(self, decision: dict[str, Any], attempt: int,
+                               kwargs: dict[str, Any]) -> OpenRouterResult:
+        request_hash = hashlib.sha256(json.dumps(kwargs, sort_keys=True).encode()).hexdigest()
+        path = None
+        record: dict[str, Any] = {"call_id": str(uuid.uuid4()), "decision_id": decision["decision_id"],
+                                  "player_id": decision["player_id"], "turn_index": decision["turn_index"],
+                                  "decision_type": decision["decision_type"],
+                                  "attempt_index": attempt, "request_hash": request_hash,
+                                  "request": kwargs, "status": "in_flight"}
+        if self._run_files is not None:
+            key = hashlib.sha256(f'{decision["decision_id"]}:{attempt}'.encode()).hexdigest()
+            path = self._run_files.run_dir / "calls" / f"{key}.json"
+            if path.exists():
+                saved = json.loads(path.read_text(encoding="utf-8"))
+                if saved["request_hash"] != request_hash:
+                    raise RuntimeError("Recovered request differs from durable call intent")
+                if saved.get("status") == "received":
+                    return OpenRouterResult(**saved["result"])
+                raise RuntimeError("Interrupted call has unknown outcome; reconcile billing before resubmission")
+            self._run_files.write_json_artifact(path, record)
+        try:
+            result = await asyncio.wait_for(self._openrouter.create_chat_completion(**kwargs), timeout=120)
+        except asyncio.TimeoutError:
+            result = OpenRouterResult(False, None, None, "Total request deadline exceeded", "total_timeout", None)
+        if path is not None and self._run_files is not None:
+            record.update(status="received", result=asdict(result))
+            self._run_files.write_json_artifact(path, record)
+        return result
+
     async def _with_generation_metadata(self, result: OpenRouterResult) -> OpenRouterResult:
         response_json = result.response_json
         if not result.ok or not isinstance(response_json, dict):
@@ -396,7 +428,10 @@ class SharedDecisionResolver:
         get_generation = getattr(self._openrouter, "get_generation", None)
         if get_generation is None:
             return result
-        generation_result = await get_generation(generation_id)
+        try:
+            generation_result = await asyncio.wait_for(get_generation(generation_id), timeout=15)
+        except asyncio.TimeoutError:
+            return result
         next_response = _attach_generation_metadata(response_json, generation_result)
         return replace(result, response_json=next_response)
 
@@ -777,7 +812,8 @@ class SharedDecisionResolver:
         elif "end_turn" in legal_actions:
             action_name = "end_turn"
             args = {}
-        elif "declare_bankruptcy" in legal_actions:
+        elif ("declare_bankruptcy" in legal_actions
+              and "mortgage_property" not in legal_actions and "sell_houses_or_hotel" not in legal_actions):
             action_name = "declare_bankruptcy"
             args = {}
         elif "mortgage_property" in legal_actions:
@@ -874,7 +910,7 @@ class SharedDecisionResolver:
                 response_text=response_text,
             )
         except OSError:
-            return
+            raise
 
 
 def _now_ms() -> int:

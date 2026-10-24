@@ -257,12 +257,9 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
                     if isinstance(value, int):
                         token_usage_totals[key] += value
                         token_usage_seen = True
-                cost = usage.get("cost")
-                if isinstance(cost, (int, float)):
-                    cost_total += float(cost)
-                    cost_seen = True
             if isinstance(raw, dict):
-                cost = raw.get("cost") or raw.get("total_cost")
+                from .usage import _normalize_usage
+                cost = _normalize_usage(usage if isinstance(usage, dict) else {}, raw)["cost"]
                 if isinstance(cost, (int, float)):
                     cost_total += float(cost)
                     cost_seen = True

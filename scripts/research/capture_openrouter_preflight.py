@@ -285,10 +285,7 @@ def _tool_route_check(
                 },
             }
         ],
-        "tool_choice": {
-            "type": "function",
-            "function": {"name": PREFLIGHT_TOOL_NAME},
-        },
+        "tool_choice": "auto",
         "parallel_tool_calls": False,
         "usage": {"include": True},
     }

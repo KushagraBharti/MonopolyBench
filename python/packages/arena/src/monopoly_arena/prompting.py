@@ -524,6 +524,8 @@ def build_full_state(
             "cash": player.get("cash"),
             "position": space_key_for_index(position_index, space_key_by_index),
             "in_jail": bool(player.get("in_jail")),
+            "jail_turns": int(player.get("jail_turns", 0)),
+            "bankrupt": bool(player.get("bankrupt")),
             "holdings": build_holdings(str(player.get("player_id"))),
             "get_out_of_jail_cards": int(player.get("get_out_of_jail_cards", 0)),
         }
@@ -1073,6 +1075,9 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
     current_offer_from = current_offer_payload.get("from_player_id")
     if not isinstance(current_offer_from, str):
         current_offer_from = initiator
+        history = trade.get("history") or trade.get("history_last_2") or []
+        if history and isinstance(history[-1].get("from_player_id"), str):
+            current_offer_from = history[-1]["from_player_id"]
     raw_offer = current_offer_payload.get("offer")
     raw_request = current_offer_payload.get("request")
     if actor_id == current_offer_from:

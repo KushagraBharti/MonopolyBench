@@ -29,7 +29,7 @@ class OpenRouterClient:
         api_key: str | None = None,
         base_url: str = "https://openrouter.ai/api/v1",
         timeout_s: float = 30.0,
-        max_retries: int = 2,
+        max_retries: int = 0,
         extra_headers: dict[str, str] | None = None,
         stream_callback: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
     ) -> None:

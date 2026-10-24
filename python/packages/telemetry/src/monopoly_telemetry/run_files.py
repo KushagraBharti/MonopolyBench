@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .writer_jsonl import append_jsonl
+from .writer_jsonl import append_jsonl, atomic_write_text
 
 
 @dataclass
@@ -74,7 +74,7 @@ class RunFiles:
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(snapshot, separators=(",", ":"), ensure_ascii=True)
         if not canonical_path.exists():
-            canonical_path.write_text(payload, encoding="utf-8")
+            atomic_write_text(canonical_path, payload)
             return canonical_path
 
         existing = canonical_path.read_text(encoding="utf-8")
@@ -84,19 +84,19 @@ class RunFiles:
         phase = str(snapshot.get("phase") or "UNKNOWN")
         variant_kind = "decision" if phase == "AWAITING_DECISION" else "snapshot"
         variant_path = _next_snapshot_variant_path(self.snapshots_dir, int(turn_index), variant_kind)
-        variant_path.write_text(payload, encoding="utf-8")
+        atomic_write_text(variant_path, payload)
         return variant_path
 
     def write_summary(self, summary: dict[str, Any]) -> None:
         self.summary_path.parent.mkdir(parents=True, exist_ok=True)
-        self.summary_path.write_text(
+        atomic_write_text(self.summary_path,
             json.dumps(summary, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
 
     def write_json_artifact(self, path: Path, payload: dict[str, Any] | list[Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
+        atomic_write_text(path,
             json.dumps(payload, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
@@ -162,24 +162,24 @@ class RunFiles:
         parsed: dict[str, Any] | None,
     ) -> None:
         if system_prompt is not None:
-            (self.prompts_dir / f"{prefix}_system.txt").write_text(system_prompt, encoding="utf-8")
+            _write_evidence(self.prompts_dir / f"{prefix}_system.txt", system_prompt)
         if user_payload is not None:
-            (self.prompts_dir / f"{prefix}_user.json").write_text(
+            _write_evidence(self.prompts_dir / f"{prefix}_user.json",
                 json.dumps(user_payload, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if tools is not None:
-            (self.prompts_dir / f"{prefix}_tools.json").write_text(
+            _write_evidence(self.prompts_dir / f"{prefix}_tools.json",
                 json.dumps(tools, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if response is not None:
-            (self.prompts_dir / f"{prefix}_response.json").write_text(
+            _write_evidence(self.prompts_dir / f"{prefix}_response.json",
                 json.dumps(response, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if parsed is not None:
-            (self.prompts_dir / f"{prefix}_parsed.json").write_text(
+            _write_evidence(self.prompts_dir / f"{prefix}_parsed.json",
                 json.dumps(parsed, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
@@ -197,12 +197,22 @@ class RunFiles:
         prefix = _prompt_file_prefix(decision_id, attempt_index=attempt_index)
         self.quality_dir.mkdir(parents=True, exist_ok=True)
         if request_text is not None:
-            (self.quality_dir / f"{prefix}_request.txt").write_text(request_text, encoding="utf-8")
+            _write_evidence(self.quality_dir / f"{prefix}_request.txt", request_text)
         if response_text is not None:
-            (self.quality_dir / f"{prefix}_response.txt").write_text(response_text, encoding="utf-8")
+            _write_evidence(self.quality_dir / f"{prefix}_response.txt", response_text)
 
     def write_artifact_manifest(self) -> None:
         self.write_json_artifact(self.artifact_manifest_path, build_artifact_manifest(self))
+
+
+def _write_evidence(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+    if path.exists():
+        original = path.read_text(encoding=encoding)
+        if original == text:
+            return
+        digest = hashlib.sha256(original.encode(encoding)).hexdigest()
+        atomic_write_text(path.parent / "prior_evidence" / f"{path.name}.{digest}", original, encoding=encoding)
+    atomic_write_text(path, text, encoding=encoding)
 
 
 def init_run_files(runs_dir: Path, run_id: str) -> RunFiles:
@@ -285,6 +295,10 @@ def build_artifact_manifest(run_files: RunFiles) -> dict[str, Any]:
         if path == run_files.artifact_manifest_path:
             continue
         artifacts.append(_artifact_entry(label, run_files.run_dir, path))
+    known = {path for _, path in known_paths}
+    for path in sorted(run_files.run_dir.rglob("*")):
+        if path.is_file() and path not in known and path.name != "completion.json":
+            artifacts.append(_artifact_entry(str(path.relative_to(run_files.run_dir)), run_files.run_dir, path))
     return {
         "schema_version": "v1",
         "manifest_version": "artifact_manifest_v1",

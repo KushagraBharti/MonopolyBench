@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from monopoly_engine import canonical_event_lines, replay_actions
+from monopoly_engine.replay import load_jsonl
 from monopoly_telemetry import RunFiles
 
 
@@ -72,11 +73,35 @@ def build_replay_verification_report(run_files: RunFiles) -> dict[str, Any]:
 
 def build_replay_verification_reports(run_files: RunFiles) -> dict[str, dict[str, Any]]:
     started_at = datetime.now(timezone.utc).isoformat()
-    original_events = _read_jsonl(run_files.events_path)
-    actions = _read_jsonl(run_files.actions_path)
+    try:
+        original_events = load_jsonl(run_files.events_path)
+        actions = load_jsonl(run_files.actions_path)
+        decisions = load_jsonl(run_files.decisions_path)
+    except ValueError as exc:
+        context = _replay_context(run_files, started_at, [], [], {}, [])
+        return _failed_reports(context, str(exc))
     run_config = _read_json(run_files.run_config_path)
     players = _replay_players(run_config)
     context = _replay_context(run_files, started_at, original_events, actions, run_config, players)
+    requested = [e.get("payload", {}).get("decision_id") for e in original_events
+                 if e.get("type") == "LLM_DECISION_REQUESTED"]
+    action_ids = [a.get("decision_id") for a in actions]
+    context["missing_actions"] = len(set(requested) - set(action_ids))
+    context["extra_actions"] = len(set(action_ids) - set(requested)) + len(action_ids) - len(set(action_ids))
+    if context["missing_actions"] or context["extra_actions"]:
+        return _failed_reports(context, "Decision/action identities do not reconcile")
+    resolved = [d.get("decision_id") for d in decisions if d.get("phase") == "decision_resolved"]
+    if decisions and resolved != action_ids:
+        return _failed_reports(context, "Resolved decisions do not match actions in order")
+    resolved_rows = [d for d in decisions if d.get("phase") == "decision_resolved"]
+    for row, action in zip(resolved_rows, actions):
+        if row.get("final_action") != action.get("action"):
+            return _failed_reports(context, "Resolved decision/action payload mismatch")
+    for event in original_events:
+        if event.get("run_id") != run_files.run_id:
+            return _failed_reports(context, "Event run identity mismatch")
+    if not original_events or original_events[-1].get("type") != "GAME_ENDED":
+        return _failed_reports(context, "Missing terminal GAME_ENDED event")
     if not original_events:
         return _failed_reports(context, "events.jsonl is empty or missing")
     if not actions:

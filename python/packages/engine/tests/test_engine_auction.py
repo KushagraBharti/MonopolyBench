@@ -157,6 +157,11 @@ def test_auction_end_no_bids() -> None:
     }
     _, events, post_decision, _ = engine.apply_action(action)
 
+    assert post_decision is not None
+    assert post_decision["decision_type"] == "AUCTION_BID_DECISION"
+    assert post_decision["player_id"] == "p1"
+    action["decision_id"] = post_decision["decision_id"]
+    _, events, post_decision, _ = engine.apply_action(action)
     assert engine.state.auction is None
     assert engine.state.board[target_index].owner_id is None
     ended = next(event for event in events if event["type"] == "AUCTION_ENDED")
