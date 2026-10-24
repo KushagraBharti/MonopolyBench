@@ -8,7 +8,7 @@ import shutil
 import time
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -109,11 +109,14 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         if action not in job["allowed_actions"]:
             raise HTTPException(409, "Action is not allowed in this state")
         if action == "pause":
-            store.pause(job_id, "operator")
+            store.pause(job_id, "operator", expected_status="running")
         elif action == "resume":
             store.resume(job_id)
         elif action == "cancel":
-            store.execute("UPDATE jobs SET status='cancelled',ended_at=? WHERE job_id=?", (time.time(), job_id))
+            with store.connect() as db:
+                changed = db.execute("UPDATE jobs SET status='cancelled',ended_at=? WHERE job_id=? AND status=?", (time.time(), job_id, job["status"])).rowcount
+                if not changed:
+                    raise HTTPException(409, "Job state changed; refresh before retrying")
         elif action == "archive":
             store.execute("UPDATE jobs SET archived=1 WHERE job_id=?", (job_id,))
         store.audit(action, {"job_id": job_id}, "dashboard")
@@ -122,10 +125,14 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
     @app.post("/api/resume-all")
     def resume_all():
         store.set_state("account_stop", None)
+        waiting = []
         for job in store.rows("SELECT job_id FROM jobs WHERE status='paused'"):
-            store.resume(job["job_id"])
+            try:
+                store.resume(job["job_id"])
+            except ValueError:
+                waiting.append(job["job_id"])
         store.audit("resume_all", {}, "dashboard")
-        return {"ok": True}
+        return {"ok": True, "waiting_for_worker": waiting}
 
     @app.post("/api/smoke/prepare")
     def prepare(body: Smoke):
@@ -223,17 +230,32 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
             raise HTTPException(409, "Package is not ready")
         return download(rows[0]["export_id"])
 
-    @app.get("/api/jobs/{job_id}/decisions")
-    def decisions(job_id: str, cursor: int = 0):
+    def decision_index(job_id: str):
+        from monopoly_telemetry.run_files import build_run_files
+        from .decision_index import DecisionIndex
         job = store.job(job_id)
         commits = store.rows("SELECT offsets_json FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
         name = f"runs/{job['run_id']}/decisions.jsonl"
         end = json.loads(commits[0]["offsets_json"]).get(name, {}).get("bytes", 0) if commits else 0
-        if not end:
-            return []
-        with (store.root / name).open("rb") as handle:
-            rows = [json.loads(line) for line in handle.read(end).splitlines()]
+        rows = []
+        if end:
+            with (store.root / name).open("rb") as handle:
+                rows = [json.loads(line) for line in handle.read(end).splitlines()]
+        files = build_run_files(store.root / "runs", job["run_id"])
+        prompts = [files.run_dir / entry["path"] for entry in artifacts(job_id) if entry["path"].startswith("prompts/")]
+        return DecisionIndex(files, entries=rows, prompt_paths=prompts)
+
+    @app.get("/api/jobs/{job_id}/decisions")
+    def decisions(job_id: str, cursor: int = 0):
+        rows = decision_index(job_id).ordered()
         return rows[max(0, cursor):max(0, cursor)+50]
+
+    @app.get("/api/jobs/{job_id}/decisions/{decision_id}")
+    def decision_bundle(job_id: str, decision_id: str):
+        bundle = decision_index(job_id).get_bundle(decision_id)
+        if bundle is None:
+            raise KeyError(decision_id)
+        return bundle
 
     @app.get("/api/jobs/{job_id}/snapshots")
     def snapshots(job_id: str, cursor: int = 0):
@@ -259,11 +281,17 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
                 if record["journal_seq"] <= committed:
                     names.update(target["path"][len(prefix):] for target in record["targets"] if target["path"].startswith(prefix))
         entries = {name: directory / name for name in names if name != ".writer.lock"}
+        commits = store.rows("SELECT offsets_json FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
+        offsets = json.loads(commits[0]["offsets_json"]) if commits else {}
         if path is None:
-            return [{"path": name, "bytes": p.stat().st_size} for name, p in entries.items()]
+            return [{"path": name, "bytes": offsets.get(f"runs/{job['run_id']}/{name}", {}).get("bytes", p.stat().st_size)} for name, p in entries.items()]
         safe_path(path)
         if path not in entries or not entries[path].resolve().is_relative_to(directory.resolve()):
             raise KeyError(path)
+        committed = offsets.get(f"runs/{job['run_id']}/{path}")
+        if committed:
+            with entries[path].open("rb") as handle:
+                return Response(handle.read(committed["bytes"]), media_type="application/x-ndjson")
         return FileResponse(entries[path])
 
     @app.websocket("/api/jobs/{job_id}/ws")

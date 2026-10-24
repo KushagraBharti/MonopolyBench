@@ -148,16 +148,17 @@ def main() -> None:
     signal.signal(signal.SIGTERM, lambda *_: store.set_state("drain", True))
     try:
         with writer_lock(store.root / "runs" / job["run_id"] / ".writer.lock"):
-            asyncio.run(play(store, args.job, args.execution))
+            try:
+                asyncio.run(play(store, args.job, args.execution))
+            except OperationalPause as exc:
+                store.pause(args.job, exc.reason, str(exc))
+            except Exception as exc:
+                store.execute("UPDATE jobs SET status='failed',pause_reason=?,ended_at=? WHERE job_id=? AND status NOT IN ('cancelled','completed')", (f"{type(exc).__name__}: {exc}", time.time(), args.job))
+                store.audit("worker_failed", {"job_id": args.job, "error": str(exc)})
+            finally:
+                store.execute("UPDATE executions SET ended_at=?,exit_status=? WHERE execution_id=?", (time.time(), store.job(args.job)["status"], args.execution))
     except BlockingIOError:
         return
-    except OperationalPause as exc:
-        store.pause(args.job, exc.reason, str(exc))
-    except Exception as exc:
-        store.execute("UPDATE jobs SET status='failed',pause_reason=?,ended_at=? WHERE job_id=?", (f"{type(exc).__name__}: {exc}", time.time(), args.job))
-        store.audit("worker_failed", {"job_id": args.job, "error": str(exc)})
-    finally:
-        store.execute("UPDATE executions SET ended_at=?,exit_status=? WHERE execution_id=?", (time.time(), store.job(args.job)["status"], args.execution))
 
 
 if __name__ == "__main__":

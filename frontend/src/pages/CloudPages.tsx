@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type FormEvent } from 'react'
 import { CLOUD_API, cloudRequest, type CloudJob, type CloudCampaign, type CloudLive, type CloudConfig } from '@/net/jobs'
 import { Board } from '@/components/board/Board'
 import { PlayerStackPanel } from '@/components/panels/PlayerStackPanel'
@@ -10,6 +10,7 @@ import { Inspector } from '@/components/panels/Inspector'
 import { AuctionPanel } from '@/components/panels/AuctionPanel'
 import { TradeInspectorPanel } from '@/components/panels/TradeInspectorPanel'
 import { LlmIoPanel } from '@/components/panels/LlmIoPanel'
+import { ThoughtsPanel } from '@/components/panels/ThoughtsPanel'
 import './cloud.css'
 
 function usePoll<T>(path: string) {
@@ -47,6 +48,8 @@ export function LoginPage() {
 
 const models = ['anthropic/claude-opus-5.5', 'openai/gpt-6.1-sol', 'google/gemini-4-argon', 'x-ai/grok-4.7']
 function RunModal({ close }: { close: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => { dialog.current?.showModal() }, [])
   const [step, setStep] = useState(1)
   const [kind, setKind] = useState('smoke')
   const [seats, setSeats] = useState(models)
@@ -66,12 +69,24 @@ function RunModal({ close }: { close: () => void }) {
       setStep(step + 1)
     } catch (e) { setError(String(e)) } finally { setBusy(false) }
   }
-  return <div className="cloud-overlay"><section role="dialog" aria-modal="true" aria-labelledby="run-title" className="cloud-modal"><button className="cloud-close" onClick={close} aria-label="Close">×</button><h2 id="run-title">Run games · {step} / 3</h2>
+  return <dialog ref={dialog} onCancel={close} aria-labelledby="run-title" className="cloud-modal"><button className="cloud-close" onClick={close} aria-label="Close">×</button><h2 id="run-title">Run games · {step} / 3</h2>
     {step === 1 ? <><p>What would you like to run?</p><label><input type="radio" checked={kind === 'campaign'} onChange={() => setKind('campaign')} /> Frozen campaign</label><label><input type="radio" checked={kind === 'smoke'} onChange={() => setKind('smoke')} /> Smoke games · excluded from research</label></> : null}
     {step === 2 ? <>{seats.map((model, i) => <label key={i}>Seat {i + 1}<select value={model} onChange={e => setSeats(seats.map((m, n) => n === i ? e.target.value : m))}>{models.map(m => <option key={m}>{m}</option>)}</select></label>)}<label>Provider-native effort<select value={effort} onChange={e => setEffort(e.target.value)}>{['low', 'medium', 'high'].map(e => <option key={e}>{e}</option>)}</select></label><label>Turn cap<input type="number" min={5} max={10} value={turns} onChange={e => setTurns(Number(e.target.value))} /></label><label>Games<input type="number" min={1} max={20} value={count} onChange={e => setCount(Number(e.target.value))} /></label></> : null}
     {step === 3 ? <><p>Smoke games use the same execution and recovery path as campaign games.</p>{prepared?.configs.map(c => <article key={c.run_id}><strong>Seed {c.seed}</strong><p>{c.players.map(p => p.name).join(' → ')}</p><small>{c.players[0].reasoning.effort} effort · {c.max_turns} turns · code {c.git_sha.slice(0, 8)}</small></article>)}</> : null}
     <p role="alert">{error}</p><button disabled={busy} onClick={() => void next()}>{busy ? 'Working…' : step === 3 ? 'Launch' : 'Continue'}</button>{step > 1 ? <button disabled={busy} onClick={() => setStep(step - 1)}>Back</button> : null}
-  </section></div>
+  </dialog>
+}
+
+function JobActions({ job }: { job: CloudJob }) {
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  async function act(action: string) {
+    setBusy(true); setError('')
+    try { await cloudRequest(`/jobs/${job.job_id}/${action}`, {}) }
+    catch (e) { setError(String(e)) }
+    finally { setBusy(false) }
+  }
+  return <><div className="cloud-actions">{job.export_status === 'ready' ? <a href={`${CLOUD_API}/jobs/${job.job_id}/export`}>Export</a> : null}{job.allowed_actions.map(action => <button disabled={busy} key={action} onClick={() => void act(action)}>{action}</button>)}</div><p role="alert">{error}</p></>
 }
 
 function JobCard({ job }: { job: CloudJob }) {
@@ -96,8 +111,16 @@ export function CampaignPage() {
   const id = window.location.pathname.split('/')[2]
   const { data, error } = usePoll<CloudCampaign | CloudCampaign[]>(id ? `/campaigns/${id}` : '/campaigns')
   const [actionError, setActionError] = useState('')
+  const [exportId, setExportId] = useState('')
+  const [exporting, setExporting] = useState(false)
+  async function prepareExport() {
+    setExporting(true); setActionError('')
+    try { setExportId((await cloudRequest<{ export_id: string }>(`/campaigns/${id}/export`, {})).export_id) }
+    catch (e) { setActionError(String(e)) }
+    finally { setExporting(false) }
+  }
   const campaign = data && !Array.isArray(data) ? data : null
-  return <Shell><h1>{id || 'Campaigns'}</h1><p role="alert">{error || actionError}</p>{Array.isArray(data) ? data.map(c => <article className="cloud-card" key={c.campaign_id}><a href={`/campaigns/${c.campaign_id}`}>{c.campaign_id}</a><p>{c.status}</p></article>) : null}{campaign ? <><p>{campaign.status} · {campaign.cells.length} cells</p><div className="cloud-actions">{(campaign.status === 'draft' ? ['freeze'] : ['run', 'pause']).map(action => <button key={action} onClick={() => void cloudRequest(`/campaigns/${id}/${action}`, {}).catch(e => setActionError(String(e)))}>{action}</button>)}</div><div className="cloud-grid">{campaign.cells.map(cell => <article className="cloud-card" key={cell.cell_index}><h2>Cell {cell.cell_index + 1}</h2><p>Seed {cell.seed} · {cell.job_status || 'queued'}</p><p>Launch rank {cell.execution_rank + 1} · Reruns {cell.rerun_count}</p>{cell.job_id ? <a href={`/games/${cell.job_id}`}>Open game</a> : null}</article>)}</div></> : null}</Shell>
+  return <Shell><h1>{id || 'Campaigns'}</h1><p role="alert">{error || actionError}</p>{Array.isArray(data) ? data.map(c => <article className="cloud-card" key={c.campaign_id}><a href={`/campaigns/${c.campaign_id}`}>{c.campaign_id}</a><p>{c.status}</p></article>) : null}{campaign ? <><p>{campaign.status} · {campaign.cells.length} cells</p><div className="cloud-actions">{(campaign.status === 'draft' ? ['freeze'] : ['run', 'pause']).map(action => <button key={action} onClick={() => void cloudRequest(`/campaigns/${id}/${action}`, {}).catch(e => setActionError(String(e)))}>{action}</button>)}{campaign.status !== 'draft' ? <button disabled={exporting} onClick={() => void prepareExport()}>{exporting ? 'Preparing export…' : 'Prepare campaign export'}</button> : null}{exportId ? <a href={`${CLOUD_API}/exports/${exportId}/download`}>Download campaign</a> : null}</div><div className="cloud-grid">{campaign.cells.map(cell => <article className="cloud-card" key={cell.cell_index}><h2>Cell {cell.cell_index + 1}</h2><p>Seed {cell.seed} · {cell.job_status || 'queued'}</p><p>Launch rank {cell.execution_rank + 1} · Reruns {cell.rerun_count}</p>{cell.job_id ? <a href={`/games/${cell.job_id}`}>Open game</a> : null}</article>)}</div></> : null}</Shell>
 }
 
 export function GamePage() {
@@ -108,6 +131,7 @@ export function GamePage() {
   const snapshot = useCloudStore(s => s.views[id]?.snapshot)
   const [rows, setRows] = useState<unknown>(null)
   const [cursor, setCursor] = useState(0)
+  const [decisionPageSize, setDecisionPageSize] = useState(0)
   const [tabError, setTabError] = useState('')
   useEffect(() => {
     let active = true
@@ -140,12 +164,12 @@ export function GamePage() {
     if (job) useGameStore.getState().setRunStatus({ runId: job.run_id, running: job.status === 'running', paused: job.status === 'paused', players: job.config.players.map(p => ({ ...p, model_display_name: p.name })) })
   }, [job])
   useEffect(() => {
-    if (tab === 'Live') return
+    if (tab === 'Live' || tab === 'Decisions') return
     let active = true
-    const path = tab === 'Decisions' ? `/decisions?cursor=${cursor}` : '/artifacts'
+    const path = '/artifacts'
     void cloudRequest(`/jobs/${id}${path}`).then(value => { if (active) { setRows(value); setTabError('') } }).catch(e => { if (active) setTabError(String(e)) })
     return () => { active = false }
   }, [id, tab, cursor])
   const current = snapshot?.run_id === job?.run_id ? snapshot : job?.snapshot
-  return <Shell><h1>{job?.run_id || 'Loading game…'}</h1><p>{job?.status} · {connected ? 'Live connection' : 'Reconnecting…'}</p><p role="alert">{error || tabError}</p><nav className="cloud-tabs">{['Live', 'Decisions', 'Artifacts', 'Replay', 'Analysis'].map(name => <button aria-pressed={tab === name} key={name} onClick={() => { setTab(name); setCursor(0) }}>{name}</button>)}</nav>{tab === 'Live' ? <>{current ? <div className="cloud-live"><Board spaces={current.board} players={current.players} activePlayerId={current.active_player_id} /><PlayerStackPanel /></div> : <p>Waiting for the first committed snapshot.</p>}<AuctionPanel visible /><TradeInspectorPanel visible /><div className="cloud-live cloud-feed-panels"><EventFeed /><ChatFeed /></div><Inspector /></> : tab === 'Decisions' ? <><LlmIoPanel /><button disabled={cursor === 0} onClick={() => setCursor(Math.max(0, cursor-50))}>Previous</button><button onClick={() => setCursor(cursor+50)}>Next</button></> : <><p>{tab === 'Replay' ? `Replay verdict: ${job?.replay_status || 'pending'}` : 'Open an artifact to inspect its contents.'}</p>{Array.isArray(rows) ? rows.filter((r: { path: string }) => tab === 'Replay' ? r.path.includes('replay') : true).map((r: { path: string; bytes: number }) => <p key={r.path}><a href={`${CLOUD_API}/jobs/${id}/artifacts?path=${encodeURIComponent(r.path)}`}>{r.path}</a> · {r.bytes} bytes</p>) : null}{job?.export_status === 'ready' ? <a href={`${CLOUD_API}/jobs/${id}/export`}>Download game with analysis</a> : null}</>}</Shell>
+  return <Shell><h1>{job?.run_id || 'Loading game…'}</h1><p>{job?.status} · {connected ? 'Live connection' : 'Reconnecting…'}</p>{job ? <JobActions job={job} /> : null}<p role="alert">{error || tabError}</p><nav className="cloud-tabs">{['Live', 'Decisions', 'Artifacts', 'Replay', 'Analysis'].map(name => <button aria-pressed={tab === name} key={name} onClick={() => { setTab(name); setCursor(0) }}>{name}</button>)}</nav>{tab === 'Live' ? <>{current ? <div className="cloud-live"><Board spaces={current.board} players={current.players} activePlayerId={current.active_player_id} /><PlayerStackPanel /></div> : <p>Waiting for the first committed snapshot.</p>}<AuctionPanel visible /><TradeInspectorPanel visible /><div className="cloud-live cloud-feed-panels"><EventFeed /><ChatFeed /></div><ThoughtsPanel /><Inspector /></> : tab === 'Decisions' ? <><LlmIoPanel jobId={id} cursor={cursor} revision={job?.commit_seq} onPageSize={setDecisionPageSize} /><button disabled={cursor === 0} onClick={() => setCursor(Math.max(0, cursor-50))}>Previous</button><button disabled={decisionPageSize < 50} onClick={() => setCursor(cursor+50)}>Next</button></> : <><p>{tab === 'Replay' ? `Replay verdict: ${job?.replay_status || 'pending'}` : 'Open an artifact to inspect its contents.'}</p>{Array.isArray(rows) ? rows.filter((r: { path: string }) => tab === 'Replay' ? r.path.includes('replay') : true).map((r: { path: string; bytes: number }) => <p key={r.path}><a href={`${CLOUD_API}/jobs/${id}/artifacts?path=${encodeURIComponent(r.path)}`}>{r.path}</a> · {r.bytes} bytes</p>) : null}{job?.export_status === 'ready' ? <a href={`${CLOUD_API}/jobs/${id}/export`}>Download game with analysis</a> : null}</>}</Shell>
 }

@@ -91,3 +91,34 @@ def test_live_committed_snapshot_batch_and_export_range(cloud, monkeypatch, tmp_
     store.execute("INSERT INTO exports VALUES(?,?,?,?,?,?,?,?,?)", ("export-test", "job", job_id, 1, "completed", str(package), 100, "hash", 0))
     response = client.get("/api/exports/export-test/download", headers={"Range": "bytes=10-19"})
     assert response.status_code == 206 and response.content == bytes(range(10, 20))
+
+
+def test_decision_pages_and_artifacts_only_expose_committed_bytes(cloud, monkeypatch, tmp_path):
+    import json
+    from monopoly_arena.cloud_campaign import run_config
+    from monopoly_arena.journal import Journal, JournalRunFiles
+    client, store = cloud
+    path = tmp_path / "build.json"
+    path.write_text(json.dumps({"git_sha": "test", "image_digest": "test"}))
+    monkeypatch.setenv("MB_BUILD_INFO", str(path))
+    job = store.create_job(run_config(42, "paged", max_turns=5), kind="smoke", key="paged")
+    journal = Journal(store, job["job_id"], store.claim(job["job_id"]))
+    files = JournalRunFiles.create(journal, job["run_id"])
+    with journal.transition("decisions"):
+        for i in range(301):
+            for phase in ("decision_started", "decision_resolved"):
+                files.write_decision({"decision_id": f"d{i}", "phase": phase, "player_id": "p1", "turn_index": i})
+        journal.write(files.prompts_dir / "decision_d300_system.txt", b"committed prompt")
+    committed = files.decisions_path.read_bytes()
+    with files.decisions_path.open("ab") as handle:
+        handle.write(b'{"decision_id":"unpublished","phase":"decision_started"}\n')
+    (files.prompts_dir / "decision_unpublished_system.txt").write_text("unpublished prompt")
+    client.post("/api/auth/login", json={"password": "password"})
+    base = f"/api/jobs/{job['job_id']}"
+    assert len(client.get(base + "/decisions").json()) == 50
+    final = client.get(base + "/decisions?cursor=300").json()
+    assert len(final) == 1 and final[0]["decision_id"] == "d300"
+    bundle = client.get(base + "/decisions/d300").json()
+    assert bundle["attempts"][0]["system_prompt"] == "committed prompt"
+    assert client.get(base + "/decisions/unpublished").status_code == 404
+    assert client.get(base + "/artifacts?path=decisions.jsonl").content == committed

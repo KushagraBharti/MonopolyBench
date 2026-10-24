@@ -4,7 +4,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from monopoly_telemetry import RunFiles
 
@@ -40,13 +40,18 @@ class DecisionSummary:
 
 
 class DecisionIndex:
-    def __init__(self, run_files: RunFiles) -> None:
+    def __init__(self, run_files: RunFiles, *, entries: Iterable[dict[str, Any]] | None = None, prompt_paths: list[Path] | None = None) -> None:
         self._run_files = run_files
         self._summaries: dict[str, DecisionSummary] = {}
         self._resolved_entries: dict[str, dict[str, Any]] = {}
         self._order: list[str] = []
         self._prompt_prefixes: dict[str, str] = {}
         self._loaded = False
+        self._prompt_paths = prompt_paths
+        if entries is not None:
+            self._loaded = True
+            for entry in entries:
+                self.record_entry(entry)
 
     def record_entry(self, entry: dict[str, Any]) -> None:
         decision_id = entry.get("decision_id")
@@ -185,7 +190,7 @@ class DecisionIndex:
         safe = _safe_decision_id(decision_id)
         base_prefix = self._prompt_prefixes.get(decision_id, f"decision_{safe}")
         attempts: dict[int, dict[str, Any]] = {}
-        for path in prompts_dir.iterdir():
+        for path in self._prompt_paths if self._prompt_paths is not None else prompts_dir.iterdir():
             if not path.is_file():
                 continue
             name = path.name

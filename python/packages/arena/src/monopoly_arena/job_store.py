@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS campaign_amendments (
 CREATE TABLE IF NOT EXISTS exports (
  export_id TEXT PRIMARY KEY, scope TEXT, scope_id TEXT, revision INTEGER, kind TEXT,
  path TEXT, bytes INTEGER, manifest_sha256 TEXT, created_at REAL);
+CREATE UNIQUE INDEX IF NOT EXISTS exports_scope_revision ON exports(scope,scope_id,revision);
 CREATE TABLE IF NOT EXISTS audit (ts REAL, actor TEXT, action TEXT, detail_json TEXT);
 PRAGMA user_version=1;
 """
@@ -146,10 +147,19 @@ class JobStore:
             db.execute("UPDATE jobs SET status='running',started_at=COALESCE(started_at,?) WHERE job_id=?", (time.time(), job_id))
             return execution
 
-    def pause(self, job_id: str, reason: str, detail: str = "") -> None:
+    def pause(self, job_id: str, reason: str, detail: str = "", *, expected_status: str | None = None) -> None:
         from .execution_policy import OUTAGE_INTERVAL, OUTAGE_RETRIES
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            job = db.execute("SELECT status,pause_reason FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+            if not job:
+                raise KeyError(job_id)
+            if expected_status is not None and job["status"] != expected_status:
+                raise ValueError("Job state changed; refresh before retrying")
+            if job["status"] in {"cancelled", "failed", "completed", "finalizing"}:
+                return
+            if job["status"] == "paused" and job["pause_reason"] in {"operator", "drain"}:
+                return
             old = db.execute("SELECT retries_used FROM pauses WHERE job_id=?", (job_id,)).fetchone()
             retries = old[0] + 1 if old else 0
             retry_at = time.time() + OUTAGE_INTERVAL if reason in {"provider_unavailable", "credit_admission"} and retries < OUTAGE_RETRIES else None
@@ -159,8 +169,22 @@ class JobStore:
             self.set_state("account_stop", {"reason": reason, "detail": detail})
 
     def resume(self, job_id: str) -> None:
+        # A paused status is a boundary request, not proof that the writer has
+        # exited. Keep its lock until the old execution records its final state.
+        from .worker import writer_lock
+        job = self.job(job_id)
+        try:
+            with writer_lock(self.root / "runs" / job["run_id"] / ".writer.lock"):
+                self._resume_unlocked(job_id)
+        except BlockingIOError as exc:
+            raise ValueError("Worker is finishing its current request; retry resume after it stops") from exc
+
+    def _resume_unlocked(self, job_id: str) -> None:
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT status FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+            if not row or row[0] != "paused":
+                raise ValueError("Only paused jobs can be resumed")
             key = "resume_epoch:" + job_id
             row = db.execute("SELECT value_json FROM account_state WHERE key=?", (key,)).fetchone()
             epoch = json.loads(row[0]) + 1 if row else 1

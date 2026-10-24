@@ -2,6 +2,13 @@
 
 Local validation on 2026-10-24:
 
+The PR adversarial review also covers corrupt committed prefixes with pending
+appends, missing journal records, repair attribution after restart, interrupted
+atomic-write temporary files, pause/resume ownership, preflight cancellation,
+finalizer scheduling, atomic campaign freeze, serialized export revisions, and
+decision pagination beyond 300 decisions. Readers expose committed JSONL bytes;
+pending response artifacts remain hidden from the decision inspector.
+
 - Full repository verification: contracts, Ruff, mypy, engine, API, arena,
   telemetry, frontend lint and frontend build passed.
 - Microbench tests, which the repository verification script omits, passed.

@@ -8,6 +8,7 @@ import signal
 import subprocess
 import sys
 import time
+from typing import Callable
 
 from .cloud_campaign import enqueue_cells
 from .cloud_preflight import preflight
@@ -38,10 +39,17 @@ class Supervisor:
             except BlockingIOError:
                 pass
         if self.finalizer is None or self.finalizer.poll() is not None:
-            candidates = store.rows("SELECT * FROM jobs WHERE status IN ('finalizing','failed','cancelled') AND export_status IS NULL ORDER BY created_at LIMIT 1")
-            candidates = [job for job in candidates if job["job_id"] not in self.children]
-            if candidates:
-                self.finalizer = subprocess.Popen([sys.executable, "-m", "monopoly_arena.finalizer", "--job", candidates[0]["job_id"]])
+            candidates = store.rows("SELECT * FROM jobs WHERE status IN ('finalizing','failed','cancelled') AND export_status IS NULL ORDER BY created_at")
+            for candidate in candidates:
+                if candidate["job_id"] in self.children or store.state("finalize_retry:" + candidate["job_id"], 0) > time.time():
+                    continue
+                try:
+                    with writer_lock(store.root / "runs" / candidate["run_id"] / ".writer.lock"):
+                        pass
+                except BlockingIOError:
+                    continue
+                self.finalizer = subprocess.Popen([sys.executable, "-m", "monopoly_arena.finalizer", "--job", candidate["job_id"]])
+                break
         for job in store.rows("SELECT * FROM jobs WHERE status='failed' AND kind='campaign'"):
             cell = store.rows("SELECT * FROM cells WHERE campaign_id=? AND cell_index=?", (job["campaign_id"], job["cell_index"]))[0]
             if cell["rerun_count"] == 0:
@@ -78,6 +86,31 @@ class Supervisor:
                 active += 1
 
 
+async def run_supervisor(store: JobStore, stopping: Callable[[], bool]) -> None:
+    # Preflight can take minutes. Keep recovery and the drain signal responsive
+    # while new jobs remain gated on a fresh successful report.
+    store.set_state("preflight", {"passed": False, "status": "running"})
+    check = asyncio.create_task(preflight(store))
+    supervisor = Supervisor(store)
+    try:
+        while not stopping():
+            supervisor.tick()
+            await asyncio.sleep(2)
+    finally:
+        check.cancel()
+        await asyncio.gather(check, return_exceptions=True)
+        deadline = time.monotonic() + max(0, int(os.getenv("RAILWAY_DEPLOYMENT_DRAINING_SECONDS", "180")) - 10)
+        processes = list(supervisor.children.values())
+        if supervisor.finalizer:
+            processes.append(supervisor.finalizer)
+        while any(p.poll() is None for p in processes) and time.monotonic() < deadline:
+            await asyncio.sleep(0.5)
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+            process.wait()
+
+
 def main() -> None:
     store = JobStore(data_root())
     with writer_lock(store.root / ".supervisor.lock"):
@@ -92,20 +125,7 @@ def main() -> None:
 
         signal.signal(signal.SIGTERM, stop)
         signal.signal(signal.SIGINT, stop)
-        asyncio.run(preflight(store))
-        supervisor = Supervisor(store)
-        while not stopping:
-            supervisor.tick()
-            time.sleep(2)
-        deadline = time.monotonic() + int(os.getenv("RAILWAY_DEPLOYMENT_DRAINING_SECONDS", "180")) - 10
-        while any(p.poll() is None for p in supervisor.children.values()) and time.monotonic() < deadline:
-            time.sleep(1)
-        for process in supervisor.children.values():
-            if process.poll() is None:
-                process.kill()
-                process.wait()
-        if supervisor.finalizer and supervisor.finalizer.poll() is None:
-            supervisor.finalizer.terminate()
+        asyncio.run(run_supervisor(store, lambda: stopping))
 
 
 if __name__ == "__main__":

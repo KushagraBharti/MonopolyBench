@@ -71,16 +71,16 @@ async def finalize(store: JobStore, job_id: str) -> None:
             journal.unlink()
         frozen = {table: store.rows(f"SELECT * FROM {table} WHERE job_id=?", (job_id,)) for table in ("jobs", "executions", "commits", "calls", "pauses")}
         if completed:
-            import importlib.util
-            script = Path(__file__).resolve().parents[5] / "scripts" / "standardize_saved_games.py"
-            spec = importlib.util.spec_from_file_location("cloud_analysis", script)
-            if spec is None or spec.loader is None:
-                raise RuntimeError("Analysis module unavailable")
-            module: Any = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            module.SAVED_ROOT = staging.parent
-            module.GLOBAL_ARCHIVE_ROOT = staging.parent / "archive"
             try:
+                import importlib.util
+                script = Path(__file__).resolve().parents[5] / "scripts" / "standardize_saved_games.py"
+                spec = importlib.util.spec_from_file_location("cloud_analysis", script)
+                if spec is None or spec.loader is None:
+                    raise RuntimeError("Analysis module unavailable")
+                module: Any = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                module.SAVED_ROOT = staging.parent
+                module.GLOBAL_ARCHIVE_ROOT = staging.parent / "archive"
                 module.generate_analysis(staging)
             except Exception as exc:
                 completed = False
@@ -89,7 +89,7 @@ async def finalize(store: JobStore, job_id: str) -> None:
                 if (directory / "journal.jsonl").exists():
                     shutil.copyfile(directory / "journal.jsonl", staging / "cloud" / "journal.jsonl")
         if not (staging / "saved_game_manifest.json").exists():
-            atomic_write(staging / "saved_game_manifest.json", encode({"run_id": job["run_id"], "kind": job["kind"], "status": "completed" if completed else job["status"]}).encode())
+            atomic_write(staging / "saved_game_manifest.json", encode({"run_id": job["run_id"], "kind": job["kind"], "status": "completed" if completed else store.job(job_id)["status"]}).encode())
         ended_at = time.time()
         final_status = "completed" if completed else store.job(job_id)["status"]
         frozen["jobs"] = [{**store.job(job_id), "status": final_status, "ended_at": ended_at, "export_status": "ready", "replay_status": "passed" if completed else "failed", "analysis_status": "completed" if completed else "unavailable"}]
@@ -113,7 +113,15 @@ def main() -> None:
     store = JobStore(data_root())
     job = store.job(args.job)
     with writer_lock(store.root / "runs" / job["run_id"] / ".writer.lock"):
-        asyncio.run(finalize(store, args.job))
+        try:
+            asyncio.run(finalize(store, args.job))
+        except Exception as exc:
+            # Packaging/storage failures remain retryable, but must not create a
+            # tight crash loop that starves other games' finalizers.
+            store.set_state("finalize_retry:" + args.job, time.time() + 60)
+            store.execute("UPDATE jobs SET pause_reason=? WHERE job_id=?", (f"Export pending: {type(exc).__name__}: {exc}", args.job))
+            store.audit("finalizer_failed", {"job_id": args.job, "error": str(exc)})
+            raise
 
 
 if __name__ == "__main__":

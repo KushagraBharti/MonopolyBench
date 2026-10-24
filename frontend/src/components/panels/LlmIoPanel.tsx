@@ -252,7 +252,7 @@ const normalizeErrors = (errors: string[] | null | undefined): string | null => 
   return errors.join('\n');
 };
 
-export const LlmIoPanel = () => {
+export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jobId?: string; cursor?: number; revision?: number; onPageSize?: (size: number) => void } = {}) => {
   const runId = useGameStore((state) => state.runStatus.runId);
   const players = useGameStore((state) => state.runStatus.players ?? []);
   const selectedDecisionId = useGameStore((state) => state.llmIoSelectedDecisionId);
@@ -294,10 +294,11 @@ export const LlmIoPanel = () => {
     let active = true;
     setLoadingDecisions(true);
     setDecisionError(null);
-    fetchDecisionList(runId, 300)
+    fetchDecisionList(runId, 300, jobId, cursor)
       .then((data) => {
         if (!active) return;
         setDecisions(data);
+        onPageSize?.(data.length);
         if (!data.length) {
           setSelectedDecisionId(null);
           return;
@@ -319,14 +320,14 @@ export const LlmIoPanel = () => {
     return () => {
       active = false;
     };
-  }, [runId, setSelectedDecisionId]);
+  }, [runId, jobId, cursor, revision, onPageSize, setSelectedDecisionId]);
 
   useEffect(() => {
     if (!runId || !selectedDecisionId) return;
     let active = true;
     setLoadingBundle(true);
     setBundleError(null);
-    fetchDecisionBundle(runId, selectedDecisionId)
+    fetchDecisionBundle(runId, selectedDecisionId, jobId)
       .then((data) => {
         if (!active) return;
         setBundle(data);
@@ -343,7 +344,7 @@ export const LlmIoPanel = () => {
     return () => {
       active = false;
     };
-  }, [runId, selectedDecisionId]);
+  }, [runId, selectedDecisionId, jobId, revision]);
 
   useEffect(() => {
     if (!activeBundle) return;

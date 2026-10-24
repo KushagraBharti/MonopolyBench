@@ -36,7 +36,7 @@ def freeze(store: JobStore, config: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Unsafe campaign ID")
     preflight = store.state("preflight", {})
     identity = build_identity()
-    if not preflight.get("passed") or time.time() - preflight.get("created_at", 0) > 21600 or preflight.get("git_sha") != identity["git_sha"]:
+    if not preflight.get("passed") or time.time() - preflight.get("created_at", 0) > 21600 or any(preflight.get(key) != identity[key] for key in ("git_sha", "image_digest")):
         raise ValueError("A passing preflight on current code within six hours is required")
     seeds = config.get("seeds", [])
     if not seeds or len(set(seeds)) != len(seeds) or any(type(seed) is not int or not 0 <= seed < 2**32 for seed in seeds):
@@ -59,11 +59,13 @@ def freeze(store: JobStore, config: dict[str, Any]) -> dict[str, Any]:
             return dict(existing)
         db.execute("INSERT INTO campaigns VALUES(?,?,?,?,?,?,?)", (campaign_id, raw, digest, "frozen", time.time(), identity["git_sha"], identity["image_digest"]))
         insert_cells(db, campaign_id, seeds, config["execution_order_seed"], 0)
-    atomic_write(store.root / "campaigns" / campaign_id / "campaign.json", raw.encode())
-    atomic_write(store.root / "campaigns" / campaign_id / "preflight.json", encode(preflight).encode())
-    from .research_registry import research_dir
-    hashes = {name: hashlib.sha256((research_dir() / name).read_bytes()).hexdigest() for name in ("monopoly_long_v1_model_rosters.json", "monopoly_long_v1_seed_registry.json")}
-    atomic_write(store.root / "campaigns" / campaign_id / "freeze_manifest.json", encode({**identity, "registry_sha256": hashes, "config_sha256": digest}).encode())
+        # Publish the campaign only after all frozen evidence is durable. A crash
+        # between these writes rolls back the ledger and cannot enqueue cells.
+        atomic_write(store.root / "campaigns" / campaign_id / "campaign.json", raw.encode())
+        atomic_write(store.root / "campaigns" / campaign_id / "preflight.json", encode(preflight).encode())
+        from .research_registry import research_dir
+        hashes = {name: hashlib.sha256((research_dir() / name).read_bytes()).hexdigest() for name in ("monopoly_long_v1_model_rosters.json", "monopoly_long_v1_seed_registry.json")}
+        atomic_write(store.root / "campaigns" / campaign_id / "freeze_manifest.json", encode({**identity, "registry_sha256": hashes, "config_sha256": digest}).encode())
     store.audit("freeze", {"campaign_id": campaign_id, "config_sha256": digest})
     return store.rows("SELECT * FROM campaigns WHERE campaign_id=?", (campaign_id,))[0]
 

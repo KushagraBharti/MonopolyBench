@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from '@/net/ws';
+import { cloudRequest } from '@/net/jobs';
 
 export type DecisionSummary = {
   decision_id: string;
@@ -45,8 +46,11 @@ export type DecisionBundle = {
 
 export const fetchDecisionList = async (
   runId: string,
-  limit?: number
+  limit?: number,
+  jobId?: string,
+  cursor = 0
 ): Promise<DecisionSummary[]> => {
+  if (jobId) return cloudRequest(`/jobs/${encodeURIComponent(jobId)}/decisions?cursor=${cursor}`);
   const base = getApiBaseUrl();
   const params = typeof limit === 'number' ? `?limit=${limit}` : '';
   const res = await fetch(`${base}/runs/${encodeURIComponent(runId)}/decisions${params}`);
@@ -59,8 +63,10 @@ export const fetchDecisionList = async (
 
 export const fetchDecisionBundle = async (
   runId: string,
-  decisionId: string
+  decisionId: string,
+  jobId?: string
 ): Promise<DecisionBundle> => {
+  if (jobId) return cloudRequest(`/jobs/${encodeURIComponent(jobId)}/decisions/${encodeURIComponent(decisionId)}`);
   const base = getApiBaseUrl();
   const res = await fetch(
     `${base}/runs/${encodeURIComponent(runId)}/decisions/${encodeURIComponent(decisionId)}`

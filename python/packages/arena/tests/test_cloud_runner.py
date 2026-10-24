@@ -55,6 +55,69 @@ def test_journal_contradiction_keeps_evidence(tmp_path, monkeypatch):
     assert target.read_bytes() == b'{"x":9}\n'
 
 
+def test_pending_append_cannot_bless_corrupt_committed_prefix(tmp_path, monkeypatch):
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    journal = Journal(store, job["job_id"], execution)
+    target = store.root / "runs" / job["run_id"] / "events.jsonl"
+    journal.write(target, b'{"x":1}\n', append=True)
+    apply = journal._apply
+    monkeypatch.setattr(journal, "_apply", lambda record: (_ for _ in ()).throw(RuntimeError("crash")))
+    with pytest.raises(RuntimeError):
+        journal.write(target, b'{"x":2}\n', append=True)
+    monkeypatch.setattr(journal, "_apply", apply)
+    target.write_bytes(b'{"x":9}\n')
+    with pytest.raises(ValueError, match="contradiction"):
+        journal.recover()
+    assert target.read_bytes() == b'{"x":9}\n'
+    assert journal.last()["commit_seq"] == 1
+
+
+def test_recovery_rejects_missing_committed_journal_records(tmp_path, monkeypatch):
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    journal = Journal(store, job["job_id"], execution)
+    journal.write(store.root / "runs" / job["run_id"] / "config.json", b'{}')
+    journal.path.write_bytes(b"")
+    (store.root / "runs" / job["run_id"] / "config.json").unlink()
+    with pytest.raises(ValueError, match="Journal coverage"):
+        journal.recover()
+
+
+def test_new_writes_after_restart_are_not_repairs(tmp_path, monkeypatch):
+    store, job, _ = setup_job(tmp_path, monkeypatch)
+    store.execute("UPDATE jobs SET status='recovering' WHERE job_id=?", (job["job_id"],))
+    journal = Journal(store, job["job_id"], store.claim(job["job_id"]))
+    journal.recover()
+    journal.write(store.root / "runs" / job["run_id"] / "events.jsonl", b'{"x":1}\n', append=True)
+    assert store.job(job["job_id"])["repaired"] == 0
+
+
+@pytest.mark.parametrize("folder", ["prompts", "state", "quality_check", "snapshots"])
+def test_recovery_quarantines_interrupted_atomic_write(tmp_path, monkeypatch, folder):
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    journal = Journal(store, job["job_id"], execution)
+    base = store.root / "runs" / job["run_id"] / folder
+    if folder == "quality_check":
+        base = store.root / folder / job["run_id"]
+    elif folder == "snapshots":
+        base = journal.directory / folder
+    target = base / "evidence.json"
+    apply = journal._apply
+    monkeypatch.setattr(journal, "_apply", lambda record: (_ for _ in ()).throw(RuntimeError("crash")))
+    with pytest.raises(RuntimeError):
+        journal.write(target, b'{"complete":true}')
+    base.mkdir(parents=True, exist_ok=True)
+    leftover = base / ".write-killed"
+    leftover.write_bytes(b'{"complete":tr')
+    monkeypatch.setattr(journal, "_apply", apply)
+    journal.recover()
+    assert target.read_bytes() == b'{"complete":true}'
+    assert not leftover.exists()
+    quarantined = list((journal.directory / "recovery/quarantine").rglob(".write-killed"))
+    assert len(quarantined) == 1 and quarantined[0].read_bytes() == b'{"complete":tr'
+    assert store.job(job["job_id"])["repaired"] == 1
+    journal.recover()
+
+
 def test_claim_and_idempotency(tmp_path, monkeypatch):
     store, job, _ = setup_job(tmp_path, monkeypatch)
     assert store.claim(job["job_id"]) is None
@@ -148,6 +211,41 @@ def test_campaign_freeze_and_amend(tmp_path, monkeypatch):
     assert len(store.rows("SELECT * FROM cells")) == 12
     with pytest.raises(ValueError):
         amend(store, "test", [1], "Duplicate")
+
+
+def test_freeze_failure_cannot_publish_campaign(tmp_path, monkeypatch):
+    import time
+    store, _, _ = setup_job(tmp_path, monkeypatch)
+    store.set_state("preflight", {"passed": True, "created_at": time.time(), **build_identity()})
+    config = json.loads((Path(__file__).resolve().parents[4] / "campaigns" / "monopoly-long-v2-frontier-2026q4.json").read_text())
+    config.update(campaign_id="freeze-crash", execution_order_seed=42, seeds=[1])
+    def fail(path, data):
+        if path.name == "preflight.json":
+            raise OSError("disk full")
+        atomic_write(path, data)
+    monkeypatch.setattr("monopoly_arena.cloud_campaign.atomic_write", fail)
+    with pytest.raises(OSError):
+        freeze(store, config)
+    assert not store.rows("SELECT * FROM campaigns")
+    assert not store.rows("SELECT * FROM cells")
+
+
+def test_campaign_exports_serialize_revisions(tmp_path, monkeypatch):
+    from monopoly_arena.campaign_export import export_campaign
+    from monopoly_arena.worker import writer_lock
+    import time
+    store, _, _ = setup_job(tmp_path, monkeypatch)
+    store.set_state("preflight", {"passed": True, "created_at": time.time(), **build_identity()})
+    config = json.loads((Path(__file__).resolve().parents[4] / "campaigns" / "monopoly-long-v2-frontier-2026q4.json").read_text())
+    config.update(campaign_id="export-test", execution_order_seed=42, seeds=[1])
+    freeze(store, config)
+    with writer_lock(store.root / "campaigns/export-test/.export.lock"):
+        with pytest.raises(ValueError, match="already being prepared"):
+            export_campaign(store, "export-test")
+    first = export_campaign(store, "export-test")
+    second = export_campaign(store, "export-test")
+    assert first != second
+    assert [r["revision"] for r in store.rows("SELECT revision FROM exports ORDER BY revision")] == [1, 2]
 
 
 def test_unknown_request_limit(tmp_path, monkeypatch):
@@ -333,3 +431,53 @@ def test_scheduler_slots_priority_and_live_lock(tmp_path, monkeypatch):
     assert len(launched) == 5
     ranks = [store.job(command[command.index("--job")+1])["execution_rank"] for command in launched]
     assert ranks == sorted(ranks)
+
+
+def test_resume_waits_for_old_writer_and_preserves_cancel(tmp_path, monkeypatch):
+    from monopoly_arena.worker import writer_lock
+    store, job, _ = setup_job(tmp_path, monkeypatch)
+    job_id = job["job_id"]
+    with writer_lock(store.root / "runs" / job["run_id"] / ".writer.lock"):
+        store.pause(job_id, "operator")
+        with pytest.raises(ValueError, match="finishing"):
+            store.resume(job_id)
+        store.pause(job_id, "provider_unavailable")
+        assert store.job(job_id)["pause_reason"] == "operator"
+    store.resume(job_id)
+    assert store.job(job_id)["status"] == "recovering"
+    store.execute("UPDATE jobs SET status='cancelled' WHERE job_id=?", (job_id,))
+    store.pause(job_id, "provider_unavailable")
+    assert store.job(job_id)["status"] == "cancelled"
+    assert not store.rows("SELECT * FROM pauses WHERE job_id=?", (job_id,))
+
+
+def test_finalizer_skips_locked_oldest_job(tmp_path, monkeypatch):
+    from monopoly_arena.supervisor import Supervisor
+    from monopoly_arena.worker import writer_lock
+    store, first, _ = setup_job(tmp_path, monkeypatch)
+    second = store.create_job(run_config(8, "second", max_turns=5), kind="smoke", key="second")
+    store.execute("UPDATE jobs SET status='cancelled'")
+    store.set_state("drain", True)
+    launched = []
+    monkeypatch.setattr("monopoly_arena.supervisor.subprocess.Popen", lambda command: launched.append(command))
+    with writer_lock(store.root / "runs" / first["run_id"] / ".writer.lock"):
+        Supervisor(store).tick()
+    assert len(launched) == 1 and launched[0][-1] == second["job_id"]
+
+
+def test_shutdown_cancels_inflight_preflight(tmp_path, monkeypatch):
+    from monopoly_arena.supervisor import run_supervisor
+    store, _, _ = setup_job(tmp_path, monkeypatch)
+    stopped = False
+    cancelled = False
+    async def stalled(_):
+        nonlocal stopped, cancelled
+        stopped = True
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled = True
+    monkeypatch.setattr("monopoly_arena.supervisor.preflight", stalled)
+    monkeypatch.setattr("monopoly_arena.supervisor.Supervisor.tick", lambda self: None)
+    asyncio.run(asyncio.wait_for(run_supervisor(store, lambda: stopped), timeout=3))
+    assert cancelled
