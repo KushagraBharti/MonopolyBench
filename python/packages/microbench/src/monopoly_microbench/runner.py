@@ -95,28 +95,36 @@ async def run_scenario(
     async def log_writer(entry: dict[str, Any]) -> None:
         run_files.write_decision(entry)
 
-    outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
-    run_files.write_decision(
-        resolver.build_decision_log_entry(
-            decision=decision,
-            player_config=player_config,
-            phase="decision_resolved",
-            action=outcome.action,
-            attempts=outcome.attempts,
-            retry_used=outcome.retry_used,
-            fallback_used=outcome.fallback_used,
-            fallback_reason=outcome.fallback_reason,
-            applied=False,
-            sequence_meta=outcome.sequence_meta,
+    try:
+        outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
+        run_files.write_decision(
+            resolver.build_decision_log_entry(
+                decision=decision,
+                player_config=player_config,
+                phase="decision_resolved",
+                action=outcome.action,
+                attempts=outcome.attempts,
+                retry_used=outcome.retry_used,
+                fallback_used=outcome.fallback_used,
+                fallback_reason=outcome.fallback_reason,
+                applied=False,
+                sequence_meta=outcome.sequence_meta,
+            )
         )
-    )
-    close = getattr(resolver._openrouter, "aclose", None)
-    if close is not None:
-        maybe = close()
-        if asyncio.iscoroutine(maybe):
-            await maybe
-    if outcome.fallback_used:
-        raise RuntimeError(f"Micro model run failed without a valid action: {outcome.fallback_reason or 'fallback_used'}")
+        if outcome.fallback_used:
+            raise RuntimeError(f"Micro model run failed without a valid action: {outcome.fallback_reason or 'fallback_used'}")
+    except Exception as exc:
+        run_files.write_json_artifact(run_files.run_dir / "failure.json", {
+            "run_id": run_id, "error": str(exc), "complete": False,
+        })
+        write_usage_artifacts(run_files)
+        raise
+    finally:
+        close = getattr(resolver._openrouter, "aclose", None)
+        if close is not None:
+            maybe = close()
+            if asyncio.iscoroutine(maybe):
+                await maybe
     action = outcome.action
     latency_ms = _latency_from_attempts(outcome.attempts)
 

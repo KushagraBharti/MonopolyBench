@@ -2,13 +2,14 @@
   "date": "2026-10-24",
   "verification_command": "bash scripts/verify.sh",
   "verification_result": "All checks passed.",
+  "verification_scope": "Full verification passed 266 tests; the affected microbench suite then passed all 29 tests after adding two failure-cleanup regressions. Ruff and mypy also passed after that change.",
   "python_tests": {
-    "engine": 61,
-    "api": 76,
-    "arena": 73,
-    "telemetry": 12,
-    "microbench": 22,
-    "total": 244
+    "engine": 62,
+    "api": 78,
+    "arena": 83,
+    "telemetry": 16,
+    "microbench": 29,
+    "total": 268
   },
   "other_checks": [
     "contract examples",
@@ -67,6 +68,21 @@
     }
   ],
   "live_five_turn_smokes": [
+    {
+      "run_id": "audit-v2-pr2-review-5turn-23",
+      "seed": 23,
+      "turns": 5,
+      "decisions": 9,
+      "invalid_attempts": 0,
+      "fallbacks": 0,
+      "replay": "passed",
+      "recorded_cost_usd": 0.0020192,
+      "missing_usage_attempt_count": 0,
+      "missing_cost_attempt_count": 0,
+      "model_ids": ["openai/gpt-6-luna"],
+      "executed_treatment_fingerprint": "1ab551934dc65b548c3a477c6f3bf8db76a121eabd56ff578024951a080ba305",
+      "fresh_replay_and_stricter_completion_recheck": "passed"
+    },
     {
       "run_id": "audit-v2-final-paid-5turn-23",
       "seed": 23,
@@ -130,10 +146,27 @@
     "original_files_modified": false
   },
   "quarantined_legacy_fixtures": 11,
+  "pr_review_regressions": {
+    "greptile_findings_fixed": 5,
+    "adversarial_cases": [
+      "Last birthday debtor bankruptcy creates no unanswered decision",
+      "Exact TURN_ENDED recovery and pending decision recovery preserve the original five-turn trajectory",
+      "Recovered pending decisions do not duplicate decision_started",
+      "All suite and batch fixtures are screened before client creation",
+      "Missing, empty, and start-only decision logs fail replay",
+      "Net-worth ties ignore the selected winner",
+      "Conflicting later commits cannot partially mutate canonical journals",
+      "Interior action and decision gaps cannot be appended out of order",
+      "Identity and treatment rejection occurs before journal repair",
+      "Fractional and string-valued bids fail schema validation before scoring",
+      "Completion requires its final marker and full inventory hashes",
+      "Micro provider failures close clients and preserve unresolved-call accounting"
+    ]
+  },
   "limits": [
     "No Railway deployment or concurrency validation",
     "No claim of completed human calibration or validated causal micro scores",
-    "Live smoke fingerprints record their actual source revisions; later admission-gate and unknown-BYOK refinements passed targeted regressions",
+    "Live smoke fingerprints record their actual source revisions; subsequent completion and micro failure-path refinements have dedicated regressions",
     "Power-loss and unknown in-flight-call reconciliation remain fail-closed boundaries"
   ]
 }

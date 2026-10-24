@@ -93,7 +93,8 @@ standard rules. Changing them requires another treatment version.
   source trajectories can re-enter finalization; a summary file alone does not
   block recovery. `completion.json` is written after required finalization stages.
 - Account/transport failures fail without applying a strategic fallback. A failure
-  artifact and usage accounting remain. Invalid model output retains one corrective
+  artifact and usage accounting remain. Microbench failures also close their client
+  and retain accounting for unresolved calls. Invalid model output retains one corrective
   retry and then the versioned deterministic fallback.
 - Completion calls have a 120-second total deadline; generation/catalog enrichment
   in the runner has a 15-second deadline. Launch pricing is separate from final
