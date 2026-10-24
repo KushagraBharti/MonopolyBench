@@ -227,6 +227,25 @@ def test_unknown_call_outcome_still_blocks_resubmission(tmp_path, status, error)
     assert client.calls == 1
 
 
+def test_missing_physical_call_record_blocks_recovery_without_another_request(tmp_path):
+    class Client:
+        calls = 0
+        async def create_chat_completion(self, **kwargs):
+            self.calls += 1
+            return OpenRouterResult(False, 429, None, "Rejected", "http_429", None)
+    files = init_run_files(tmp_path, "call-gap")
+    client = Client()
+    resolver = SharedDecisionResolver(openrouter=client, run_files=files,
+        prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()), space_key_by_index=build_space_key_by_index())
+    decision = {"decision_id": "d", "player_id": "p", "turn_index": 0, "decision_type": "BUY_OR_AUCTION_DECISION"}
+    for _ in range(3):
+        asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    next((files.run_dir / "calls").glob("*-1.json")).unlink()
+    with pytest.raises(RuntimeError, match="history has a gap"):
+        asyncio.run(resolver._call_completion(decision, 0, {"model": "test"}))
+    assert client.calls == 3
+
+
 def test_human_reviews_do_not_invalidate_completed_campaign_cell(completed_run):
     from monopoly_telemetry.review import append_review_label
     from monopoly_telemetry.writer_jsonl import append_jsonl

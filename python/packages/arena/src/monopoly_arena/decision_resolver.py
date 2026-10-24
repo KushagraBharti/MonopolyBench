@@ -400,14 +400,18 @@ class SharedDecisionResolver:
         if self._run_files is not None:
             key = hashlib.sha256(f'{decision["decision_id"]}:{attempt}'.encode()).hexdigest()
             path = self._run_files.run_dir / "calls" / f"{key}.json"
+            remaining_paths = set(path.parent.glob(f"{key}*.json"))
             physical_attempt = 0
             while path.exists():
+                remaining_paths.discard(path)
                 saved = json.loads(path.read_text(encoding="utf-8"))
                 if saved["request_hash"] != request_hash:
                     raise RuntimeError("Recovered request differs from durable call intent")
                 if saved.get("status") == "received":
                     cached = OpenRouterResult(**saved["result"])
                     if cached.ok:
+                        if remaining_paths:
+                            raise RuntimeError("Conflicting durable call history after a successful response")
                         return replace(cached, call_id=saved["call_id"])
                     known_rejection = cached.error_type == "no_api_key" or cached.status_code in {
                         400, 401, 402, 403, 404, 405, 413, 415, 422, 429,
@@ -419,6 +423,8 @@ class SharedDecisionResolver:
                         path = self._run_files.run_dir / "calls" / f"{key}-{physical_attempt}.json"
                         continue
                 raise RuntimeError("Interrupted call has unknown outcome; reconcile billing before resubmission")
+            if remaining_paths:
+                raise RuntimeError("Durable call history has a gap; reconcile before resubmission")
             self._run_files.write_json_artifact(path, record)
         try:
             result = await asyncio.wait_for(self._openrouter.create_chat_completion(**kwargs), timeout=120)
