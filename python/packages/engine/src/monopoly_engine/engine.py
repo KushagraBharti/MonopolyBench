@@ -76,6 +76,7 @@ class Engine:
         self._pending_decision: DecisionPoint | None = None
         self._pending_turn: dict[str, Any] | None = None
         self._pending_payment: dict[str, Any] | None = None
+        self._debt_continuation: dict[str, Any] | None = None
         self._applied_decision_ids: set[str] = set()
         self.state = create_initial_state(run_id, seed, players)
         self._jail_index = next(
@@ -296,39 +297,16 @@ class Engine:
                 if not is_double:
                     player.jail_turns += 1
                     if player.jail_turns >= 3:
-                        if player.cash < JAIL_FINE:
-                            self._handle_bankruptcy(
-                                player, None, events, turn_index=self.state.turn_index
-                            )
-                            player.in_jail = False
-                            player.jail_turns = 0
-                            self._end_turn(events, player, allow_extra_turn=False)
-                            snapshot = self.get_snapshot()
-                            if self._should_end_game():
-                                self._finish_game(events)
-                                snapshot = self.get_snapshot()
-                            return self.state, events, None, snapshot
-                        decision = self._build_jail_decision(player)
-                        self.state.phase = "AWAITING_DECISION"
-                        self._pending_decision = decision
-                        self._pending_turn = {
-                            "player_id": player.player_id,
-                            "decision_type": "JAIL_DECISION",
-                        }
-                        events.append(
-                            self._build_event(
-                                "LLM_DECISION_REQUESTED",
-                                self._actor_engine(),
-                                {
-                                    "decision_id": decision["decision_id"],
-                                    "player_id": player.player_id,
-                                    "decision_type": decision["decision_type"],
-                                },
-                                turn_index=self.state.turn_index,
-                            )
+                        self._debt_continuation = {"kind": "jail", "steps": d1 + d2}
+                        payment = self._build_payment_entry(JAIL_FINE, None, "JAIL_FINE", kind="JAIL")
+                        debt_decision = self._request_payment(
+                            player, payment, events, turn_index=self.state.turn_index, rolled_double=False
                         )
-                        snapshot = self.get_snapshot()
-                        return self.state, events, decision, snapshot
+                        if debt_decision is not None:
+                            self._activate_debt_decision(debt_decision, events)
+                        else:
+                            debt_decision = self._continue_after_debt(player, events)
+                        return self.state, events, debt_decision, self.get_snapshot()
                     self._end_turn(events, player, allow_extra_turn=False)
                     snapshot = self.get_snapshot()
                     if self._should_end_game():
@@ -365,7 +343,7 @@ class Engine:
                             self._actor_engine(),
                             {
                                 "decision_id": move_decision["decision_id"],
-                                "player_id": player.player_id,
+                                "player_id": move_decision["player_id"],
                                 "decision_type": move_decision["decision_type"],
                             },
                             turn_index=self.state.turn_index,
@@ -535,12 +513,12 @@ class Engine:
                 creditor = self._find_player(creditor_id) if creditor_id else None
                 self._handle_bankruptcy(player, creditor, events, turn_index=self.state.turn_index)
                 self._pending_payment = None
-                self._end_turn(events, player, allow_extra_turn=False)
+                next_decision = self._continue_after_debt(player, events)
                 snapshot = self.get_snapshot()
                 if self._should_end_game():
                     self._finish_game(events)
                     snapshot = self.get_snapshot()
-                return self.state, events, None, snapshot
+                return self.state, events, next_decision, snapshot
             if action_name == "mortgage_property":
                 self._apply_mortgage(player, action, events)
             elif action_name == "sell_houses_or_hotel":
@@ -661,7 +639,7 @@ class Engine:
                     self._actor_engine(),
                     {
                         "decision_id": move_decision["decision_id"],
-                        "player_id": current_id,
+                        "player_id": move_decision["player_id"],
                         "decision_type": move_decision["decision_type"],
                     },
                     turn_index=turn_index,
@@ -803,7 +781,7 @@ class Engine:
                 "space_index": (
                     decision_space_index if decision_space_index is not None else player.position
                 ),
-                "player_id": player.player_id,
+                "player_id": decision["player_id"],
             }
             events.append(
                 self._build_event(
@@ -811,7 +789,7 @@ class Engine:
                     self._actor_engine(),
                     {
                         "decision_id": decision["decision_id"],
-                        "player_id": player.player_id,
+                        "player_id": decision["player_id"],
                         "decision_type": decision["decision_type"],
                     },
                     turn_index=turn_index,
@@ -1176,15 +1154,12 @@ class Engine:
             self._apply_cash_delta(player, 20, card_id, events, turn_index=turn_index)
             return None, None
         if card_id == "BIRTHDAY_COLLECT_10_FROM_EACH_PLAYER":
-            for other in self.state.players:
-                if other.player_id == player.player_id or other.bankrupt:
-                    continue
-                if other.cash >= 10:
-                    self._apply_cash_delta(other, -10, card_id, events, turn_index=turn_index)
-                    self._apply_cash_delta(player, 10, card_id, events, turn_index=turn_index)
-                else:
-                    self._handle_bankruptcy(other, player, events, turn_index=turn_index)
-            return None, None
+            self._debt_continuation = {
+                "kind": "birthday", "recipient": player.player_id, "rolled_double": rolled_double,
+                "payers": [other.player_id for other in self.state.players
+                           if other.player_id != player.player_id and not other.bankrupt],
+            }
+            return self._collect_birthday(events), None
         if card_id == "LIFE_INSURANCE_COLLECT_100":
             self._apply_cash_delta(player, 100, card_id, events, turn_index=turn_index)
             return None, None
@@ -1699,6 +1674,8 @@ class Engine:
         if auction.current_leader_player_id is not None:
             self._finalize_auction(auction, events, reason="SOLD")
             return
+        if auction.active_bidders_player_ids:
+            return
         self._finalize_auction(auction, events, reason="NO_BIDS")
 
     def _finalize_auction(self, auction: AuctionState, events: list[Event], *, reason: str) -> None:
@@ -1793,6 +1770,8 @@ class Engine:
                 raise ValueError("Trade property not owned by player.")
             if space.houses > 0 or space.hotel:
                 raise ValueError("Cannot trade property with buildings.")
+            if space.group and self._group_has_buildings(space.group):
+                raise ValueError("Cannot trade property in a developed group.")
             if space.kind not in OWNABLE_KINDS:
                 raise ValueError("Invalid trade property.")
 
@@ -2247,6 +2226,64 @@ class Engine:
             "space_index": space_index,
         }
 
+    def _activate_debt_decision(self, decision: DecisionPoint, events: list[Event]) -> None:
+        self.state.phase = "AWAITING_DECISION"
+        self._pending_decision = decision
+        self._pending_turn = {"player_id": decision["player_id"], "decision_type": decision["decision_type"],
+                              "rolled_double": False}
+        events.append(self._build_event("LLM_DECISION_REQUESTED", self._actor_engine(), {
+            "decision_id": decision["decision_id"], "player_id": decision["player_id"],
+            "decision_type": decision["decision_type"],
+        }, turn_index=self.state.turn_index))
+
+    def _collect_birthday(self, events: list[Event]) -> DecisionPoint | None:
+        context = self._debt_continuation
+        assert context is not None
+        while context["payers"]:
+            payer = self._find_player(context["payers"].pop(0))
+            assert payer is not None
+            payment = self._build_payment_entry(10, context["recipient"],
+                                                "BIRTHDAY_COLLECT_10_FROM_EACH_PLAYER", kind="CARD")
+            decision = self._request_payment(payer, payment, events,
+                                            turn_index=self.state.turn_index, rolled_double=False)
+            if decision is not None:
+                return decision
+        self._debt_continuation = None
+        return None
+
+    def _continue_after_debt(self, payer: PlayerState, events: list[Event],
+                             *, rolled_double: bool = False) -> DecisionPoint | None:
+        if self._should_end_game():
+            self._debt_continuation = None
+            self._finish_game(events)
+            return None
+        context = self._debt_continuation
+        if context and context["kind"] == "birthday":
+            decision = self._collect_birthday(events)
+            if decision is not None:
+                self._activate_debt_decision(decision, events)
+                return decision
+            recipient = self._find_player(context["recipient"])
+            assert recipient is not None
+            return self._maybe_start_post_turn_decision(events, recipient,
+                                                       rolled_double=context["rolled_double"])
+        self._debt_continuation = None
+        if payer.bankrupt:
+            self._end_turn(events, payer, allow_extra_turn=False)
+            return None
+        if context and context["kind"] == "jail":
+            payer.in_jail = False
+            payer.jail_turns = 0
+            payer.doubles_count = 0
+            decision, space_index = self._move_player(payer, context["steps"], events,
+                                                      turn_index=self.state.turn_index, rolled_double=False)
+            if decision is not None:
+                self._activate_debt_decision(decision, events)
+                assert self._pending_turn is not None
+                self._pending_turn["space_index"] = space_index
+                return decision
+        return self._maybe_start_post_turn_decision(events, payer, rolled_double=rolled_double)
+
     def _request_payment(
         self,
         payer: PlayerState,
@@ -2367,8 +2404,7 @@ class Engine:
                 creditor = self._find_player(creditor_id) if creditor_id else None
                 self._handle_bankruptcy(payer, creditor, events, turn_index=turn_index)
                 self._pending_payment = None
-                self._end_turn(events, payer, allow_extra_turn=False)
-                return None
+                return self._continue_after_debt(payer, events)
             liquidation_decision = self._build_liquidation_decision(payer, payment, options=options)
             self.state.phase = "AWAITING_DECISION"
             self._pending_decision = liquidation_decision
@@ -2420,11 +2456,7 @@ class Engine:
                 )
             )
             return next_decision
-        return self._maybe_start_post_turn_decision(
-            events,
-            payer,
-            rolled_double=rolled_double,
-        )
+        return self._continue_after_debt(payer, events, rolled_double=rolled_double)
 
     def _space_index_from_key(self, space_key: str | None) -> int | None:
         if not space_key:
@@ -2749,6 +2781,16 @@ class Engine:
                 raise ValueError("Unknown build kind.")
             touched_groups.add(space.group)
 
+            # Inventory must be available before a later hotel returns houses.
+            if self.state.bank.houses_remaining + bank_houses_delta < 0:
+                raise ValueError("Bank houses exhausted during build plan.")
+            if self.state.bank.hotels_remaining + bank_hotels_delta < 0:
+                raise ValueError("Bank hotels exhausted during build plan.")
+            levels = [HOTEL_HOUSE_EQUIV if temp[index][1] else temp[index][0]
+                      for index in GROUP_INDEXES[space.group]]
+            if max(levels) - min(levels) > 1:
+                raise ValueError("Uneven intermediate building operation; interleave purchases across the group.")
+
         if self.state.bank.houses_remaining + bank_houses_delta < 0:
             raise ValueError("Bank houses exhausted.")
         if self.state.bank.hotels_remaining + bank_hotels_delta < 0:
@@ -2854,7 +2896,7 @@ class Engine:
         if not indices:
             return False
         return all(
-            self.state.board[index].owner_id == player_id and not self.state.board[index].mortgaged
+            self.state.board[index].owner_id == player_id
             for index in indices
         )
 
@@ -2920,6 +2962,13 @@ class Engine:
         player.bankrupt = True
         player.bankrupt_to = creditor.player_id if creditor else None
         player.doubles_count = 0
+        if player.get_out_of_jail_cards:
+            if creditor is not None:
+                self._transfer_jail_cards(player, creditor, player.get_out_of_jail_cards)
+            else:
+                while player.get_out_of_jail_cards:
+                    self._return_jail_card(player)
+                    player.get_out_of_jail_cards -= 1
         if remaining_cash > 0:
             self._apply_cash_delta(
                 player,

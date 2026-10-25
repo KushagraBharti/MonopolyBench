@@ -9,6 +9,7 @@ from typing import Any
 from monopoly_telemetry import RunFiles
 
 from .decision_resolver import SharedDecisionResolver
+from .fixture_validation import validate_fixture_action
 from .player_config import PlayerConfig
 from .prompting import PromptMemory, build_space_key_by_index
 
@@ -31,6 +32,7 @@ class MicroRunner:
         self._space_key_by_index = build_space_key_by_index()
         self._prompt_memory = PromptMemory(space_key_by_index=self._space_key_by_index)
         self._resolver = SharedDecisionResolver(
+            rules_validator=validate_fixture_action,
             openrouter=openrouter,
             run_files=run_files,
             prompt_memory=self._prompt_memory,

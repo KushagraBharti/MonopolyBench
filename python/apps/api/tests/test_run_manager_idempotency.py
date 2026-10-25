@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
+
+import pytest
 
 from monopoly_engine import create_initial_state
 from monopoly_telemetry import init_run_files
+from monopoly_telemetry.commit import write_commit
 
 from monopoly_api.player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name
 from monopoly_api.run_manager import RunManager
+from monopoly_arena.treatment import treatment_fingerprint
 
 
 class FakeRunner:
@@ -181,6 +186,7 @@ def test_recover_run_restores_logged_configuration(tmp_path) -> None:
                 "max_turns": 25,
                 "players": [player.to_status() for player in players],
                 "baseline_strategies": {},
+                "treatment_fingerprint": treatment_fingerprint(),
             }
         )
         run_files.write_event({"seq": 0, "turn_index": 0, "type": "LLM_DECISION_REQUESTED"})
@@ -209,3 +215,81 @@ def test_recover_run_restores_logged_configuration(tmp_path) -> None:
         await manager.stop_run()
 
     asyncio.run(run_test())
+
+
+@pytest.mark.parametrize("mismatch", ["identity", "treatment"])
+def test_rejected_recovery_does_not_repair_journals(tmp_path, mismatch):
+    files = init_run_files(tmp_path, "rejected")
+    files.write_run_config({"run_id": "wrong" if mismatch == "identity" else "rejected",
+                            "treatment_fingerprint": "old-treatment" if mismatch == "treatment" else None})
+    write_commit(files, {"decision_id": "d1"}, {"decision_id": "d1", "phase": "decision_resolved"},
+                 [{"seq": 1, "type": "EXPECTED"}])
+    paths = [files.actions_path, files.decisions_path, files.events_path]
+    before = {path: path.read_bytes() if path.exists() else None for path in paths}
+    manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+    with pytest.raises(ValueError):
+        asyncio.run(manager.recover_run("rejected"))
+    assert {path: path.read_bytes() if path.exists() else None for path in paths} == before
+
+
+def test_repeated_start_after_stop_preserves_saved_run(tmp_path):
+    async def run_test():
+        manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+        players = _make_players()
+        run_id = await manager.start_run(seed=5, players=players)
+        files = init_run_files(tmp_path, run_id)
+        files.write_event({"seq": 1, "type": "ORIGINAL"})
+        before = files.events_path.read_bytes()
+        await manager.stop_run()
+        with pytest.raises(ValueError, match="already exists"):
+            await manager.start_run(seed=5, players=players)
+        assert files.events_path.read_bytes() == before
+        assert not manager.get_status()["running"]
+    asyncio.run(run_test())
+
+
+@pytest.mark.parametrize("changed", ["provider", "reasoning", "treatment"])
+def test_api_run_identity_includes_full_treatment(monkeypatch, changed):
+    players = _make_players()
+    kwargs = {"seed": 5, "players": players, "max_turns": 5, "max_trade_exchanges": 20, "max_auction_actions": 200}
+    original = RunManager._generate_run_id(**kwargs)
+    if changed == "treatment":
+        monkeypatch.setattr("monopoly_api.run_manager.treatment_fingerprint", lambda: "different-source")
+    else:
+        players[0] = replace(players[0], **{changed: {"only": ["openai"]} if changed == "provider" else {"effort": "high"}})
+    assert RunManager._generate_run_id(**kwargs) != original
+
+
+@pytest.mark.parametrize("legacy_shape", ["completed_without_marker", "interrupted"])
+def test_recovery_refuses_historical_runs_without_rewriting_them(tmp_path, legacy_shape) -> None:
+    manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+    players = _make_players()
+    run_id = "historical-run"
+    run_files = init_run_files(tmp_path, run_id)
+    run_files.write_run_config({"run_id": run_id, "seed": 303, "max_turns": 5,
+                                "players": [player.to_status() for player in players], "baseline_strategies": {}})
+    run_files.write_event({"seq": 0, "turn_index": 0, "type": "LLM_DECISION_REQUESTED"})
+    if legacy_shape == "completed_without_marker":
+        run_files.write_summary({"run_id": run_id, "reason": "TURN_LIMIT"})
+        run_files.write_json_artifact(run_files.usage_path, {"run_id": run_id, "usage_accounting_version": "usage_accounting_v1"})
+    before = {path: path.read_bytes() for path in run_files.run_dir.rglob("*") if path.is_file()}
+    with pytest.raises(ValueError, match="different executable treatment"):
+        asyncio.run(manager.recover_run(run_id))
+    after = {path: path.read_bytes() for path in run_files.run_dir.rglob("*") if path.is_file()}
+    assert after == before
+
+
+@pytest.mark.parametrize("second_cost", [0.25, None])
+def test_model_detail_keeps_unknown_cost_unknown(tmp_path, second_cost) -> None:
+    import json
+    manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+    for run_id, cost in (("run-a", 0.5), ("run-b", second_cost)):
+        run_files = init_run_files(tmp_path, run_id)
+        run_files.scorecard_path.write_text(json.dumps({"players": [{"openrouter_model_id": "test/model", "winner": False}]}))
+        # A partially accounted run keeps its known spend in known_cost_subtotal.
+        row = {"total_tokens": 10, "cost": cost, "known_cost_subtotal": 0.1 if cost is None else cost}
+        run_files.usage_path.write_text(json.dumps({"by_model": {"test/model": row}}))
+    detail = manager.get_model("test__model")
+    assert detail is not None and detail["game_count"] == 2
+    assert detail["known_cost_subtotal"] == pytest.approx(0.5 + (0.1 if second_cost is None else second_cost))
+    assert detail["total_cost"] == (None if second_cost is None else 0.75)

@@ -12,7 +12,9 @@ import {
   fetchRunArtifact,
   fetchRunSnapshot,
   fetchRunSnapshots,
+  normalizeReplayStep,
   saveReviewLabel,
+  type LegacyReplayStep,
   type ReplayFlag,
   type ReplayStep,
   type ReviewLabel,
@@ -218,7 +220,7 @@ export const ReplayReviewPage = () => {
         safeLoadArtifact<Record<string, unknown>>(runId, 'artifact_replay_report'),
         safeLoadArtifact<Record<string, unknown>>(runId, 'replay_diff'),
         safeLoadArtifact<Record<string, unknown>>(runId, 'event_hashes'),
-        safeLoadArtifact<ReplayStep>(runId, 'replay_steps'),
+        safeLoadArtifact<LegacyReplayStep>(runId, 'replay_steps'),
         safeLoadArtifact<ReplayFlag>(runId, 'replay_flags'),
         safeLoadArtifact<TraceFinding>(runId, 'trace_findings'),
         safeLoadArtifact<TraceFinding>(runId, 'failure_findings'),
@@ -228,7 +230,7 @@ export const ReplayReviewPage = () => {
         fetchReviewSummary(runId).catch(() => null),
       ]);
       if (!active) return;
-      const loadedSteps = asRows<ReplayStep>(replayStepsArtifact);
+      const loadedSteps = asRows<LegacyReplayStep>(replayStepsArtifact).map(normalizeReplayStep);
       setReplayReport(asContent<Record<string, unknown>>(replayReportArtifact));
       setStateReplayReport(asContent<Record<string, unknown>>(stateReplayReportArtifact));
       setArtifactReplayReport(asContent<Record<string, unknown>>(artifactReplayReportArtifact));

@@ -17,7 +17,7 @@ def build_summary(run_files: RunFiles) -> dict[str, Any]:
     actions = _read_jsonl(run_files.actions_path)
     players_payload = _read_json(run_files.players_path)
     board_spec = _load_board_spec()
-    return _build_summary_from_logs(
+    summary = _build_summary_from_logs(
         run_id=run_files.run_id,
         events=events,
         decisions=decisions,
@@ -25,6 +25,15 @@ def build_summary(run_files: RunFiles) -> dict[str, Any]:
         players_payload=players_payload,
         board_spec=board_spec,
     )
+    from .usage import build_usage_report
+
+    usage = build_usage_report(run_files)
+    if usage["attempt_count"]:
+        # Cost covers every physical call, including ones no resolved decision references.
+        token_usage = summary.setdefault("token_usage", {})
+        token_usage["total_cost"] = usage["totals"]["cost"]
+        token_usage["known_cost_subtotal"] = usage["known_cost_subtotal"]
+    return summary
 
 
 def _build_summary_from_logs(
@@ -243,6 +252,7 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
     token_usage_seen = False
     cost_total = 0.0
     cost_seen = False
+    cost_missing = False
 
     for entry in resolved:
         for attempt in entry.get("attempts", []):
@@ -257,15 +267,14 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
                     if isinstance(value, int):
                         token_usage_totals[key] += value
                         token_usage_seen = True
-                cost = usage.get("cost")
-                if isinstance(cost, (int, float)):
-                    cost_total += float(cost)
-                    cost_seen = True
             if isinstance(raw, dict):
-                cost = raw.get("cost") or raw.get("total_cost")
+                from .usage import _normalize_usage
+                cost = _normalize_usage(usage if isinstance(usage, dict) else {}, raw)["cost"]
                 if isinstance(cost, (int, float)):
                     cost_total += float(cost)
                     cost_seen = True
+                else:
+                    cost_missing = True
 
         latency = entry.get("latency_ms")
         if isinstance(latency, int):
@@ -286,8 +295,10 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
         token_usage = {}
         if token_usage_seen:
             token_usage.update(token_usage_totals)
-        if cost_seen:
-            token_usage["total_cost"] = round(cost_total, 6)
+        if cost_seen or cost_missing:
+            # Match usage accounting v2: one unknown call cost makes the total unknown.
+            token_usage["total_cost"] = None if cost_missing else round(cost_total, 6)
+            token_usage["known_cost_subtotal"] = round(cost_total, 6)
     return stats, token_usage
 
 

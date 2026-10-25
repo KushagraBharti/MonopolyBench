@@ -397,7 +397,8 @@ def _read_key() -> KeyPress:
 
 
 def _read_windows_key() -> KeyPress:
-    import msvcrt
+    import importlib
+    msvcrt = importlib.import_module("msvcrt")
 
     char = msvcrt.getwch()
     if char == "\x1b":

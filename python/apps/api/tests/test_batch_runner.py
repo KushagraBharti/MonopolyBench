@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from monopoly_arena import OpenRouterResult
 from monopoly_arena.batch_artifacts import budget_preflight_estimate, should_stop_for_budget
 from monopoly_arena.batch_run import run_batch
@@ -60,6 +62,7 @@ class DeterministicOpenRouter:
         }
         payload = {
             "id": "resp-1",
+            "usage": {"cost": 0.0},
             "choices": [
                 {
                     "message": {
@@ -218,13 +221,15 @@ def test_batch_runner_writes_index_and_summaries(tmp_path: Path) -> None:
     assert '"private_thought":"test"' not in markdown_text
 
 
-def test_batch_runner_continues_after_failures_when_configured(tmp_path: Path) -> None:
+@pytest.mark.parametrize("budget_policy,expected_runs", [("stop_immediately", 1), ("report_only", 2)])
+def test_batch_failure_continuation_obeys_unknown_cost_budget_guard(tmp_path: Path, budget_policy, expected_runs) -> None:
     config = {
         "batch_id": "batch-failure-test",
         "seeds": [21, 22],
         "matches": 2,
         "players": str(default_players_config_path()),
         "continue_on_failure": True,
+        "budget_policy": budget_policy,
         "max_turns": 8,
     }
 
@@ -237,16 +242,20 @@ def test_batch_runner_continues_after_failures_when_configured(tmp_path: Path) -
     )
 
     rows = [json.loads(line) for line in index_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    assert len(rows) == 2
+    assert len(rows) == expected_runs
     assert {row["status"] for row in rows} == {"failed"}
     assert all("scripted batch failure" in row["error"] for row in rows)
     batch_dir = tmp_path / "batches" / "batch-failure-test"
     manifest = json.loads((batch_dir / "batch_manifest.json").read_text(encoding="utf-8"))
-    assert manifest["run_count"] == 2
-    assert [run["status"] for run in manifest["runs"]] == ["failed", "failed"]
+    assert manifest["run_count"] == expected_runs
+    assert [run["status"] for run in manifest["runs"]] == ["failed"] * expected_runs
     results = [json.loads(line) for line in (batch_dir / "results.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
-    assert [row["status"] for row in results] == ["failed", "failed"]
-    assert (batch_dir / "budget_report.json").exists()
+    assert [row["status"] for row in results] == ["failed"] * expected_runs
+    budget = json.loads((batch_dir / "budget_report.json").read_text())
+    assert budget["total_actual_cost"] is None
+    assert budget["known_cost_subtotal"] == 0
+    if budget_policy == "stop_immediately":
+        assert budget["stop_reason"] == "incomplete_cost_coverage_cannot_verify_remaining_budget"
     assert (batch_dir / "artifact_manifest.json").exists()
 
 
@@ -288,3 +297,25 @@ def test_batch_budget_preflight_uses_historical_actual_costs() -> None:
     assert preflight["remaining_budget"] == 0.5
     assert preflight["would_exceed_remaining_budget"] is True
     assert should_stop_for_budget(config, entries) == "remaining_budget_0.5_less_than_historical_max_run_cost_0.6"
+
+
+@pytest.mark.parametrize("second_usage", [{"totals": {"cost": 0.25}, "known_cost_subtotal": 0.25},
+                                          {"totals": {"cost": None}, "known_cost_subtotal": 0.1}, None])
+def test_micro_batch_cost_aggregates_keep_unknown_cost_unknown(tmp_path, second_usage) -> None:
+    import json
+    from monopoly_arena.batch_run import _micro_cost_report, _micro_token_report
+    entries = []
+    for index, usage in enumerate(({"totals": {"cost": 0.5}, "known_cost_subtotal": 0.5}, second_usage)):
+        run_dir = tmp_path / f"micro-{index}"
+        run_dir.mkdir()
+        if usage is not None:
+            (run_dir / "usage.json").write_text(json.dumps(usage))
+        entries.append({"run_dir": str(run_dir), "run_id": f"micro-{index}", "model_id": "test/model"})
+    cost = _micro_cost_report(entries)
+    tokens = _micro_token_report(entries)
+    known = 0.5 + ((second_usage or {}).get("known_cost_subtotal") or 0)
+    expected = 0.75 if second_usage and second_usage["totals"]["cost"] is not None else None
+    assert cost["total_actual_cost"] == expected
+    assert tokens["totals"]["cost"] == expected and tokens["totals"]["known_cost_subtotal"] == known
+    assert cost["by_model"]["test/model"]["cost"] == expected
+    assert cost["by_run"]["micro-0"]["cost"] == 0.5

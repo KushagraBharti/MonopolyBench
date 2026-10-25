@@ -7,6 +7,8 @@ import type {
   BatchList,
   BatchModelCard,
   ModelDetail,
+  LegacyReplayStep,
+  ReplayStep,
   ReviewLabel,
   ReviewQueueItem,
   ReviewSummary,
@@ -29,6 +31,7 @@ export type {
   BatchModelCard,
   JsonArtifact,
   JsonlArtifact,
+  LegacyReplayStep,
   ModelDetail,
   ReplayFlag,
   ReplayReport,
@@ -46,6 +49,14 @@ export type {
   TraceFinding,
   UsageReport,
 } from '@/net/contracts';
+
+export const normalizeReplayStep = (step: LegacyReplayStep): ReplayStep => ({
+  ...step,
+  event_type: step.event_type ?? step.type ?? step.event?.type ?? 'UNKNOWN',
+  event_seq: step.event_seq ?? step.seq ?? step.event?.seq,
+  actor: step.actor ?? step.event?.actor,
+  payload: step.payload ?? step.event?.payload ?? {},
+});
 
 const apiGet = async <T>(path: string): Promise<T> => {
   const res = await fetch(`${getApiBaseUrl()}${path}`);

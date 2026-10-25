@@ -606,6 +606,48 @@ def test_zero_budget_preserves_every_planned_cell_as_not_started(
     assert result["actual_cost"] == 0
 
 
+@pytest.mark.parametrize("first_status", ["completed", "failed"])
+def test_partial_cost_stops_campaign_even_when_failures_may_continue(tmp_path, monkeypatch, first_status):
+    import monopoly_arena.long_campaign as campaign
+    config = _campaign_config()
+    config.update(campaign_id="partial-cost-stop", model_roster="baseline_field",
+                  seat_permutation="configured_order", cost_budget=50, continue_on_failure=True)
+    original = campaign._run_campaign_row
+    calls = []
+
+    async def partially_reported_run(row, **kwargs):
+        calls.append(row["run_id"])
+        entry = await original(row, **kwargs)
+        entry["status"] = first_status
+        entry["cost_report"] = {"total_actual_cost": None, "known_cost_subtotal": 5.0,
+                                "cost_coverage": "partial_or_missing", "missing_cost_attempt_count": 1}
+        return entry
+
+    monkeypatch.setattr(campaign, "_run_campaign_row", partially_reported_run)
+    result = asyncio.run(run_campaign(config, runs_dir=tmp_path, openrouter_factory=_NoOpenRouter, force_execute=True))
+    assert len(calls) == 1
+    assert result["stop_reason"] == "incomplete_cost_coverage_cannot_verify_remaining_budget"
+    assert result["actual_cost"] is None and result["known_cost_subtotal"] == 5.0
+    report = json.loads((Path(result["campaign_dir"]) / "budget_report.json").read_text())
+    assert report["actual_cost"] is None and report["known_cost_subtotal"] == 5.0
+    rows = json.loads((Path(result["campaign_dir"]) / "run_results.json").read_text())["runs"]
+    assert [row["status"] for row in rows] == [first_status, "not_started_budget_stop"]
+
+
+def test_budgeted_baseline_campaign_executes_every_zero_call_cell(tmp_path):
+    config = _campaign_config()
+    config.update(campaign_id="baseline-zero-cost", model_roster="baseline_field",
+                  seat_permutation="configured_order", cost_budget=1.0)
+    result = asyncio.run(run_campaign(config, runs_dir=tmp_path, openrouter_factory=_NoOpenRouter, force_execute=True))
+    assert result["completed_count"] == 2 and result["stop_reason"] is None
+    assert result["actual_cost"] == 0.0 and result["cost_coverage"] == "complete"
+    rows = json.loads((Path(result["campaign_dir"]) / "run_results.json").read_text())["runs"]
+    for row in rows:
+        assert row["usage"]["attempt_count"] == 0
+        assert row["cost_report"]["total_actual_cost"] == 0.0
+        assert row["cost_report"]["cost_coverage"] == "complete"
+
+
 def test_failure_halt_preserves_later_planned_cells(tmp_path: Path) -> None:
     config = _campaign_config()
     config["campaign_id"] = "monopoly-long-v1-failure-ledger-test"

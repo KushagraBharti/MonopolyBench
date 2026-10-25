@@ -11,6 +11,7 @@ from typing import Any, Awaitable, Callable
 
 from monopoly_arena import OpenRouterClient, build_single_player_config
 from monopoly_arena.decision_resolver import SharedDecisionResolver
+from monopoly_arena.fixture_validation import validate_fixture_action
 from monopoly_arena.prompting import PromptMemory, build_space_key_by_index
 from monopoly_telemetry import (
     build_experiment_manifest,
@@ -22,7 +23,7 @@ from monopoly_telemetry import (
 from monopoly_telemetry.writer_jsonl import append_jsonl
 
 from .artifacts import batch_dir, compact_result_for_jsonl, micro_run_files
-from .catalog import get_suite, load_scenario
+from .catalog import get_suite, list_scenarios, load_scenario
 from .paths import default_runs_dir
 from .scorer import score_action
 
@@ -44,6 +45,9 @@ async def run_scenario(
     openrouter_factory: Callable[[], Any] = OpenRouterClient,
 ) -> dict[str, Any]:
     scenario = load_scenario(config.scenario_id)
+    fixture_errors = validate_fixture_action(scenario["decision_point"], scenario["reference_policy"]["action"])
+    if fixture_errors:
+        raise ValueError(f"Quarantined legacy fixture {config.scenario_id}: {fixture_errors}")
     decision = json.loads(json.dumps(scenario["decision_point"]))
     focal_player_id = scenario["focal_player_id"]
     focal_name = next(
@@ -81,6 +85,7 @@ async def run_scenario(
     run_files.write_snapshot(decision["state"])
 
     resolver = SharedDecisionResolver(
+        rules_validator=validate_fixture_action,
         openrouter=openrouter_factory(),
         run_files=run_files,
         prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()),
@@ -90,28 +95,36 @@ async def run_scenario(
     async def log_writer(entry: dict[str, Any]) -> None:
         run_files.write_decision(entry)
 
-    outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
-    run_files.write_decision(
-        resolver.build_decision_log_entry(
-            decision=decision,
-            player_config=player_config,
-            phase="decision_resolved",
-            action=outcome.action,
-            attempts=outcome.attempts,
-            retry_used=outcome.retry_used,
-            fallback_used=outcome.fallback_used,
-            fallback_reason=outcome.fallback_reason,
-            applied=False,
-            sequence_meta=outcome.sequence_meta,
+    try:
+        outcome = await resolver.resolve_decision(decision=decision, player_config=player_config, log_writer=log_writer)
+        run_files.write_decision(
+            resolver.build_decision_log_entry(
+                decision=decision,
+                player_config=player_config,
+                phase="decision_resolved",
+                action=outcome.action,
+                attempts=outcome.attempts,
+                retry_used=outcome.retry_used,
+                fallback_used=outcome.fallback_used,
+                fallback_reason=outcome.fallback_reason,
+                applied=False,
+                sequence_meta=outcome.sequence_meta,
+            )
         )
-    )
-    close = getattr(resolver._openrouter, "aclose", None)
-    if close is not None:
-        maybe = close()
-        if asyncio.iscoroutine(maybe):
-            await maybe
-    if outcome.fallback_used:
-        raise RuntimeError(f"Micro model run failed without a valid action: {outcome.fallback_reason or 'fallback_used'}")
+        if outcome.fallback_used:
+            raise RuntimeError(f"Micro model run failed without a valid action: {outcome.fallback_reason or 'fallback_used'}")
+    except Exception as exc:
+        run_files.write_json_artifact(run_files.run_dir / "failure.json", {
+            "run_id": run_id, "error": str(exc), "complete": False,
+        })
+        write_usage_artifacts(run_files)
+        raise
+    finally:
+        close = getattr(resolver._openrouter, "aclose", None)
+        if close is not None:
+            maybe = close()
+            if asyncio.iscoroutine(maybe):
+                await maybe
     action = outcome.action
     latency_ms = _latency_from_attempts(outcome.attempts)
 
@@ -202,6 +215,22 @@ async def run_scenario(
     return result
 
 
+def _preflight_selection(scenario_ids: list[str]) -> None:
+    """Reject an invalid selection before any provider client is constructed."""
+    catalog = {scenario["scenario_id"]: scenario for scenario in list_scenarios()}
+    failures: dict[str, list[str]] = {}
+    for scenario_id in scenario_ids:
+        if scenario_id not in catalog:
+            failures[scenario_id] = ["Unknown fixture"]
+            continue
+        scenario = catalog[scenario_id]
+        errors = validate_fixture_action(scenario["decision_point"], scenario["reference_policy"]["action"])
+        if errors:
+            failures[scenario_id] = errors
+    if failures:
+        raise ValueError(f"Quarantined/invalid fixture selection; no model calls were made: {failures}")
+
+
 async def run_suite(
     suite_id: str,
     *,
@@ -212,6 +241,7 @@ async def run_suite(
     openrouter_factory: Callable[[], Any] = OpenRouterClient,
 ) -> list[dict[str, Any]]:
     suite = get_suite(suite_id)
+    _preflight_selection(suite["scenario_ids"])
     results: list[dict[str, Any]] = []
     for scenario_id in suite["scenario_ids"]:
         results.append(
@@ -241,9 +271,10 @@ async def run_batch(
 ) -> dict[str, Any]:
     root = runs_dir or default_runs_dir()
     batch_id = f"micro-batch-{suite_id}-{int(time.time() * 1000)}"
-    out_dir = batch_dir(root, batch_id)
     suite = get_suite(suite_id)
     selected = scenario_ids or suite["scenario_ids"]
+    _preflight_selection(selected)
+    out_dir = batch_dir(root, batch_id)
     config = {
         "batch_id": batch_id,
         "suite_id": suite_id,
@@ -314,9 +345,10 @@ async def run_batch_with_progress(
 ) -> dict[str, Any]:
     root = runs_dir or default_runs_dir()
     batch_id = f"micro-batch-{suite_id}-{int(time.time() * 1000)}"
-    out_dir = batch_dir(root, batch_id)
     suite = get_suite(suite_id)
     selected = scenario_ids or suite["scenario_ids"]
+    _preflight_selection(selected)
+    out_dir = batch_dir(root, batch_id)
     config = {
         "batch_id": batch_id,
         "suite_id": suite_id,

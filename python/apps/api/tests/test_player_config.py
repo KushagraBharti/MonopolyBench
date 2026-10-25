@@ -143,6 +143,23 @@ def test_run_start_rejects_too_many_players() -> None:
     assert response.status_code == 400
 
 
+def test_run_start_existing_run_returns_client_error_without_mutating_files(tmp_path, monkeypatch):
+    from monopoly_api.run_manager import RunManager
+    from monopoly_telemetry import init_run_files
+    manager = RunManager(tmp_path, openrouter_factory=lambda: pytest.fail("No provider client should be created"))
+    players = build_player_configs(requested_players=None, config_path=api_main.settings.players_config_path)
+    run_id = manager._generate_run_id(123, players, max_turns=5, max_trade_exchanges=20, max_auction_actions=200)
+    files = init_run_files(tmp_path, run_id)
+    files.write_event({"type": "ORIGINAL", "seq": 0})
+    original = files.events_path.read_bytes()
+    monkeypatch.setattr(api_main, "run_manager", manager)
+    response = TestClient(app, raise_server_exceptions=False).post("/run/start", json={"seed": 123, "max_turns": 5})
+    assert response.status_code == 400
+    assert "already exists" in response.json()["detail"]
+    assert "recovery" in response.json()["detail"]
+    assert files.events_path.read_bytes() == original
+
+
 def test_generate_run_seed_uses_fresh_random_bits(monkeypatch) -> None:
     monkeypatch.setattr(api_main.secrets, "randbits", lambda bit_count: 4_294_967_291 if bit_count == 32 else 0)
 

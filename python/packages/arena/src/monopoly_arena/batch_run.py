@@ -632,15 +632,15 @@ def _micro_total_tokens(entries: list[dict[str, Any]]) -> int:
     return int(_micro_usage_totals(entries).get("total_tokens") or 0)
 
 
-def _micro_total_cost(entries: list[dict[str, Any]]) -> float:
-    return round(float(_micro_usage_totals(entries).get("cost") or 0.0), 10)
+def _micro_total_cost(entries: list[dict[str, Any]]) -> float | None:
+    return _micro_usage_totals(entries).get("cost")
 
 
 def _micro_usage_totals(entries: list[dict[str, Any]]) -> dict[str, Any]:
     total = _empty_usage_totals()
     for entry in entries:
         _add_usage_totals(total, _run_usage_totals(entry))
-    total["cost"] = round(float(total["cost"]), 10)
+    _round_costs(total)
     return total
 
 
@@ -652,7 +652,7 @@ def _micro_usage_by_key(entries: list[dict[str, Any]], key: str) -> dict[str, An
         row["run_count"] = int(row.get("run_count") or 0) + 1
         _add_usage_totals(row, _run_usage_totals(entry))
     for row in grouped.values():
-        row["cost"] = round(float(row["cost"]), 10)
+        _round_costs(row)
     return grouped
 
 
@@ -665,7 +665,13 @@ def _run_usage_totals(entry: dict[str, Any]) -> dict[str, Any]:
     for key in row:
         value = totals.get(key)
         if isinstance(value, (int, float)):
-            row[key] = float(value) if key == "cost" else int(value)
+            row[key] = float(value) if key in {"cost", "known_cost_subtotal"} else int(value)
+    if not isinstance(totals.get("cost"), (int, float)):
+        row["cost"] = None  # Missing or incomplete usage is unknown spending, not zero.
+    if not isinstance(usage.get("known_cost_subtotal"), (int, float)):
+        row["known_cost_subtotal"] = row["cost"] or 0.0
+    else:
+        row["known_cost_subtotal"] = float(usage["known_cost_subtotal"])
     if not isinstance(totals.get("input_tokens"), (int, float)) and isinstance(totals.get("prompt_tokens"), (int, float)):
         row["input_tokens"] = int(totals["prompt_tokens"])
     if not isinstance(totals.get("output_tokens"), (int, float)) and isinstance(totals.get("completion_tokens"), (int, float)):
@@ -688,18 +694,26 @@ def _empty_usage_totals() -> dict[str, Any]:
         "cache_read_tokens": 0,
         "cache_write_tokens": 0,
         "cost": 0.0,
+        "known_cost_subtotal": 0.0,
         "latency_ms": 0,
     }
 
 
 def _add_usage_totals(target: dict[str, Any], row: dict[str, Any]) -> None:
     for key, value in row.items():
-        if not isinstance(value, (int, float)):
-            continue
         if key == "cost":
+            # One unknown run cost makes the aggregate unknown; known_cost_subtotal keeps the rest.
+            target[key] = None if value is None or target.get(key) is None else float(target[key]) + float(value)
+        elif key == "known_cost_subtotal" and isinstance(value, (int, float)):
             target[key] = float(target.get(key) or 0.0) + float(value)
-        else:
+        elif isinstance(value, (int, float)):
             target[key] = int(target.get(key) or 0) + int(value)
+
+
+def _round_costs(row: dict[str, Any]) -> None:
+    for key in ("cost", "known_cost_subtotal"):
+        if isinstance(row.get(key), (int, float)):
+            row[key] = round(float(row[key]), 10)
 
 
 def _micro_batch_manifest(config: dict[str, Any], entries: list[dict[str, Any]], paths: dict[str, Path]) -> dict[str, Any]:

@@ -75,14 +75,14 @@ export const RunsPage = () => {
                 <NeoBadge
                   variant={
                     run.state_replay_report_exists && run.artifact_replay_report_exists
-                      ? 'success'
+                      ? 'info'
                       : run.replay_report_exists
                         ? 'info'
                         : 'warning'
                   }
                 >
                   {run.state_replay_report_exists && run.artifact_replay_report_exists
-                    ? 'split replay'
+                    ? 'replay reports available'
                     : run.replay_report_exists
                       ? 'legacy replay'
                       : 'partial'}

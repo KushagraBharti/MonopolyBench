@@ -400,13 +400,11 @@ def test_third_failed_attempt_requires_fine() -> None:
         "args": {},
     }
     engine.apply_action(action)
-    assert player.jail_turns == 3
-
-    _, _, decision_after, _ = engine.advance_until_decision(max_steps=1)
-    assert decision_after is not None
-    assert decision_after["decision_type"] == "JAIL_DECISION"
-    legal_actions = {entry["action"] for entry in decision_after["legal_actions"]}
-    assert legal_actions == {"pay_jail_fine"}
+    assert player.jail_turns == 0
+    assert not player.in_jail
+    assert player.cash == 150
+    assert player.position == 13
+    assert next(rolls) == (1, 2)  # movement did not consume a second roll
 
 
 def test_replay_continues_across_automatic_no_decision_turns() -> None:
