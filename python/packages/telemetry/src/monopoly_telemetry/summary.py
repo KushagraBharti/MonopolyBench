@@ -17,7 +17,7 @@ def build_summary(run_files: RunFiles) -> dict[str, Any]:
     actions = _read_jsonl(run_files.actions_path)
     players_payload = _read_json(run_files.players_path)
     board_spec = _load_board_spec()
-    return _build_summary_from_logs(
+    summary = _build_summary_from_logs(
         run_id=run_files.run_id,
         events=events,
         decisions=decisions,
@@ -25,6 +25,15 @@ def build_summary(run_files: RunFiles) -> dict[str, Any]:
         players_payload=players_payload,
         board_spec=board_spec,
     )
+    from .usage import build_usage_report
+
+    usage = build_usage_report(run_files)
+    if usage["attempt_count"]:
+        # Cost covers every physical call, including ones no resolved decision references.
+        token_usage = summary.setdefault("token_usage", {})
+        token_usage["total_cost"] = usage["totals"]["cost"]
+        token_usage["known_cost_subtotal"] = usage["known_cost_subtotal"]
+    return summary
 
 
 def _build_summary_from_logs(
