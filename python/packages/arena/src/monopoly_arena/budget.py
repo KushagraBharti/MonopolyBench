@@ -51,6 +51,23 @@ def _scope(scope: Literal["job", "campaign"], limit: float,
             "in_flight_calls": len(calls) - len(settled)}
 
 
+_JOB_CALLS = "SELECT * FROM calls WHERE job_id=? ORDER BY rowid"
+_CAMPAIGN_CALLS = ("SELECT calls.* FROM calls JOIN jobs ON jobs.job_id=calls.job_id "
+                   "WHERE jobs.campaign_id=? ORDER BY calls.rowid")
+
+
+def _decide(scopes: list[BudgetScope]) -> BudgetStatus:
+    for scope in scopes:
+        if scope["known_total"] >= scope["limit"]:
+            return {"blocked": True, "reason": "budget", "scopes": scopes,
+                    "detail": f"{scope['scope'].capitalize()} recorded spend ${scope['known_total']:.6g} reached the ${scope['limit']:.6g} budget."}
+    for scope in scopes:
+        if scope["unaccounted_calls"]:
+            return {"blocked": True, "reason": "budget_unknown", "scopes": scopes,
+                    "detail": f"{scope['scope'].capitalize()} budget cannot be checked: {scope['unaccounted_calls']} settled call(s) have missing or unknown cost."}
+    return {"blocked": False, "reason": None, "detail": "", "scopes": scopes}
+
+
 def budget_status(store: JobStore, job_id: str) -> BudgetStatus:
     """Return a read-only budget decision from one ledger snapshot.
 
@@ -73,25 +90,57 @@ def budget_status(store: JobStore, job_id: str) -> BudgetStatus:
             raise KeyError(job_id)
         limit = _limit(job["config_json"])
         if limit is not None:
-            calls = [dict(row) for row in db.execute("SELECT * FROM calls WHERE job_id=?", (job_id,))]
+            calls = [dict(row) for row in db.execute(_JOB_CALLS, (job_id,))]
             scopes.append(_scope("job", limit, calls))
         if job["campaign_id"] is not None:
             campaign = db.execute("SELECT config_json FROM campaigns WHERE campaign_id=?", (job["campaign_id"],)).fetchone()
             limit = _limit(campaign["config_json"]) if campaign else None
             if limit is not None:
-                calls = [dict(row) for row in db.execute(
-                    "SELECT calls.* FROM calls JOIN jobs ON jobs.job_id=calls.job_id WHERE jobs.campaign_id=?",
-                    (job["campaign_id"],))]
+                calls = [dict(row) for row in db.execute(_CAMPAIGN_CALLS, (job["campaign_id"],))]
                 scopes.append(_scope("campaign", limit, calls))
-    for scope in scopes:
-        if scope["known_total"] >= scope["limit"]:
-            return {"blocked": True, "reason": "budget", "scopes": scopes,
-                    "detail": f"{scope['scope'].capitalize()} recorded spend ${scope['known_total']:.6g} reached the ${scope['limit']:.6g} budget."}
-    for scope in scopes:
-        if scope["unaccounted_calls"]:
-            return {"blocked": True, "reason": "budget_unknown", "scopes": scopes,
-                    "detail": f"{scope['scope'].capitalize()} budget cannot be checked: {scope['unaccounted_calls']} settled call(s) have missing or unknown cost."}
-    return {"blocked": False, "reason": None, "detail": "", "scopes": scopes}
+    return _decide(scopes)
+
+
+def campaign_budget_statuses(store: JobStore, campaign_id: str) -> dict[str, BudgetStatus]:
+    """Return budget_status for every job attached to a campaign from one snapshot.
+
+    Each value equals budget_status(store, job_id) taken at the same instant,
+    but the campaign-wide ledger is read once instead of once per job. Keys
+    follow job insertion order. A job whose own cost_budget is invalid is
+    omitted so callers fall back to budget_status and surface its ValueError;
+    an invalid campaign limit raises ValueError as budget_status would. This is
+    a request-local read for responses only, never cached: workers and
+    admission keep calling budget_status/check_budget for a fresh decision.
+    """
+    with store.connect() as db:
+        db.execute("BEGIN")
+        jobs = db.execute("SELECT job_id,config_json FROM jobs WHERE campaign_id=? ORDER BY rowid", (campaign_id,)).fetchall()
+        if not jobs:
+            return {}
+        campaign = db.execute("SELECT config_json FROM campaigns WHERE campaign_id=?", (campaign_id,)).fetchone()
+        campaign_limit = _limit(campaign["config_json"]) if campaign else None
+        job_limits: dict[str, float | None] = {}
+        for job in jobs:
+            try:
+                job_limits[job["job_id"]] = _limit(job["config_json"])
+            except ValueError:
+                pass
+        calls: list[dict[str, Any]] = []
+        if campaign_limit is not None or any(limit is not None for limit in job_limits.values()):
+            calls = [dict(row) for row in db.execute(_CAMPAIGN_CALLS, (campaign_id,))]
+    by_job: dict[str, list[dict[str, Any]]] = {job_id: [] for job_id in job_limits}
+    for call in calls:
+        by_job.setdefault(call["job_id"], []).append(call)
+    shared = _scope("campaign", campaign_limit, calls) if campaign_limit is not None else None
+    statuses: dict[str, BudgetStatus] = {}
+    for job_id, limit in job_limits.items():
+        scopes: list[BudgetScope] = []
+        if limit is not None:
+            scopes.append(_scope("job", limit, by_job[job_id]))
+        if shared is not None:
+            scopes.append(shared.copy())
+        statuses[job_id] = _decide(scopes)
+    return statuses
 
 
 def check_budget(store: JobStore, job_id: str) -> None:

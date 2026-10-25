@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS exports (
  export_id TEXT PRIMARY KEY, scope TEXT, scope_id TEXT, revision INTEGER, kind TEXT,
  path TEXT, bytes INTEGER, manifest_sha256 TEXT, created_at REAL);
 CREATE UNIQUE INDEX IF NOT EXISTS exports_scope_revision ON exports(scope,scope_id,revision);
+-- Per-job and campaign-wide ledger reads (cost, budget, readiness) must not scan every call.
+CREATE INDEX IF NOT EXISTS calls_job ON calls(job_id);
+CREATE INDEX IF NOT EXISTS jobs_campaign ON jobs(campaign_id);
 CREATE TABLE IF NOT EXISTS audit (ts REAL, actor TEXT, action TEXT, detail_json TEXT);
 PRAGMA user_version=1;
 """

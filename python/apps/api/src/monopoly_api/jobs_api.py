@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from monopoly_arena.cloud_campaign import freeze, amend, run_config
 from monopoly_arena.campaign_setup import prepare as prepare_campaign, create as create_campaign, readiness
 from monopoly_arena.campaign_controls import pause_campaign, run_campaign, cancel_campaign, start_cell
-from monopoly_arena.budget import budget_status
+from monopoly_arena.budget import BudgetStatus, budget_status, campaign_budget_statuses
 from monopoly_arena.cloud_preflight import preflight
 from monopoly_arena.execution_policy import MODELS, data_root
 from monopoly_arena.job_store import JobStore
@@ -111,10 +111,15 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         rows = store.rows("""SELECT * FROM jobs WHERE (? IS NULL OR status=?) AND (? IS NULL OR kind=?)
             AND (? IS NULL OR campaign_id=?) AND archived=? AND (run_id LIKE ? OR config_json LIKE ? OR campaign_id LIKE ?)
             ORDER BY created_at DESC,job_id LIMIT 50 OFFSET ?""", (status, status, kind, kind, campaign, campaign, int(archived), "%"+search+"%", "%"+search+"%", "%"+search+"%", max(0, cursor)))
-        return {"jobs": [detail(row["job_id"]) for row in rows], "next_cursor": cursor+50 if len(rows) == 50 else None}
+        budgets = campaign_budget_statuses(store, campaign) if campaign is not None else None
+        return {"jobs": [job_detail(row["job_id"], budgets) for row in rows], "next_cursor": cursor+50 if len(rows) == 50 else None}
 
     @app.get("/api/jobs/{job_id}")
     def detail(job_id: str):
+        return job_detail(job_id)
+
+    def job_detail(job_id: str, budgets: dict[str, BudgetStatus] | None = None):
+        # budgets is a request-local campaign snapshot; never reuse it across requests.
         job = store.job(job_id)
         job["config"] = json.loads(job.pop("config_json"))
         job["outcome"] = json.loads(job.pop("outcome_json") or "null")
@@ -132,7 +137,7 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
                                      players=[{"player_id": p["player_id"], "name": p["name"]} for p in config["players"]],
                                      max_turns=config["max_turns"], max_trade_exchanges=config.get("max_trade_exchanges", 20),
                                      max_auction_actions=config.get("max_auction_actions", 200)).get_snapshot()
-        job["budget"] = budget_status(store, job_id)
+        job["budget"] = budgets[job_id] if budgets is not None and job_id in budgets else budget_status(store, job_id)
         job["commit_seq"] = commits[0]["commit_seq"] if commits else 0
         now = time.time()
         job["elapsed_seconds"] = max(0, (job["ended_at"] or now) - job["started_at"]) if job["started_at"] else None
@@ -261,11 +266,13 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         else:
             result = {**rows[0], "config": json.loads(rows[0]["config_json"]), "cells": store.rows("SELECT cells.*,jobs.status AS job_status FROM cells LEFT JOIN jobs ON cells.job_id=jobs.job_id WHERE cells.campaign_id=? ORDER BY cells.execution_rank", (campaign_id,)), "amendments": store.rows("SELECT * FROM campaign_amendments WHERE campaign_id=?", (campaign_id,))}
         result["display_name"] = result["config"].get("study_label") or campaign_id
+        # One consistent campaign ledger read serves every cell and readiness in this response.
+        budgets = campaign_budget_statuses(store, campaign_id) if rows else {}
         for cell in result["cells"]:
             cell["models_by_seat"] = json.loads(cell["seat_order_json"])
-            cell["game"] = detail(cell["job_id"]) if cell["job_id"] else None
+            cell["game"] = job_detail(cell["job_id"], budgets) if cell["job_id"] else None
             cell["allowed_actions"] = cell["game"]["allowed_actions"] if cell["game"] else (["start"] if cell["status"] != "cancelled" and result["status"] not in {"done", "cancelled"} else [])
-        result["readiness"] = readiness(store, result)
+        result["readiness"] = readiness(store, result, budgets=budgets)
         result["allowed_actions"] = [] if result["status"] in {"draft", "done", "cancelled"} else ["run", "pause", "cancel"]
         result["exports"] = export_entries(campaign_id)
         return result

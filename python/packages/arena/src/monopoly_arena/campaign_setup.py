@@ -9,7 +9,7 @@ import random
 import shutil
 import time
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 from .cloud_campaign import freeze
 from .execution_policy import MODELS
@@ -17,8 +17,13 @@ from .job_store import JobStore, encode
 from .research_registry import load_seed_registry, research_dir, validate_campaign_config
 from .worker import build_identity
 
+if TYPE_CHECKING:
+    from .budget import BudgetStatus
 
-def readiness(store: JobStore, campaign: dict[str, Any], *, require_study: bool = True) -> dict[str, Any]:
+
+def readiness(store: JobStore, campaign: dict[str, Any], *, require_study: bool = True,
+              budgets: Mapping[str, BudgetStatus] | None = None) -> dict[str, Any]:
+    """budgets may carry a request-local campaign_budget_statuses snapshot; absent jobs are read fresh."""
     identity = build_identity()
     config = campaign.get("config") or json.loads(campaign.get("config_json") or "{}")
     reasons = []
@@ -44,7 +49,7 @@ def readiness(store: JobStore, campaign: dict[str, Any], *, require_study: bool 
         jobs = store.rows("SELECT job_id FROM jobs WHERE campaign_id=? LIMIT 1", (campaign["campaign_id"],))
         if jobs:
             from .budget import budget_status
-            budget = budget_status(store, jobs[0]["job_id"])
+            budget = (budgets or {}).get(jobs[0]["job_id"]) or budget_status(store, jobs[0]["job_id"])
             if budget["blocked"]:
                 reasons.append(budget["detail"])
     return {"can_start": not reasons, "reasons": reasons}
