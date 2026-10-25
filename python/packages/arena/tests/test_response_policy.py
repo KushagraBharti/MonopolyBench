@@ -238,14 +238,43 @@ def test_action_only_retry_does_not_accept_a_new_private_note(tmp_path):
     assert outcome.attempts[-1].reason == "unexpected_private_thought"
 
 
-def test_usage_attributes_fallback_cost_to_actual_model():
+@pytest.mark.parametrize("fallback_cost", [0.02, None])
+def test_usage_nests_fallback_model_under_its_participant(fallback_cost):
     from monopoly_telemetry.usage import _attempt_usage_rows, _aggregate_usage, _decision_usage_rows
-    attempts = [{"requested_model": model, "raw_response": {"model": model, "usage": {
-        "is_byok": True, "cost": 0, "cost_details": {"upstream_inference_cost": cost},
-    }}} for model, cost in [("anthropic/claude-opus-5.5", .01), ("anthropic/claude-opus-4.8", .02)]]
-    rows = _attempt_usage_rows([{"phase": "decision_resolved", "decision_id": "d1", "player_id": "p1",
-                                "openrouter_model_id": "anthropic/claude-opus-5.5", "attempts": attempts}])
-    assert [r["openrouter_model_id"] for r in rows] == [a["requested_model"] for a in attempts]
-    assert sum(r["cost"] for r in rows) == pytest.approx(.03)
-    report = _aggregate_usage("test", rows, _decision_usage_rows(rows))
-    assert set(report["by_model"]) == {"anthropic/claude-opus-5.5", "anthropic/claude-opus-4.8"}
+    chain = [("anthropic/claude-opus-5.5", "standard", 0.01),
+             ("anthropic/claude-opus-5.5", "same_model_without_private_thought", 0.005),
+             ("anthropic/claude-opus-4.8", "fallback_without_private_thought", fallback_cost)]
+    attempts = [{"requested_model": model, "response_condition": condition, "raw_response": {"model": model, "usage": (
+        {"is_byok": True, "cost": 0, "cost_details": {"upstream_inference_cost": cost}} if cost is not None else {})}}
+        for model, condition, cost in chain]
+    ordinary = [{"requested_model": "anthropic/claude-opus-5.5", "response_condition": "standard",
+                 "raw_response": {"model": "anthropic/claude-opus-5.5", "usage": {"cost": 0.001}}}]
+    decisions = [{"phase": "decision_resolved", "decision_id": decision_id, "player_id": "p1",
+                  "openrouter_model_id": "anthropic/claude-opus-5.5", "attempts": decision_attempts}
+                 for decision_id, decision_attempts in (("d1", attempts), ("d2", ordinary))]
+    rows = _attempt_usage_rows(decisions)
+    # Each attempt names the model that served it, its participant, and whether it was a fallback.
+    assert [r["openrouter_model_id"] for r in rows] == [m for m, _, _ in chain] + ["anthropic/claude-opus-5.5"]
+    assert {r["participant_model_id"] for r in rows} == {"anthropic/claude-opus-5.5"}
+    assert [r["fallback_model_used"] for r in rows] == [False, False, True, False]
+    decision_rows = _decision_usage_rows(rows)
+    assert [(d["openrouter_model_id"], d["fallback_attempt_count"], d["fallback_models_used"]) for d in decision_rows] == [
+        ("anthropic/claude-opus-5.5", 1, ["anthropic/claude-opus-4.8"]), ("anthropic/claude-opus-5.5", 0, [])]
+    report = _aggregate_usage("test", rows, decision_rows)
+    # The fallback is not a participant: it appears only under the seat that used it.
+    assert set(report["by_model"]) == {"anthropic/claude-opus-5.5"}
+    assert report["fallback_attempt_count"] == 1
+    for umbrella in (report["by_model"]["anthropic/claude-opus-5.5"], report["by_player"]["p1"]):
+        known_total = 0.01 + 0.005 + 0.001 + (fallback_cost or 0)
+        assert umbrella["known_cost_subtotal"] == pytest.approx(known_total)
+        assert umbrella["cost"] == (pytest.approx(known_total) if fallback_cost is not None else None)
+        own = umbrella["own_model"]
+        assert (own["attempt_count"], own["cost"], own["missing_cost_attempt_count"]) == (3, pytest.approx(0.016), 0)
+        fallback = umbrella["fallback_models"]["anthropic/claude-opus-4.8"]
+        assert fallback["attempt_count"] == 1 and fallback["decision_ids"] == ["d1"] and fallback["decision_count"] == 1
+        assert fallback["cost"] == (pytest.approx(fallback_cost) if fallback_cost is not None else None)
+        assert fallback["known_cost_subtotal"] == pytest.approx(fallback_cost or 0)
+        assert fallback["missing_cost_attempt_count"] == (0 if fallback_cost is not None else 1)
+        assert fallback["response_conditions"] == ["fallback_without_private_thought"]
+        assert fallback["triggers"] == ["explicit_provider_refusal_after_same_model_retry"]
+        assert fallback["served_model_ids"] == ["anthropic/claude-opus-4.8"]

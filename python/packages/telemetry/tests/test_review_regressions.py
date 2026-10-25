@@ -157,3 +157,23 @@ def test_null_billing_fields_fall_back_to_generation_metadata(usage, generation,
     from monopoly_telemetry.usage import _normalize_usage
     raw = {"usage": usage, "openrouter_generation": {"status": "ok", "data": generation}}
     assert _normalize_usage(usage, raw)["cost"] == expected
+
+
+def test_invalid_attempt_rate_divides_calls_by_calls_not_decisions():
+    from monopoly_telemetry.scorecard import _apply_decision_metrics, _decision_row, _empty_player_score, _empty_run_metrics
+    bad = {"validation_errors": ["No tool call found"]}
+    entries = [
+        {"decision_id": "d1", "player_id": "p1", "fallback_used": True, "retry_used": True, "attempts": [bad, bad]},
+        {"decision_id": "d2", "player_id": "p1", "attempts": [{}]},
+        {"decision_id": "d3", "player_id": "p2", "automated": True, "attempts": []},
+    ]
+    by_player = {pid: _empty_player_score({"player_id": pid}) for pid in ("p1", "p2")}
+    run_metrics = _empty_run_metrics("rate-run", {}, [], [], [])
+    _apply_decision_metrics(by_player, run_metrics, [_decision_row(entry) for entry in entries])
+    reliability = run_metrics["reliability_metrics"]
+    # Two invalid calls out of three calls, not two per two model decisions (the old 100%).
+    assert reliability["invalid_attempt_rate"] == pytest.approx(2 / 3)
+    assert reliability["invalid_decision_rate"] == pytest.approx(1 / 3)
+    assert run_metrics["decision_stats"]["attempts"] == 3
+    assert by_player["p1"]["invalid_attempt_rate"] == pytest.approx(2 / 3)
+    assert by_player["p2"]["invalid_attempt_rate"] is None  # A baseline seat made no model calls.

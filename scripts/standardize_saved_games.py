@@ -186,6 +186,18 @@ def cost_fields(costs: pd.Series) -> dict[str, Any]:
     return {"cost": subtotal if missing == 0 else None, "known_cost_subtotal": subtotal, "missing_cost_calls": missing}
 
 
+def fallback_model_fields(group: pd.DataFrame) -> dict[str, Any]:
+    """Calls a configured fallback model served for this seat, kept under the seat."""
+    fallback = group[group["fallback_model_used"].astype(bool)] if "fallback_model_used" in group else group.iloc[0:0]
+    costs = cost_fields(fallback["cost"]) if not fallback.empty else {"cost": 0.0, "known_cost_subtotal": 0.0}
+    return {
+        "fallback_model_calls": int(len(fallback)),
+        "fallback_models": ";".join(sorted({str(model) for model in fallback.get("requested_model_id", [])})),
+        "fallback_model_cost": costs["cost"],
+        "fallback_model_known_cost_subtotal": costs["known_cost_subtotal"],
+    }
+
+
 def ensure_inside(child: Path, parent: Path) -> None:
     child_resolved = child.resolve()
     parent_resolved = parent.resolve()
@@ -353,6 +365,11 @@ def normalize_usage(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "player_id": row.get("player_id") or "",
                 "openrouter_model_id": row.get("openrouter_model_id") or "",
                 "model_display_name": row.get("model_display_name") or "",
+                # The seat's configured model owns every call, including configured fallbacks.
+                "participant_model_id": row.get("participant_model_id") or row.get("openrouter_model_id") or "",
+                "requested_model_id": row.get("requested_model_id") or row.get("openrouter_model_id") or "",
+                "response_condition": row.get("response_condition") or "standard",
+                "fallback_model_used": bool(row.get("fallback_model_used")),
                 "finish_reason": row.get("finish_reason") or "",
                 "accounting_status": row.get("accounting_status") or "",
                 "input_tokens": safe_int(row.get("input_tokens") or row.get("prompt_tokens")),
@@ -696,11 +713,12 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
             model_usage_rows.append(
                 {
                     "player_id": player_id,
-                    "openrouter_model_id": first_non_empty(group, "openrouter_model_id"),
+                    "openrouter_model_id": first_non_empty(group, "participant_model_id") or first_non_empty(group, "openrouter_model_id"),
                     "model_display_name": first_non_empty(group, "model_display_name"),
                     "calls": int(len(group)),
                     "retry_attempts": int((group["attempt_index"] > 0).sum()),
                     "fallback_rows": int(group["fallback_used"].astype(bool).sum()),
+                    **fallback_model_fields(group),
                     "input_tokens": int(group["input_tokens"].sum()),
                     "output_tokens": int(group["output_tokens"].sum()),
                     "reasoning_tokens": int(group["reasoning_tokens"].sum()),
@@ -1099,8 +1117,14 @@ def write_reports(
         "- `run_summary.csv`: one-row run summary and artifact counts.",
         "- `players.csv`: player/model configuration plus final summary values.",
         "- `model_usage.csv`: token, cost, retry, fallback, and latency totals by player/model. "
-        "`cost` is blank when any call cost is unknown; `known_cost_subtotal` and `missing_cost_calls` show coverage.",
-        "- `per_call_usage.csv`: one row per OpenRouter call attempt.",
+        "`cost` is blank when any call cost is unknown; `known_cost_subtotal` and `missing_cost_calls` show coverage. "
+        "`openrouter_model_id` is the seat's participant model; calls served by a configured fallback model "
+        "(for example Opus 4.8 after Opus 5.5 refusals) stay in that seat's totals and are broken out in "
+        "`fallback_model_calls`, `fallback_models`, `fallback_model_cost` and `fallback_model_known_cost_subtotal`. "
+        "`fallback_rows` counts deterministic game fallback moves, which are unrelated.",
+        "- `per_call_usage.csv`: one row per OpenRouter call attempt. `openrouter_model_id` is the model that "
+        "served the call; `participant_model_id`, `requested_model_id`, `response_condition` and "
+        "`fallback_model_used` show when a configured fallback model served the seat.",
         "- `per_turn_usage_by_player.csv`: token/cost totals by turn and player.",
         "- `per_turn_usage_total.csv`: token/cost totals by turn.",
         "- `decisions.csv`: flattened decision resolution rows.",

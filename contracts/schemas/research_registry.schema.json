@@ -238,6 +238,91 @@
           "type": "integer",
           "minimum": 1
         },
+        "preflight": {
+          "type": "object",
+          "required": [
+            "version",
+            "max_age_hours"
+          ],
+          "properties": {
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_age_hours": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "response_policy": {
+          "type": "object",
+          "required": [
+            "version",
+            "fallback_models",
+            "stages",
+            "trigger",
+            "max_resolver_calls"
+          ],
+          "properties": {
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fallback_models": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "stages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "trigger": {
+              "type": "string"
+            },
+            "max_resolver_calls": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "paper_model_labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "study_label": {
+          "type": "string"
+        },
+        "research_freeze": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "path",
+              "sha256",
+              "content"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "content": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "cost_budget": {
           "type": "number",
           "minimum": 0

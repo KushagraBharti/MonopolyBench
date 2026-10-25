@@ -8,7 +8,7 @@ from typing import Any
 from .run_files import RunFiles
 
 
-SCORECARD_VERSION = "scorecard_v2"
+SCORECARD_VERSION = "scorecard_v3"
 DEFAULT_STARTING_CASH = 1500
 
 
@@ -349,7 +349,9 @@ def _empty_run_metrics(
             "high_rent_payment_count": 0,
         },
         "reliability_metrics": {
+            # Share of model calls that were invalid, and share of decisions with any invalid call.
             "invalid_attempt_rate": None,
+            "invalid_decision_rate": None,
             "retry_rate": None,
             "fallback_rate": None,
             "average_decision_latency_ms": None,
@@ -384,7 +386,9 @@ def _empty_run_metrics(
         },
         "decision_stats": {
             "total_resolved": 0,
+            "attempts": 0,
             "invalid_attempts": 0,
+            "decisions_with_invalid_attempt": 0,
             "retries": 0,
             "fallbacks": 0,
             "fallback_reasons": {},
@@ -455,7 +459,9 @@ def _empty_player_score(player: dict[str, Any]) -> dict[str, Any]:
         "counters_made": 0,
         "public_messages_sent": 0,
         "private_thoughts_recorded": 0,
+        "attempt_count": 0,
         "invalid_attempts": 0,
+        "invalid_attempt_rate": None,
         "retries_used": 0,
         "fallbacks_used": 0,
         "average_decision_latency_ms": None,
@@ -579,13 +585,17 @@ def _apply_decision_metrics(
         stats["total_resolved"] += 1
         player_id = row.get("player_id")
         invalid_attempts = _int(row.get("invalid_attempts"))
+        attempt_count = _int(row.get("attempt_count"))
         retries = 1 if row.get("retry_used") else 0
         fallbacks = 1 if row.get("fallback_used") else 0
+        stats["attempts"] += attempt_count
         stats["invalid_attempts"] += invalid_attempts
+        stats["decisions_with_invalid_attempt"] += 1 if invalid_attempts else 0
         stats["retries"] += retries
         stats["fallbacks"] += fallbacks
         _add_player_metric(by_player, player_id, "decision_count", 1)
         _add_player_metric(by_player, player_id, "valid_first_response_count", 0 if invalid_attempts else 1)
+        _add_player_metric(by_player, player_id, "attempt_count", attempt_count)
         _add_player_metric(by_player, player_id, "invalid_attempts", invalid_attempts)
         _add_player_metric(by_player, player_id, "retries_used", retries)
         _add_player_metric(by_player, player_id, "fallbacks_used", fallbacks)
@@ -598,8 +608,11 @@ def _apply_decision_metrics(
         if latencies:
             _set_player_metric(by_player, player_id, "average_decision_latency_ms", round(sum(latencies) / len(latencies), 2))
     total_resolved = stats["total_resolved"]
+    if stats["attempts"]:
+        # A decision can have several invalid calls, so the call fraction divides by calls.
+        run_metrics["reliability_metrics"]["invalid_attempt_rate"] = stats["invalid_attempts"] / stats["attempts"]
     if total_resolved:
-        run_metrics["reliability_metrics"]["invalid_attempt_rate"] = stats["invalid_attempts"] / total_resolved
+        run_metrics["reliability_metrics"]["invalid_decision_rate"] = stats["decisions_with_invalid_attempt"] / total_resolved
         run_metrics["reliability_metrics"]["retry_rate"] = stats["retries"] / total_resolved
         run_metrics["reliability_metrics"]["fallback_rate"] = stats["fallbacks"] / total_resolved
     all_latencies = [latency for latencies in latencies_by_player.values() for latency in latencies]
@@ -607,6 +620,8 @@ def _apply_decision_metrics(
         run_metrics["reliability_metrics"]["average_decision_latency_ms"] = round(sum(all_latencies) / len(all_latencies), 2)
     for player in by_player.values():
         decision_count = _int(player.get("decision_count"))
+        if _int(player.get("attempt_count")):
+            player["invalid_attempt_rate"] = player["invalid_attempts"] / player["attempt_count"]
         if decision_count:
             player["valid_first_response_rate"] = player["valid_first_response_count"] / decision_count
             player["retry_rate"] = player["retries_used"] / decision_count
@@ -865,6 +880,7 @@ def _decision_row(entry: dict[str, Any]) -> dict[str, Any]:
         "retry_used": bool(entry.get("retry_used")),
         "fallback_used": bool(entry.get("fallback_used")),
         "fallback_reason": entry.get("fallback_reason"),
+        "attempt_count": len(attempts),
         "invalid_attempts": invalid_attempts,
         "latency_ms": entry.get("latency_ms"),
         "emitted_event_seq_start": entry.get("emitted_event_seq_start"),
