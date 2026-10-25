@@ -85,6 +85,28 @@ def test_run_materializes_all_four_jobs_without_launching(store, campaign, proce
     assert jobs(store) == original
 
 
+@pytest.mark.parametrize("status", ["running", "paused"])
+def test_finished_campaign_reaches_done_even_when_paused(store, campaign, processes, status):
+    run_campaign(store, campaign)
+    store.execute("UPDATE jobs SET status='completed',export_status='ready'")
+    store.execute("UPDATE campaigns SET status=?", (status,))
+    Supervisor(store).tick()
+    assert store.rows("SELECT status FROM campaigns")[0]["status"] == "done"
+    assert not processes
+
+
+@pytest.mark.parametrize("status", ["queued", "paused", "finalizing", "failed"])
+def test_paused_campaign_with_unfinished_cell_stays_paused(store, campaign, processes, status):
+    run_campaign(store, campaign)
+    store.execute("UPDATE jobs SET status='completed',export_status='ready'")
+    job = jobs(store)[0]
+    store.execute("UPDATE jobs SET status=? WHERE job_id=?", (status, job["job_id"]))
+    store.execute("UPDATE campaigns SET status='paused'")
+    Supervisor(store).tick()
+    assert store.rows("SELECT status FROM campaigns")[0]["status"] == "paused"
+    assert not workers(processes)
+
+
 @pytest.mark.parametrize("campaign_status", ["frozen", "paused"])
 def test_individual_start_is_idempotent_and_admitted_without_campaign_run(
     store, campaign, processes, campaign_status
