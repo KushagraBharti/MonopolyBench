@@ -143,3 +143,17 @@ def test_model_and_player_groups_keep_known_spend_beside_unknown_cost():
     for group in (report["by_model"]["m"], report["by_player"]["p1"]):
         assert group["cost"] is None and group["known_cost_subtotal"] == 1.25
     assert report["known_cost_subtotal"] == 1.25 and report["totals"]["cost"] is None
+
+
+@pytest.mark.parametrize("usage,generation,expected", [
+    ({"cost": 0, "is_byok": None}, {"is_byok": True}, None),  # Null flag: generation reveals BYOK, bill unknown.
+    ({"cost": 0, "is_byok": True, "cost_details": {"upstream_inference_cost": None}},
+     {"upstream_inference_cost": 1.25}, 1.25),  # Null upstream: generation supplies the bill.
+    ({"cost": 0.5, "is_byok": False, "cost_details": {"upstream_inference_cost": None}},
+     {"is_byok": True, "upstream_inference_cost": 0.4}, 0.5),  # An explicit false is kept.
+    ({"cost": 0, "cost_details": {"upstream_inference_cost": 0}}, {"upstream_inference_cost": 2}, 0.0),  # Zero is real.
+])
+def test_null_billing_fields_fall_back_to_generation_metadata(usage, generation, expected):
+    from monopoly_telemetry.usage import _normalize_usage
+    raw = {"usage": usage, "openrouter_generation": {"status": "ok", "data": generation}}
+    assert _normalize_usage(usage, raw)["cost"] == expected
