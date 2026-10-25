@@ -36,6 +36,8 @@ from monopoly_telemetry.commit import write_commit
 
 
 DecisionCallback = Callable[[dict[str, Any]], Awaitable[None]]
+# Fail a run visibly instead of letting a policy loop inside one turn forever.
+MAX_DECISIONS_PER_TURN = 1000
 
 
 DecisionAttempt = DecisionResolutionAttempt
@@ -57,7 +59,7 @@ class LlmRunner:
         run_id: str,
         openrouter: OpenRouterClient,
         run_files: RunFiles | None = None,
-        max_turns: int = 200,
+        max_turns: int | None = 200,
         event_delay_s: float = 0.25,
         start_ts_ms: int = 0,
         ts_step_ms: int = 250,
@@ -67,8 +69,10 @@ class LlmRunner:
         baseline_strategies: dict[str, str] | None = None,
         resume_actions: list[dict[str, Any]] | None = None,
         resume_events: list[dict[str, Any]] | None = None,
+        resume_at_boundary: bool = False,
     ) -> None:
         self.run_id = run_id
+        self._resume_at_boundary = resume_at_boundary
         if len(players) != EXPECTED_PLAYER_COUNT:
             raise ValueError(f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.")
         self._seed = seed
@@ -149,7 +153,8 @@ class LlmRunner:
         expected_events: list[dict[str, Any]],
     ) -> None:
         replayed_events: list[dict[str, Any]] = []
-        max_auto_steps = max(1, self._max_turns + len(self._players) + 1)
+        from monopoly_engine.replay import UNCAPPED_MAX_AUTO_STEPS
+        max_auto_steps = UNCAPPED_MAX_AUTO_STEPS if self._max_turns is None else max(1, self._max_turns + len(self._players) + 1)
 
         for entry in actions:
             _, decision_events, decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
@@ -170,13 +175,23 @@ class LlmRunner:
             replayed_events.extend(action_events)
             self._applied_decision_ids.add(str(decision["decision_id"]))
 
-        # A durable commit may end exactly at TURN_ENDED. Do not generate the
-        # next turn until the normal event stream can persist its events.
-        at_committed_boundary = canonical_event_lines(replayed_events) == canonical_event_lines(expected_events)
-        _, _, pending_decision, _ = self._engine.advance_until_decision(max_steps=0)
-        if not self._engine.is_game_over() and not at_committed_boundary:
-            _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
-            replayed_events.extend(tail_events)
+        pending_decision: dict[str, Any] | None = None
+        at_committed_boundary = False
+        if self._resume_at_boundary:
+            # Cloud journals commit single engine steps; replay exactly to the last one.
+            while not self._engine.is_game_over() and len(replayed_events) < len(expected_events):
+                _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=1)
+                replayed_events.extend(tail_events)
+                if not tail_events or pending_decision is not None:
+                    break
+        else:
+            # A durable commit may end exactly at TURN_ENDED. Do not generate the
+            # next turn until the normal event stream can persist its events.
+            at_committed_boundary = canonical_event_lines(replayed_events) == canonical_event_lines(expected_events)
+            _, _, pending_decision, _ = self._engine.advance_until_decision(max_steps=0)
+            if not self._engine.is_game_over() and not at_committed_boundary:
+                _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
+                replayed_events.extend(tail_events)
 
         replayed_lines = canonical_event_lines(replayed_events)
         expected_lines = canonical_event_lines(expected_events)
@@ -193,7 +208,8 @@ class LlmRunner:
                 "Interrupted-run event replay mismatch at index "
                 f"{mismatch_index} (replayed={len(replayed_lines)}, recorded={len(expected_lines)})."
             )
-        if pending_decision is None and not self._engine.is_game_over() and not at_committed_boundary:
+        if (pending_decision is None and not self._engine.is_game_over()
+                and not self._resume_at_boundary and not at_committed_boundary):
             raise ValueError("Interrupted run has no recoverable pending decision.")
 
         for event in replayed_events:
@@ -320,7 +336,9 @@ class LlmRunner:
             }
         else:
             try:
-                result = await asyncio.wait_for(method(), timeout=15)
+                # Durable clients apply their own recorded metadata deadline.
+                timeout = None if getattr(self._openrouter, "durable_call_records", False) is True else 15
+                result = await asyncio.wait_for(method(), timeout=timeout)
             except asyncio.TimeoutError:
                 self._run_files.write_json_artifact(self._run_files.pricing_snapshot_path, {
                     "status": "error", "reason": "metadata_deadline_exceeded"})
@@ -375,8 +393,8 @@ class LlmRunner:
                     decisions_this_turn = 0
                     last_turn = decision["turn_index"]
                 decisions_this_turn += 1
-                if decisions_this_turn > 1000:
-                    raise RuntimeError("No-progress guard: more than 1000 decisions in one turn; run is incomplete")
+                if decisions_this_turn > MAX_DECISIONS_PER_TURN:
+                    raise RuntimeError(f"No-progress guard: more than {MAX_DECISIONS_PER_TURN} decisions in one turn; run is incomplete")
                 await self._await_resume()
                 outcome = await self._resolve_decision(decision, write_decision)
                 self._pending_resolution = PendingResolution(decision=decision, outcome=outcome)

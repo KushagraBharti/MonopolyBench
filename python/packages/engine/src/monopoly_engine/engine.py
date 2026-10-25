@@ -54,7 +54,7 @@ class Engine:
         seed: int,
         players: list[dict[str, Any]],
         run_id: str,
-        max_turns: int = 30,
+        max_turns: int | None = 30,
         start_ts_ms: int = 0,
         ts_step_ms: int = 250,
         allow_extra_turns: bool = True,
@@ -3121,7 +3121,7 @@ class Engine:
     def _should_end_game(self) -> bool:
         if self._stop_reason is not None:
             return True
-        if self.state.turn_index >= self._max_turns:
+        if self._max_turns is not None and self.state.turn_index >= self._max_turns:
             self._stop_reason = "TURN_LIMIT"
             return True
         if self._active_player_count() <= 1 and self.state.players:

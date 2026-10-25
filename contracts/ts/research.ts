@@ -71,6 +71,27 @@ export type LongHorizonModelRosterRegistry = {
   prompt_pipeline: PromptPipelineMarker
 }
 
+export type LongHorizonCampaignConfigV2 = {
+  schema_version: 'v2'
+  campaign_config_version: 'long_horizon_campaign_config_v2'
+  campaign_id: string
+  benchmark_id: 'monopoly-long-v1'
+  seed_cohort: string
+  model_roster: string
+  seeds: number[]
+  repetitions_per_seed: 1
+  seat_permutation: 'cyclic_4'
+  max_turns: null
+  max_trade_exchanges: 20
+  max_auction_actions: 200
+  concurrency: number
+  execution_order_seed: number
+  execution_policy_version: 'execution_policy_v1'
+  rerun_policy: { max_reruns_per_cell: 1; same_seed_and_seats: true }
+  billing: { enforcement: 'observe'; [provider: string]: string }
+  prompt_pipeline: PromptPipelineMarker
+}
+
 export type LongHorizonCampaignConfig = {
   schema_version: 'v1'
   campaign_config_version: 'long_horizon_campaign_config_v1'
@@ -80,7 +101,7 @@ export type LongHorizonCampaignConfig = {
   model_roster: string
   repetitions_per_seed: number
   seat_permutation: 'latin_square' | 'full' | 'seeded_random' | 'configured_order'
-  max_turns: number
+  max_turns: number | null
   max_trade_exchanges?: number
   max_auction_actions?: number
   cost_budget?: number

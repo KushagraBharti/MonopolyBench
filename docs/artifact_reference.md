@@ -104,6 +104,40 @@ Model cards:
 
 `mixed` is a parent batch that can launch full-game and micro-suite components and writes a parent `run_index.jsonl` that points to each component batch.
 
+## Cloud execution and export
+
+`MB_DATA_DIR` contains `ledger.sqlite`, `runs/`, `quality_check/`, `jobs/`,
+`campaigns/`, and `exports/`. Run and wire artifacts retain their local layout.
+Job IDs identify operations; engine run IDs remain stable across recovery.
+
+Each `jobs/<job_id>/` contains frozen `job.json`, an execution manifest,
+`pricing_start.json`, physical-call intents and responses in `calls/`, and a
+write-ahead `journal.jsonl`. Journal records contain exact target bytes, starting
+offsets and SHA-256 hashes. SQLite commits publish an entire engine transition
+with its matching snapshot. Recovery completes only matching byte prefixes,
+quarantines incomplete journal tails, and records repairs under `recovery/`.
+Successful finalization replaces duplicated journal bytes with `journal_index.jsonl`.
+Failed or cancelled jobs retain diagnostic evidence.
+
+`execution_cost.json` accounts for every physical call, including unknown
+interrupted calls. Known charges, missing values, unknown charges and labeled
+token-price estimates are separate. Ledger totals use the usage v2 rule: upstream
+inference cost is added only with explicit BYOK or a zero gateway charge, and
+generation metadata fills fields a completion omitted without replacing reported
+values. Run usage follows usage accounting v2, which
+adds BYOK upstream inference cost and keeps unknown costs null; `usage_byok.json`
+is that report labeled for cloud packages.
+
+ZIP64 packages contain `run/`, `quality_check/`, `analysis/`, `cloud/`,
+`saved_game_manifest.json`, and `storage_manifest.json`. The storage manifest
+lists every regular file except itself. Its tree hash sorts relative POSIX paths
+by Unicode code point and hashes `path + NUL + lowercase_sha256 + newline`.
+Symlinks, traversal and duplicate ZIP paths are rejected. Campaign revisions
+include failed jobs, rerun links, unstarted cells, amendments and launch order.
+Treat verified packages as immutable; run further analysis on a copy.
+
+See `deploy/README.md` for setup, recovery, export and rollout verification.
+
 ## Non-Negotiable Prompt Boundary
 
 Artifact generation is downstream of decisions. Agents must not change prompt construction, prompt content, message order, tool schema construction, retry wording, or model-facing prompt conditions while working on artifacts, metrics, replay, UI, contracts, or batch orchestration.

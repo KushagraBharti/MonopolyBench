@@ -36,6 +36,11 @@ class OpenRouterClient:
     ) -> None:
         self._api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self._base_url = base_url.rstrip("/")
+        if os.getenv("MB_TEST_MODE") == "1":
+            from urllib.parse import urlparse
+            if urlparse(self._base_url).hostname not in {"127.0.0.1", "localhost", "::1"}:
+                raise ValueError("Test mode refuses non-loopback OpenRouter hosts")
+            self._api_key = "mock-only"
         self._timeout_s = timeout_s
         self._max_retries = max_retries
         self._extra_headers = extra_headers or {}

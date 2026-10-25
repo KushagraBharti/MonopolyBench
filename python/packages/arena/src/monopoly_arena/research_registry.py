@@ -97,7 +97,8 @@ def validate_model_roster_registry(payload: dict[str, Any]) -> None:
 
 
 def validate_campaign_config(payload: dict[str, Any]) -> None:
-    _validate_schema(payload, f"{RESEARCH_SCHEMA_ID}#/$defs/campaignConfig")
+    definition = "campaignConfigV2" if payload.get("campaign_config_version") == "long_horizon_campaign_config_v2" else "campaignConfig"
+    _validate_schema(payload, f"{RESEARCH_SCHEMA_ID}#/$defs/{definition}")
     _assert_prompt_pipeline_unchanged(payload, "campaign config")
 
 

@@ -11,11 +11,15 @@ from .run_files import RunFiles, evidence_paths
 USAGE_ACCOUNTING_VERSION = "usage_accounting_v2"
 
 
-def build_usage_report(run_files: RunFiles) -> dict[str, Any]:
+def build_usage_report(run_files: RunFiles, *, byok_aware: bool = False) -> dict[str, Any]:
     decisions = _read_jsonl(run_files.decisions_path)
     attempt_rows = _all_attempt_usage_rows(run_files, decisions)
     decision_rows = _decision_usage_rows(attempt_rows)
-    return _aggregate_usage(run_files.run_id, attempt_rows, decision_rows)
+    report = _aggregate_usage(run_files.run_id, attempt_rows, decision_rows)
+    if byok_aware:
+        # Usage v2 already adds BYOK upstream inference cost and keeps unknown cost null.
+        report["source"] = "openrouter_and_byok_actuals"
+    return report
 
 
 def write_usage_artifacts(run_files: RunFiles) -> dict[str, Any]:

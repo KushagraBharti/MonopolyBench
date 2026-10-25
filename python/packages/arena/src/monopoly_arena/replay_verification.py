@@ -118,7 +118,7 @@ def build_replay_verification_reports(run_files: RunFiles) -> dict[str, dict[str
             players=players,
             run_id=run_files.run_id,
             actions=actions,
-            max_turns=int(run_config.get("max_turns", 200)),
+            max_turns=run_config.get("max_turns", 200),
             start_ts_ms=int(run_config.get("start_ts_ms", 0)),
             ts_step_ms=int(run_config.get("ts_step_ms", 250)),
             max_trade_exchanges=int(run_config.get("max_trade_exchanges", 20)),

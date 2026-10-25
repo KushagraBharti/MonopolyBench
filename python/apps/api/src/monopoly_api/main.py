@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+import os
 from typing import Any
 from fastapi import FastAPI, WebSocket, HTTPException, Query
 from fastapi import WebSocketDisconnect
@@ -65,6 +66,8 @@ class PlayerSpec(BaseModel):
     name: str | None = None
     openrouter_model_id: str | None = None
     system_prompt: str | None = None
+    reasoning: dict[str, Any] | None = None
+    provider: dict[str, Any] | None = None
 
 
 class StartRunRequest(BaseModel):
@@ -509,3 +512,19 @@ async def ws(websocket: WebSocket) -> None:
         )
     finally:
         await run_manager.unsubscribe(websocket)
+
+
+# Cloud exposes only the authenticated, job-scoped application.
+if os.getenv("MB_MODE") == "cloud":
+    from monopoly_api.jobs_api import create_cloud_app
+    legacy_app = app
+    app = create_cloud_app()
+    from fastapi.routing import APIRoute
+    read_routes = []
+    for route in legacy_app.routes:
+        if isinstance(route, APIRoute) and route.methods == {"GET"} and route.path.startswith(("/runs", "/models", "/batches", "/micro")):
+            route.path = "/api" + route.path
+            from starlette.routing import compile_path
+            route.path_regex, route.path_format, route.param_convertors = compile_path(route.path)
+            read_routes.append(route)
+    app.router.routes = read_routes + app.router.routes

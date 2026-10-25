@@ -400,11 +400,11 @@ def _read_windows_key() -> KeyPress:
     import importlib
     msvcrt = importlib.import_module("msvcrt")
 
-    char = msvcrt.getwch()
+    char = getattr(msvcrt, "getwch")()
     if char == "\x1b":
         return _read_windows_escape_sequence(msvcrt) or KeyPress("escape")
     if char in {"\x00", "\xe0"}:
-        code = msvcrt.getwch()
+        code = getattr(msvcrt, "getwch")()
         return {
             "H": KeyPress("up"),
             "P": KeyPress("down"),

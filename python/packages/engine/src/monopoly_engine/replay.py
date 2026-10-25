@@ -6,6 +6,8 @@ from typing import Any, Iterable
 
 from .engine import Engine
 
+UNCAPPED_MAX_AUTO_STEPS = 10_000
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
@@ -30,7 +32,7 @@ def replay_actions(
     players: list[dict[str, Any]],
     run_id: str,
     actions: Iterable[dict[str, Any]],
-    max_turns: int = 200,
+    max_turns: int | None = 200,
     start_ts_ms: int = 0,
     ts_step_ms: int = 250,
     max_trade_exchanges: int = 20,
@@ -50,7 +52,7 @@ def replay_actions(
     )
     events: list[dict[str, Any]] = []
 
-    max_auto_steps = max(1, max_turns + len(players) + 1)
+    max_auto_steps = UNCAPPED_MAX_AUTO_STEPS if max_turns is None else max(1, max_turns + len(players) + 1)
     for entry in action_entries:
         _, new_events, decision, _ = engine.advance_until_decision(max_steps=max_auto_steps)
         events.extend(new_events)

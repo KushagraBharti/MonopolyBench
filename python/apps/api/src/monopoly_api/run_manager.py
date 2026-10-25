@@ -457,10 +457,8 @@ class RunManager:
         run_files = self._resolve_run_files(run_id)
         if run_files is None:
             return None
-        summary = build_review_summary(run_files)
-        if not run_files.review_summary_path.exists():
-            run_files.write_json_artifact(run_files.review_summary_path, summary)
-        return summary
+        # A read must not write: cloud run directories accept only journaled bytes.
+        return build_review_summary(run_files)
 
     def list_runs(self) -> dict[str, Any]:
         runs = []
@@ -483,6 +481,7 @@ class RunManager:
                         "summary_exists": bool(summary),
                         "scorecard_exists": bool(scorecard),
                         "replay_report_exists": (path / "replay_report.json").exists(),
+                        "replay_status": _read_json(path / "replay_report.json").get("status"),
                         "state_replay_report_exists": (path / "state_replay_report.json").exists(),
                         "artifact_replay_report_exists": (path / "artifact_replay_report.json").exists(),
                     }
@@ -982,21 +981,9 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        return rows
-    for line in lines:
-        if not line.strip():
-            continue
-        try:
-            parsed = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            rows.append(parsed)
-    return rows
+    # Artifact reads can race a live writer's append; show only complete rows.
+    from monopoly_telemetry.writer_jsonl import read_jsonl_strict
+    return read_jsonl_strict(path, allow_partial_tail=True)
 
 
 def _recovery_player_configs(

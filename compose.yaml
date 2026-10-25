@@ -1,0 +1,37 @@
+name: monopolybench
+
+services:
+  monopolybench:
+    image: monopolybench:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        MB_GIT_SHA: ${MB_GIT_SHA:-}
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MB_PORT:-8000}:8000"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      MB_DASHBOARD_PASSWORD: ${MB_DASHBOARD_PASSWORD:-monopoly}
+      MB_SESSION_SECRET: ${MB_SESSION_SECRET:-}
+      MB_EXPORT_TOKEN: ${MB_EXPORT_TOKEN:-}
+      MB_DEMO: ${MB_DEMO:-0}
+      MB_LOCAL_HTTP: "1"
+      MB_MAX_ACTIVE_GAMES: ${MB_MAX_ACTIVE_GAMES:-5}
+      MB_DISK_RESERVE_GB: ${MB_DISK_RESERVE_GB:-5}
+      MB_REQUEST_DEADLINE_S: ${MB_REQUEST_DEADLINE_S:-1200}
+      RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "180"
+    volumes:
+      - data:/data/monopolybench
+    stop_grace_period: 190s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  data:
+    name: ${MB_DATA_VOLUME:-${COMPOSE_PROJECT_NAME:-monopolybench}-data-${MB_DEMO:-0}}

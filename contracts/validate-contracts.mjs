@@ -12,6 +12,7 @@ const examplesDir = path.join(contractsDir, "examples");
 const dataDir = path.join(contractsDir, "data");
 
 const schemaFiles = [
+  "cloud.schema.json",
   "state.schema.json",
   "event.schema.json",
   "action.schema.json",
@@ -180,10 +181,19 @@ const jsonExamples = [
   { file: "research_seed_registry.example.json", schema: "research_registry.schema.json#/$defs/seedRegistry" },
   { file: "research_model_roster.example.json", schema: "research_registry.schema.json#/$defs/modelRosterRegistry" },
   { file: "long_campaign_config.example.json", schema: "research_registry.schema.json#/$defs/campaignConfig" },
+  { file: "long_campaign_config_v2.example.json", schema: "research_registry.schema.json#/$defs/campaignConfigV2" },
   { file: "micro_expert_label_task.example.json", schema: "micro_research.schema.json#/$defs/expertLabelTask" },
   { file: "micro_expert_label.example.json", schema: "micro_research.schema.json#/$defs/expertLabel" }
 ];
 
+jsonExamples.push({ file: "cloud_job.example.json", schema: "cloud.schema.json#/$defs/job" });
+jsonExamples.push({ file: "cloud_live.example.json", schema: "cloud.schema.json#/$defs/live" });
+jsonExamples.push({ file: "cloud_call.example.json", schema: "cloud.schema.json#/$defs/call" });
+jsonExamples.push({ file: "cloud_commit.example.json", schema: "cloud.schema.json#/$defs/commit" });
+jsonExamples.push({ file: "cloud_journal.example.json", schema: "cloud.schema.json#/$defs/journal" });
+jsonExamples.push({ file: "cloud_repair.example.json", schema: "cloud.schema.json#/$defs/repair" });
+jsonExamples.push({ file: "cloud_executionManifest.example.json", schema: "cloud.schema.json#/$defs/executionManifest" });
+jsonExamples.push({ file: "cloud_storageManifest.example.json", schema: "cloud.schema.json#/$defs/storageManifest" });
 for (const example of jsonExamples) {
   try {
     const result = await validateJsonExample(ajv, example.file, example.schema);

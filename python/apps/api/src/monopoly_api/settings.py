@@ -23,7 +23,8 @@ class Settings:
 
 def load_settings() -> Settings:
     _load_env()
-    runs_dir = resolve_repo_path(os.getenv("RUNS_DIR", str(resolve_repo_root() / "runs")))
+    default_runs = Path(os.getenv("MB_DATA_DIR", "/data/monopolybench")) / "runs" if os.getenv("MB_MODE") == "cloud" else resolve_repo_root() / "runs"
+    runs_dir = resolve_repo_path(os.getenv("RUNS_DIR", str(default_runs)))
     api_host = os.getenv("API_HOST", "127.0.0.1")
     api_port = int(os.getenv("API_PORT", "8000"))
     players_config_path = resolve_repo_path(

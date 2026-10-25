@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .writer_jsonl import append_jsonl, atomic_write_text
+from .writer_jsonl import append_jsonl, atomic_write
 
 
 @dataclass
@@ -65,6 +65,9 @@ class RunFiles:
     review_summary_path: Path
     model_cards_dir: Path
 
+    def _write_text(self, path: Path, text: str, encoding: str = "utf-8") -> None:
+        atomic_write(path, text.encode(encoding))
+
     def write_event(self, event: dict[str, Any]) -> None:
         append_jsonl(self.events_path, event)
 
@@ -74,7 +77,7 @@ class RunFiles:
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(snapshot, separators=(",", ":"), ensure_ascii=True)
         if not canonical_path.exists():
-            atomic_write_text(canonical_path, payload)
+            self._write_text(canonical_path, payload, encoding="utf-8")
             return canonical_path
 
         existing = canonical_path.read_text(encoding="utf-8")
@@ -84,7 +87,7 @@ class RunFiles:
         phase = str(snapshot.get("phase") or "UNKNOWN")
         variant_kind = "decision" if phase == "AWAITING_DECISION" else "snapshot"
         variant_path = _next_snapshot_variant_path(self.snapshots_dir, int(turn_index), variant_kind)
-        atomic_write_text(variant_path, payload)
+        self._write_text(variant_path, payload, encoding="utf-8")
         return variant_path
 
     def snapshot_exists(self, snapshot: dict[str, Any]) -> bool:
@@ -96,14 +99,14 @@ class RunFiles:
 
     def write_summary(self, summary: dict[str, Any]) -> None:
         self.summary_path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(self.summary_path,
+        self._write_text(self.summary_path,
             json.dumps(summary, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
 
     def write_json_artifact(self, path: Path, payload: dict[str, Any] | list[Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(path,
+        self._write_text(path,
             json.dumps(payload, separators=(",", ":"), ensure_ascii=True),
             encoding="utf-8",
         )
@@ -169,24 +172,24 @@ class RunFiles:
         parsed: dict[str, Any] | None,
     ) -> None:
         if system_prompt is not None:
-            _write_evidence(self.prompts_dir / f"{prefix}_system.txt", system_prompt)
+            self._write_evidence(self.prompts_dir / f"{prefix}_system.txt", system_prompt)
         if user_payload is not None:
-            _write_evidence(self.prompts_dir / f"{prefix}_user.json",
+            self._write_evidence(self.prompts_dir / f"{prefix}_user.json",
                 json.dumps(user_payload, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if tools is not None:
-            _write_evidence(self.prompts_dir / f"{prefix}_tools.json",
+            self._write_evidence(self.prompts_dir / f"{prefix}_tools.json",
                 json.dumps(tools, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if response is not None:
-            _write_evidence(self.prompts_dir / f"{prefix}_response.json",
+            self._write_evidence(self.prompts_dir / f"{prefix}_response.json",
                 json.dumps(response, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
         if parsed is not None:
-            _write_evidence(self.prompts_dir / f"{prefix}_parsed.json",
+            self._write_evidence(self.prompts_dir / f"{prefix}_parsed.json",
                 json.dumps(parsed, separators=(",", ":"), ensure_ascii=True),
                 encoding="utf-8",
             )
@@ -204,22 +207,21 @@ class RunFiles:
         prefix = _prompt_file_prefix(decision_id, attempt_index=attempt_index)
         self.quality_dir.mkdir(parents=True, exist_ok=True)
         if request_text is not None:
-            _write_evidence(self.quality_dir / f"{prefix}_request.txt", request_text)
+            self._write_evidence(self.quality_dir / f"{prefix}_request.txt", request_text)
         if response_text is not None:
-            _write_evidence(self.quality_dir / f"{prefix}_response.txt", response_text)
+            self._write_evidence(self.quality_dir / f"{prefix}_response.txt", response_text)
 
     def write_artifact_manifest(self) -> None:
         self.write_json_artifact(self.artifact_manifest_path, build_artifact_manifest(self))
 
-
-def _write_evidence(path: Path, text: str, *, encoding: str = "utf-8") -> None:
-    if path.exists():
-        original = path.read_text(encoding=encoding)
-        if original == text:
-            return
-        digest = hashlib.sha256(original.encode(encoding)).hexdigest()
-        atomic_write_text(path.parent / "prior_evidence" / f"{path.name}.{digest}", original, encoding=encoding)
-    atomic_write_text(path, text, encoding=encoding)
+    def _write_evidence(self, path: Path, text: str, *, encoding: str = "utf-8") -> None:
+        if path.exists():
+            original = path.read_text(encoding=encoding)
+            if original == text:
+                return
+            digest = hashlib.sha256(original.encode(encoding)).hexdigest()
+            self._write_text(path.parent / "prior_evidence" / f"{path.name}.{digest}", original, encoding=encoding)
+        self._write_text(path, text, encoding=encoding)
 
 
 def evidence_paths(directory: Path, pattern: str = "*.json") -> list[Path]:
