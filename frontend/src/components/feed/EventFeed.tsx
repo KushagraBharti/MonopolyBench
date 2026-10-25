@@ -46,14 +46,18 @@ const KNOWN_EVENT_TYPES = new Set<string>([
   'LLM_PRIVATE_THOUGHT',
 ]);
 
-const PlayerName = ({ id }: { id: string }) => (
-  <span
-    className="font-mono font-bold px-1.5 py-px border border-black/60 text-[9px] items-center inline-flex rounded-[2px]"
-    style={{ backgroundColor: getPlayerColor(id), color: 'white' }}
-  >
-    {id}
-  </span>
-);
+const PlayerName = ({ id }: { id: string }) => {
+  const name = useGameStore((state) => state.runStatus.players?.find((player) => player.player_id === id)?.name);
+  return (
+    <span
+      className="font-bold px-1.5 py-px border border-black/60 text-[10px] items-center inline-flex rounded-[2px]"
+      style={{ backgroundColor: getPlayerColor(id), color: 'white' }}
+      title={id}
+    >
+      {name ?? id}
+    </span>
+  );
+};
 
 const MoneyAmount = ({ amount, showSign }: { amount: number; showSign?: boolean }) => {
   const isNegative = amount < 0;
@@ -206,7 +210,7 @@ export const EventFeed = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white font-sans">
+    <div className="relative flex flex-col h-full bg-white font-sans">
       {/* Resume Banner */}
       {!autoScroll && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30">

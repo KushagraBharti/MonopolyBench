@@ -479,6 +479,7 @@ export const MicroSuitePage = () => {
               spaces={snapshot?.board ?? []}
               players={snapshot?.players ?? []}
               activePlayerId={snapshot?.active_player_id ?? null}
+              phase={snapshot?.phase ?? null}
               highlightState={{
                 deedHighlight,
                 decisionHighlight: highlightIndices,

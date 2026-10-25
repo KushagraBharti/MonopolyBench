@@ -3,6 +3,146 @@
   "$id": "cloud.schema.json",
   "title": "Cloud runner v1 contracts",
   "$defs": {
+    "resumeAllResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "waiting_for_worker", "skipped"],
+      "properties": {
+        "ok": {"const": true},
+        "waiting_for_worker": {"type": "array", "items": {"type": "string"}},
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["job_id", "reasons"],
+            "properties": {
+              "job_id": {"type": "string"},
+              "reasons": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "workspaceCount": {"type": "integer", "minimum": 0},
+    "exportEntry": {
+      "type": "object",
+      "required": ["export_id", "scope", "scope_id", "revision", "kind", "bytes", "created_at", "manifest_sha256", "display_name", "download_url", "source_url", "run_kind"],
+      "properties": {
+        "export_id": {"type": "string"},
+        "scope": {"enum": ["job", "campaign"]},
+        "scope_id": {"type": "string"},
+        "revision": {"type": "integer", "minimum": 1},
+        "kind": {"enum": ["completed", "diagnostic", "campaign"]},
+        "bytes": {"$ref": "#/$defs/workspaceCount"},
+        "created_at": {"type": "number"},
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "display_name": {"type": "string"},
+        "download_url": {"type": "string", "pattern": "^/api/exports/"},
+        "source_url": {"type": "string", "pattern": "^/(games|campaigns)/"},
+        "run_kind": {"enum": ["single", "smoke", "campaign", null]}
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "required": ["totals", "activity", "recent_jobs", "recent_campaigns", "recent_exports", "status"],
+      "properties": {
+        "totals": {
+          "type": "object", "required": ["games", "campaigns", "tests", "exports"],
+          "additionalProperties": {"$ref": "#/$defs/workspaceCount"}
+        },
+        "activity": {
+          "type": "object", "required": ["running", "queued", "paused", "finalizing", "recovering"],
+          "additionalProperties": {"$ref": "#/$defs/workspaceCount"}
+        },
+        "recent_jobs": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/job"}},
+        "recent_campaigns": {"type": "array", "maxItems": 4, "items": {"type": "object", "required": ["campaign_id", "status", "cells", "exports"]}},
+        "recent_exports": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/exportEntry"}},
+        "status": {
+          "type": "object", "required": ["active_workers", "account_stop", "drain", "free_disk", "preflight"],
+          "properties": {
+            "active_workers": {"$ref": "#/$defs/workspaceCount"},
+            "drain": {"type": "boolean"},
+            "free_disk": {"$ref": "#/$defs/workspaceCount"},
+            "preflight": {"anyOf": [{"type": "null"}, {"type": "object", "required": ["passed"], "properties": {"passed": {"type": "boolean"}, "created_at": {"type": "number"}}}]}
+          }
+        }
+      }
+    },
+    "campaignPrepareRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 80},
+        "seed_blocks": {"type": "integer", "minimum": 1, "maximum": 20},
+        "concurrency": {"type": "integer", "minimum": 1, "maximum": 5},
+        "cost_budget": {"type": ["number", "null"], "exclusiveMinimum": 0}
+      }
+    },
+    "singleGamePrepareRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "models": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string"}},
+        "effort": {"enum": ["low", "medium", "high"]},
+        "max_turns": {"type": ["integer", "null"], "minimum": 1, "maximum": 10000},
+        "cost_budget": {"type": ["number", "null"], "exclusiveMinimum": 0}
+      }
+    },
+    "smokePrepareRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "models": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string"}},
+        "effort": {"enum": ["low", "medium", "high"]},
+        "max_turns": {"type": "integer", "minimum": 5, "maximum": 10},
+        "count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "cost_budget": {"type": ["number", "null"], "exclusiveMinimum": 0}
+      }
+    },
+    "campaignCreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preparation_id", "idempotency_key"],
+      "properties": {
+        "preparation_id": {"type": "string"},
+        "idempotency_key": {"type": "string", "minLength": 8, "maxLength": 128}
+      }
+    },
+    "campaignReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["can_start", "reasons"],
+      "properties": {
+        "can_start": {"type": "boolean"},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "campaignPreparation": {
+      "type": "object",
+      "required": ["preparation_id", "config", "cells", "readiness", "git_sha", "image_digest"],
+      "properties": {
+        "preparation_id": {"type": "string"},
+        "config": {"$ref": "research_registry.schema.json#/$defs/campaignConfigV2"},
+        "readiness": {"$ref": "#/$defs/campaignReadiness"},
+        "git_sha": {"type": "string"},
+        "image_digest": {"type": "string"},
+        "cells": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["cell_index", "run_id", "seed", "execution_rank", "models_by_seat"],
+            "properties": {
+              "cell_index": {"type": "integer", "minimum": 0},
+              "run_id": {"type": "string"},
+              "seed": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+              "execution_rank": {"type": "integer", "minimum": 0},
+              "models_by_seat": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
     "job": {
       "type": "object",
       "required": [
@@ -21,6 +161,7 @@
         "kind": {
           "enum": [
             "smoke",
+            "single",
             "campaign"
           ]
         },
@@ -278,6 +419,7 @@
         "kind": {
           "enum": [
             "smoke",
+            "single",
             "campaign"
           ]
         }

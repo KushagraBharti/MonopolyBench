@@ -41,7 +41,7 @@ def main() -> None:
             if entry.get("campaign_id"):
                 name = safe_path(entry["campaign_id"]) + f"/{entry['cell_index']}-{run_id}"
             else:
-                name = "smoke/" + run_id
+                name = ("single/" if entry.get("job_kind") == "single" else "smoke/") + run_id
         target = args.dest / name
         if target.exists():
             verify_inventory(target)

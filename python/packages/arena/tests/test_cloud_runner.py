@@ -904,3 +904,51 @@ def test_recovered_worker_reads_the_decision_log_once(tmp_path, monkeypatch):
     starts = [row["decision_id"] for row in strict(store.root / "runs" / job["run_id"] / "decisions.jsonl")
               if row["phase"] == "decision_started"]
     assert len(starts) == len(set(starts))
+
+
+@pytest.mark.parametrize("action", ["pause", "cancel"])
+@pytest.mark.parametrize("success", [True, False])
+def test_control_during_inflight_request_blocks_next_post_and_retry(tmp_path, monkeypatch, action, success):
+    """An admitted request can finish, but control must prevent every later POST."""
+    store, job, _ = setup_job(tmp_path, monkeypatch)
+    posts = []
+
+    async def run():
+        entered, release = asyncio.Event(), asyncio.Event()
+
+        async def complete(self, **payload):
+            posts.append(payload)
+            entered.set()
+            await release.wait()
+            if success:
+                return OpenRouterResult(True, 200, {"model": "test", "provider": "openai", "usage": {"cost": 0.01}}, None, None, "test")
+            return OpenRouterResult(False, 503, {"error": {"message": "unavailable"}}, "unavailable", "http_error", "test")
+
+        monkeypatch.setattr(OpenRouterClient, "create_chat_completion", complete)
+        client = CloudClient(store, job["job_id"])
+        payload = {"model": "test", "messages": [], "provider": {"only": ["openai"]}}
+        try:
+            client.begin_decision("in-flight")
+            pending = asyncio.create_task(client.create_chat_completion(**payload))
+            await asyncio.wait_for(entered.wait(), 2)
+            if action == "pause":
+                store.pause(job["job_id"], "operator")
+            else:
+                store.execute("UPDATE jobs SET status='cancelled' WHERE job_id=?", (job["job_id"],))
+            release.set()
+            if success:
+                assert (await pending).ok
+            else:
+                with pytest.raises(OperationalPause):
+                    await pending
+            client.begin_decision("next-decision")
+            with pytest.raises(OperationalPause):
+                await client.create_chat_completion(**payload)
+        finally:
+            await client.aclose()
+
+    asyncio.run(run())
+    assert len(posts) == 1
+    calls = store.rows("SELECT * FROM calls WHERE job_id=?", (job["job_id"],))
+    assert len(calls) == 1 and calls[0]["state"] == ("responded" if success else "failed")
+    assert store.job(job["job_id"])["status"] == ("paused" if action == "pause" else "cancelled")

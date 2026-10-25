@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS exports (
  export_id TEXT PRIMARY KEY, scope TEXT, scope_id TEXT, revision INTEGER, kind TEXT,
  path TEXT, bytes INTEGER, manifest_sha256 TEXT, created_at REAL);
 CREATE UNIQUE INDEX IF NOT EXISTS exports_scope_revision ON exports(scope,scope_id,revision);
+-- Per-job and campaign-wide ledger reads (cost, budget, readiness) must not scan every call.
+CREATE INDEX IF NOT EXISTS calls_job ON calls(job_id);
+CREATE INDEX IF NOT EXISTS jobs_campaign ON jobs(campaign_id);
 CREATE TABLE IF NOT EXISTS audit (ts REAL, actor TEXT, action TEXT, detail_json TEXT);
 PRAGMA user_version=1;
 """
@@ -63,6 +66,10 @@ PRAGMA user_version=1;
 
 def encode(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+class CampaignClosed(ValueError):
+    """Admission lost a race with terminal campaign cancellation/completion."""
 
 
 class JobStore:
@@ -125,6 +132,10 @@ class JobStore:
                 if old["config_sha256"] != digest:
                     raise ValueError("Idempotency key reused with different configuration")
                 return dict(old)
+            if campaign_id is not None:
+                campaign = db.execute("SELECT status FROM campaigns WHERE campaign_id=?", (campaign_id,)).fetchone()
+                if campaign and campaign[0] in {"cancelled", "done"}:
+                    raise CampaignClosed("This campaign has finished or was cancelled.")
             db.execute("""INSERT INTO jobs(job_id,run_id,kind,campaign_id,cell_index,execution_rank,
                 rerun_of_job_id,config_json,config_sha256,seed,git_sha,image_digest,idempotency_key,created_at)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
@@ -158,7 +169,7 @@ class JobStore:
                 raise ValueError("Job state changed; refresh before retrying")
             if job["status"] in {"cancelled", "failed", "completed", "finalizing"}:
                 return
-            if job["status"] == "paused" and job["pause_reason"] in {"operator", "drain"}:
+            if job["status"] == "paused" and job["pause_reason"] in {"operator", "campaign_operator", "drain"}:
                 return
             old = db.execute("SELECT retries_used FROM pauses WHERE job_id=?", (job_id,)).fetchone()
             retries = old[0] + 1 if old else 0
