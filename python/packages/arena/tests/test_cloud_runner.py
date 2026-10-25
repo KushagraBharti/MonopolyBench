@@ -766,6 +766,11 @@ def test_supervisor_honors_frozen_campaign_concurrency(tmp_path, monkeypatch):
     supervisor.tick()
     supervisor.tick()
     assert len(launched) == 2  # Five global slots, but the campaign was frozen with concurrency 2.
+    # A pause request changes status before the live worker reaches its boundary and exits.
+    for command in launched:
+        store.execute("UPDATE jobs SET status='paused' WHERE job_id=?", (command[command.index("--job") + 1],))
+    supervisor.tick()
+    assert len(launched) == 2
 
 
 def test_failed_replay_verdict_survives_a_raised_finalization(tmp_path, monkeypatch):

@@ -68,11 +68,15 @@ class Supervisor:
             WHERE jobs.status='recovering' OR (jobs.status='queued' AND (jobs.kind='smoke' OR campaigns.status='running'))
             ORDER BY jobs.status='recovering' DESC,jobs.kind='smoke' DESC,execution_rank,jobs.created_at""")
         running = store.rows("SELECT job_id,campaign_id FROM jobs WHERE status='running'")
-        active = len(set(self.children) | {row["job_id"] for row in running})
+        # A live child still occupies its slot after a pause request, until its process exits.
+        live = set(self.children) | {row["job_id"] for row in running}
+        active = len(live)
         # A frozen campaign's concurrency also bounds its simultaneous games and paid requests.
         campaign_limits = {row["campaign_id"]: int(json.loads(row["config_json"]).get("concurrency") or 1)
                            for row in store.rows("SELECT campaign_id,config_json FROM campaigns")}
-        campaign_active = Counter(row["campaign_id"] for row in running if row["campaign_id"])
+        live_campaigns = store.rows(f"SELECT job_id,campaign_id FROM jobs WHERE job_id IN ({','.join('?' * len(live))})",
+                                    tuple(live)) if live else []
+        campaign_active = Counter(row["campaign_id"] for row in live_campaigns if row["campaign_id"])
         for job in ready:
             if job["job_id"] in self.children:
                 continue
