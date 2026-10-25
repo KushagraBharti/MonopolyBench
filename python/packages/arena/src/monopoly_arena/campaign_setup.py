@@ -18,7 +18,7 @@ from .research_registry import load_seed_registry, research_dir, validate_campai
 from .worker import build_identity
 
 
-def readiness(store: JobStore, campaign: dict[str, Any]) -> dict[str, Any]:
+def readiness(store: JobStore, campaign: dict[str, Any], *, require_study: bool = True) -> dict[str, Any]:
     identity = build_identity()
     config = campaign.get("config") or json.loads(campaign.get("config_json") or "{}")
     reasons = []
@@ -29,7 +29,7 @@ def readiness(store: JobStore, campaign: dict[str, Any]) -> dict[str, Any]:
     if any(campaign.get(key, identity[key]) != identity[key] for key in ("git_sha", "image_digest")):
         reasons.append("The app was updated after this campaign was saved. Create a new campaign on the current version; this campaign's records will be kept.")
     preflight = store.state("preflight", {})
-    if (not preflight.get("passed") or time.time() - preflight.get("created_at", 0) > 21600
+    if require_study and (not preflight.get("passed") or time.time() - preflight.get("created_at", 0) > 21600
             or any(preflight.get(key) != identity[key] for key in ("git_sha", "image_digest"))):
         reasons.append("Check model connections before starting. A passing check on this app version is needed within six hours.")
     if store.state("account_stop"):
@@ -38,7 +38,7 @@ def readiness(store: JobStore, campaign: dict[str, Any]) -> dict[str, Any]:
         reasons.append("The server is finishing existing work before maintenance. Try again when maintenance ends.")
     if shutil.disk_usage(store.root).free < float(os.getenv("MB_DISK_RESERVE_GB", "5")) * 1e9:
         reasons.append("Storage is below the reserved space. Free space or expand storage before starting.")
-    if os.getenv("MB_DEMO") == "1":
+    if require_study and os.getenv("MB_DEMO") == "1":
         reasons.append("Demo mode supports test games only. Full campaigns need the research workspace.")
     if config.get("cost_budget") is not None and campaign.get("campaign_id"):
         jobs = store.rows("SELECT job_id FROM jobs WHERE campaign_id=? LIMIT 1", (campaign["campaign_id"],))

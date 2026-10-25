@@ -113,7 +113,7 @@ export function BudgetField({ value, onChange, scope = 'game' }: { value: string
   const { problem } = parseBudget(value)
   return <div className="cb-field">
     <label htmlFor={`${id}-budget`}>Pause at recorded spend <span className="cb-optional">(optional)</span></label>
-    <p className="cb-hint" id={`${id}-budget-hint`}>{scope === 'campaign' ? 'Share this threshold across the whole campaign.' : 'Apply this threshold to each game.'} Further requests pause when recorded spend reaches this US dollar amount. Leave empty for no spend pause.</p>
+    <p className="cb-hint" id={`${id}-budget-hint`}>{scope === 'campaign' ? 'Share this threshold across the whole campaign.' : 'Apply this threshold to each game.'} Further requests pause when recorded spend reaches this US dollar amount. An unreported charge also pauses execution and can prevent resuming permanently if it cannot be reconciled. Leave empty for no spend pause.</p>
     <div className="cb-money"><span aria-hidden="true">$</span><input id={`${id}-budget`} className="cb-input cb-input-short" inputMode="decimal" autoComplete="off" placeholder="None" value={value} aria-invalid={Boolean(problem) || undefined} aria-describedby={`${id}-budget-hint ${id}-budget-note`} onChange={e => onChange(e.target.value)} /></div>
     {problem ? <p className="cb-error" role="alert">{problem}</p> : null}
     <BudgetNote id={`${id}-budget-note`} />
@@ -126,7 +126,7 @@ export function BudgetNote({ id }: { id?: string }) {
     <ul className="cb-reasons cb-hint">
       <li>This is not a guaranteed hard cap. Model requests already in flight can finish and push spend past the amount.</li>
       <li>Recorded spend counts the provider and OpenRouter charges reported for each call. It isn’t your free quota or your final invoice.</li>
-      <li>If a call’s cost isn’t reported, the game pauses to be safe.</li>
+      <li>If a call’s cost isn’t reported, the game pauses. Resume stays blocked until the charge can be reconciled; if that never happens, this capped run cannot continue.</li>
       <li>The threshold is saved with the run settings. Resume cannot bypass a reached threshold.</li>
       <li>Games use your existing provider funding. This app makes no purchases.</li>
     </ul>

@@ -68,6 +68,9 @@ one reviewed preparation with an idempotency key. It records `kind=single`, keep
 full research artifacts and does not claim to be a balanced campaign. Model tests
 retain `/api/smoke/prepare` and `/api/smoke`, 5–10 turns, 1–20 games, configurable
 effort/models and an optional threshold for each game.
+Resuming a standalone game or test does not require a fresh campaign connection
+check and remains available in demo mode. It still checks code identity, account
+and maintenance stops, storage and the recorded-spend threshold.
 
 The billing policy is unchanged: OpenAI BYOK preferred with OpenRouter-credit
 fallback, Anthropic BYOK preferred, Google/xAI OpenRouter credits, observational
@@ -84,3 +87,8 @@ requests can finish and concurrent calls can overshoot, so this is not a guarant
 hard spending cap or a statement about free quotas or final invoices. The guard
 does not estimate charges or alter prompts. A reached immutable threshold cannot
 be bypassed by Resume; uncapped runs retain their existing accounting behavior.
+The same restriction applies to an unreconciled charge, including an HTTP error
+or timed-out request with no reported cost. Resume does not acknowledge or erase
+that uncertainty. If the provider never supplies a reconcilable charge, that
+capped run cannot continue with its immutable settings. Preserve its artifacts
+and create a separate run if needed; there is no charge-waiver control.

@@ -78,6 +78,36 @@ def test_preparations_reserve_distinct_seeds_and_enforce_bounds(setup_client):
     assert save(client, b).status_code == 409
 
 
+@pytest.mark.parametrize("kind", ["smoke", "single"])
+def test_standalone_resume_does_not_require_study_preflight(setup_client, monkeypatch, kind):
+    client, store, _ = setup_client
+    from monopoly_arena.cloud_campaign import run_config
+    from monopoly_arena.execution_policy import MODELS
+    job = store.create_job(run_config(123, "resume-test", MODELS, max_turns=5), kind=kind, key="resume-test")
+    store.pause(job["job_id"], "operator")
+    store.set_state("preflight", {"passed": False})
+    monkeypatch.setenv("MB_DEMO", "1")
+    response = client.post(f"/api/jobs/{job['job_id']}/resume", json={})
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "recovering"
+
+
+@pytest.mark.parametrize("blocker", ["account_stop", "drain", "storage", "identity"])
+def test_standalone_resume_keeps_operational_guards(setup_client, monkeypatch, blocker):
+    client, store, identity = setup_client
+    from monopoly_arena.cloud_campaign import run_config
+    job = store.create_job(run_config(123, "resume-test", max_turns=5), kind="smoke", key="resume-test")
+    store.pause(job["job_id"], "operator")
+    if blocker in {"account_stop", "drain"}:
+        store.set_state(blocker, True)
+    elif blocker == "storage":
+        monkeypatch.setenv("MB_DISK_RESERVE_GB", "999999999")
+    else:
+        identity.write_text(json.dumps({"git_sha": "different", "image_digest": "different"}))
+    assert client.post(f"/api/jobs/{job['job_id']}/resume", json={}).status_code == 409
+    assert store.job(job["job_id"])["status"] == "paused"
+
+
 def test_source_change_blocks_save_and_run_without_mutating_campaign(setup_client):
     client, store, identity = setup_client
     a = prepare(client)

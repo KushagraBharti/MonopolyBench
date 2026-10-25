@@ -28,7 +28,7 @@ class Supervisor:
     def tick(self) -> None:
         store = self.store
         store.execute("UPDATE cells SET status=(SELECT status FROM jobs WHERE jobs.job_id=cells.job_id) WHERE job_id IS NOT NULL")
-        store.execute("UPDATE campaigns SET status='done' WHERE status IN ('running','paused') AND EXISTS(SELECT 1 FROM cells WHERE cells.campaign_id=campaigns.campaign_id) AND NOT EXISTS(SELECT 1 FROM cells WHERE cells.campaign_id=campaigns.campaign_id AND (cells.status NOT IN ('completed','failed','cancelled') OR (cells.status='failed' AND cells.rerun_count=0)))")
+        store.execute("UPDATE campaigns SET status='done' WHERE status IN ('running','paused','frozen') AND EXISTS(SELECT 1 FROM cells WHERE cells.campaign_id=campaigns.campaign_id) AND NOT EXISTS(SELECT 1 FROM cells WHERE cells.campaign_id=campaigns.campaign_id AND (cells.status NOT IN ('completed','failed','cancelled') OR (cells.status='failed' AND cells.rerun_count=0)))")
         for job_id, process in list(self.children.items()):
             if process.poll() is not None:
                 del self.children[job_id]

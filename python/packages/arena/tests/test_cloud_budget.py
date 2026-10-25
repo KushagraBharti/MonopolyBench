@@ -175,7 +175,8 @@ def test_boundary_blocks_new_requests_but_saved_response_remains_reusable(tmp_pa
     assert saved_payload == payloads[0]
 
 
-def test_budget_is_checked_before_transport_retry(tmp_path, monkeypatch):
+@pytest.mark.parametrize("response,reason", [({"usage": {"cost": 1}}, "budget"), ({"error": {"message": "unavailable"}}, "budget_unknown")])
+def test_budget_is_checked_before_transport_retry(tmp_path, monkeypatch, response, reason):
     monkeypatch.setenv("MB_DISK_RESERVE_GB", "0")
     store = JobStore(tmp_path)
     target = job(store, budget=1)
@@ -183,7 +184,7 @@ def test_budget_is_checked_before_transport_retry(tmp_path, monkeypatch):
 
     async def complete(self, **kwargs):
         requests.append(kwargs)
-        return OpenRouterResult(False, 503, {"usage": {"cost": 1}}, "unavailable", "http_error", "test")
+        return OpenRouterResult(False, 503, response, "unavailable", "http_error", "test")
 
     async def no_sleep(seconds):
         pass
@@ -196,7 +197,7 @@ def test_budget_is_checked_before_transport_retry(tmp_path, monkeypatch):
         try:
             with pytest.raises(OperationalPause) as exc:
                 await client.create_chat_completion(model="test", messages=[])
-            assert exc.value.reason == "budget"
+            assert exc.value.reason == reason
         finally:
             await client.aclose()
 

@@ -85,7 +85,7 @@ def test_run_materializes_all_four_jobs_without_launching(store, campaign, proce
     assert jobs(store) == original
 
 
-@pytest.mark.parametrize("status", ["running", "paused"])
+@pytest.mark.parametrize("status", ["running", "paused", "frozen"])
 def test_finished_campaign_reaches_done_even_when_paused(store, campaign, processes, status):
     run_campaign(store, campaign)
     store.execute("UPDATE jobs SET status='completed',export_status='ready'")

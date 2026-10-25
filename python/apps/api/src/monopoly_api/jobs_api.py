@@ -149,7 +149,7 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
             store.pause(job_id, "operator", expected_status=job["status"])
             store.set_state("individual_start:" + job_id, False)
         elif action == "resume":
-            check = readiness(store, {"status": "paused", "config": {"seeds": [job["seed"]]}, "git_sha": job["git_sha"], "image_digest": job["image_digest"]})
+            check = readiness(store, {"status": "paused", "config": {"seeds": [job["seed"]]}, "git_sha": job["git_sha"], "image_digest": job["image_digest"]}, require_study=job["campaign_id"] is not None)
             if not check["can_start"] or job["budget"]["blocked"]:
                 raise HTTPException(409, " ".join(check["reasons"]) or job["budget"]["detail"])
             store.resume(job_id)
