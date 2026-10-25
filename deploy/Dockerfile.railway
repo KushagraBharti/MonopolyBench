@@ -1,0 +1,35 @@
+# Railway accepts cache mounts only. Keep optional private-CA secret mounts in
+# deploy/Dockerfile for local Docker; this image uses the public trust store.
+FROM python:3.12.14-slim-bookworm AS provenance
+WORKDIR /src
+COPY . .
+ARG MB_GIT_SHA=""
+ARG RAILWAY_GIT_COMMIT_SHA=""
+RUN python scripts/build_manifest.py --source /src --output /build_info.json \
+    --git-sha "${MB_GIT_SHA:-${RAILWAY_GIT_COMMIT_SHA}}"
+
+FROM node:22-bookworm-slim AS web
+WORKDIR /src
+COPY contracts ./contracts
+COPY frontend/package.json frontend/package-lock.json ./frontend/
+RUN cd frontend && npm ci
+COPY frontend ./frontend
+RUN cd frontend && VITE_MB_MODE=cloud npm run build
+
+FROM python:3.12.14-slim-bookworm AS app
+COPY --from=ghcr.io/astral-sh/uv:0.9.18 /uv /uvx /bin/
+WORKDIR /app
+COPY python ./python
+COPY contracts ./contracts
+COPY campaigns ./campaigns
+COPY scripts ./scripts
+COPY deploy ./deploy
+COPY --from=provenance /build_info.json ./build_info.json
+RUN cd python && uv sync --frozen --all-packages --no-dev
+COPY --from=web /src/frontend/dist ./frontend/dist
+ENV MB_MODE=cloud MB_DATA_DIR=/data/monopolybench RUNS_DIR=/data/monopolybench/runs PATH="/app/python/.venv/bin:$PATH" PYTHONUNBUFFERED=1
+EXPOSE 8000
+STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=3 \
+    CMD python -c "import json,os,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:'+os.getenv('PORT','8000')+'/api/health',timeout=2); assert json.load(r)['ok']"
+CMD ["python", "-m", "monopoly_api.serve"]
