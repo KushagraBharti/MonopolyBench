@@ -20,6 +20,13 @@ function buildingText(space: Space) {
   return ''
 }
 
+function BuildingPieces({ space }: { space: Space }) {
+  return <span className="mbg-building-pieces" aria-hidden="true">
+    {space.hotel ? <svg viewBox="0 0 18 14" className="mbg-hotel-piece"><path d="M1 5 9 1l8 4v8H1Z" fill="#d52a30" stroke="#76171b" /><path d="M4 6h2v2H4zm4 0h2v2H8zm4 0h2v2h-2zM4 10h2v2H4zm8 0h2v2h-2z" fill="#fff4dd" /><path d="M8 10h2v3H8z" fill="#76171b" /></svg>
+      : Array.from({ length: space.houses }, (_, index) => <svg key={index} viewBox="0 0 14 14" className="mbg-house-piece"><path d="m1 6 6-5 6 5v7H1Z" fill="#239348" stroke="#12532a" /><path d="M6 9h3v4H6z" fill="#d8efdb" /></svg>)}
+  </span>
+}
+
 /** Visible deed name and state; clicking only highlights the authoritative board square. */
 function PropertyChip({ space, selected, onSelect }: { space: Space; selected: boolean; onSelect: () => void }) {
   const color = space.kind === 'PROPERTY' ? getGroupColor(space.group) : space.kind === 'RAILROAD' ? '#1a1a1a' : '#8a96a3'
@@ -29,7 +36,10 @@ function PropertyChip({ space, selected, onSelect }: { space: Space; selected: b
       aria-label={`${space.name}${state ? `, ${state}` : ''}. Highlight on board`}
       data-mortgaged={space.mortgaged || undefined} style={{ '--deed': color } as CSSProperties} onClick={onSelect}>
       <span className="mbg-property-name">{space.name}</span>
-      {state ? <span className="mbg-property-state">{state}</span> : null}
+      {space.hotel || space.houses > 0 || space.mortgaged ? <span className="mbg-property-state">
+        {space.hotel || space.houses > 0 ? <BuildingPieces space={space} /> : null}
+        {space.mortgaged ? <span>Mortgaged</span> : null}
+      </span> : null}
     </button>
   </li>
 }
