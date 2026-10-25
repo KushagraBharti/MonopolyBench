@@ -1,15 +1,15 @@
 {
-  "date": "2026-10-24",
+  "date": "2026-10-25",
   "verification_command": "bash scripts/verify.sh",
   "verification_result": "All checks passed.",
   "verification_scope": "Full verification after Greptile, CodeRabbit and adversarial fixes.",
   "python_tests": {
     "engine": 63,
-    "api": 82,
-    "arena": 87,
-    "telemetry": 22,
+    "api": 84,
+    "arena": 109,
+    "telemetry": 24,
     "microbench": 29,
-    "total": 283
+    "total": 309
   },
   "other_checks": [
     "contract examples",
@@ -68,6 +68,21 @@
     }
   ],
   "live_five_turn_smokes": [
+    {
+      "run_id": "audit-v2-pr2-recovery-review-5turn-7",
+      "seed": 7,
+      "turns": 5,
+      "decisions": 9,
+      "invalid_attempts": 0,
+      "fallbacks": 0,
+      "replay": "passed",
+      "recorded_cost_usd": 0.002133325,
+      "missing_usage_attempt_count": 0,
+      "missing_cost_attempt_count": 0,
+      "model_ids": ["openai/gpt-6-luna"],
+      "executed_treatment_fingerprint": "46fbe59edbfa041e2080dc91990893999c6f243159cff01486dde9fd7ac5dffb",
+      "fresh_replay_and_completion_recheck": "passed"
+    },
     {
       "run_id": "audit-v2-pr2-bot-final-5turn-42",
       "seed": 42,
@@ -132,7 +147,12 @@
     }
   ],
   "browser": {
-    "story": "Run list to saved run detail through live API",
+    "story": "Run list to saved run, replay decision selection, queue a review, save a label, reload the persisted annotation",
+    "review_workflow_api_requests": 61,
+    "review_workflow_all_api_responses": 200,
+    "canonical_files_unchanged": true,
+    "reviewed_run_completion_and_fresh_replay": "passed",
+    "annotation_kind": "Automated smoke only; not human research calibration",
     "page_errors": [],
     "api_responses": [
       {
@@ -162,7 +182,7 @@
   },
   "quarantined_legacy_fixtures": 11,
   "pr_review_regressions": {
-    "greptile_findings_fixed": 5,
+    "greptile_findings_addressed": 12,
     "coderabbit_findings_addressed": 8,
     "coderabbit_findings_note": "Seven additional fixes plus a quarantine finding already addressed by full-selection preflight; includes three findings outside the diff.",
     "adversarial_cases": [
@@ -181,7 +201,17 @@
       "Real counteroffer histories identify the opposite party and preserve normalized prompt history",
       "Unknown costs propagate through decision, player, model, run and campaign reports",
       "Repeated API starts preserve existing run artifacts and full treatment identity",
-      "Jail-exit birthday events identify the debtor rather than the card drawer"
+      "Jail-exit birthday events identify the debtor rather than the card drawer",
+      "Known no-key/auth/rate-limit rejections recover with a new physical call ID while preserving and accounting for prior calls",
+      "Timeouts, server errors, in-flight calls and gaps in physical-call history block resubmission",
+      "Five-turn recovery reuses successful calls after failures before commit, action append, resolved decision append and during event append",
+      "Budget and preflight changes preserve campaign cell identity; actual treatment changes invalidate it",
+      "Post-hoc review annotations do not invalidate completion; canonical evidence changes still do",
+      "Unknown action or resolved-decision rows reject recovery before any journal changes",
+      "Partial cost coverage preserves known spending and stops both batch and campaign execution before the next game",
+      "Batch leaderboards count each model cost once per run, and batch summaries/model cards preserve unknown costs",
+      "Duplicate HTTP starts return 400 without contacting a provider or modifying saved evidence",
+      "Replay timeline producer and historical reader agree on event type, sequence, actor and decision payload"
     ]
   },
   "limits": [

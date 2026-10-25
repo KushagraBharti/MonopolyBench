@@ -18,6 +18,7 @@ from typing import Any
 from .baselines import BASELINE_IDS
 from .batch_artifacts import (
     batch_actual_cost,
+    batch_cost_coverage,
     budget_preflight_estimate,
     should_stop_for_budget,
 )
@@ -212,9 +213,7 @@ async def run_campaign(
         if entry["status"] == "failed" and not bool(
             config.get("continue_on_failure", False)
         ):
-            stop_reason = (
-                stop_reason or f"campaign_halted_after_failed_run_{row['run_id']}"
-            )
+            stop_reason = f"campaign_halted_after_failed_run_{row['run_id']}"
 
     metadata_client = factory() if callable(factory) else factory
     endpoint_snapshot_after = await _openrouter_metadata_snapshot(
@@ -250,7 +249,9 @@ async def run_campaign(
         ),
         "failed_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
         "status_counts": _status_counts(run_entries),
-        "actual_cost": batch_actual_cost(run_entries),
+        "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": batch_actual_cost(run_entries),
+        "cost_coverage": batch_cost_coverage(run_entries),
         "stop_reason": stop_reason,
         "campaign_dir": str(paths["campaign_dir"]),
         "prompt_pipeline": _prompt_marker(
@@ -1304,7 +1305,9 @@ def _write_campaign_dynamic_artifacts(
             "budget_policy": config.get("budget_policy"),
             "cost_budget": config.get("cost_budget"),
             "minimum_available_credits": config.get("minimum_available_credits"),
-            "actual_cost": batch_actual_cost(run_entries),
+            "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+            "known_cost_subtotal": batch_actual_cost(run_entries),
+            "cost_coverage": batch_cost_coverage(run_entries),
             "stop_reason": stop_reason,
             "next_run_preflight": budget_preflight_estimate(config, run_entries),
             "credits_before": credits_before,
@@ -1595,7 +1598,9 @@ def _execution_result_payload(
         ),
         "failed_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
         "status_counts": _status_counts(run_entries),
-        "actual_cost": batch_actual_cost(run_entries),
+        "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": batch_actual_cost(run_entries),
+        "cost_coverage": batch_cost_coverage(run_entries),
         "campaign_dir": str(paths["campaign_dir"]),
         "artifacts": {
             "results": str(paths["results"]),

@@ -289,35 +289,36 @@ def test_campaign_identity_ignores_execution_controls_but_tracks_model_treatment
         assert all(a != b for a, b in zip(identity(config, changed), original))
 
 
+class RecoveryClient:
+    def __init__(self, reject_once=False):
+        self.reject_once = reject_once
+        self.runner = None
+        self.calls = 0
+
+    async def create_chat_completion(self, **kwargs):
+        self.calls += 1
+        if self.reject_once:
+            self.reject_once = False
+            return OpenRouterResult(False, 429, None, "Rate limited", "http_429", "rejected")
+        decision = self.runner._engine._pending_decision
+        selected = choose_baseline_action(decision, "always_buy")
+        args = {**selected.get("args", {}), "public_message": "", "private_thought": "Legal baseline move"}
+        return OpenRouterResult(True, 200, {
+            "id": f"generation-{self.calls}", "usage": {"cost": 0.001},
+            "choices": [{"message": {"role": "assistant", "tool_calls": [{
+                "id": f"tool-{self.calls}", "type": "function", "function": {
+                    "name": selected["action"], "arguments": json.dumps(args)}}]}}],
+        }, None, None, f"request-{self.calls}")
+
+    async def aclose(self):
+        pass
+
+
 def test_five_turn_run_recovers_after_known_rate_limit_with_full_call_accounting(tmp_path):
-    class Client:
-        def __init__(self, reject_once=False):
-            self.reject_once = reject_once
-            self.runner = None
-            self.calls = 0
-
-        async def create_chat_completion(self, **kwargs):
-            self.calls += 1
-            if self.reject_once:
-                self.reject_once = False
-                return OpenRouterResult(False, 429, None, "Rate limited", "http_429", "rejected")
-            decision = self.runner._engine._pending_decision
-            selected = choose_baseline_action(decision, "always_buy")
-            args = {**selected.get("args", {}), "public_message": "", "private_thought": "Legal baseline move"}
-            return OpenRouterResult(True, 200, {
-                "id": f"generation-{self.calls}", "usage": {"cost": 0.001},
-                "choices": [{"message": {"role": "assistant", "tool_calls": [{
-                    "id": f"tool-{self.calls}", "type": "function", "function": {
-                        "name": selected["action"], "arguments": json.dumps(args)}}]}}],
-            }, None, None, f"request-{self.calls}")
-
-        async def aclose(self):
-            pass
-
     files = init_run_files(tmp_path, "recovered-five-turn")
     players = [build_single_player_config(player_id=f"p{i}", name=f"P{i}", openrouter_model_id="test/model")
                for i in range(4)]
-    first = Client(reject_once=True)
+    first = RecoveryClient(reject_once=True)
     first.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=first,
                              run_files=files, max_turns=5, event_delay_s=0)
     with pytest.raises(RuntimeError):
@@ -325,7 +326,7 @@ def test_five_turn_run_recovers_after_known_rate_limit_with_full_call_accounting
     assert load_jsonl(files.actions_path) == []
     original_call = next((files.run_dir / "calls").glob("*.json"))
     original_bytes = original_call.read_bytes()
-    recovered = Client()
+    recovered = RecoveryClient()
     recovered.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=recovered,
         run_files=files, max_turns=5, event_delay_s=0,
         resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
@@ -339,6 +340,55 @@ def test_five_turn_run_recovers_after_known_rate_limit_with_full_call_accounting
     assert len(list((files.run_dir / "calls").glob("*.json"))) == usage["attempt_count"]
     starts = [row["decision_id"] for row in load_jsonl(files.decisions_path) if row["phase"] == "decision_started"]
     assert len(starts) == len(set(starts)) == len(actions)
+
+
+@pytest.mark.parametrize("interruption", ["before_commit", "before_action", "before_resolution", "mid_events"])
+def test_five_turn_recovery_from_write_failures_never_repeats_a_successful_call(tmp_path, monkeypatch, interruption):
+    files = init_run_files(tmp_path, "write-failure")
+    players = [build_single_player_config(player_id=f"p{i}", name=f"P{i}", openrouter_model_id="test/model")
+               for i in range(4)]
+    first = RecoveryClient()
+    first.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=first,
+                             run_files=files, max_turns=5, event_delay_s=0)
+    def fail(*args, **kwargs):
+        raise OSError("Injected interruption")
+    original_decision_writer, original_event_writer = files.write_decision, files.write_event
+    committed_event_count = 0
+    def decision_writer(row):
+        if row.get("phase") == "decision_resolved":
+            fail()
+        original_decision_writer(row)
+    def event_writer(row):
+        nonlocal committed_event_count
+        if list((files.run_dir / "commits").glob("*.json")):
+            committed_event_count += 1
+            if committed_event_count == 2:
+                fail()
+        original_event_writer(row)
+    with monkeypatch.context() as patch:
+        if interruption == "before_commit":
+            patch.setattr("monopoly_arena.llm_runner.write_commit", fail)
+        elif interruption == "before_action":
+            patch.setattr(files, "write_action", fail)
+        elif interruption == "before_resolution":
+            patch.setattr(files, "write_decision", decision_writer)
+        else:
+            patch.setattr(files, "write_event", event_writer)
+        with pytest.raises(OSError, match="Injected"):
+            asyncio.run(first.runner.run())
+    first_call = next((files.run_dir / "calls").glob("*.json"))
+    saved_response = first_call.read_bytes()
+    repair_committed_tails(files)
+    recovered = RecoveryClient()
+    recovered.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=recovered,
+        run_files=files, max_turns=5, event_delay_s=0,
+        resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(recovered.runner.run())
+    assert _completed_run_exists(files.run_dir)
+    assert first_call.read_bytes() == saved_response
+    action_count = len(load_jsonl(files.actions_path))
+    assert first.calls + recovered.calls == action_count
+    assert json.loads(files.usage_path.read_text())["attempt_count"] == action_count
 
 
 @pytest.mark.parametrize("exchange_index", [0, 1, 2, 3, 4])
@@ -407,6 +457,54 @@ def test_campaign_cost_statistics_exclude_unknown_and_count_it():
     comparison = _baseline_comparison_payload(config, entries, {"rows": [row]})["rows"][0]
     assert comparison["net_worth_per_dollar"] is None
     assert comparison["unknown_cost_count"] == 1
+
+
+@pytest.mark.parametrize("budget", [1.0, 50.0])
+def test_incomplete_cost_coverage_blocks_next_game_and_preserves_known_spend(budget):
+    from monopoly_arena.batch_artifacts import batch_actual_cost, should_stop_for_budget
+    entries = [{"status": "completed", "usage": {"attempt_count": 2},
+                "cost_report": {"total_actual_cost": None, "known_cost_subtotal": 5.0,
+                                "cost_coverage": "partial_or_missing", "missing_cost_attempt_count": 1}}]
+    assert batch_actual_cost(entries) == 5.0
+    assert should_stop_for_budget({"cost_budget": budget}, entries) is not None
+    entries[0]["cost_report"] = {"total_actual_cost": 0.0, "cost_coverage": "complete"}
+    assert should_stop_for_budget({"cost_budget": budget}, entries) is None
+
+
+def test_replay_steps_expose_timeline_contract_and_preserve_legacy_envelope():
+    from monopoly_arena.replay_verification import _build_replay_steps
+    event = {"seq": 7, "event_id": "e7", "turn_index": 2, "type": "LLM_DECISION_REQUESTED",
+             "actor": {"kind": "player", "player_id": "p1"}, "payload": {"decision_id": "d1"}}
+    step = _build_replay_steps([event])[0]
+    assert step["event_type"] == step["type"] == event["type"]
+    assert step["event_seq"] == step["seq"] == 7
+    assert step["actor"] == event["actor"]
+    assert step["payload"] == event["payload"]
+    assert step["event"] == event
+
+
+@pytest.mark.parametrize("second_cost", [2.0, None])
+def test_batch_model_costs_are_counted_once_per_game_and_unknown_stays_unknown(second_cost):
+    from monopoly_arena.batch_artifacts import _leaderboard, _model_card, _batch_usage_summary
+    entries = []
+    for cost in [2.0, second_cost]:
+        group = {"cost": cost, "decision_count": 2}
+        entries.append({"status": "completed", "scorecard": {"players": [
+            {"player_id": p, "openrouter_model_id": "m", "final_net_worth_estimate": 1000} for p in ["p1", "p2"]]},
+            "usage": {"by_model": {"m": group}},
+            "cost_report": {"total_actual_cost": cost, "by_model": {"m": group}}})
+    leaderboard = _leaderboard(entries)
+    expected = 4.0 if second_cost is not None else None
+    assert leaderboard["rankings"][0]["total_cost"] == expected
+    card = _model_card("m", entries, leaderboard)
+    assert card["usage"]["total_cost"] == expected
+    summary = _batch_usage_summary(entries)
+    assert summary["actual_cost"] == expected
+    assert summary["cost_report"]["by_model"]["m"]["cost"] == expected
+    if expected is None:
+        assert leaderboard["rankings"][0]["cost_adjusted_score"] is None
+        assert card["usage"]["cost_per_game"] is None
+        assert summary["known_cost_subtotal"] == 2.0
 
 
 def test_terminal_run_can_repeat_finalization_without_provider_calls(completed_run):

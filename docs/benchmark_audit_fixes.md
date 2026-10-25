@@ -61,8 +61,14 @@ standard rules. Changing them requires another treatment version.
   from gateway charges, and adds upstream cost only for explicit BYOK or a zero
   gateway charge. Decision, player, model and run costs remain null when any
   contributing call cost is missing. Campaign statistics exclude unknown costs
-  from numeric averages and report unknown counts. Durable calls without resolved decisions remain
+  from numeric averages and report unknown counts. A separate known-cost subtotal
+  preserves reported spending; monetary budget enforcement stops before the next
+  game whenever an executed run has incomplete cost coverage, even below budget
+  and when failure continuation is enabled. Remaining budget is then only an upper
+  bound. Durable calls without resolved decisions remain
   accounted for, including interrupted/unknown calls.
+  Batch leaderboards charge each model once per run even when it occupies multiple
+  seats; batch cost summaries and model cards preserve unknown costs.
 - Campaign leaderboard inference resamples seed means, labels small block counts,
   and provides no singleton interval. Ordinary ungrouped summaries are descriptive.
   Cyclic rotation balances absolute seats, not all relative opponent positions.
@@ -114,7 +120,10 @@ standard rules. Changing them requires another treatment version.
   metadata remains evidence to inspect; this does not certify every external route.
 - API run IDs include provider, reasoning and executable treatment. Starting an
   already recorded run is rejected before stopping another active run or appending
-  any evidence; interrupted runs use recovery.
+  any evidence, with an HTTP 400 recovery instruction; interrupted runs use recovery.
+- Replay steps expose event type, sequence, actor and payload to the timeline.
+  The UI also reads historical nested event envelopes without rewriting saved
+  artifacts, so decision inspection, filters and review selection work for both.
 
 Recovery is conservative, not a general cloud supervisor. Uncommitted or malformed
 tails, unknown in-flight calls, concurrent writers and treatment changes require

@@ -5,7 +5,7 @@ import pytest
 from monopoly_telemetry import init_run_files
 from monopoly_telemetry.commit import repair_committed_tails, write_commit
 from monopoly_telemetry.scorecard import _rank_players
-from monopoly_telemetry.usage import _decision_usage_rows, _aggregate_usage
+from monopoly_telemetry.usage import _decision_usage_rows, _aggregate_usage, _cost_report
 
 
 def test_net_worth_ranks_tie_independently_of_winner_and_cash():
@@ -64,6 +64,11 @@ def test_unknown_cost_propagates_through_decision_player_model_and_run(costs, sa
     assert report["totals"]["cost"] == expected
     assert report["by_player"]["p"]["cost"] == expected
     assert report["by_model"]["m"]["cost"] == expected
+    assert report["known_cost_subtotal"] == sum(cost for cost in costs if cost is not None)
+    cost_report = _cost_report(report)
+    assert cost_report["total_actual_cost"] == expected
+    assert cost_report["known_cost_subtotal"] == report["known_cost_subtotal"]
+    assert cost_report["missing_cost_attempt_count"] == costs.count(None)
     if same_decision:
         assert decisions[0]["cost"] == expected
 
