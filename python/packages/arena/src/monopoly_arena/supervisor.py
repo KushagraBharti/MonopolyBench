@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 import json
 import os
 import shutil
@@ -66,12 +67,20 @@ class Supervisor:
         ready = store.rows("""SELECT jobs.* FROM jobs LEFT JOIN campaigns USING(campaign_id)
             WHERE jobs.status='recovering' OR (jobs.status='queued' AND (jobs.kind='smoke' OR campaigns.status='running'))
             ORDER BY jobs.status='recovering' DESC,jobs.kind='smoke' DESC,execution_rank,jobs.created_at""")
-        active = len(set(self.children) | {row["job_id"] for row in store.rows("SELECT job_id FROM jobs WHERE status='running'")})
+        running = store.rows("SELECT job_id,campaign_id FROM jobs WHERE status='running'")
+        active = len(set(self.children) | {row["job_id"] for row in running})
+        # A frozen campaign's concurrency also bounds its simultaneous games and paid requests.
+        campaign_limits = {row["campaign_id"]: int(json.loads(row["config_json"]).get("concurrency") or 1)
+                           for row in store.rows("SELECT campaign_id,config_json FROM campaigns")}
+        campaign_active = Counter(row["campaign_id"] for row in running if row["campaign_id"])
         for job in ready:
             if job["job_id"] in self.children:
                 continue
             if active >= min(5, int(os.getenv("MB_MAX_ACTIVE_GAMES", "5"))):
                 break
+            campaign_id = job["campaign_id"]
+            if campaign_id and campaign_active[campaign_id] >= campaign_limits.get(campaign_id, 1):
+                continue
             if job["status"] == "queued" and not store.state("preflight", {}).get("passed"):
                 continue
             try:
@@ -84,6 +93,8 @@ class Supervisor:
                 self.children[job["job_id"]] = subprocess.Popen([sys.executable, "-m", "monopoly_arena.worker", "--job", job["job_id"], "--execution", execution])
                 store.audit("launch", {"job_id": job["job_id"], "execution_id": execution})
                 active += 1
+                if campaign_id:
+                    campaign_active[campaign_id] += 1
 
 
 async def run_supervisor(store: JobStore, stopping: Callable[[], bool]) -> None:

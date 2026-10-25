@@ -457,10 +457,8 @@ class RunManager:
         run_files = self._resolve_run_files(run_id)
         if run_files is None:
             return None
-        summary = build_review_summary(run_files)
-        if not run_files.review_summary_path.exists():
-            run_files.write_json_artifact(run_files.review_summary_path, summary)
-        return summary
+        # A read must not write: cloud run directories accept only journaled bytes.
+        return build_review_summary(run_files)
 
     def list_runs(self) -> dict[str, Any]:
         runs = []

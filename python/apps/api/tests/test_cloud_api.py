@@ -241,3 +241,21 @@ def test_decision_cache_tails_new_commits_without_rescanning_journal(cloud, monk
     assert [r["decision_id"] for r in readers.decisions(job, 0)] == ["first", "second"]
     readers.bundle(job, "first")
     assert positions == [0, first_end]
+
+
+def test_review_summary_read_keeps_a_journaled_run_recoverable(tmp_path, monkeypatch):
+    from monopoly_api.run_manager import RunManager
+    from monopoly_arena.cloud_campaign import run_config
+    from monopoly_arena.job_store import JobStore
+    from monopoly_arena.journal import Journal, JournalRunFiles
+    store = JobStore(tmp_path / "data")
+    job = store.create_job(run_config(7, "reviewed-live", max_turns=5), kind="smoke", key="reviewed-live")
+    execution = store.claim(job["job_id"])
+    journal = Journal(store, job["job_id"], execution)
+    files = JournalRunFiles.create(journal, job["run_id"])
+    with journal.transition("advance"):
+        files.write_event({"seq": 0, "turn_index": 0, "type": "GAME_STARTED", "run_id": job["run_id"]})
+    manager = RunManager(store.root / "runs", runner_factory=lambda **_: None, openrouter_factory=lambda: object())
+    assert manager.get_review_summary(job["run_id"]) is not None
+    assert not files.review_summary_path.exists()
+    Journal(store, job["job_id"], execution).recover()  # No unjournaled canonical file.

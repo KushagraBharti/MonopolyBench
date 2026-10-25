@@ -22,6 +22,22 @@ class OperationalPause(Exception):
         self.reason = reason
 
 
+def storage_full(exc: BaseException) -> bool:
+    """Disk or ledger exhaustion is a retryable storage pause, never a game failure."""
+    import errno
+    import sqlite3
+    current: BaseException | None = exc
+    while current is not None:
+        if isinstance(current, OSError) and current.errno in {errno.ENOSPC, errno.EDQUOT}:
+            return True
+        if isinstance(current, sqlite3.OperationalError) and (
+                getattr(current, "sqlite_errorcode", None) == getattr(sqlite3, "SQLITE_FULL", 13)
+                or "database or disk is full" in str(current)):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 def error_pause(status: int | None, error_type: str | None, body: str | None) -> str:
     if status in (401, 403) or error_type == "no_api_key":
         return "account_error"

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import errno
 from contextlib import contextmanager
 import json
 import os
@@ -13,7 +12,7 @@ from typing import Iterator, Any
 
 from monopoly_telemetry.writer_jsonl import atomic_write, read_jsonl_strict
 from .cloud_client import CloudClient
-from .execution_policy import OperationalPause, VERSION, data_root
+from .execution_policy import OperationalPause, VERSION, data_root, storage_full
 from .job_store import JobStore, encode
 from .journal import Journal, JournalRunFiles
 from .llm_runner import MAX_DECISIONS_PER_TURN, LlmRunner
@@ -99,6 +98,9 @@ async def play(store: JobStore, job_id: str, execution_id: str) -> None:
             await asyncio.sleep(10)
 
     heart = asyncio.create_task(heartbeat())
+    # A resumed decision already has its canonical decision_started row; read the log once.
+    started = {row["decision_id"] for row in read_jsonl_strict(files.decisions_path)
+               if row.get("phase") == "decision_started"} if recover else set()
     turn = runner._engine.state.turn_index
     decisions_this_turn = sum(row.get("turn_index") == turn for row in read_jsonl_strict(files.actions_path)) if recover else 0
     try:
@@ -123,9 +125,10 @@ async def play(store: JobStore, job_id: str, execution_id: str) -> None:
             client.begin_decision(decision["decision_id"])
 
             async def log(entry: dict[str, Any]) -> None:
-                # A resumed decision already has its canonical decision_started row.
-                if recover and entry.get("phase") == "decision_started" and any(r.get("decision_id") == entry["decision_id"] and r.get("phase") == "decision_started" for r in read_jsonl_strict(files.decisions_path)):
-                    return
+                if entry.get("phase") == "decision_started":
+                    if entry["decision_id"] in started:
+                        return
+                    started.add(entry["decision_id"])
                 files.write_decision(entry)
 
             outcome = await runner._resolve_decision(decision, log)
@@ -161,7 +164,7 @@ def main() -> None:
             except OperationalPause as exc:
                 store.pause(args.job, exc.reason, str(exc))
             except Exception as exc:
-                if isinstance(exc, OSError) and exc.errno in {errno.ENOSPC, errno.EDQUOT}:
+                if storage_full(exc):
                     store.pause(args.job, "storage", str(exc))
                 else:
                     store.execute("UPDATE jobs SET status='failed',pause_reason=?,ended_at=? WHERE job_id=? AND status NOT IN ('cancelled','completed')", (f"{type(exc).__name__}: {exc}", time.time(), args.job))

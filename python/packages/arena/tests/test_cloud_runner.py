@@ -470,9 +470,11 @@ def test_resume_waits_for_old_writer_and_preserves_cancel(tmp_path, monkeypatch)
     assert not store.rows("SELECT * FROM pauses WHERE job_id=?", (job_id,))
 
 
+@pytest.mark.parametrize("error", ["disk", "sqlite"])
 @pytest.mark.parametrize("cancelled", [False, True])
-def test_worker_disk_full_pauses_without_overwriting_cancellation(tmp_path, monkeypatch, cancelled):
+def test_worker_disk_full_pauses_without_overwriting_cancellation(tmp_path, monkeypatch, cancelled, error):
     import errno
+    import sqlite3
     from monopoly_arena.worker import main
     store, job, execution = setup_job(tmp_path, monkeypatch)
     monkeypatch.setenv("MB_DATA_DIR", str(store.root))
@@ -480,6 +482,8 @@ def test_worker_disk_full_pauses_without_overwriting_cancellation(tmp_path, monk
     async def fail(*args):
         if cancelled:
             store.execute("UPDATE jobs SET status='cancelled' WHERE job_id=?", (job["job_id"],))
+        if error == "sqlite":
+            raise sqlite3.OperationalError("database or disk is full")
         raise OSError(errno.ENOSPC, "disk full")
     monkeypatch.setattr("monopoly_arena.worker.play", fail)
     main()
@@ -602,7 +606,7 @@ def test_storage_full_during_finalization_stays_retryable(tmp_path, monkeypatch,
 
 
 @pytest.mark.parametrize("mode", ["credits", "byok", "byok_flag_only_in_generation", "upstream_without_flag",
-                                  "byok_without_upstream"])
+                                  "byok_without_upstream", "byok_flag_only_in_completion"])
 def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatch, mode):
     from monopoly_telemetry.execution_cost import execution_cost
     from monopoly_telemetry.run_files import build_run_files
@@ -618,6 +622,8 @@ def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatc
                 data.update(total_cost=0, is_byok=True, upstream_inference_cost=1.25)
             if mode == "byok_without_upstream":
                 del data["upstream_inference_cost"]
+            if mode == "byok_flag_only_in_completion":
+                del data["is_byok"]  # The saved BYOK flag must survive the merge.
             return httpx.Response(200, json={"data": data})
         if request.method == "GET":
             return httpx.Response(200, json={"data": []})
@@ -628,6 +634,8 @@ def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatc
             usage.update(cost=0)  # Looks like a known free call until generation reveals BYOK.
         elif mode == "upstream_without_flag":
             usage.update(cost=0, cost_details={"upstream_inference_cost": 1.25})
+        elif mode == "byok_flag_only_in_completion":
+            usage.update(cost=0, is_byok=True)  # Missing until generation supplies the upstream bill.
         return httpx.Response(200, json={"id": f"gen-{count}", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [{"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}], "usage": usage})
     def init(self, **kwargs):
         original(self, **kwargs)
@@ -734,3 +742,86 @@ def test_exported_analysis_keeps_unknown_cost_unknown(tmp_path, monkeypatch):
     reports = [path.read_text() for path in (tmp_path / "exported/analysis/reports").glob("*.md")]
     usage_report = next(text for text in reports if "## Model Usage" in text)
     assert "unknown ($" in usage_report
+
+
+def test_supervisor_honors_frozen_campaign_concurrency(tmp_path, monkeypatch):
+    import time
+    from monopoly_arena.supervisor import Supervisor
+    store, smoke, _ = setup_job(tmp_path, monkeypatch)
+    store.execute("UPDATE jobs SET status='completed' WHERE job_id=?", (smoke["job_id"],))
+    store.set_state("preflight", {"passed": True})
+    store.execute("INSERT INTO campaigns VALUES(?,?,?,?,?,?,?)",
+                  ("limited", encode({"concurrency": 2}), "sha", "running", time.time(), "test", "test"))
+    for i in range(4):
+        store.create_job(run_config(i, f"limited-{i}", max_turns=5), kind="campaign", key=f"limited-{i}",
+                         campaign_id="limited", cell_index=i, rank=i)
+    launched = []
+    class Child:
+        def __init__(self, command):
+            launched.append(command)
+        def poll(self):
+            return None
+    monkeypatch.setattr("monopoly_arena.supervisor.subprocess.Popen", Child)
+    supervisor = Supervisor(store)
+    supervisor.tick()
+    supervisor.tick()
+    assert len(launched) == 2  # Five global slots, but the campaign was frozen with concurrency 2.
+
+
+def test_failed_replay_verdict_survives_a_raised_finalization(tmp_path, monkeypatch):
+    from monopoly_arena import replay_verification
+    from monopoly_arena.finalizer import finalize
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    original = OpenRouterClient.__init__
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=mock_transport())
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    asyncio.run(play(store, job["job_id"], execution))
+    build = replay_verification.build_replay_verification_reports
+    def failing(run_files):
+        reports = build(run_files)
+        for report in reports.values():
+            report["status"] = "failed"
+        return reports
+    monkeypatch.setattr(replay_verification, "build_replay_verification_reports", failing)
+    asyncio.run(finalize(store, job["job_id"]))
+    final = store.job(job["job_id"])
+    assert (final["status"], final["replay_status"]) == ("failed", "failed")
+
+
+def test_recovered_worker_reads_the_decision_log_once(tmp_path, monkeypatch):
+    from monopoly_arena import worker
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    original = OpenRouterClient.__init__
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=mock_transport())
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    record = CloudClient._record_result
+    calls = 0
+    def crash(self, call_id, result):
+        nonlocal calls
+        calls += 1
+        if calls == 4:
+            raise RuntimeError("crash after a saved response")
+        record(self, call_id, result)
+    monkeypatch.setattr(CloudClient, "_record_result", crash)
+    with pytest.raises(RuntimeError):
+        asyncio.run(play(store, job["job_id"], execution))
+    monkeypatch.setattr(CloudClient, "_record_result", record)
+    reads = []
+    strict = worker.read_jsonl_strict
+    def counting(path):
+        reads.append(path.name)
+        return strict(path)
+    monkeypatch.setattr(worker, "read_jsonl_strict", counting)
+    store.execute("UPDATE jobs SET status='recovering' WHERE job_id=?", (job["job_id"],))
+    asyncio.run(play(store, job["job_id"], store.claim(job["job_id"])))
+    assert store.job(job["job_id"])["status"] == "finalizing"
+    assert reads.count("decisions.jsonl") == 1
+    starts = [row["decision_id"] for row in strict(store.root / "runs" / job["run_id"] / "decisions.jsonl")
+              if row["phase"] == "decision_started"]
+    assert len(starts) == len(set(starts))

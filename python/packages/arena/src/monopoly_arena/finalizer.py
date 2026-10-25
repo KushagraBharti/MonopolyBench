@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import errno
 import json
 from pathlib import Path
 import shutil
@@ -16,7 +15,7 @@ from monopoly_telemetry.inventory import write_inventory, inventory
 from monopoly_telemetry.export import package_zip
 from monopoly_telemetry.writer_jsonl import atomic_write
 from .cloud_client import CloudClient
-from .execution_policy import data_root
+from .execution_policy import data_root, storage_full
 from .job_store import JobStore, encode
 from .worker import make_runner, writer_lock
 
@@ -48,9 +47,10 @@ async def finalize(store: JobStore, job_id: str) -> None:
                     raise ValueError(f"Replay verification failed: {path.name}")
             replay_status = "passed"
         except Exception as exc:
-            if _storage_full(exc):
+            if storage_full(exc):
                 raise  # Retryable: the job stays finalizing instead of failing a finished game.
             completed = False
+            replay_status = _replay_verdict(files) or replay_status
             store.execute("UPDATE jobs SET status='failed',pause_reason=? WHERE job_id=?", (f"Finalization: {exc}", job_id))
         finally:
             await client.aclose()
@@ -92,7 +92,7 @@ async def finalize(store: JobStore, job_id: str) -> None:
                 module.generate_analysis(staging)
                 analysis_status = "completed"
             except Exception as exc:
-                if _storage_full(exc):
+                if storage_full(exc):
                     raise
                 completed = False
                 analysis_status = "failed"
@@ -119,13 +119,15 @@ async def finalize(store: JobStore, job_id: str) -> None:
             (directory / "journal.jsonl").unlink(missing_ok=True)
 
 
-def _storage_full(exc: BaseException) -> bool:
-    current: BaseException | None = exc
-    while current is not None:
-        if isinstance(current, OSError) and current.errno in {errno.ENOSPC, errno.EDQUOT}:
-            return True
-        current = current.__cause__ or current.__context__
-    return False
+def _replay_verdict(files: Any) -> str | None:
+    """The saved replay verdict, so a raised finalization cannot hide a failed replay."""
+    statuses = []
+    for path in (files.state_replay_report_path, files.artifact_replay_report_path):
+        try:
+            statuses.append(json.loads(path.read_text()).get("status"))
+        except (OSError, ValueError, AttributeError):
+            return None
+    return "passed" if all(status in {"pass", "passed", "ok"} for status in statuses) else "failed"
 
 
 def main() -> None:
