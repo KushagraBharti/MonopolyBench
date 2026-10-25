@@ -1,6 +1,7 @@
 """Run the complete container, draining games before stopping HTTP and mock IO."""
 import os
 from pathlib import Path
+import shutil
 import signal
 import subprocess
 import sys
@@ -32,7 +33,17 @@ def stop_process(process: subprocess.Popen | None, timeout: float) -> None:
     process.wait()
 
 
+def remove_abandoned_staging(root: Path) -> None:
+    """A killed finalizer or campaign export cannot clean its staging tree. Under the
+    runtime lock no export can be in progress, so any remaining tree is abandoned."""
+    for pattern in ("package-*", "campaign-export-*"):
+        for path in root.glob(pattern):
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+
+
 def serve(root: Path, demo: bool) -> None:
+    remove_abandoned_staging(root)
     store = JobStore(root)
     supervisor = web = mock = None
     stopping = False

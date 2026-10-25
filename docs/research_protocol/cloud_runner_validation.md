@@ -78,8 +78,8 @@ cancellation cleanup now releases the shared game tailer under cancelled scopes.
 These checks rerun the evidence after merging PR #2. Cloud games now use the v2
 rules, usage accounting v2 and PR #2's strict completion contract.
 
-- Full repository verification: contracts, Ruff, mypy, 429 Python tests
-  (engine 65, API 114, arena 176, telemetry 45, microbench 29), frontend lint and
+- Full repository verification: contracts, Ruff, mypy, 430 Python tests
+  (engine 65, API 115, arena 176, telemetry 45, microbench 29), frontend lint and
   frontend build passed.
 - Each physical call has exactly one durable owner: `CloudClient` journals it, and
   the resolver's local call journal and deadlines step aside. A regression game
@@ -111,6 +111,13 @@ rules, usage accounting v2 and PR #2's strict completion contract.
   failed replay verdict being saved when finalization raises, a recovered worker
   reading its decision log once instead of before every decision, and a dashboard
   review read leaving a journaled run recoverable.
+
+Known follow-up (non-blocking): each journaled append rereads and hashes the whole
+stream to recheck its committed prefix, so the cost grows with `decisions.jsonl`.
+Measured locally, one append took 0.011 s at 10 MB and 0.132 s at 150 MB of
+25 KB rows. That is a few tenths of a second per decision late in a very long game,
+small next to model latency. Incremental hashes would remove it, but would weaken
+the per-commit on-disk check, so the change is deferred and needs its own review.
 
 Not exercised here: Railway deploy/redeploy, backup restoration, real provider
 compatibility, BYOK billing, Windows/macOS export execution, and real-model soak

@@ -125,3 +125,16 @@ def test_build_identity_ignores_stale_host_manifest_and_tracks_source(tmp_path):
     (tmp_path / "python/worker.py").write_text("changed runtime")
     assert build(tmp_path)["source_sha256"] != first["source_sha256"]
     assert build(tmp_path)["git_sha"].startswith("source:")
+
+
+def test_startup_removes_only_abandoned_export_staging(tmp_path):
+    from monopoly_api.serve import remove_abandoned_staging
+    for name in ("package-abc", "campaign-export-xyz"):
+        (tmp_path / name / "run").mkdir(parents=True)
+        (tmp_path / name / "run" / "events.jsonl").write_text("{}\n")
+    (tmp_path / "runs" / "kept").mkdir(parents=True)
+    (tmp_path / "exports").mkdir()
+    (tmp_path / "exports" / "package-1.zip").write_text("zip")
+    remove_abandoned_staging(tmp_path)
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["exports", "runs"]
+    assert (tmp_path / "runs" / "kept").is_dir() and (tmp_path / "exports" / "package-1.zip").exists()
