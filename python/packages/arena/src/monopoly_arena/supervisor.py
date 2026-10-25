@@ -15,7 +15,7 @@ from .cloud_campaign import enqueue_cells
 from .campaign_controls import resume_campaign_jobs
 from .cloud_preflight import preflight
 from .execution_policy import data_root
-from .job_store import JobStore
+from .job_store import JobStore, CampaignClosed
 from .worker import writer_lock
 
 
@@ -57,7 +57,10 @@ class Supervisor:
             if cell["rerun_count"] == 0:
                 config = json.loads(job["config_json"])
                 config["run_id"] += "-rerun1"
-                rerun = store.create_job(config, kind="campaign", key="rerun:"+job["job_id"], campaign_id=job["campaign_id"], cell_index=job["cell_index"], rank=job["execution_rank"], rerun_of=job["job_id"])
+                try:
+                    rerun = store.create_job(config, kind="campaign", key="rerun:"+job["job_id"], campaign_id=job["campaign_id"], cell_index=job["cell_index"], rank=job["execution_rank"], rerun_of=job["job_id"])
+                except CampaignClosed:
+                    continue
                 store.execute("UPDATE cells SET rerun_count=1,job_id=?,status='queued' WHERE campaign_id=? AND cell_index=?", (rerun["job_id"], job["campaign_id"], job["cell_index"]))
                 if store.state("individual_start:" + job["job_id"]):
                     store.set_state("individual_start:" + rerun["job_id"], True)

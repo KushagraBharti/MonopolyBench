@@ -337,3 +337,45 @@ def test_completed_game_does_not_get_strategic_rerun(store, campaign, processes)
     assert not workers(processes)
     with pytest.raises(ValueError, match="finished"):
         start_cell(store, campaign, 0)
+
+
+def test_cancel_between_validation_and_start_cannot_reopen(store, campaign, monkeypatch):
+    import monopoly_arena.campaign_controls as controls
+    original = controls._controllable
+
+    def cancel_after_check(current_store, campaign_id, *, starting=False):
+        original(current_store, campaign_id, starting=starting)
+        if starting:
+            cancel_campaign(current_store, campaign_id)
+
+    monkeypatch.setattr(controls, "_controllable", cancel_after_check)
+    with pytest.raises(ValueError, match="cancelled"):
+        run_campaign(store, campaign)
+    assert store.rows("SELECT status FROM campaigns")[0]["status"] == "cancelled"
+    assert not jobs(store)
+
+
+def test_cancel_between_cell_selection_and_job_insertion_creates_nothing(store, campaign, monkeypatch):
+    original = store.create_job
+    cancelled = False
+
+    def cancel_before_insert(*args, **kwargs):
+        nonlocal cancelled
+        if not cancelled:
+            cancel_campaign(store, campaign)
+            cancelled = True
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(store, "create_job", cancel_before_insert)
+    run_campaign(store, campaign)
+    assert store.rows("SELECT status FROM campaigns")[0]["status"] == "cancelled"
+    assert not jobs(store)
+
+
+def test_terminal_campaign_job_lookup_remains_idempotent(store, campaign):
+    start_cell(store, campaign, 0)
+    job = jobs(store)[0]
+    cancel_campaign(store, campaign)
+    repeated = store.create_job(json.loads(job["config_json"]), kind="campaign", key=job["idempotency_key"], campaign_id=campaign)
+    assert repeated["job_id"] == job["job_id"] and repeated["status"] == "cancelled"
+    assert len(jobs(store)) == 1

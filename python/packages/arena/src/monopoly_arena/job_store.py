@@ -65,6 +65,10 @@ def encode(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
 
 
+class CampaignClosed(ValueError):
+    """Admission lost a race with terminal campaign cancellation/completion."""
+
+
 class JobStore:
     def __init__(self, root: Path):
         self.root = root
@@ -125,6 +129,10 @@ class JobStore:
                 if old["config_sha256"] != digest:
                     raise ValueError("Idempotency key reused with different configuration")
                 return dict(old)
+            if campaign_id is not None:
+                campaign = db.execute("SELECT status FROM campaigns WHERE campaign_id=?", (campaign_id,)).fetchone()
+                if campaign and campaign[0] in {"cancelled", "done"}:
+                    raise CampaignClosed("This campaign has finished or was cancelled.")
             db.execute("""INSERT INTO jobs(job_id,run_id,kind,campaign_id,cell_index,execution_rank,
                 rerun_of_job_id,config_json,config_sha256,seed,git_sha,image_digest,idempotency_key,created_at)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",

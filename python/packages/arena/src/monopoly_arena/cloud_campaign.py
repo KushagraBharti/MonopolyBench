@@ -9,7 +9,7 @@ from typing import Any
 
 from monopoly_telemetry.writer_jsonl import atomic_write
 from .execution_policy import MODELS, VERSION
-from .job_store import JobStore, encode
+from .job_store import JobStore, encode, CampaignClosed
 from .player_config import default_provider_for_model
 from .response_policy import policy_manifest
 from .worker import build_identity
@@ -118,4 +118,7 @@ def enqueue_cells(store: JobStore) -> None:
         if any(campaign[key] != identity.get(key) for key in ("git_sha", "image_digest")):
             store.execute("UPDATE cells SET not_started_reason='code_identity_mismatch' WHERE campaign_id=? AND cell_index=?", (cell["campaign_id"], cell["cell_index"]))
             continue
-        create_cell_job(store, cell)
+        try:
+            create_cell_job(store, cell)
+        except CampaignClosed:
+            continue

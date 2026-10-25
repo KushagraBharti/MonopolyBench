@@ -25,7 +25,10 @@ def _controllable(store: JobStore, campaign_id: str, *, starting: bool = False) 
 def pause_campaign(store: JobStore, campaign_id: str) -> None:
     _controllable(store, campaign_id)
     # Gate admission first, then request boundary pauses. In-flight calls can finish.
-    store.execute("UPDATE campaigns SET status='paused' WHERE campaign_id=?", (campaign_id,))
+    with store.connect() as db:
+        changed = db.execute("UPDATE campaigns SET status='paused' WHERE campaign_id=? AND status IN ('frozen','running','paused')", (campaign_id,)).rowcount
+        if not changed:
+            raise ValueError("This campaign has finished or was cancelled.")
     for job in store.rows("SELECT * FROM jobs WHERE campaign_id=?", (campaign_id,)):
         store.set_state("individual_start:" + job["job_id"], False)
         if job["status"] in {"queued", "running", "recovering"}:
@@ -35,7 +38,10 @@ def pause_campaign(store: JobStore, campaign_id: str) -> None:
 
 def run_campaign(store: JobStore, campaign_id: str) -> None:
     _controllable(store, campaign_id, starting=True)
-    store.execute("UPDATE campaigns SET status='running' WHERE campaign_id=?", (campaign_id,))
+    with store.connect() as db:
+        changed = db.execute("UPDATE campaigns SET status='running' WHERE campaign_id=? AND status IN ('frozen','running','paused')", (campaign_id,)).rowcount
+        if not changed:
+            raise ValueError("This campaign has finished or was cancelled.")
     # Materialize all games now so every board link is available in the response.
     enqueue_cells(store)
     resume_campaign_jobs(store, campaign_id)
