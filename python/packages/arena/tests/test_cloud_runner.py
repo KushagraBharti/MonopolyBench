@@ -246,6 +246,29 @@ def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch, analysis_f
         findings = read_jsonl_strict(run / "failure_findings.jsonl")
         assert any(f["finding_type"] == "provider_refusal" and f["severity"] == "high" for f in findings)
         assert not any(f["finding_type"] == "missing_tool_call" for f in findings)
+    if refused == "recover":
+        # Opus 4.8 is never a participant: its usage sits under the Opus 5.5 seat it rescued.
+        claude_decisions = len(resolved)
+        usage = json.loads((tmp_path / "exported/run/usage.json").read_text())
+        assert "anthropic/claude-opus-4.8" not in usage["by_model"]
+        claude = usage["by_model"]["anthropic/claude-opus-5.5"]
+        assert claude["cost"] == pytest.approx(0.003 * claude_decisions)
+        assert claude["own_model"]["attempt_count"] == 2 * claude_decisions
+        assert claude["own_model"]["cost"] == pytest.approx(0.002 * claude_decisions)
+        fallback = claude["fallback_models"]["anthropic/claude-opus-4.8"]
+        assert (fallback["attempt_count"], fallback["decision_count"]) == (claude_decisions, claude_decisions)
+        assert fallback["cost"] == pytest.approx(0.001 * claude_decisions)
+        assert fallback["triggers"] == ["explicit_provider_refusal_after_same_model_retry"]
+        assert usage["fallback_attempt_count"] == claude_decisions
+        import csv
+        rows = {row["openrouter_model_id"]: row for row in csv.DictReader(
+            (tmp_path / "exported/analysis/tables/model_usage.csv").open())}
+        assert "anthropic/claude-opus-4.8" not in rows
+        claude_row = rows["anthropic/claude-opus-5.5"]
+        assert int(claude_row["fallback_model_calls"]) == claude_decisions
+        assert claude_row["fallback_models"] == "anthropic/claude-opus-4.8"
+        assert float(claude_row["fallback_model_cost"]) == pytest.approx(0.001 * claude_decisions)
+        assert int(claude_row["calls"]) == 3 * claude_decisions
 
 
 def test_campaign_freeze_and_amend(tmp_path, monkeypatch):

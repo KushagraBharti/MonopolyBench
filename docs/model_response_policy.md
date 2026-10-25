@@ -40,6 +40,10 @@ execution policy, treatment fingerprint, configured map, source hashes, prompts,
 tools, requested/returned models, response condition, request IDs, and costs.
 Per-attempt cost and failure attribution use the actual model. The original
 participant identity remains available on the enclosing decision and run.
+Usage reports (`usage_accounting_v3`) keep the fallback under the participant's
+umbrella: `by_model["anthropic/claude-opus-5.5"]` totals the whole seat, and
+`fallback_models["anthropic/claude-opus-4.8"]` breaks out the fallback's calls,
+cost, decision IDs and the trigger `explicit_provider_refusal_after_same_model_retry`.
 
 `fallback_used` continues to mean the deterministic engine fallback.
 `sequence_meta.model_fallback_used` identifies an attempted substitute model;

@@ -20,13 +20,23 @@ Core replay artifacts:
 - `replay_navigation.json`: skip targets for important decisions/events.
 
 Score and accounting artifacts:
-- `scorecard.json`: run-level and player-level metrics.
+- `scorecard.json`: run-level and player-level metrics. Under `scorecard_v3`,
+  `invalid_attempt_rate` is invalid model calls divided by model calls (run and
+  player level), and `invalid_decision_rate` is decisions with any invalid call
+  divided by decisions. Earlier scorecards divided invalid calls by decisions.
 - `scorecard_players.json`: player score rows.
 - `scorecard_decisions.jsonl`: per-decision score rows.
 - `scorecard_events.jsonl`: per-event score rows.
-- `usage.json`: OpenRouter-reported usage only.
-- `usage_decisions.jsonl`: per-decision usage.
-- `usage_attempts.jsonl`: per-attempt usage.
+- `usage.json`: OpenRouter-reported usage only. Under `usage_accounting_v3`,
+  `by_model` and `by_player` are keyed by participant, and their totals cover every
+  call the seat made. Each group splits that into `own_model` and `fallback_models`.
+  A configured fallback (for example Opus 4.8 after Opus 5.5 refusals) appears only
+  under its participant, with its calls, tokens, cost, decision IDs and trigger.
+- `usage_decisions.jsonl`: per-decision usage, owned by the participant model, with
+  `fallback_attempt_count` and `fallback_models_used`.
+- `usage_attempts.jsonl`: per-attempt usage. `openrouter_model_id` is the model that
+  served the call; `participant_model_id`, `requested_model_id`, `response_condition`
+  and `fallback_model_used` record why a fallback model was involved.
 - `cost_report.json`: actual OpenRouter cost rollup.
 - `pricing_snapshot.json`: OpenRouter model metadata snapshot when available.
 

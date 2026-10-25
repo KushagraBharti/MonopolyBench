@@ -8,7 +8,10 @@ from typing import Any
 from .run_files import RunFiles, evidence_paths
 
 
-USAGE_ACCOUNTING_VERSION = "usage_accounting_v2"
+USAGE_ACCOUNTING_VERSION = "usage_accounting_v3"
+# Why a configured fallback model served an attempt. Response conditions come from the
+# arena's versioned refusal-recovery policy; accounting only describes them.
+FALLBACK_TRIGGERS = {"fallback_without_private_thought": "explicit_provider_refusal_after_same_model_retry"}
 
 
 def build_usage_report(run_files: RunFiles, *, byok_aware: bool = False) -> dict[str, Any]:
@@ -36,6 +39,7 @@ def write_usage_artifacts(run_files: RunFiles) -> dict[str, Any]:
 
 def _all_attempt_usage_rows(run_files: RunFiles, decisions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = _attempt_usage_rows(decisions)
+    participants = {row.get("decision_id"): row for row in decisions if row.get("decision_id")}
     accounted_calls = {row["call_id"] for row in rows if row.get("call_id")}
     legacy_accounted = {(row["decision_id"], row["attempt_index"]) for row in rows if not row.get("call_id")}
     for path in evidence_paths(run_files.run_dir / "calls"):
@@ -45,10 +49,20 @@ def _all_attempt_usage_rows(run_files: RunFiles, decisions: list[dict[str, Any]]
         result = _dict(call.get("result"))
         raw = _dict(result.get("response_json"))
         normalized = _normalize_usage(_dict(raw.get("usage")), raw)
+        decision = _dict(participants.get(call["decision_id"]))
+        requested = call["request"].get("model")
+        participant = decision.get("openrouter_model_id") or requested
+        fallback = bool(requested and participant and requested != participant)
+        # Older call records predate the saved condition; do not guess why a fallback ran.
+        condition = call.get("response_condition") or ("unrecorded" if fallback else "standard")
         rows.append({**normalized, "run_id": run_files.run_id, "decision_id": call["decision_id"],
                      "attempt_index": call["attempt_index"], "player_id": call.get("player_id"),
                      "turn_index": call.get("turn_index"), "decision_type": call.get("decision_type"),
-                     "openrouter_model_id": call["request"].get("model"), "call_id": call["call_id"],
+                     "openrouter_model_id": raw.get("model") or requested, "call_id": call["call_id"],
+                     "participant_model_id": participant,
+                     "participant_model_display_name": decision.get("model_display_name") or participant,
+                     "requested_model_id": requested, "response_condition": condition,
+                     "fallback_model_used": fallback,
                      "call_status": call["status"], "input_tokens": normalized["prompt_tokens"],
                      "output_tokens": normalized["completion_tokens"],
                      "accounting_status": "actual_openrouter_usage" if normalized["usage_seen"] else "missing_openrouter_usage",
@@ -67,6 +81,8 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
             raw = _dict(attempt.get("raw_response"))
             usage = _dict(raw.get("usage"))
             normalized = _normalize_usage(usage, raw)
+            participant = decision.get("openrouter_model_id")
+            requested = attempt.get("requested_model") or participant
             rows.append(
                 {
                     "schema_version": "v1",
@@ -77,8 +93,15 @@ def _attempt_usage_rows(decisions: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "turn_index": decision.get("turn_index"),
                     "decision_type": decision.get("decision_type"),
                     "player_id": decision.get("player_id"),
-                    "openrouter_model_id": raw.get("model") or attempt.get("requested_model") or decision.get("openrouter_model_id"),
-                    "model_display_name": raw.get("model") or attempt.get("requested_model") or decision.get("model_display_name"),
+                    # openrouter_model_id is the model that served this attempt; the
+                    # participant is the seat's configured model, which owns the decision.
+                    "openrouter_model_id": raw.get("model") or requested,
+                    "model_display_name": raw.get("model") or requested or decision.get("model_display_name"),
+                    "participant_model_id": participant,
+                    "participant_model_display_name": decision.get("model_display_name") or participant,
+                    "requested_model_id": requested,
+                    "response_condition": attempt.get("response_condition") or "standard",
+                    "fallback_model_used": bool(requested and participant and requested != participant),
                     "openrouter_request_id": attempt.get("openrouter_request_id"),
                     "call_id": attempt.get("call_id"),
                     "openrouter_status_code": attempt.get("openrouter_status_code"),
@@ -130,9 +153,12 @@ def _decision_usage_rows(attempt_rows: list[dict[str, Any]]) -> list[dict[str, A
                 "turn_index": first.get("turn_index"),
                 "decision_type": first.get("decision_type"),
                 "player_id": first.get("player_id"),
-                "openrouter_model_id": first.get("openrouter_model_id"),
-                "model_display_name": first.get("model_display_name"),
+                "openrouter_model_id": _participant(first),
+                "model_display_name": first.get("participant_model_display_name") or first.get("model_display_name"),
                 "attempt_count": len(attempts),
+                "fallback_attempt_count": sum(1 for row in attempts if row.get("fallback_model_used")),
+                "fallback_models_used": sorted({str(row.get("requested_model_id")) for row in attempts
+                                                if row.get("fallback_model_used")}),
                 "accounting_status": _combined_status(attempts),
                 "prompt_tokens": _sum_optional(attempts, "prompt_tokens"),
                 "input_tokens": _sum_optional(attempts, "input_tokens"),
@@ -169,14 +195,20 @@ def _aggregate_usage(
         _accumulate_group(by_model, model_id, row)
         _accumulate_group(by_player, player_id, row)
     # Known spend per group comes from attempts: a decision with one unknown call has no cost.
-    for group in (*by_model.values(), *by_player.values()):
-        group["known_cost_subtotal"] = 0.0
-    for row in attempt_rows:
-        if isinstance(row.get("cost"), (int, float)):
-            for target, key in ((by_model, str(row.get("openrouter_model_id") or "unknown")),
-                                (by_player, str(row.get("player_id") or "unknown"))):
-                group = target.setdefault(key, {"decision_count": 0, **_zero_totals(), "known_cost_subtotal": 0.0})
-                group["known_cost_subtotal"] = round(group["known_cost_subtotal"] + float(row["cost"]), 10)
+    # Groups are participants, so fallback-model attempts stay under the seat that used them.
+    for target, key_of in ((by_model, _participant), (by_player, lambda row: str(row.get("player_id") or "unknown"))):
+        attempts_by_key: dict[str, list[dict[str, Any]]] = {}
+        for row in attempt_rows:
+            attempts_by_key.setdefault(key_of(row), []).append(row)
+        for key, rows in attempts_by_key.items():
+            group = target.setdefault(key, {"decision_count": 0, **_zero_totals()})
+            group["known_cost_subtotal"] = _known_subtotal(rows)
+            group["own_model"] = _attempt_breakdown([row for row in rows if not row.get("fallback_model_used")])
+            group["fallback_models"] = _fallback_breakdown(rows)
+        for group in target.values():
+            group.setdefault("known_cost_subtotal", 0.0)
+            group.setdefault("own_model", _attempt_breakdown([]))
+            group.setdefault("fallback_models", {})
     totals = _totals(decision_rows)
     if not attempt_rows:
         totals["cost"] = 0.0  # No provider calls is known zero spending, not missing usage.
@@ -192,10 +224,55 @@ def _aggregate_usage(
         "missing_cost_attempt_count": sum(row.get("cost") is None for row in attempt_rows),
         "cost_coverage": "complete" if all(row.get("cost") is not None for row in attempt_rows) else "partial_or_missing",
         "known_cost_subtotal": round(sum(float(row["cost"]) for row in attempt_rows if row.get("cost") is not None), 10),
+        "fallback_attempt_count": sum(1 for row in attempt_rows if row.get("fallback_model_used")),
         "totals": totals,
         "by_model": by_model,
         "by_player": by_player,
     }
+
+
+def _participant(row: dict[str, Any]) -> str:
+    return str(row.get("participant_model_id") or row.get("openrouter_model_id") or "unknown")
+
+
+def _known_subtotal(rows: list[dict[str, Any]]) -> float:
+    return round(sum(float(row["cost"]) for row in rows if isinstance(row.get("cost"), (int, float))), 10)
+
+
+def _attempt_breakdown(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "attempt_count": len(rows),
+        "prompt_tokens": _sum_optional(rows, "prompt_tokens"),
+        "completion_tokens": _sum_optional(rows, "completion_tokens"),
+        "total_tokens": _sum_optional(rows, "total_tokens"),
+        "reasoning_tokens": _sum_optional(rows, "reasoning_tokens"),
+        # Unknown stays unknown: one missing call cost leaves this cost null.
+        "cost": _sum_optional_float(rows, "cost") if rows else 0.0,
+        "known_cost_subtotal": _known_subtotal(rows),
+        "missing_cost_attempt_count": sum(1 for row in rows if row.get("cost") is None),
+    }
+
+
+def _fallback_breakdown(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Fallback models nest under the participant that used them, with why and where."""
+    by_fallback: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        if row.get("fallback_model_used"):
+            by_fallback.setdefault(str(row.get("requested_model_id")), []).append(row)
+    breakdown: dict[str, dict[str, Any]] = {}
+    for model_id, fallback_rows in sorted(by_fallback.items()):
+        conditions = sorted({str(row.get("response_condition") or "standard") for row in fallback_rows})
+        decision_ids = sorted({str(row.get("decision_id")) for row in fallback_rows})
+        breakdown[model_id] = {
+            **_attempt_breakdown(fallback_rows),
+            "served_model_ids": sorted({str(row.get("openrouter_model_id")) for row in fallback_rows}),
+            "decision_count": len(decision_ids),
+            "decision_ids": decision_ids,
+            "response_conditions": conditions,
+            "triggers": sorted({FALLBACK_TRIGGERS.get(condition, f"unrecognized_condition:{condition}")
+                                for condition in conditions}),
+        }
+    return breakdown
 
 
 def _cost_report(usage_report: dict[str, Any]) -> dict[str, Any]:

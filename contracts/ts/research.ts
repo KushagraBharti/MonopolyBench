@@ -71,6 +71,20 @@ export type LongHorizonModelRosterRegistry = {
   prompt_pipeline: PromptPipelineMarker
 }
 
+export type CampaignResponsePolicy = {
+  version: string
+  fallback_models: Record<string, string>
+  stages: string[]
+  trigger: string
+  max_resolver_calls: number
+}
+
+export type CampaignFreezeRecord = {
+  path: string
+  sha256: string
+  content: Record<string, unknown>
+}
+
 export type LongHorizonCampaignConfigV2 = {
   schema_version: 'v2'
   campaign_config_version: 'long_horizon_campaign_config_v2'
@@ -86,10 +100,28 @@ export type LongHorizonCampaignConfigV2 = {
   max_auction_actions: 200
   concurrency: number
   execution_order_seed: number
-  execution_policy_version: 'execution_policy_v1' | 'execution_policy_v2'
+  execution_policy_version: 'execution_policy_v1' | 'execution_policy_v2' | 'execution_policy_v3'
   rerun_policy: { max_reruns_per_cell: 1; same_seed_and_seats: true }
   billing: { enforcement: 'observe'; [provider: string]: string }
   prompt_pipeline: PromptPipelineMarker
+  preflight?: { version: string; max_age_hours: number }
+  response_policy?: CampaignResponsePolicy
+  paper_model_labels?: Record<string, string>
+  study_label?: string
+  research_freeze?: Record<string, CampaignFreezeRecord>
+  budget_policy?: string
+  cost_budget?: number
+  minimum_available_credits?: number
+  execution_preflight_path?: string
+  maximum_preflight_age_hours?: number
+  require_preflight_authorization?: boolean
+  dry_run?: boolean
+  resume?: boolean
+  continue_on_failure?: boolean
+  replay_after_run?: boolean
+  build_scorecard_after_run?: boolean
+  build_trace_after_run?: boolean
+  build_failure_taxonomy_after_run?: boolean
 }
 
 export type LongHorizonCampaignConfig = {
