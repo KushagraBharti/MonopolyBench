@@ -9,10 +9,12 @@ import { RunsPage } from '@/pages/RunsPage'
 import { GamesPage, LoginPage, GamePage } from '@/pages/CloudPages'
 import { CampaignsRoute } from '@/pages/cloud/CampaignPages'
 import { CreateCampaignPage } from '@/pages/cloud/CreateCampaignPage'
+import { NewGamePage } from '@/pages/cloud/NewGamePage'
 
 function App() {
   if (import.meta.env.VITE_MB_MODE === 'cloud') {
     if (window.location.pathname === '/login') return <LoginPage />
+    if (window.location.pathname === '/games/new') return <NewGamePage />
     if (window.location.pathname.startsWith('/games/')) return <GamePage />
     if (window.location.pathname === '/campaigns/new') return <CreateCampaignPage />
     if (window.location.pathname === '/campaigns' || window.location.pathname.startsWith('/campaigns/')) return <CampaignsRoute />

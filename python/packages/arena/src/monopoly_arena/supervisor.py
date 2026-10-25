@@ -12,6 +12,7 @@ import time
 from typing import Callable
 
 from .cloud_campaign import enqueue_cells
+from .campaign_controls import resume_campaign_jobs
 from .cloud_preflight import preflight
 from .execution_policy import data_root
 from .job_store import JobStore
@@ -51,21 +52,29 @@ class Supervisor:
                     continue
                 self.finalizer = subprocess.Popen([sys.executable, "-m", "monopoly_arena.finalizer", "--job", candidate["job_id"]])
                 break
-        for job in store.rows("SELECT * FROM jobs WHERE status='failed' AND kind='campaign'"):
+        for job in store.rows("SELECT jobs.* FROM jobs JOIN campaigns USING(campaign_id) WHERE jobs.status='failed' AND jobs.kind='campaign' AND campaigns.status!='cancelled'"):
             cell = store.rows("SELECT * FROM cells WHERE campaign_id=? AND cell_index=?", (job["campaign_id"], job["cell_index"]))[0]
             if cell["rerun_count"] == 0:
                 config = json.loads(job["config_json"])
                 config["run_id"] += "-rerun1"
                 rerun = store.create_job(config, kind="campaign", key="rerun:"+job["job_id"], campaign_id=job["campaign_id"], cell_index=job["cell_index"], rank=job["execution_rank"], rerun_of=job["job_id"])
                 store.execute("UPDATE cells SET rerun_count=1,job_id=?,status='queued' WHERE campaign_id=? AND cell_index=?", (rerun["job_id"], job["campaign_id"], job["cell_index"]))
+                if store.state("individual_start:" + job["job_id"]):
+                    store.set_state("individual_start:" + rerun["job_id"], True)
         if store.state("drain") or store.state("account_stop"):
             return
         if shutil.disk_usage(store.root).free < float(os.getenv("MB_DISK_RESERVE_GB", "5"))*1e9:
             return
-        store.execute("UPDATE jobs SET status='recovering',pause_reason=NULL WHERE status='paused' AND job_id IN (SELECT job_id FROM pauses WHERE next_retry_at<=?)", (time.time(),))
+        for campaign in store.rows("SELECT campaign_id FROM campaigns WHERE status='running'"):
+            resume_campaign_jobs(store, campaign["campaign_id"])
+        store.execute("""UPDATE jobs SET status='recovering',pause_reason=NULL WHERE status='paused'
+            AND job_id IN (SELECT job_id FROM pauses WHERE next_retry_at<=?)
+            AND (campaign_id IS NULL OR campaign_id IN (SELECT campaign_id FROM campaigns WHERE status='running')
+                 OR EXISTS(SELECT 1 FROM account_state WHERE key='individual_start:'||jobs.job_id AND value_json='true'))""", (time.time(),))
         enqueue_cells(store)
         ready = store.rows("""SELECT jobs.* FROM jobs LEFT JOIN campaigns USING(campaign_id)
-            WHERE jobs.status='recovering' OR (jobs.status='queued' AND (jobs.kind='smoke' OR campaigns.status='running'))
+            WHERE jobs.status IN ('recovering','queued') AND (jobs.kind IN ('smoke','single') OR campaigns.status='running'
+                OR EXISTS(SELECT 1 FROM account_state WHERE key='individual_start:'||jobs.job_id AND value_json='true'))
             ORDER BY jobs.status='recovering' DESC,jobs.kind='smoke' DESC,execution_rank,jobs.created_at""")
         running = store.rows("SELECT job_id,campaign_id FROM jobs WHERE status='running'")
         # A live child still occupies its slot after a pause request, until its process exits.

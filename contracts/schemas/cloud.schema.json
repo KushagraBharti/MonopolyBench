@@ -10,7 +10,29 @@
       "properties": {
         "name": {"type": "string", "minLength": 1, "maxLength": 80},
         "seed_blocks": {"type": "integer", "minimum": 1, "maximum": 20},
-        "concurrency": {"type": "integer", "minimum": 1, "maximum": 5}
+        "concurrency": {"type": "integer", "minimum": 1, "maximum": 5},
+        "cost_budget": {"type": ["number", "null"], "exclusiveMinimum": 0}
+      }
+    },
+    "singleGamePrepareRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "models": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string"}},
+        "effort": {"enum": ["low", "medium", "high"]},
+        "max_turns": {"type": ["integer", "null"], "minimum": 1, "maximum": 10000},
+        "cost_budget": {"type": ["number", "null"], "exclusiveMinimum": 0}
+      }
+    },
+    "smokePrepareRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "models": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string"}},
+        "effort": {"enum": ["low", "medium", "high"]},
+        "max_turns": {"type": "integer", "minimum": 5, "maximum": 10},
+        "count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "cost_budget": {"type": ["number", "null"], "exclusiveMinimum": 0}
       }
     },
     "campaignCreateRequest": {
@@ -74,6 +96,7 @@
         "kind": {
           "enum": [
             "smoke",
+            "single",
             "campaign"
           ]
         },
@@ -331,6 +354,7 @@
         "kind": {
           "enum": [
             "smoke",
+            "single",
             "campaign"
           ]
         }

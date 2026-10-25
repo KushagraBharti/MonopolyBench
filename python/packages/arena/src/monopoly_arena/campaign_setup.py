@@ -22,8 +22,8 @@ def readiness(store: JobStore, campaign: dict[str, Any]) -> dict[str, Any]:
     identity = build_identity()
     config = campaign.get("config") or json.loads(campaign.get("config_json") or "{}")
     reasons = []
-    if campaign.get("status") not in {"draft", "frozen", "paused"}:
-        reasons.append("This campaign is already running or has finished.")
+    if campaign.get("status") not in {"draft", "frozen", "paused", "running"}:
+        reasons.append("This campaign has finished or was cancelled.")
     if not config.get("seeds"):
         reasons.append("This older draft has no games. Create a new campaign to choose its settings.")
     if any(campaign.get(key, identity[key]) != identity[key] for key in ("git_sha", "image_digest")):
@@ -40,10 +40,17 @@ def readiness(store: JobStore, campaign: dict[str, Any]) -> dict[str, Any]:
         reasons.append("Storage is below the reserved space. Free space or expand storage before starting.")
     if os.getenv("MB_DEMO") == "1":
         reasons.append("Demo mode supports test games only. Full campaigns need the research workspace.")
+    if config.get("cost_budget") is not None and campaign.get("campaign_id"):
+        jobs = store.rows("SELECT job_id FROM jobs WHERE campaign_id=? LIMIT 1", (campaign["campaign_id"],))
+        if jobs:
+            from .budget import budget_status
+            budget = budget_status(store, jobs[0]["job_id"])
+            if budget["blocked"]:
+                reasons.append(budget["detail"])
     return {"can_start": not reasons, "reasons": reasons}
 
 
-def prepare(store: JobStore, *, name: str, seed_blocks: int, concurrency: int) -> dict[str, Any]:
+def prepare(store: JobStore, *, name: str, seed_blocks: int, concurrency: int, cost_budget: float | None = None) -> dict[str, Any]:
     if not name.strip() or len(name) > 80 or not 1 <= seed_blocks <= 20 or not 1 <= concurrency <= 5:
         raise ValueError("Choose a campaign name, 4 to 80 games in balanced groups of four, and 1 to 5 simultaneous games.")
     template = research_dir().parents[1] / "campaigns" / "monopoly-q4-recovery-v3-four-game-relay-20261025.json"
@@ -74,6 +81,12 @@ def prepare(store: JobStore, *, name: str, seed_blocks: int, concurrency: int) -
         order_seed = int.from_bytes(hashlib.sha256(b"MonopolyBench/execution-order/v1\0" + entropy).digest()[:4], "big")
         config.update(campaign_id=campaign_id, study_label=name.strip(), seed_cohort=campaign_id,
                       seeds=seeds, concurrency=concurrency, execution_order_seed=order_seed)
+        if cost_budget is not None:
+            import math
+            if type(cost_budget) not in {int, float} or not math.isfinite(cost_budget) or cost_budget <= 0:
+                raise ValueError("The recorded-spend threshold must be a positive finite USD amount.")
+            config["cost_budget"] = cost_budget
+            config["budget_policy"] = "recorded_spend_pause_threshold_existing_funding_only_no_purchases"
         analysis = copy.deepcopy(config["research_freeze"]["analysis_contract"]["content"])
         analysis.update(version="cloud_campaign_analysis_v1", behavior_source_commit=identity["git_sha"], status="recorded_before_execution",
                         claim_boundary=f"{seed_blocks} independent seed blocks, {seed_blocks * 4} correlated seat rotations. Report seed-level uncertainty and small-sample limits; no sample-size or power guarantee.")
@@ -84,6 +97,10 @@ def prepare(store: JobStore, *, name: str, seed_blocks: int, concurrency: int) -
             if key.startswith("max_execution_jobs_for_"):
                 del limits[key]
         limits["max_execution_jobs"] = seed_blocks * 8
+        if cost_budget is not None:
+            analysis["billing"]["recorded_spend_pause_threshold_usd"] = cost_budget
+            analysis["billing"]["launch_gate"] = "Pause new requests at the reported-spend threshold; missing costs pause capped execution. In-flight and concurrent calls may overshoot. Existing funds only, no purchases."
+            limits["monetary_stop"] = analysis["billing"]["launch_gate"]
         order = list(range(seed_blocks * 4))
         random.Random(order_seed).shuffle(order)
         ranks = {index: rank for rank, index in enumerate(order)}

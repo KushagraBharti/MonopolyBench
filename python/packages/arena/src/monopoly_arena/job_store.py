@@ -158,7 +158,7 @@ class JobStore:
                 raise ValueError("Job state changed; refresh before retrying")
             if job["status"] in {"cancelled", "failed", "completed", "finalizing"}:
                 return
-            if job["status"] == "paused" and job["pause_reason"] in {"operator", "drain"}:
+            if job["status"] == "paused" and job["pause_reason"] in {"operator", "campaign_operator", "drain"}:
                 return
             old = db.execute("SELECT retries_used FROM pauses WHERE job_id=?", (job_id,)).fetchone()
             retries = old[0] + 1 if old else 0

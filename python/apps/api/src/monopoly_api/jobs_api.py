@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from monopoly_arena.cloud_campaign import freeze, amend, run_config
 from monopoly_arena.campaign_setup import prepare as prepare_campaign, create as create_campaign, readiness
+from monopoly_arena.campaign_controls import pause_campaign, run_campaign, cancel_campaign, start_cell
+from monopoly_arena.budget import budget_status
 from monopoly_arena.cloud_preflight import preflight
 from monopoly_arena.execution_policy import MODELS, data_root
 from monopoly_arena.job_store import JobStore
@@ -36,6 +38,15 @@ class Smoke(BaseModel):
     effort: str = "medium"
     max_turns: int = Field(default=5, ge=5, le=10)
     count: int = Field(default=1, ge=1, le=20)
+    cost_budget: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
+
+
+class SingleGame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    models: list[str] = Field(default_factory=lambda: list(MODELS))
+    effort: str = "medium"
+    max_turns: int | None = Field(default=None, ge=1, le=10000, strict=True)
+    cost_budget: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
 
 
 class Launch(BaseModel):
@@ -54,6 +65,7 @@ class CampaignSettings(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     seed_blocks: int = Field(default=1, ge=1, le=20, strict=True)
     concurrency: int = Field(default=4, ge=1, le=5, strict=True)
+    cost_budget: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
 
 
 def create_cloud_app(root: Path | None = None) -> FastAPI:
@@ -108,9 +120,19 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         job["outcome"] = json.loads(job.pop("outcome_json") or "null")
         job["cost"] = execution_cost(store.rows("SELECT * FROM calls WHERE job_id=?", (job_id,)))
         job["pauses"] = store.rows("SELECT * FROM pauses WHERE job_id=?", (job_id,))
-        job["allowed_actions"] = ({"queued": ["cancel"], "running": ["pause", "cancel"], "recovering": ["cancel"], "paused": ["resume", "cancel"], "completed": ["archive"], "failed": ["archive"], "cancelled": ["archive"]}).get(job["status"], [])
+        job["allowed_actions"] = ({"queued": ["pause", "cancel"], "running": ["pause", "cancel"], "recovering": ["pause", "cancel"], "paused": ["resume", "cancel"], "completed": ["archive"], "failed": ["archive"], "cancelled": ["archive"]}).get(job["status"], [])
         commits = store.rows("SELECT * FROM commits WHERE job_id=? ORDER BY commit_seq DESC LIMIT 1", (job_id,))
         job["snapshot"] = json.loads((store.root / commits[0]["snapshot_path"]).read_text()) if commits and commits[0]["snapshot_path"] else None
+        job["snapshot_kind"] = "committed" if job["snapshot"] else "initial_preview"
+        if job["snapshot"] is None:
+            # An engine-produced initial board is a display preview, never a canonical checkpoint.
+            from monopoly_engine import Engine
+            config = job["config"]
+            job["snapshot"] = Engine(seed=config["seed"], run_id=config["run_id"],
+                                     players=[{"player_id": p["player_id"], "name": p["name"]} for p in config["players"]],
+                                     max_turns=config["max_turns"], max_trade_exchanges=config.get("max_trade_exchanges", 20),
+                                     max_auction_actions=config.get("max_auction_actions", 200)).get_snapshot()
+        job["budget"] = budget_status(store, job_id)
         job["commit_seq"] = commits[0]["commit_seq"] if commits else 0
         now = time.time()
         job["elapsed_seconds"] = max(0, (job["ended_at"] or now) - job["started_at"]) if job["started_at"] else None
@@ -124,9 +146,15 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         if action not in job["allowed_actions"]:
             raise HTTPException(409, "Action is not allowed in this state")
         if action == "pause":
-            store.pause(job_id, "operator", expected_status="running")
+            store.pause(job_id, "operator", expected_status=job["status"])
+            store.set_state("individual_start:" + job_id, False)
         elif action == "resume":
+            check = readiness(store, {"status": "paused", "config": {"seeds": [job["seed"]]}, "git_sha": job["git_sha"], "image_digest": job["image_digest"]})
+            if not check["can_start"] or job["budget"]["blocked"]:
+                raise HTTPException(409, " ".join(check["reasons"]) or job["budget"]["detail"])
             store.resume(job_id)
+            if job["campaign_id"]:
+                store.set_state("individual_start:" + job_id, True)
         elif action == "cancel":
             with store.connect() as db:
                 changed = db.execute("UPDATE jobs SET status='cancelled',ended_at=? WHERE job_id=? AND status=?", (time.time(), job_id, job["status"])).rowcount
@@ -149,19 +177,34 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         store.audit("resume_all", {}, "dashboard")
         return {"ok": True, "waiting_for_worker": waiting}
 
-    @app.post("/api/smoke/prepare")
-    def prepare(body: Smoke):
+    def prepare_games(models: list[str], effort: str, max_turns: int | None, count: int, cost_budget: float | None, kind: str):
         preparation = secrets.token_hex(16)
-        configs = [run_config(secrets.randbits(32), f"smoke-{preparation}-{i}", body.models, body.effort, body.max_turns) for i in range(body.count)]
-        result = {"preparation_id": preparation, "configs": configs, "created_at": time.time(), "cost_estimate": None, "preflight": store.state("preflight")}
+        configs = [run_config(secrets.randbits(32), f"{kind}-{preparation}-{i}", models, effort, max_turns) for i in range(count)]
+        if cost_budget is not None:
+            for config in configs:
+                config["cost_budget"] = cost_budget
+        result = {"preparation_id": preparation, "kind": kind, "configs": configs, "created_at": time.time(), "cost_estimate": None, "preflight": store.state("preflight")}
         store.set_state("prepare:"+preparation, result)
         return result
 
-    @app.post("/api/smoke")
-    def smoke(body: Launch):
+    @app.post("/api/smoke/prepare")
+    def prepare(body: Smoke):
+        return prepare_games(body.models, body.effort, body.max_turns, body.count, body.cost_budget, "smoke")
+
+    @app.post("/api/games/prepare")
+    def prepare_single(body: SingleGame):
+        return prepare_games(body.models, body.effort, body.max_turns, 1, body.cost_budget, "single")
+
+    def launch_games(body: Launch, kind: str):
         prepared = store.state("prepare:"+body.preparation_id)
         if not prepared:
             raise HTTPException(404, "Preparation not found")
+        if prepared.get("kind", "smoke") != kind:
+            raise HTTPException(409, "This preparation belongs to a different run type.")
+        from monopoly_arena.worker import build_identity
+        identity = build_identity()
+        if any(config.get(key) != identity[key] for config in prepared["configs"] for key in ("git_sha", "image_digest")):
+            raise HTTPException(409, "The app was updated after review. Prepare the game again.")
         with store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             key = "launch:" + body.idempotency_key
@@ -169,9 +212,17 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
             if previous and json.loads(previous[0]) != body.preparation_id:
                 raise ValueError("Idempotency key already belongs to another preparation")
             db.execute("INSERT OR IGNORE INTO account_state VALUES(?,?,?)", (key, json.dumps(body.preparation_id), time.time()))
-        jobs = [store.create_job(config, kind="smoke", key=f"smoke:{body.preparation_id}:{i}") for i, config in enumerate(prepared["configs"])]
-        store.audit("smoke_launch", {"jobs": [j["job_id"] for j in jobs]}, "dashboard")
-        return jobs
+        jobs = [store.create_job(config, kind=kind, key=f"{kind}:{body.preparation_id}:{i}") for i, config in enumerate(prepared["configs"])]
+        store.audit(kind + "_launch", {"jobs": [j["job_id"] for j in jobs]}, "dashboard")
+        return [detail(job["job_id"]) for job in jobs]
+
+    @app.post("/api/smoke")
+    def smoke(body: Launch):
+        return launch_games(body, "smoke")
+
+    @app.post("/api/games")
+    def single(body: Launch):
+        return launch_games(body, "single")
 
     def campaign_file(campaign_id: str) -> Path:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", campaign_id):
@@ -212,8 +263,22 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         result["display_name"] = result["config"].get("study_label") or campaign_id
         for cell in result["cells"]:
             cell["models_by_seat"] = json.loads(cell["seat_order_json"])
+            cell["game"] = detail(cell["job_id"]) if cell["job_id"] else None
+            cell["allowed_actions"] = cell["game"]["allowed_actions"] if cell["game"] else (["start"] if cell["status"] != "cancelled" and result["status"] not in {"done", "cancelled"} else [])
         result["readiness"] = readiness(store, result)
+        result["allowed_actions"] = [] if result["status"] in {"draft", "done", "cancelled"} else ["run", "pause", "cancel"]
         return result
+
+    @app.post("/api/campaigns/{campaign_id}/cells/{cell_index}/start")
+    def campaign_cell_start(campaign_id: str, cell_index: int):
+        current = campaign(campaign_id)
+        if current["status"] in {"draft", "done", "cancelled"}:
+            raise HTTPException(409, "This campaign cannot start games.")
+        check = readiness(store, {**current, "status": "frozen"})
+        if not check["can_start"]:
+            raise HTTPException(409, " ".join(check["reasons"]))
+        start_cell(store, campaign_id, cell_index)
+        return campaign(campaign_id)
 
     @app.post("/api/campaigns/{campaign_id}/freeze")
     def freeze_campaign(campaign_id: str):
@@ -229,20 +294,23 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
     @app.post("/api/campaigns/{campaign_id}/{action}")
     def campaign_control(campaign_id: str, action: str):
         current = campaign(campaign_id)
-        if action not in {"run", "pause"} or current["status"] == "draft":
+        if action not in {"run", "pause", "cancel"} or current["status"] == "draft":
             if action == "export" and current["status"] != "draft":
                 from monopoly_arena.campaign_export import export_campaign
                 return {"export_id": export_campaign(store, campaign_id)}
             raise HTTPException(409, "Freeze the campaign before running it")
         if action == "run":
-            if current["status"] == "running":
-                return current
-            if not current["readiness"]["can_start"]:
-                raise HTTPException(409, " ".join(current["readiness"]["reasons"]))
-        elif current["status"] not in {"running", "paused"}:
-            raise HTTPException(409, "Only a running campaign can pause new games.")
-        store.execute("UPDATE campaigns SET status=? WHERE campaign_id=?", ("running" if action == "run" else "paused", campaign_id))
-        store.audit("campaign_"+action, {"campaign_id": campaign_id}, "dashboard")
+            check = readiness(store, {**current, "status": "frozen"})
+            if not check["can_start"]:
+                raise HTTPException(409, " ".join(check["reasons"]))
+        if current["status"] in {"done", "cancelled"}:
+            raise HTTPException(409, "This campaign has finished or was cancelled.")
+        if action == "run":
+            run_campaign(store, campaign_id)
+        elif action == "pause":
+            pause_campaign(store, campaign_id)
+        else:
+            cancel_campaign(store, campaign_id)
         return campaign(campaign_id)
 
     @app.post("/api/preflight/run")

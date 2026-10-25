@@ -1,16 +1,16 @@
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { cloudRequest, type CampaignPreparation, type CloudCampaign } from '@/net/jobs'
-import { CheckConnections, Facts, Notice, SeatTokens, Shell, Token } from './CloudShell'
-import { boardNumbers, errorText, modelInfo, needsConnectionCheck, ROSTER } from './cloudUi'
+import { BudgetField, BudgetNote, CheckConnections, Facts, Notice, SeatTokens, Shell, Token } from './CloudShell'
+import { boardNumbers, errorText, modelInfo, money, needsConnectionCheck, parseBudget, ROSTER } from './cloudUi'
 
 const GAME_PRESETS = [4, 8, 12, 24, 40, 80]
 const MAX_GAMES = 80
 
-interface Setup { name: string; games: number; concurrency: number }
+interface Setup { name: string; games: number; concurrency: number; budget: string }
 interface Prepared { request: Setup; preparation: CampaignPreparation; idempotencyKey: string }
 
 function sameSetup(a: Setup, b: Setup) {
-  return a.name.trim() === b.name.trim() && a.games === b.games && a.concurrency === b.concurrency
+  return a.name.trim() === b.name.trim() && a.games === b.games && a.concurrency === b.concurrency && parseBudget(a.budget).value === parseBudget(b.budget).value
 }
 
 function gamesProblem(games: number) {
@@ -22,7 +22,7 @@ function gamesProblem(games: number) {
 
 export function CreateCampaignPage() {
   const [step, setStep] = useState<'setup' | 'review'>('setup')
-  const [setup, setSetup] = useState<Setup>({ name: '', games: 4, concurrency: 4 })
+  const [setup, setSetup] = useState<Setup>({ name: '', games: 4, concurrency: 4, budget: '' })
   const [prepared, setPrepared] = useState<Prepared | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<'' | 'review' | 'save'>('')
@@ -30,7 +30,7 @@ export function CreateCampaignPage() {
   const saving = useRef(false)
   const heading = useRef<HTMLHeadingElement>(null)
 
-  const problem = !setup.name.trim() ? 'Give the campaign a name.' : gamesProblem(setup.games)
+  const problem = !setup.name.trim() ? 'Give the campaign a name.' : gamesProblem(setup.games) || parseBudget(setup.budget).problem
 
   function goTo(next: 'setup' | 'review') {
     setStep(next)
@@ -47,7 +47,7 @@ export function CreateCampaignPage() {
     const request = { ...setup, name: setup.name.trim() }
     setBusy('review')
     try {
-      const preparation = await cloudRequest<CampaignPreparation>('/campaigns/prepare', { name: request.name, seed_blocks: request.games / 4, concurrency: request.concurrency })
+      const preparation = await cloudRequest<CampaignPreparation>('/campaigns/prepare', { name: request.name, seed_blocks: request.games / 4, concurrency: request.concurrency, cost_budget: parseBudget(request.budget).value })
       if (id !== requestId.current) return
       setPrepared({ request, preparation, idempotencyKey: crypto.randomUUID() })
       goTo('review')
@@ -121,11 +121,19 @@ function SetupStep({ setup, onChange, onSubmit, busy, error }: { setup: Setup; o
 
       <fieldset className="cb-field">
         <legend>Players</legend>
-        <p className="cb-hint">The same four models play every game at medium reasoning effort. This line-up is fixed for the study.</p>
+        <p className="cb-hint">The same four study models play every game. This line-up is fixed for the study.</p>
         <ul className="cb-roster">
           {ROSTER.map(model => <li key={model}><Token model={model} /><span><strong>{modelInfo(model).name}</strong><small>{modelInfo(model).lab}</small></span></li>)}
         </ul>
       </fieldset>
+
+      <section className="cb-field" aria-labelledby={`${ids}-preset`}>
+        <h2 className="cb-field-title" id={`${ids}-preset`}>Study settings</h2>
+        <Facts rows={[['Reasoning effort', 'Medium'], ['Turn limit', 'None, every game plays to the end']]} />
+        <p className="cb-hint">These are fixed so every campaign game is comparable. To choose different models, effort or a turn limit, <a href="/games/new">run one game</a> or test models from the Games page.</p>
+      </section>
+
+      <BudgetField value={setup.budget} onChange={budget => onChange({ ...setup, budget })} scope="campaign" />
 
       {error ? <p className="cb-error" role="alert">{error}</p> : null}
       <div className="cb-actions">
@@ -134,11 +142,11 @@ function SetupStep({ setup, onChange, onSubmit, busy, error }: { setup: Setup; o
       </div>
       <p className="cb-hint">Reviewing draws the boards for this campaign. Nothing is played or charged.</p>
     </form>
-    <Deed name={setup.name.trim() || 'Untitled campaign'} rows={deedRows(Number.isFinite(setup.games) ? setup.games : 0, setup.concurrency)} />
+    <Deed name={setup.name.trim() || 'Untitled campaign'} rows={deedRows(Number.isFinite(setup.games) ? setup.games : 0, setup.concurrency, parseBudget(setup.budget).value)} />
   </div>
 }
 
-function deedRows(games: number, concurrency: number): [string, ReactNode][] {
+function deedRows(games: number, concurrency: number, budget: number | null): [string, ReactNode][] {
   const boards = games > 0 && games % 4 === 0 ? games / 4 : null
   return [
     ['Games', games || '—'],
@@ -147,7 +155,7 @@ function deedRows(games: number, concurrency: number): [string, ReactNode][] {
     ['At the same time', concurrency],
     ['Reasoning effort', 'Medium'],
     ['Turn limit', 'None'],
-    ['Spending cap', 'None'],
+    ['Spend pause', budget == null ? 'None' : `${money(budget)} across campaign`],
   ]
 }
 
@@ -168,6 +176,7 @@ function ReviewStep({ prepared, busy, error, onBack, onSave, onChecked }: { prep
   const firstBoard = cells.filter(c => c.seed === firstSeed).sort((a, b) => a.cell_index - b.cell_index)
   const name = (typeof preparation.config.study_label === 'string' && preparation.config.study_label) || prepared.request.name
   const concurrency = typeof preparation.config.concurrency === 'number' ? preparation.config.concurrency : prepared.request.concurrency
+  const budget = typeof preparation.config.cost_budget === 'number' ? preparation.config.cost_budget : parseBudget(prepared.request.budget).value
   const [connectionsPassed, setConnectionsPassed] = useState(false)
   const preflightError = Boolean(error) && needsConnectionCheck(error)
   // The review's readiness was computed at preparation time; a passing check run here clears only its connection blocker.
@@ -188,7 +197,9 @@ function ReviewStep({ prepared, busy, error, onBack, onSave, onChecked }: { prep
 
       <section className="cb-section">
         <h2>Billing</h2>
-        <p>Games are paid from your existing provider funding: your OpenRouter balance, and your own provider accounts for any keys you’ve connected to OpenRouter. This app adds no spending cap and makes no purchases. There is no turn limit, so each game plays until it ends. Pausing the campaign stops new games from starting; games already playing continue until they finish.</p>
+        <p>Games are paid from your existing provider funding: your OpenRouter balance, and your own provider accounts for any keys you’ve connected to OpenRouter. This app makes no purchases. There is no turn limit, so each game plays until it ends.</p>
+        <p>{budget == null ? 'No spend pause is set, so games keep playing whatever they cost.' : `Games pause before new requests once the campaign’s combined recorded spend reaches ${money(budget)}. This is not a hard cap.`} You can pause, resume or cancel the whole campaign or any single game from the campaign page.</p>
+        <BudgetNote />
       </section>
 
       <section className="cb-section">
@@ -233,6 +244,6 @@ function ReviewStep({ prepared, busy, error, onBack, onSave, onChecked }: { prep
       </div>
       <p className="cb-hint">Saving doesn’t start any games. You’ll start them from the campaign page.</p>
     </div>
-    <Deed name={name} rows={deedRows(cells.length, concurrency)} footer={`${boards.size} ${boards.size === 1 ? 'board' : 'boards'} drawn. Not started.`} />
+    <Deed name={name} rows={deedRows(cells.length, concurrency, budget)} footer={`${boards.size} ${boards.size === 1 ? 'board' : 'boards'} drawn. Not started.`} />
   </div>
 }

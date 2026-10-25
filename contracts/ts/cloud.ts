@@ -12,10 +12,12 @@ export interface CloudPlayer {
 }
 export interface CloudConfig {
   seed: number; run_id: string; players: CloudPlayer[]; max_turns: number | null; git_sha: string
+  /** Pause threshold on recorded spend in USD. Not a hard cap: in-flight calls may overshoot. */
+  cost_budget?: number | null
   response_policy?: { version: string; fallback_models: Record<string, string>; stages: string[]; trigger: string; max_resolver_calls: number }
 }
 export interface CloudJob {
-  job_id: string; run_id: string; kind: 'smoke' | 'campaign'; status: JobStatus
+  job_id: string; run_id: string; kind: 'single' | 'smoke' | 'campaign'; status: JobStatus
   campaign_id: string | null; cell_index?: number | null; config: CloudConfig; snapshot: StateSnapshot | null
   commit_seq: number; created_at: number; started_at: number | null; last_progress_at: number | null
   ended_at: number | null; outcome: { winner_player_id?: string; reason?: string } | null
@@ -24,6 +26,7 @@ export interface CloudJob {
   pause_reason: string | null; replay_status: string | null; export_status: string | null
   recovered: boolean; repaired: boolean; allowed_actions: string[]; cost: ExecutionCost
   slow: boolean
+  snapshot_kind?: 'initial_preview' | 'committed'
 }
 export interface CloudLive {
   schema_version: 'v2'; type: 'HELLO' | 'SNAPSHOT' | 'EVENT'
@@ -39,11 +42,17 @@ export interface CampaignCell extends Partial<CampaignPlannedCell> {
   cell_index: number; seed: number; execution_rank: number
   job_id: string | null; job_status: JobStatus | null; rerun_count: number
   status?: string; not_started_reason?: string | null
+  /** The game for this cell once it has been started, else null. */
+  game?: CloudJob | null
+  /** Unstarted cells allow 'start'; started cells mirror their job's controls. */
+  allowed_actions?: string[]
 }
 export interface CampaignConfig {
   campaign_id?: string; study_label?: string; seeds?: number[]; concurrency?: number
   model_roster?: string; seat_permutation?: string; max_turns?: number | null
   budget_policy?: string; billing?: Record<string, string>
+  /** Optional per-game pause threshold on recorded spend in USD. */
+  cost_budget?: number | null
   research_freeze?: Record<string, { path: string; sha256: string; content?: unknown }>
   [key: string]: unknown
 }
@@ -54,10 +63,17 @@ export interface CloudCampaign {
   cells: CampaignCell[]
 }
 /** POST /api/campaigns/prepare: persisted seed draw, no games or provider calls. */
-export interface CampaignPrepareRequest { name: string; seed_blocks: number; concurrency: number }
+export interface CampaignPrepareRequest { name: string; seed_blocks: number; concurrency: number; cost_budget?: number | null }
 export interface CampaignPreparation {
   preparation_id: string; config: CampaignConfig; cells: CampaignPlannedCell[]
   readiness: CampaignReadiness; git_sha: string; image_digest: string
 }
 /** POST /api/campaigns/create: freezes a preparation; never starts games. */
 export interface CampaignCreateRequest { preparation_id: string; idempotency_key: string }
+/** POST /api/games/prepare (count 1) and /api/smoke/prepare (count 1..20, max_turns 5..10). No games start. */
+export interface GamePrepareRequest {
+  models: string[]; effort: 'low' | 'medium' | 'high'; max_turns: number | null; cost_budget: number | null; count?: number
+}
+export interface GamePreparation { preparation_id: string; configs: CloudConfig[]; created_at: number; [key: string]: unknown }
+/** POST /api/games and /api/smoke: starts the prepared games. */
+export interface GameStartRequest { preparation_id: string; idempotency_key: string }

@@ -139,9 +139,151 @@ def test_explicit_start_is_required_and_repeat_start_is_idempotent(setup_client)
     assert client.get(path).json()["status"] == "frozen"
     assert client.post(path + "/run", json={}).json()["status"] == "running"
     assert client.post(path + "/run", json={}).json()["status"] == "running"
-    # No supervisor or provider runs in this test; only the explicit control state changes.
-    assert not store.rows("SELECT * FROM jobs") and not store.rows("SELECT * FROM calls")
+    # Start materializes all board links immediately; no supervisor or provider runs.
+    assert len(store.rows("SELECT * FROM jobs")) == 4 and not store.rows("SELECT * FROM calls")
     store.execute("UPDATE campaigns SET status='done' WHERE campaign_id=?", (campaign["campaign_id"],))
     assert client.post(path + "/run", json={}).status_code == 409
     assert client.post(path + "/pause", json={}).status_code == 409
     assert client.get(path).json()["status"] == "done"
+
+
+def test_campaign_start_returns_every_board_and_individual_controls(setup_client):
+    client, store, _ = setup_client
+    saved = save(client, prepare(client)).json()
+    path = f"/api/campaigns/{saved['campaign_id']}"
+    response = client.post(path + "/run", json={})
+    assert response.status_code == 200
+    games = [cell["game"] for cell in response.json()["cells"]]
+    assert len(games) == 4 and len({game["job_id"] for game in games}) == 4
+    for game in games:
+        assert game["status"] == "queued" and game["snapshot_kind"] == "initial_preview"
+        assert len(game["snapshot"]["board"]) == 40 and len(game["snapshot"]["players"]) == 4
+        assert game["allowed_actions"] == ["pause", "cancel"]
+    assert not store.rows("SELECT * FROM commits") and not store.rows("SELECT * FROM calls")
+
+
+def test_campaign_and_individual_pause_resume_and_cancel(setup_client):
+    client, store, _ = setup_client
+    saved = save(client, prepare(client)).json()
+    path = f"/api/campaigns/{saved['campaign_id']}"
+    cell_index = saved["cells"][0]["cell_index"]
+    one = client.post(f"{path}/cells/{cell_index}/start", json={}).json()
+    assert len(store.rows("SELECT * FROM jobs")) == 1
+    assert one["status"] == "frozen"  # starting one does not authorize the other three
+    job_id = next(c["job_id"] for c in one["cells"] if c["job_id"])
+    assert store.state("individual_start:" + job_id)
+    assert client.post(path + "/pause", json={}).status_code == 200
+    assert store.job(job_id)["pause_reason"] == "campaign_operator"
+    assert not store.state("individual_start:" + job_id)
+    assert client.post(path + "/run", json={}).status_code == 200
+    assert len(store.rows("SELECT * FROM jobs")) == 4
+    assert store.job(job_id)["status"] == "recovering"
+    assert client.post(f"/api/jobs/{job_id}/pause", json={}).status_code == 200
+    assert store.job(job_id)["pause_reason"] == "operator"
+    assert client.post(path + "/pause", json={}).status_code == 200
+    assert client.post(path + "/run", json={}).status_code == 200
+    assert store.job(job_id)["status"] == "paused"  # preserve an individual pause
+    others = store.rows("SELECT * FROM jobs WHERE job_id!=?", (job_id,))
+    assert all(j["status"] == "recovering" for j in others)
+    assert client.post(path + "/pause", json={}).status_code == 200
+    assert client.post(f"/api/jobs/{job_id}/resume", json={}).status_code == 200
+    assert store.state("individual_start:" + job_id)
+    assert client.get(path).json()["status"] == "paused"
+    cancelled = client.post(path + "/cancel", json={}).json()
+    assert cancelled["status"] == "cancelled"
+    assert all(j["status"] == "cancelled" for j in store.rows("SELECT * FROM jobs"))
+    assert client.post(path + "/run", json={}).status_code == 409
+    assert client.post(f"{path}/cells/{cell_index}/start", json={}).status_code == 409
+    assert not store.rows("SELECT * FROM calls")
+
+
+def test_cancel_unstarted_campaign_keeps_records_and_creates_no_jobs(setup_client):
+    client, store, _ = setup_client
+    saved = save(client, prepare(client)).json()
+    response = client.post(f"/api/campaigns/{saved['campaign_id']}/cancel", json={})
+    assert response.status_code == 200
+    assert all(cell["status"] == "cancelled" and not cell["allowed_actions"] for cell in response.json()["cells"])
+    assert not store.rows("SELECT * FROM jobs")
+    assert response.json()["config_sha256"] == saved["config_sha256"]
+
+
+@pytest.mark.parametrize("turns,effort", [(None, "high"), (1, "low"), (300, "medium")])
+def test_single_game_settings_launch_and_initial_board(setup_client, turns, effort):
+    client, store, _ = setup_client
+    response = client.post("/api/games/prepare", json={"effort": effort, "max_turns": turns, "cost_budget": 2.5})
+    assert response.status_code == 200, response.text
+    prepared = response.json()
+    assert not store.rows("SELECT * FROM jobs")
+    payload = {"preparation_id": prepared["preparation_id"], "idempotency_key": "single-launch-key"}
+    first = client.post("/api/games", json=payload)
+    second = client.post("/api/games", json=payload)
+    assert first.status_code == second.status_code == 200
+    job = first.json()[0]
+    assert job["job_id"] == second.json()[0]["job_id"]
+    assert job["kind"] == "single" and job["campaign_id"] is None
+    assert job["config"]["max_turns"] == turns and job["config"]["cost_budget"] == 2.5
+    assert all(p["reasoning"]["effort"] == effort for p in job["config"]["players"])
+    assert len(job["snapshot"]["board"]) == 40 and job["snapshot_kind"] == "initial_preview"
+    assert len(store.rows("SELECT * FROM jobs")) == 1 and not store.rows("SELECT * FROM calls")
+    assert client.post("/api/smoke", json=payload).status_code == 409
+
+
+def test_smoke_settings_and_budget_validation(setup_client):
+    client, store, _ = setup_client
+    for invalid in [{"cost_budget": 0}, {"cost_budget": -1}, {"cost_budget": True}, {"cost_budget": "Infinity"}, {"max_turns": 0}, {"max_turns": 10001}]:
+        assert client.post("/api/games/prepare", json=invalid).status_code == 422
+    prepared = client.post("/api/smoke/prepare", json={"effort": "low", "max_turns": 10, "count": 2, "cost_budget": 1}).json()
+    configs = prepared["configs"]
+    assert len(configs) == 2 and all(c["cost_budget"] == 1 and c["max_turns"] == 10 for c in configs)
+    assert not store.rows("SELECT * FROM jobs")
+    assert client.post("/api/games/prepare", json={"effort": "invalid"}).status_code == 409
+
+
+def test_shared_campaign_budget_blocks_remaining_starts_and_resume(setup_client):
+    client, store, _ = setup_client
+    prepared = prepare(client, cost_budget=0.1)
+    saved = save(client, prepared).json()
+    assert saved["config"]["cost_budget"] == 0.1
+    assert saved["config"]["max_turns"] is None
+    path = f"/api/campaigns/{saved['campaign_id']}"
+    cell = saved["cells"][0]
+    one = client.post(f"{path}/cells/{cell['cell_index']}/start", json={}).json()
+    job_id = next(c["job_id"] for c in one["cells"] if c["job_id"])
+    store.execute("INSERT INTO calls(call_id,job_id,state,total_cost,cost_status) VALUES('spent',?,'responded',0.12,'known')", (job_id,))
+    assert not client.get(path).json()["readiness"]["can_start"]
+    assert client.post(path + "/run", json={}).status_code == 409
+    assert len(store.rows("SELECT * FROM jobs")) == 1
+    assert client.post(f"/api/jobs/{job_id}/pause", json={}).status_code == 200
+    assert client.post(f"/api/jobs/{job_id}/resume", json={}).status_code == 409
+    from monopoly_arena.campaign_controls import pause_shared_budget
+    pause_shared_budget(store, job_id)
+    assert client.get(path).json()["status"] == "paused"
+
+
+def test_live_board_stream_uses_full_committed_engine_snapshots(setup_client):
+    from monopoly_arena.journal import Journal
+    from monopoly_engine import Engine
+    client, store, _ = setup_client
+    preparation = client.post("/api/games/prepare", json={"max_turns": 5}).json()
+    job = client.post("/api/games", json={"preparation_id": preparation["preparation_id"], "idempotency_key": "live-board-preview"}).json()[0]
+    config = job["config"]
+    engine = Engine(seed=config["seed"], run_id=config["run_id"], players=config["players"], max_turns=5)
+    journal = Journal(store, job["job_id"], store.claim(job["job_id"]))
+    with journal.transition("initialize", snapshot=engine.get_snapshot()):
+        pass
+    with client.websocket_connect(f"wss://testserver/api/jobs/{job['job_id']}/ws") as socket:
+        assert socket.receive_json()["type"] == "HELLO"
+        first = socket.receive_json()
+        assert len(first["snapshot"]["board"]) == 40
+        _, events, _, _ = engine.advance_until_decision(max_steps=100)
+        with journal.transition("advance", snapshot=engine.get_snapshot()):
+            for event in events:
+                journal.write(store.root / "runs" / config["run_id"] / "events.jsonl", (encode(event) + "\n").encode(), append=True)
+        updated = socket.receive_json()
+        assert updated["commit_seq"] > first["commit_seq"]
+        assert updated["snapshot"] == engine.get_snapshot()
+        assert updated["events"] == events
+        assert len(updated["snapshot"]["players"]) == 4 and events
+    committed = client.get(f"/api/jobs/{job['job_id']}").json()
+    assert committed["snapshot_kind"] == "committed"
+    assert not store.rows("SELECT * FROM calls")

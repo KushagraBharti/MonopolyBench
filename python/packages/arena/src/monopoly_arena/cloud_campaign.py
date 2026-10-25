@@ -100,13 +100,22 @@ def amend(store: JobStore, campaign_id: str, seeds: list[int], reason: str) -> N
         db.execute("INSERT INTO campaign_amendments VALUES(?,?,?,?,?,?)", (campaign_id, index, reason, encode({"add_seeds": seeds}), encode(list(range(start, start+4*len(seeds)))), time.time()))
 
 
+def create_cell_job(store: JobStore, cell: dict[str, Any]) -> dict[str, Any]:
+    campaign = store.rows("SELECT git_sha,image_digest FROM campaigns WHERE campaign_id=?", (cell["campaign_id"],))[0]
+    identity = build_identity()
+    if any(campaign[key] != identity.get(key) for key in ("git_sha", "image_digest")):
+        raise ValueError("The app version changed. Create a new campaign before starting games.")
+    job = store.create_job(run_config(cell["seed"], cell["run_id"], json.loads(cell["seat_order_json"])), kind="campaign", key=f"cell:{cell['campaign_id']}:{cell['cell_index']}", campaign_id=cell["campaign_id"], cell_index=cell["cell_index"], rank=cell["execution_rank"])
+    store.execute("UPDATE cells SET job_id=? WHERE campaign_id=? AND cell_index=? AND job_id IS NULL", (job["job_id"], cell["campaign_id"], cell["cell_index"]))
+    return job
+
+
 def enqueue_cells(store: JobStore) -> None:
-    cells = store.rows("SELECT cells.* FROM cells JOIN campaigns USING(campaign_id) WHERE campaigns.status='running' AND cells.job_id IS NULL ORDER BY cells.execution_rank")
+    cells = store.rows("SELECT cells.* FROM cells JOIN campaigns USING(campaign_id) WHERE campaigns.status='running' AND cells.job_id IS NULL AND cells.status='queued' ORDER BY cells.execution_rank")
     for cell in cells:
         campaign = store.rows("SELECT git_sha,image_digest FROM campaigns WHERE campaign_id=?", (cell["campaign_id"],))[0]
         identity = build_identity()
         if any(campaign[key] != identity.get(key) for key in ("git_sha", "image_digest")):
             store.execute("UPDATE cells SET not_started_reason='code_identity_mismatch' WHERE campaign_id=? AND cell_index=?", (cell["campaign_id"], cell["cell_index"]))
             continue
-        job = store.create_job(run_config(cell["seed"], cell["run_id"], json.loads(cell["seat_order_json"])), kind="campaign", key=f"cell:{cell['campaign_id']}:{cell['cell_index']}", campaign_id=cell["campaign_id"], cell_index=cell["cell_index"], rank=cell["execution_rank"])
-        store.execute("UPDATE cells SET job_id=? WHERE campaign_id=? AND cell_index=?", (job["job_id"], cell["campaign_id"], cell["cell_index"]))
+        create_cell_job(store, cell)

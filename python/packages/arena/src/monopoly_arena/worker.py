@@ -169,6 +169,9 @@ def main() -> None:
                 asyncio.run(play(store, args.job, args.execution))
             except OperationalPause as exc:
                 store.pause(args.job, exc.reason, str(exc))
+                if exc.reason in {"budget", "budget_unknown"}:
+                    from .campaign_controls import pause_shared_budget
+                    pause_shared_budget(store, args.job)
             except Exception as exc:
                 if storage_full(exc):
                     store.pause(args.job, "storage", str(exc))

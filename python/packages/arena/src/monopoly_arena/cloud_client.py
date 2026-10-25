@@ -12,6 +12,7 @@ import uuid
 
 from monopoly_telemetry.execution_cost import call_cost
 from monopoly_telemetry.writer_jsonl import atomic_write
+from .budget import check_budget
 from .execution_policy import OperationalPause, UNKNOWN_PER_DECISION, UNKNOWN_PER_GAME, error_pause
 from .job_store import JobStore, encode
 from .openrouter_client import OpenRouterClient, OpenRouterResult
@@ -41,6 +42,7 @@ class CloudClient(OpenRouterClient):
             raise OperationalPause("drain")
         if job["status"] in {"paused", "cancelled"}:
             raise OperationalPause(job["pause_reason"] or "operator")
+        check_budget(self.store, self.job_id)
         import shutil
         if shutil.disk_usage(self.store.root).free < float(os.getenv("MB_DISK_RESERVE_GB", "5"))*1e9:
             raise OperationalPause("storage")

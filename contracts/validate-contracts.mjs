@@ -188,6 +188,8 @@ const jsonExamples = [
 
 jsonExamples.push({ file: "cloud_job.example.json", schema: "cloud.schema.json#/$defs/job" });
 jsonExamples.push({ file: "cloud_campaignPrepareRequest.example.json", schema: "cloud.schema.json#/$defs/campaignPrepareRequest" });
+jsonExamples.push({ file: "cloud_singleGamePrepareRequest.example.json", schema: "cloud.schema.json#/$defs/singleGamePrepareRequest" });
+jsonExamples.push({ file: "cloud_smokePrepareRequest.example.json", schema: "cloud.schema.json#/$defs/smokePrepareRequest" });
 jsonExamples.push({ file: "cloud_campaignCreateRequest.example.json", schema: "cloud.schema.json#/$defs/campaignCreateRequest" });
 jsonExamples.push({ file: "cloud_campaignReadiness.example.json", schema: "cloud.schema.json#/$defs/campaignReadiness" });
 jsonExamples.push({ file: "cloud_live.example.json", schema: "cloud.schema.json#/$defs/live" });
