@@ -267,6 +267,7 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
             cell["allowed_actions"] = cell["game"]["allowed_actions"] if cell["game"] else (["start"] if cell["status"] != "cancelled" and result["status"] not in {"done", "cancelled"} else [])
         result["readiness"] = readiness(store, result)
         result["allowed_actions"] = [] if result["status"] in {"draft", "done", "cancelled"} else ["run", "pause", "cancel"]
+        result["exports"] = export_entries(campaign_id)
         return result
 
     @app.post("/api/campaigns/{campaign_id}/cells/{cell_index}/start")
@@ -323,7 +324,54 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
 
     @app.get("/api/exports")
     def exports():
-        return store.rows("SELECT exports.*,jobs.kind AS job_kind,jobs.run_id,jobs.cell_index,COALESCE(jobs.campaign_id,CASE WHEN exports.scope='campaign' THEN exports.scope_id END) AS campaign_id FROM exports LEFT JOIN jobs ON exports.scope_id=jobs.job_id ORDER BY exports.created_at")
+        return export_entries()
+
+    def export_entries(campaign_id: str | None = None):
+        rows = store.rows("""SELECT exports.*,jobs.kind AS job_kind,jobs.run_id,jobs.cell_index,
+            COALESCE(jobs.campaign_id,CASE WHEN exports.scope='campaign' THEN exports.scope_id END) AS campaign_id,
+            campaigns.config_json AS campaign_config_json
+            FROM exports LEFT JOIN jobs ON exports.scope='job' AND exports.scope_id=jobs.job_id
+            LEFT JOIN campaigns ON campaigns.campaign_id=COALESCE(jobs.campaign_id,CASE WHEN exports.scope='campaign' THEN exports.scope_id END)
+            WHERE (? IS NULL OR (exports.scope='campaign' AND exports.scope_id=?))
+            ORDER BY exports.created_at DESC,exports.export_id DESC""", (campaign_id, campaign_id))
+        for row in rows:
+            config_json = row.pop("campaign_config_json")
+            campaign_name = json.loads(config_json).get("study_label") if config_json else None
+            if row["scope"] == "campaign":
+                row["display_name"] = campaign_name or row["scope_id"]
+                row["run_kind"] = "campaign"
+                row["source_url"] = "/campaigns/" + row["scope_id"]
+            else:
+                row["run_kind"] = row["job_kind"]
+                if row["job_kind"] == "campaign":
+                    number = row["cell_index"] + 1 if row["cell_index"] is not None else ""
+                    row["display_name"] = f"Game {number}" + (f" · {campaign_name}" if campaign_name else "")
+                else:
+                    row["display_name"] = "Model test" if row["job_kind"] == "smoke" else "Single game"
+                row["source_url"] = "/games/" + row["scope_id"]
+            row["download_url"] = "/api/exports/" + row["export_id"] + "/download"
+        return rows
+
+    @app.get("/api/dashboard")
+    def dashboard():
+        groups = store.rows("SELECT kind,status,COUNT(*) AS count FROM jobs WHERE archived=0 GROUP BY kind,status")
+        totals = {"games": sum(g["count"] for g in groups if g["kind"] == "single"),
+                  "tests": sum(g["count"] for g in groups if g["kind"] == "smoke"),
+                  "campaigns": store.rows("SELECT COUNT(*) AS count FROM campaigns")[0]["count"],
+                  "exports": store.rows("SELECT COUNT(*) AS count FROM exports")[0]["count"]}
+        activity = {name: sum(g["count"] for g in groups if g["status"] == name)
+                    for name in ("running", "queued", "paused", "finalizing", "recovering")}
+        recent_jobs = store.rows("SELECT job_id FROM jobs WHERE archived=0 ORDER BY created_at DESC,job_id DESC LIMIT 6")
+        recent_campaigns = store.rows("SELECT campaign_id FROM campaigns ORDER BY frozen_at DESC,campaign_id DESC LIMIT 4")
+        preflight_report = store.state("preflight")
+        connection = {key: preflight_report[key] for key in ("passed", "created_at") if key in preflight_report} if preflight_report else None
+        return {"totals": totals, "activity": activity,
+                "recent_jobs": [detail(row["job_id"]) for row in recent_jobs],
+                "recent_campaigns": [campaign(row["campaign_id"]) for row in recent_campaigns],
+                "recent_exports": export_entries()[:6],
+                "status": {"active_workers": activity["running"], "account_stop": store.state("account_stop"),
+                           "drain": store.state("drain", False), "free_disk": shutil.disk_usage(store.root).free,
+                           "preflight": connection}}
 
     @app.get("/api/exports/{export_id}/download")
     def download(export_id: str):

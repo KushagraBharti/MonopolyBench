@@ -61,6 +61,34 @@ export interface CloudCampaign {
   config_sha256?: string; git_sha?: string; image_digest?: string; created_at?: number
   readiness?: CampaignReadiness
   cells: CampaignCell[]
+  /** Campaign snapshot packages prepared so far, scope 'campaign'. */
+  exports?: CloudExport[]
+}
+/**
+ * GET /api/exports row. `path` is a server path and must not be displayed.
+ * Campaign packages are snapshots: they hold the finished games available when prepared, plus the manifest.
+ */
+export interface CloudExport {
+  export_id: string; scope: 'job' | 'campaign'; scope_id: string; revision: number
+  kind: 'completed' | 'diagnostic' | 'campaign'; bytes: number; created_at: number
+  job_kind: string | null; run_id: string | null; campaign_id: string | null; cell_index?: number | null
+  manifest_sha256: string; path?: string
+  display_name?: string; download_url?: string; run_kind?: 'single' | 'smoke' | 'campaign' | null; source_url?: string
+}
+export interface CloudPreflightState { passed: boolean; created_at?: number }
+/** GET /api/status */
+export interface CloudStatus {
+  demo: boolean; account_stop: unknown; drain?: boolean; free_disk: number; active_workers: number
+  cost: { known_total: number }; preflight: CloudPreflightState | null
+}
+/** GET /api/dashboard. Totals and activity are counted over all rows; recent lists are short samples. */
+export interface CloudDashboard {
+  totals: { games: number; campaigns: number; tests: number; exports: number }
+  activity: { running: number; queued: number; paused: number; finalizing: number; recovering: number }
+  recent_jobs: CloudJob[]
+  recent_campaigns: CloudCampaign[]
+  recent_exports: CloudExport[]
+  status: { active_workers: number; account_stop: unknown; drain: boolean; free_disk: number; preflight: CloudPreflightState | null }
 }
 /** POST /api/campaigns/prepare: persisted seed draw, no games or provider calls. */
 export interface CampaignPrepareRequest { name: string; seed_blocks: number; concurrency: number; cost_budget?: number | null }

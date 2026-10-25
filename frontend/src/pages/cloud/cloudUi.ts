@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cloudRequest, type CampaignCell, type CloudCampaign, type CloudJob } from '@/net/jobs'
+import { CLOUD_API, cloudRequest, type CampaignCell, type CloudCampaign, type CloudExport, type CloudJob } from '@/net/jobs'
 
 /** Polls a cloud endpoint. `replace` accepts a mutation response and discards older in-flight polls. */
 export function usePoll<T>(path: string) {
@@ -171,4 +171,70 @@ export function settingsLine(config: { players: { reasoning: { effort: string } 
     config.max_turns == null ? 'Full game, no turn limit' : `${config.max_turns} turn limit`,
     config.cost_budget == null ? 'No spend pause' : `Pauses at ${money(config.cost_budget)} recorded spend`,
   ].join(' · ')
+}
+
+
+/** Where a job belongs in the workspace: model tests, standalone games, or a campaign. */
+export function jobHome(job: Pick<CloudJob, 'kind' | 'campaign_id'>): { href: string; label: string } {
+  if (job.kind === 'smoke') return { href: '/tests', label: 'Tests' }
+  if (job.kind === 'campaign' && job.campaign_id) return { href: `/campaigns/${encodeURIComponent(job.campaign_id)}`, label: 'Back to campaign' }
+  if (job.kind === 'campaign') return { href: '/campaigns', label: 'Campaigns' }
+  return { href: '/games', label: 'Games' }
+}
+
+/** Server times are Unix seconds. */
+export function when(seconds: number | null | undefined) {
+  if (seconds == null) return '—'
+  return new Date(seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+export function fileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+}
+
+export type ExportGroup = 'single' | 'smoke' | 'campaign'
+/** Campaign snapshots and campaign games both group under campaigns. */
+export function exportGroup(item: CloudExport): ExportGroup | null {
+  if (item.scope === 'campaign') return 'campaign'
+  const kind = item.run_kind ?? item.job_kind
+  return kind === 'single' || kind === 'smoke' || kind === 'campaign' ? kind : null
+}
+
+export function exportKindLabel(item: CloudExport) {
+  if (item.scope === 'campaign') return 'Campaign snapshot'
+  return item.kind === 'diagnostic' ? 'Diagnostic package (game stopped early)' : 'Finished game package'
+}
+
+export function exportName(item: CloudExport) {
+  if (item.display_name) return item.display_name
+  if (item.scope === 'campaign') return `Campaign snapshot ${item.revision}`
+  const group = exportGroup(item)
+  if (group === 'smoke') return `Model test ${item.run_id ?? item.scope_id}`
+  if (group === 'campaign') return typeof item.cell_index === 'number' ? `Campaign game ${item.cell_index + 1}` : 'Campaign game'
+  return `Game ${item.run_id ?? item.scope_id}`
+}
+
+/** Authenticated download through the session cookie; no token needed. */
+export function exportDownload(item: Pick<CloudExport, 'export_id'>) {
+  return `${CLOUD_API}/exports/${encodeURIComponent(item.export_id)}/download`
+}
+
+export function exportSource(item: CloudExport): { href: string; label: string } | null {
+  if (item.source_url?.startsWith('/')) return { href: item.source_url, label: item.scope === 'campaign' ? 'Open campaign' : 'Open game' }
+  if (item.scope === 'campaign') return { href: `/campaigns/${encodeURIComponent(item.scope_id)}`, label: 'Open campaign' }
+  return { href: `/games/${encodeURIComponent(item.scope_id)}`, label: 'Open game' }
+}
+
+export function newestFirst<T extends { created_at?: number }>(items: T[]) {
+  return [...items].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+}
+
+const TERMINAL = new Set(['completed', 'failed', 'cancelled'])
+/** Why a game's download isn't offered yet. Null when it is ready. */
+export function downloadWait(job: Pick<CloudJob, 'status' | 'export_status'>) {
+  if (job.export_status === 'ready') return null
+  return TERMINAL.has(job.status) || job.status === 'finalizing' ? 'Download is being prepared.' : 'Download available after the game finishes.'
 }

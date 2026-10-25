@@ -3,6 +3,51 @@
   "$id": "cloud.schema.json",
   "title": "Cloud runner v1 contracts",
   "$defs": {
+    "workspaceCount": {"type": "integer", "minimum": 0},
+    "exportEntry": {
+      "type": "object",
+      "required": ["export_id", "scope", "scope_id", "revision", "kind", "bytes", "created_at", "manifest_sha256", "display_name", "download_url", "source_url", "run_kind"],
+      "properties": {
+        "export_id": {"type": "string"},
+        "scope": {"enum": ["job", "campaign"]},
+        "scope_id": {"type": "string"},
+        "revision": {"type": "integer", "minimum": 1},
+        "kind": {"enum": ["completed", "diagnostic", "campaign"]},
+        "bytes": {"$ref": "#/$defs/workspaceCount"},
+        "created_at": {"type": "number"},
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "display_name": {"type": "string"},
+        "download_url": {"type": "string", "pattern": "^/api/exports/"},
+        "source_url": {"type": "string", "pattern": "^/(games|campaigns)/"},
+        "run_kind": {"enum": ["single", "smoke", "campaign", null]}
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "required": ["totals", "activity", "recent_jobs", "recent_campaigns", "recent_exports", "status"],
+      "properties": {
+        "totals": {
+          "type": "object", "required": ["games", "campaigns", "tests", "exports"],
+          "additionalProperties": {"$ref": "#/$defs/workspaceCount"}
+        },
+        "activity": {
+          "type": "object", "required": ["running", "queued", "paused", "finalizing", "recovering"],
+          "additionalProperties": {"$ref": "#/$defs/workspaceCount"}
+        },
+        "recent_jobs": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/job"}},
+        "recent_campaigns": {"type": "array", "maxItems": 4, "items": {"type": "object", "required": ["campaign_id", "status", "cells", "exports"]}},
+        "recent_exports": {"type": "array", "maxItems": 6, "items": {"$ref": "#/$defs/exportEntry"}},
+        "status": {
+          "type": "object", "required": ["active_workers", "account_stop", "drain", "free_disk", "preflight"],
+          "properties": {
+            "active_workers": {"$ref": "#/$defs/workspaceCount"},
+            "drain": {"type": "boolean"},
+            "free_disk": {"$ref": "#/$defs/workspaceCount"},
+            "preflight": {"anyOf": [{"type": "null"}, {"type": "object", "required": ["passed"], "properties": {"passed": {"type": "boolean"}, "created_at": {"type": "number"}}}]}
+          }
+        }
+      }
+    },
     "campaignPrepareRequest": {
       "type": "object",
       "additionalProperties": false,

@@ -187,6 +187,7 @@ const jsonExamples = [
 ];
 
 jsonExamples.push({ file: "cloud_job.example.json", schema: "cloud.schema.json#/$defs/job" });
+jsonExamples.push({ file: "cloud_exportEntry.example.json", schema: "cloud.schema.json#/$defs/exportEntry" });
 jsonExamples.push({ file: "cloud_campaignPrepareRequest.example.json", schema: "cloud.schema.json#/$defs/campaignPrepareRequest" });
 jsonExamples.push({ file: "cloud_singleGamePrepareRequest.example.json", schema: "cloud.schema.json#/$defs/singleGamePrepareRequest" });
 jsonExamples.push({ file: "cloud_smokePrepareRequest.example.json", schema: "cloud.schema.json#/$defs/smokePrepareRequest" });

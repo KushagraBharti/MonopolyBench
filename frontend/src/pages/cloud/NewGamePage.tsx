@@ -153,13 +153,21 @@ export function GameSetup({ mode, onStarted, onCancel }: { mode: Mode; onStarted
   </form>
 }
 
-export function NewGamePage() {
-  return <Shell>
+export function NewGamePage({ mode = 'single' }: { mode?: Mode }) {
+  if (mode === 'smoke') return <Shell section="tests">
     <div className="cb-page cb-wizard">
-      <a className="cb-back" href="/">Games</a>
-      <h1>Run one game</h1>
+      <a className="cb-back" href="/tests">Tests</a>
+      <h1>New model test</h1>
+      <p className="cb-lede">Short games of 5 to 10 turns, to check that every model responds. Tests are excluded from research and are separate from campaigns.</p>
+      <GameSetup mode="smoke" onCancel={() => window.location.assign('/tests')} onStarted={jobs => window.location.assign(jobs.length === 1 ? `/games/${jobs[0].job_id}` : '/tests')} />
+    </div>
+  </Shell>
+  return <Shell section="games">
+    <div className="cb-page cb-wizard">
+      <a className="cb-back" href="/games">Games</a>
+      <h1>New game</h1>
       <p className="cb-lede">Pick any four models and settings, review, then start. For a balanced study where every model plays every seat, <a href="/campaigns/new">create a campaign</a> instead.</p>
-      <GameSetup mode="single" onCancel={() => window.location.assign('/')} onStarted={jobs => window.location.assign(jobs[0] ? `/games/${jobs[0].job_id}` : '/')} />
+      <GameSetup mode="single" onCancel={() => window.location.assign('/games')} onStarted={jobs => window.location.assign(jobs[0] ? `/games/${jobs[0].job_id}` : '/games')} />
     </div>
   </Shell>
 }

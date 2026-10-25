@@ -3,36 +3,39 @@ import { cloudRequest, type CampaignCell } from '@/net/jobs'
 import { cellStatus, errorText, modelInfo, parseBudget, type Tone } from './cloudUi'
 import '../cloud.css'
 
-const NAV = [
-  { href: '/', label: 'Games', match: (path: string, search: string) => (path === '/' && !search.includes('archived=true')) || (path.startsWith('/games/') && path !== '/games/new') },
-  { href: '/campaigns', label: 'Campaigns', match: (path: string) => path === '/campaigns' || (path.startsWith('/campaigns/') && path !== '/campaigns/new') },
-]
-const HISTORY = [
-  { href: '/?archived=true', label: 'Archived games' },
-  { href: '/runs', label: 'Saved runs' },
-  { href: '/research', label: 'Research outputs' },
+export type Section = 'dashboard' | 'games' | 'campaigns' | 'tests' | 'exports'
+const NAV: { href: string; label: string; section: Section }[] = [
+  { href: '/', label: 'Dashboard', section: 'dashboard' },
+  { href: '/games', label: 'Games', section: 'games' },
+  { href: '/campaigns', label: 'Campaigns', section: 'campaigns' },
+  { href: '/tests', label: 'Tests', section: 'tests' },
+  { href: '/exports', label: 'Exports', section: 'exports' },
 ]
 
-export function Shell({ children }: { children: ReactNode }) {
-  const { pathname, search } = window.location
+function sectionFor(path: string): Section | null {
+  if (path === '/' || path === '/dashboard') return 'dashboard'
+  for (const item of NAV.slice(1)) if (path === item.href || path.startsWith(item.href + '/')) return item.section
+  return null
+}
+
+/** Workspace frame. `section` overrides the path match, e.g. a model test opened under /games/{id}. */
+export function Shell({ children, section }: { children: ReactNode; section?: Section | null }) {
+  const { pathname } = window.location
+  const current = section ?? sectionFor(pathname)
+  const [menuOpen, setMenuOpen] = useState(false)
   return <div className="cloud-shell">
     <a className="cb-skip" href="#cloud-main">Skip to content</a>
     <aside>
-      <a className="cloud-brand" href="/"><span className="cb-brand-mark" aria-hidden="true" />MonopolyBench</a>
-      <div className="cb-nav-ctas">
-        <a className="cb-btn cb-btn-primary cb-nav-cta" href="/games/new" aria-current={pathname === '/games/new' ? 'page' : undefined}>Run one game</a>
-        <a className="cb-btn cb-btn-secondary cb-nav-cta" href="/campaigns/new" aria-current={pathname === '/campaigns/new' ? 'page' : undefined}>Create campaign</a>
+      <div className="cb-side-top">
+        <a className="cloud-brand" href="/"><span className="cb-brand-mark" aria-hidden="true" />MonopolyBench</a>
+        <button type="button" className="cb-btn cb-btn-ghost cb-menu-toggle" aria-expanded={menuOpen} aria-controls="cloud-menu" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? 'Close menu' : 'Menu'}</button>
       </div>
-      <nav aria-label="Main">
-        {NAV.map(item => <a key={item.href} href={item.href} aria-current={item.match(pathname, search) ? 'page' : undefined}>{item.label}</a>)}
-      </nav>
-      <details className="cb-nav-more" open={HISTORY.some(item => item.href === pathname + search || (item.href !== '/?archived=true' && pathname.startsWith(item.href))) || undefined}>
-        <summary>History and research</summary>
-        <nav aria-label="History and research">
-          {HISTORY.map(item => <a key={item.href} href={item.href}>{item.label}</a>)}
+      <div className="cb-side-menu" id="cloud-menu" data-open={menuOpen || undefined}>
+        <nav aria-label="Main">
+          {NAV.map(item => <a key={item.href} href={item.href} aria-current={item.section === current ? (pathname === item.href || (item.section === 'dashboard' && pathname === '/dashboard') ? 'page' : 'true') : undefined}>{item.label}</a>)}
         </nav>
-      </details>
-      <button className="cb-btn cb-btn-ghost cb-logout" onClick={() => void cloudRequest('/auth/logout', {}).then(() => window.location.assign('/login'))}>Log out</button>
+        <button className="cb-btn cb-btn-ghost cb-logout" onClick={() => void cloudRequest('/auth/logout', {}).then(() => window.location.assign('/login'))}>Log out</button>
+      </div>
     </aside>
     <main id="cloud-main">{children}</main>
   </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { CLOUD_API, cloudRequest, type CloudJob, type CloudCampaign, type CloudLive } from '@/net/jobs'
+import { CLOUD_API, cloudRequest, type CloudJob, type CloudCampaign, type CloudLive, type CloudStatus } from '@/net/jobs'
 import { Board } from '@/components/board/Board'
 import { PlayerStackPanel } from '@/components/panels/PlayerStackPanel'
 import { useGameStore } from '@/state/store'
@@ -10,9 +10,8 @@ import { Inspector } from '@/components/panels/Inspector'
 import { AuctionPanel } from '@/components/panels/AuctionPanel'
 import { TradeInspectorPanel } from '@/components/panels/TradeInspectorPanel'
 import { LlmIoPanel } from '@/components/panels/LlmIoPanel'
-import { CheckConnections, Facts, Notice, SeatTokens, Shell, StatusPill } from './cloud/CloudShell'
-import { ACTION_LABELS, campaignName, duration, errorText, jobStatus, jobTitle, modelInfo, settingsLine, usePoll, waitingText } from './cloud/cloudUi'
-import { TestModelsDialog } from './cloud/NewGamePage'
+import { Facts, Notice, SeatTokens, Shell, StatusPill } from './cloud/CloudShell'
+import { ACTION_LABELS, campaignName, downloadWait, duration, errorText, jobHome, jobStatus, jobTitle, modelInfo, settingsLine, usePoll, waitingText } from './cloud/cloudUi'
 import './cloud.css'
 
 export function LoginPage() {
@@ -75,7 +74,12 @@ function JobCard({ job, campaignNames, onChanged }: { job: CloudJob; campaignNam
     {(turn ?? 0) > 300 ? <p className="cb-flag" data-tone="idle">Long game: over 300 turns.</p> : null}
     {job.outcome ? <p className="cb-outcome">{winner ? `Winner: ${modelInfo(winner.openrouter_model_id).name}` : 'No winner'}{job.outcome.reason ? ` (${job.outcome.reason.toLowerCase().replace(/_/g, ' ')})` : ''}</p> : null}
     {job.pause_reason ? <p className="cb-flag" data-tone="warn">Paused: {job.pause_reason.replace(/_/g, ' ')}</p> : null}
-    <div className="cloud-actions"><a className="cb-btn cb-btn-secondary" href={`/games/${job.job_id}`}>{job.status === 'running' ? 'Watch' : 'Open'}</a><JobControls job={job} onChanged={onChanged} /></div>
+    <div className="cloud-actions">
+      <a className="cb-btn cb-btn-secondary" href={`/games/${job.job_id}`}>{job.status === 'running' ? 'Watch' : 'Open'}</a>
+      {job.export_status === 'ready' ? <a className="cb-btn cb-btn-secondary" href={`${CLOUD_API}/jobs/${job.job_id}/export`}>Download game</a> : null}
+      <JobControls job={job} onChanged={onChanged} />
+    </div>
+    {downloadWait(job) ? <p className="cb-wait">{downloadWait(job)}</p> : null}
     <details className="cb-disclosure cb-disclosure-small">
       <summary>Research details</summary>
       <Facts rows={[
@@ -98,62 +102,74 @@ const FILTERS = [
   { label: 'Finished', status: 'completed' },
 ]
 
-interface CloudStatus { demo: boolean; account_stop: unknown; drain?: boolean; free_disk: number; active_workers: number; cost: { known_total: number }; preflight: { passed: boolean; created_at?: number } | null }
+type ListKind = 'single' | 'smoke'
+const LIST_COPY: Record<ListKind, { base: string; title: string; archivedTitle: string; lede: string; newHref: string; newLabel: string; noun: string; search: string; empty: string; emptyText: string }> = {
+  single: {
+    base: '/games', title: 'Games', archivedTitle: 'Archived games', newHref: '/games/new', newLabel: 'New game', noun: 'game',
+    lede: 'Standalone games with the models and settings you chose. Campaign games live under Campaigns, model tests under Tests.',
+    search: 'Search by model or run ID', empty: 'No games here yet', emptyText: 'Run one game with any four models and settings. Nothing starts until you review and press Start.',
+  },
+  smoke: {
+    base: '/tests', title: 'Model tests', archivedTitle: 'Archived model tests', newHref: '/tests/new', newLabel: 'New test', noun: 'test game',
+    lede: 'Short games of 5 to 10 turns that check every model responds. Tests are excluded from research.',
+    search: 'Search by model or run ID', empty: 'No model tests here yet', emptyText: 'Run a short test to check every model responds before a long game or campaign.',
+  },
+}
 
-export function GamesPage() {
+/** Standalone games (kind single) or model tests (kind smoke). Never mixes in campaign games. */
+export function JobListPage({ kind }: { kind: ListKind }) {
+  const copy = LIST_COPY[kind]
   const [search, setSearch] = useState('')
   const [cursor, setCursor] = useState(0)
-  const [testing, setTesting] = useState(false)
   const params = new URLSearchParams(window.location.search)
   const archived = params.get('archived') === 'true'
   const activeFilter = params.get('status')
-  const query = new URLSearchParams(params)
-  query.set('search', search); query.set('cursor', String(cursor))
+  const query = new URLSearchParams()
+  if (activeFilter) query.set('status', activeFilter)
+  if (archived) query.set('archived', 'true')
+  query.set('kind', kind); query.set('search', search); query.set('cursor', String(cursor))
   const { data, error, refresh } = usePoll<{ jobs: CloudJob[]; next_cursor: number | null }>(`/jobs?${query}`)
   const { data: status, refresh: refreshStatus } = usePoll<CloudStatus>('/status')
   const { data: campaigns } = usePoll<Pick<CloudCampaign, 'campaign_id' | 'display_name'>[]>('/campaigns?summary=true')
   const campaignNames = new Map((campaigns ?? []).map(c => [c.campaign_id, campaignName(c)]))
   const [actionError, setActionError] = useState('')
-  const preflightStale = !status?.preflight?.passed
-  return <Shell>
+  return <Shell section={kind === 'smoke' ? 'tests' : 'games'}>
     <div className="cb-page">
       <header className="cb-page-head">
-        <div><h1>{archived ? 'Archived games' : 'Games'}</h1><p>{status ? `${status.active_workers} ${status.active_workers === 1 ? 'game' : 'games'} playing now.` : ' '}</p></div>
+        <div><h1>{archived ? copy.archivedTitle : copy.title}</h1><p>{copy.lede}</p></div>
+        {!archived ? <a className="cb-btn cb-btn-primary" href={copy.newHref}>{copy.newLabel}</a> : null}
       </header>
-      {!archived ? <section className="cb-start-choices" aria-label="Start something new">
-        <a className="cb-start-choice" href="/games/new">
-          <strong>Run one game</strong>
-          <span>Any four models, any reasoning effort, a full game or a turn limit, and an optional spend pause. Not a balanced study.</span>
-        </a>
-        <a className="cb-start-choice" href="/campaigns/new">
-          <strong>Create campaign</strong>
-          <span>A balanced research study: the four study models rotate through every seat on each board, at fixed settings.</span>
-        </a>
-        <button type="button" className="cb-start-choice" onClick={() => setTesting(true)}>
-          <strong>Test models</strong>
-          <span>Short games of 5 to 10 turns to check every model responds. Excluded from research.</span>
-        </button>
-      </section> : null}
       {status?.demo ? <Notice tone="idle" title="Demo mode" role="status"><p>Games use local mock models. Nothing is charged and nothing counts toward research.</p></Notice> : null}
       {status?.account_stop ? <Notice tone="bad" title="All games are paused" role="alert"><p>OpenRouter stopped accepting requests. Check your key and credits, then resume.</p><button className="cb-btn cb-btn-secondary" onClick={() => void cloudRequest('/resume-all', {}).then(() => { refresh(); refreshStatus() }).catch(e => setActionError(errorText(e)))}>Resume all games</button></Notice> : null}
-      {status && preflightStale ? <Notice tone="warn" title="Model connections need a check"><p>The latest model connection check hasn’t passed. Campaigns can’t be saved or started until a check passes on the current code.</p><CheckConnections onDone={() => refreshStatus()} /></Notice> : null}
       <div className="cb-toolbar">
-        {!archived ? <nav className="cb-segmented" aria-label="Filter games">
-          {FILTERS.map(f => <a key={f.label} href={f.status ? `/?status=${f.status}` : '/'} aria-current={activeFilter === f.status ? 'page' : undefined}>{f.label}</a>)}
-        </nav> : <a className="cb-back" href="/">All games</a>}
-        <label className="cb-search"><span className="cb-sr">Search games</span><input className="cb-input" type="search" value={search} onChange={e => { setSearch(e.target.value); setCursor(0) }} placeholder="Search by model or campaign" /></label>
+        {!archived ? <nav className="cb-segmented" aria-label={`Filter ${copy.title.toLowerCase()}`}>
+          {FILTERS.map(f => <a key={f.label} href={f.status ? `${copy.base}?status=${f.status}` : copy.base} aria-current={activeFilter === f.status ? 'page' : undefined}>{f.label}</a>)}
+          <a href={`${copy.base}?archived=true`}>Archived</a>
+        </nav> : <a className="cb-back" href={copy.base}>All {copy.title.toLowerCase()}</a>}
+        <label className="cb-search"><span className="cb-sr">Search {copy.title.toLowerCase()}</span><input className="cb-input" type="search" value={search} onChange={e => { setSearch(e.target.value); setCursor(0) }} placeholder={copy.search} /></label>
       </div>
       {error || actionError ? <p className="cb-error" role="alert">{error || actionError}</p> : null}
+      {!data && !error ? <p className="cb-meta" role="status">Loading…</p> : null}
       <div className="cloud-grid">{data?.jobs.map(job => <JobCard key={job.job_id} job={job} campaignNames={campaignNames} onChanged={refresh} />)}</div>
-      {data?.jobs.length === 0 ? <div className="cb-empty"><h2>No games here yet</h2><p>Run one game with the settings you choose, or create a campaign to plan a balanced set of research games.</p><div className="cb-actions"><a className="cb-btn cb-btn-primary" href="/games/new">Run one game</a><a className="cb-btn cb-btn-secondary" href="/campaigns/new">Create campaign</a></div></div> : null}
+      {data?.jobs.length === 0 ? <div className="cb-empty">
+        <h2>{search ? `No ${copy.noun}s match “${search}”` : archived ? `No archived ${copy.noun}s` : activeFilter ? `No ${copy.noun}s with this status` : copy.empty}</h2>
+        {!search && !archived && !activeFilter ? <><p>{copy.emptyText}</p><a className="cb-btn cb-btn-primary" href={copy.newHref}>{copy.newLabel}</a></> : null}
+      </div> : null}
       {cursor > 0 || data?.next_cursor != null ? <div className="cb-actions"><button className="cb-btn cb-btn-ghost" disabled={cursor === 0} onClick={() => setCursor(Math.max(0, cursor - 50))}>Previous</button><button className="cb-btn cb-btn-ghost" disabled={data?.next_cursor == null} onClick={() => setCursor(data?.next_cursor ?? 0)}>Next</button></div> : null}
       {status ? <details className="cb-disclosure cb-disclosure-small">
         <summary>Workspace details</summary>
-        <Facts rows={[['Recorded spend', `$${status.cost.known_total.toFixed(2)}`], ['Free disk', `${(status.free_disk / 1e9).toFixed(1)} GB`], ['New games', status.drain ? 'Paused for maintenance' : 'Accepted']]} />
+        <Facts rows={[['Playing now', status.active_workers], ['Recorded spend, all runs', `$${status.cost.known_total.toFixed(2)}`], ['Free disk', `${(status.free_disk / 1e9).toFixed(1)} GB`], ['New games', status.drain ? 'Paused for maintenance' : 'Accepted']]} />
       </details> : null}
-      {testing ? <TestModelsDialog close={() => setTesting(false)} onLaunched={refresh} /> : null}
     </div>
   </Shell>
+}
+
+export function GamesPage() {
+  return <JobListPage kind="single" />
+}
+
+export function TestsPage() {
+  return <JobListPage kind="smoke" />
 }
 
 export function GamePage() {
@@ -213,8 +229,9 @@ export function GamePage() {
   const current = snapshot?.run_id === job?.run_id ? snapshot : job?.snapshot
   const [statusLabel, statusTone] = jobStatus(job?.status)
   const campaignHref = job?.campaign_id ? `/campaigns/${encodeURIComponent(job.campaign_id)}` : null
-  return <Shell><div className="cb-game-head">
-    {campaignHref ? <a className="cb-back" href={campaignHref}>Back to campaign</a> : <a className="cb-back" href="/">Games</a>}
+  const home = job ? jobHome(job) : null
+  return <Shell section={job ? (job.kind === 'smoke' ? 'tests' : job.kind === 'campaign' ? 'campaigns' : 'games') : null}><div className="cb-game-head">
+    {home ? <a className="cb-back" href={home.href}>{home.label}</a> : <a className="cb-back" href="/games">Games</a>}
     <h1>{job ? jobTitle(job) : 'Loading game…'}</h1>
     {job ? <p className="cb-game-status"><StatusPill label={statusLabel} tone={statusTone} /><span className="cb-meta" role="status">{connected ? 'Live' : 'Reconnecting…'}</span>{current ? <span className="cb-meta">Turn {current.turn_index}</span> : null}</p> : null}
     {job ? <SeatTokens models={job.config.players.map(p => p.openrouter_model_id)} labelled /> : null}
@@ -222,6 +239,7 @@ export function GamePage() {
     {job?.snapshot_kind === 'initial_preview' && !snapshot ? <p className="cb-hint">Starting board. The first saved move will appear here when the game begins.</p> : null}
     {job?.pause_reason && job.status === 'paused' ? <p className="cb-flag" data-tone="warn">Paused: {job.pause_reason.replace(/_/g, ' ')}</p> : null}
     {job ? <div className="cb-game-controls"><JobActions job={job} onChanged={replace} />{campaignHref ? <a className="cb-btn cb-btn-ghost" href={campaignHref}>All campaign games</a> : null}</div> : null}
+    {job && downloadWait(job) ? <p className="cb-wait">{downloadWait(job)}</p> : null}
     {job ? <details className="cb-disclosure cb-disclosure-small"><summary>Research details</summary><Facts rows={[['Run ID', <code>{job.run_id}</code>], ['Seed', <code>{job.config.seed}</code>], ['Recorded cost', `$${job.cost.known_total.toFixed(2)}`], ['Replay check', job.replay_status || 'Pending']]} /></details> : null}
   </div>{error || tabError ? <p className="cb-error" role="alert">{error || tabError}</p> : null}<nav className="cloud-tabs">{['Live', 'Decisions', 'Artifacts', 'Replay', 'Analysis'].map(name => <button aria-pressed={tab === name} key={name} onClick={() => { setTab(name); setCursor(0) }}>{name}</button>)}</nav>{tab === 'Live' ? <>{current ? <div className="cloud-live"><Board spaces={current.board} players={current.players} activePlayerId={current.active_player_id} /><PlayerStackPanel /></div> : <div className="cloud-placeholder cloud-placeholder-large">{job ? waitingText(job.status) : 'Loading…'}</div>}<AuctionPanel visible /><TradeInspectorPanel visible /><div className="cloud-live cloud-feed-panels"><EventFeed /><ChatFeed /></div><Inspector /></> : tab === 'Decisions' ? <><div className="cloud-decisions"><LlmIoPanel jobId={id} cursor={cursor} revision={job?.commit_seq} onPageSize={setDecisionPageSize} /></div><button disabled={cursor === 0} onClick={() => setCursor(Math.max(0, cursor-50))}>Previous</button><button disabled={decisionPageSize < 50} onClick={() => setCursor(cursor+50)}>Next</button></> : <><p>{tab === 'Replay' ? `Replay verdict: ${job?.replay_status || 'pending'}` : 'Open an artifact to inspect its contents.'}</p>{Array.isArray(rows) ? rows.filter((r: { path: string }) => tab === 'Replay' ? r.path.includes('replay') : true).map((r: { path: string; bytes: number }) => <p key={r.path}><a href={`${CLOUD_API}/jobs/${id}/artifacts?path=${encodeURIComponent(r.path)}`}>{r.path}</a> · {r.bytes} bytes</p>) : null}{job?.export_status === 'ready' ? <a href={`${CLOUD_API}/jobs/${id}/export`}>Download game with analysis</a> : null}</>}</Shell>
 }

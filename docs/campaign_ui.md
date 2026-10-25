@@ -13,8 +13,19 @@ source identity, model-check freshness, maintenance/account stops and disk reser
 An old campaign remains inspectable when a code update prevents it from starting.
 Nothing automatically migrates or re-freezes its records.
 
-The games dashboard requests `/api/campaigns?summary=true` for campaign names,
-so its refreshes do not repeatedly download every embedded research record.
+The Dashboard summarizes all saved games, campaigns, tests and exports, with
+recent activity and workspace readiness. Its totals are counted across the
+database, independently of list pagination. Games lists standalone runs only;
+Tests lists short model checks; campaign games stay in their parent campaign.
+The sidebar links to Dashboard, Games, Campaigns, Tests and Exports. List pages
+request `/api/campaigns?summary=true` for names without embedded research records.
+
+Exports is the authenticated download library for completed game packages,
+diagnostic packages and campaign snapshots. A campaign's visible download controls
+prepare a revisioned snapshot and retain links after refresh. Snapshots taken
+before every game finishes preserve the current records; they do not imply final
+game packages exist. Earlier revisions remain downloadable in Research details.
+Preparing or downloading a snapshot never starts a game or calls a provider.
 
 `POST /api/campaigns/prepare` accepts `name`, `seed_blocks`, `concurrency` and an
 optional shared `cost_budget` recorded-spend pause threshold.

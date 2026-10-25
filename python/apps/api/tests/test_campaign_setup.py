@@ -3,31 +3,12 @@ import hashlib
 import json
 import time
 
-from fastapi.testclient import TestClient
 import pytest
 
-from monopoly_api.jobs_api import create_cloud_app
 from monopoly_arena.cloud_campaign import enqueue_cells
 from monopoly_arena.job_store import encode
 from monopoly_arena.worker import build_identity
 from monopoly_telemetry.export import unpack_verified
-
-
-@pytest.fixture
-def setup_client(tmp_path, monkeypatch):
-    monkeypatch.setenv("MB_DASHBOARD_PASSWORD", "test-password")
-    monkeypatch.setenv("MB_SESSION_SECRET", "s" * 64)
-    monkeypatch.setenv("MB_EXPORT_TOKEN", "test-export")
-    monkeypatch.delenv("MB_DEMO", raising=False)
-    identity = tmp_path / "identity.json"
-    identity.write_text(json.dumps({"git_sha": "preview", "image_digest": "preview-image"}))
-    monkeypatch.setenv("MB_BUILD_INFO", str(identity))
-    app = create_cloud_app(tmp_path / "data")
-    store = app.state.store
-    store.set_state("preflight", {"passed": True, "created_at": time.time(), **build_identity()})
-    with TestClient(app, base_url="https://testserver") as client:
-        client.post("/api/auth/login", json={"password": "test-password"})
-        yield client, store, identity
 
 
 def prepare(client, **overrides):

@@ -1,8 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { CLOUD_API, cloudRequest, type CampaignCell, type CloudCampaign, type CloudJob } from '@/net/jobs'
+import { cloudRequest, type CampaignCell, type CloudCampaign, type CloudJob, type CloudStatus } from '@/net/jobs'
 import { Board } from '@/components/board/Board'
 import { CheckConnections, Facts, GameTiles, Notice, SeatTokens, Shell, StatusPill } from './CloudShell'
-import { ACTION_LABELS, boardNumbers, campaignName, campaignStatus, cellCounts, cellJobId, cellStatus, duration, errorText, money, needsConnectionCheck, settingsLine, usePoll, waitingText } from './cloudUi'
+import { ACTION_LABELS, boardNumbers, campaignName, campaignStatus, cellCounts, cellJobId, cellStatus, duration, errorText, exportDownload, fileSize, money, needsConnectionCheck, newestFirst, settingsLine, usePoll, waitingText, when } from './cloudUi'
 
 export function CampaignsRoute() {
   const id = window.location.pathname.split('/')[2]
@@ -11,6 +11,7 @@ export function CampaignsRoute() {
 
 function CampaignListPage() {
   const { data, error } = usePoll<CloudCampaign[]>('/campaigns')
+  const { data: status, refresh: refreshStatus } = usePoll<CloudStatus>('/status')
   const campaigns = (data ?? []).map(c => ({ ...c, cells: c.cells ?? [] }))
   const saved = campaigns.filter(c => c.status !== 'draft')
   const drafts = campaigns.filter(c => c.status === 'draft')
@@ -20,6 +21,7 @@ function CampaignListPage() {
         <div><h1>Campaigns</h1><p>A campaign is a planned set of research games, saved before anything is played.</p></div>
         <a className="cb-btn cb-btn-primary" href="/campaigns/new">Create campaign</a>
       </header>
+      {status && !status.preflight?.passed ? <Notice tone="warn" title="Model connections need a check"><p>The latest model connection check hasn’t passed. Campaigns can’t be saved or started until a check passes on the current code.</p><CheckConnections onDone={() => refreshStatus()} /></Notice> : null}
       {error ? <p className="cb-error" role="alert">{error}</p> : null}
       {data && saved.length === 0 ? <div className="cb-empty"><h2>No saved campaigns yet</h2><p>Create one to choose how many games to play. You’ll review it before saving, and games only start when you say so.</p><a className="cb-btn cb-btn-primary" href="/campaigns/new">Create campaign</a></div> : null}
       <div className="cb-campaign-grid">
@@ -56,20 +58,25 @@ function CampaignDetailPage({ id }: { id: string }) {
   const [busy, setBusy] = useState('')
   const [confirming, setConfirming] = useState<'' | 'run' | 'cancel'>('')
   const [exportId, setExportId] = useState('')
+  const [exportError, setExportError] = useState('')
   const lock = useRef(false)
   const startButton = useRef<HTMLButtonElement>(null)
   const justSaved = new URLSearchParams(window.location.search).get('saved') === '1'
 
   async function act(action: 'run' | 'pause' | 'cancel' | 'freeze' | 'export') {
     if (lock.current) return
-    lock.current = true; setBusy(action); setActionError('')
+    lock.current = true; setBusy(action)
+    if (action === 'export') { setExportError(''); setExportId('') } else setActionError('')
     try {
       const result = await cloudRequest<CloudCampaign & { export_id?: string }>(`${path}/${action}`, {})
-      if (action === 'export' && result.export_id) setExportId(result.export_id)
-      else if (Array.isArray(result?.cells)) replace(result)
+      if (action === 'export') {
+        if (result?.export_id) setExportId(result.export_id)
+        else setExportError('The server didn’t return a snapshot to download. Try again.')
+      } else if (Array.isArray(result?.cells)) replace(result)
       refresh()
     } catch (e) {
-      setActionError(errorText(e))
+      if (action === 'export') setExportError(errorText(e))
+      else setActionError(errorText(e))
       refresh()
     } finally {
       lock.current = false; setBusy(''); setConfirming('')
@@ -100,12 +107,29 @@ function CampaignDetailPage({ id }: { id: string }) {
   const budget = typeof campaign.config?.cost_budget === 'number' ? campaign.config.cost_budget : null
   const startCount = counts.notStarted === counts.total ? `all ${counts.total}` : `the remaining ${counts.notStarted}`
   const ordered = [...campaign.cells].sort((a, b) => a.cell_index - b.cell_index)
+  const snapshots = newestFirst(campaign.exports ?? [])
+  // A snapshot prepared on this page may not be in the polled list yet.
+  const latest = snapshots.find(e => e.export_id === exportId) ?? snapshots[0] ?? null
+  const freshId = exportId && latest?.export_id !== exportId ? exportId : ''
 
   return <Shell>
     <div className="cb-page">
       <a className="cb-back" href="/campaigns">Campaigns</a>
       <header className="cb-page-head">
         <div><h1>{campaignName(campaign)}</h1><StatusPill label={label} tone={tone} /></div>
+        {campaign.status !== 'draft' ? <section className="cb-export-bar" aria-labelledby="snapshot-title">
+          <h2 id="snapshot-title" className="cb-sr">Campaign download</h2>
+          <div className="cb-actions">
+            {freshId ? <a className="cb-btn cb-btn-primary" href={exportDownload({ export_id: freshId })} download>Download snapshot</a>
+              : latest ? <a className="cb-btn cb-btn-secondary" href={exportDownload(latest)} download>Download snapshot</a> : null}
+            <button className="cb-btn cb-btn-ghost" disabled={Boolean(busy)} onClick={() => void act('export')}>{busy === 'export' ? 'Preparing snapshot…' : latest || freshId ? 'Prepare new snapshot' : 'Prepare snapshot'}</button>
+          </div>
+          <p className="cb-meta" role="status" aria-live="polite">{busy === 'export' ? 'Packaging the finished games and the campaign manifest…'
+            : freshId || (exportId && latest?.export_id === exportId) ? 'Snapshot ready to download.'
+            : latest ? `Latest snapshot ${when(latest.created_at)} · ${fileSize(latest.bytes)}` : ''}</p>
+          <p className="cb-hint">A snapshot holds the finished games available when it’s prepared, plus the campaign manifest. Games still playing or not started aren’t included in full.</p>
+          {exportError ? <p className="cb-error" role="alert">Couldn’t prepare the snapshot: {exportError}</p> : null}
+        </section> : null}
       </header>
       {justSaved && campaign.status === 'frozen' && counts.notStarted === counts.total
         ? <Notice tone="done" title="Campaign saved" role="status"><p>No games have started. Start them all below, or start a single game from its card.</p></Notice> : null}
@@ -199,10 +223,11 @@ function CampaignDetailPage({ id }: { id: string }) {
           <thead><tr><th scope="col">Order</th><th scope="col">Cell</th><th scope="col">Seed</th><th scope="col">Run ID</th><th scope="col">Technical reruns</th></tr></thead>
           <tbody>{[...campaign.cells].sort((a, b) => a.execution_rank - b.execution_rank).map(cell => <tr key={cell.cell_index}><td>{cell.execution_rank + 1}</td><td>{cell.cell_index}</td><td><code>{cell.seed}</code></td><td><code>{cell.run_id ?? '—'}</code></td><td>{cell.rerun_count}</td></tr>)}</tbody>
         </table></div> : null}
-        {campaign.status !== 'draft' ? <div className="cb-actions">
-          <button className="cb-btn cb-btn-ghost" disabled={Boolean(busy)} onClick={() => void act('export')}>{busy === 'export' ? 'Preparing download…' : 'Prepare campaign download'}</button>
-          {exportId ? <a className="cb-btn cb-btn-secondary" href={`${CLOUD_API}/exports/${exportId}/download`}>Download campaign</a> : null}
-        </div> : null}
+        {snapshots.length ? <div className="cb-table-wrap"><table className="cb-table cb-table-compact">
+          <caption>Snapshots prepared</caption>
+          <thead><tr><th scope="col">Revision</th><th scope="col">Prepared</th><th scope="col">Size</th><th scope="col">Manifest</th><th scope="col"><span className="cb-sr">Download</span></th></tr></thead>
+          <tbody>{snapshots.map(e => <tr key={e.export_id}><td>{e.revision}</td><td>{when(e.created_at)}</td><td>{fileSize(e.bytes)}</td><td><code>{e.manifest_sha256.slice(0, 12)}</code></td><td><a href={exportDownload(e)} download>Download</a></td></tr>)}</tbody>
+        </table></div> : null}
       </details>
     </div>
   </Shell>
