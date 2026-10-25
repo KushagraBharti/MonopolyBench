@@ -163,6 +163,15 @@ def _aggregate_usage(
         player_id = str(row.get("player_id") or "unknown")
         _accumulate_group(by_model, model_id, row)
         _accumulate_group(by_player, player_id, row)
+    # Known spend per group comes from attempts: a decision with one unknown call has no cost.
+    for group in (*by_model.values(), *by_player.values()):
+        group["known_cost_subtotal"] = 0.0
+    for row in attempt_rows:
+        if isinstance(row.get("cost"), (int, float)):
+            for target, key in ((by_model, str(row.get("openrouter_model_id") or "unknown")),
+                                (by_player, str(row.get("player_id") or "unknown"))):
+                group = target.setdefault(key, {"decision_count": 0, **_zero_totals(), "known_cost_subtotal": 0.0})
+                group["known_cost_subtotal"] = round(group["known_cost_subtotal"] + float(row["cost"]), 10)
     totals = _totals(decision_rows)
     if not attempt_rows:
         totals["cost"] = 0.0  # No provider calls is known zero spending, not missing usage.

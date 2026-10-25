@@ -286,9 +286,10 @@ def test_model_detail_keeps_unknown_cost_unknown(tmp_path, second_cost) -> None:
     for run_id, cost in (("run-a", 0.5), ("run-b", second_cost)):
         run_files = init_run_files(tmp_path, run_id)
         run_files.scorecard_path.write_text(json.dumps({"players": [{"openrouter_model_id": "test/model", "winner": False}]}))
-        row = {"total_tokens": 10, **({"cost": cost} if cost is not None else {"cost": None})}
+        # A partially accounted run keeps its known spend in known_cost_subtotal.
+        row = {"total_tokens": 10, "cost": cost, "known_cost_subtotal": 0.1 if cost is None else cost}
         run_files.usage_path.write_text(json.dumps({"by_model": {"test/model": row}}))
     detail = manager.get_model("test__model")
     assert detail is not None and detail["game_count"] == 2
-    assert detail["known_cost_subtotal"] == 0.5 + (second_cost or 0)
+    assert detail["known_cost_subtotal"] == pytest.approx(0.5 + (0.1 if second_cost is None else second_cost))
     assert detail["total_cost"] == (None if second_cost is None else 0.75)

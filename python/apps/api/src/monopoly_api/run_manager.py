@@ -542,8 +542,9 @@ class RunManager:
                     final_net_worth_values.append(float(player["final_net_worth_estimate"]))
             by_model = _dict(usage.get("by_model"))
             usage_row = _dict(by_model.get(target_model_id))
+            known = usage_row.get("known_cost_subtotal", usage_row.get("cost"))
+            known_cost_subtotal += float(known) if isinstance(known, (int, float)) else 0.0
             if isinstance(usage_row.get("cost"), (int, float)):
-                known_cost_subtotal += float(usage_row["cost"])
                 if total_cost is not None:
                     total_cost += float(usage_row["cost"])
             else:
