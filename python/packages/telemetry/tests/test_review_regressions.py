@@ -92,3 +92,27 @@ def test_unknown_record_rejects_repair_before_any_bytes_change(tmp_path, journal
     with pytest.raises(ValueError, match="Unknown"):
         repair_committed_tails(files)
     assert {path: path.read_bytes() for path in paths} == before
+
+
+@pytest.mark.parametrize("second_cost", [0.3, None])
+def test_summary_total_cost_is_unknown_when_any_call_cost_is_missing(second_cost):
+    from monopoly_telemetry.summary import _build_decision_stats
+    usage = [{"cost": 0.2, "prompt_tokens": 5, "completion_tokens": 1},
+             {"prompt_tokens": 5, "completion_tokens": 1} if second_cost is None else
+             {"cost": second_cost, "prompt_tokens": 5, "completion_tokens": 1}]
+    decisions = [{"phase": "decision_resolved", "attempts": [{"raw_response": {"usage": row}}]} for row in usage]
+    _, token_usage = _build_decision_stats(decisions)
+    assert token_usage is not None
+    assert token_usage["known_cost_subtotal"] == 0.2 + (second_cost or 0)
+    assert token_usage["total_cost"] == (None if second_cost is None else round(0.2 + second_cost, 6))
+
+
+def test_manifest_ignores_hidden_interrupted_write_and_lock_files(tmp_path):
+    from monopoly_telemetry.run_files import build_artifact_manifest
+    files = init_run_files(tmp_path, "hidden")
+    files.write_event({"seq": 1, "type": "EXPECTED"})
+    (files.run_dir / ".writer.lock").write_text("")
+    (files.snapshots_dir / ".write-interrupted").write_text("partial")
+    listed = {entry["relative_path"] for entry in build_artifact_manifest(files)["artifacts"]}
+    assert "events.jsonl" in listed
+    assert not any(name.rsplit("/", 1)[-1].startswith(".") for name in listed)

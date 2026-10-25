@@ -158,8 +158,9 @@ Their prior reported replay exceptions (R191 provenance and R166/R172 duplicate
 starts), missing usage, and incomplete source hashes remain visible. No historical
 run, scorecard, manuscript, or archive is rewritten. Replaying old games under v2
 can diverge because the engine rules changed; use their original executable when
-assessing historical replay. Unexecuted studies, power calculations, release PDFs
-and supplement packages are not made complete by software repairs.
+assessing historical replay (the last pre-v2 engine is `main` at `2547c83d`).
+Unexecuted studies, power calculations, release PDFs and supplement packages are
+not made complete by software repairs.
 
 Both verification wrappers now include microbench tests and the Windows TUI typing
 issue is fixed. See `audit_validation.json` for measured smoke results. New paid

@@ -297,7 +297,8 @@ def build_artifact_manifest(run_files: RunFiles) -> dict[str, Any]:
         artifacts.append(_artifact_entry(label, run_files.run_dir, path))
     known = {path for _, path in known_paths}
     for path in sorted(run_files.run_dir.rglob("*")):
-        if path.is_file() and path not in known and path.name != "completion.json":
+        # Hidden files are interrupted-write temporaries or locks, never canonical evidence.
+        if path.is_file() and path not in known and path.name != "completion.json" and not path.name.startswith("."):
             artifacts.append(_artifact_entry(str(path.relative_to(run_files.run_dir)), run_files.run_dir, path))
     return {
         "schema_version": "v1",

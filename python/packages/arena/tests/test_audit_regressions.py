@@ -583,3 +583,53 @@ def test_recovery_resumes_exact_committed_turn_boundary(completed_run, boundary)
     starts = [row["decision_id"] for row in load_jsonl(files.decisions_path) if row["phase"] == "decision_started"]
     assert len(starts) == len(set(starts))
     assert _completed_run_exists(files.run_dir)
+
+
+def test_recovered_terminal_run_persists_game_over_snapshot(completed_run):
+    files = completed_run
+    terminal_turn = load_jsonl(files.events_path)[-1]["turn_index"]
+    def terminal_snapshots():
+        return [path for path in files.snapshots_dir.glob(f"turn_{terminal_turn:04d}*.json")
+                if json.loads(path.read_text())["phase"] == "GAME_OVER"]
+    before = {path.name: path.read_bytes() for path in files.snapshots_dir.glob("*.json")}
+    assert terminal_snapshots()
+    # Interrupted after the terminal commit: every journal is complete, the snapshot is not.
+    for path in terminal_snapshots():
+        path.unlink()
+    files.write_artifact_manifest()
+    assert not _completed_run_exists(files.run_dir)
+    config = json.loads(files.run_config_path.read_text())
+    players = [build_single_player_config(player_id=p["player_id"], name=p["name"],
+                                          openrouter_model_id=p["openrouter_model_id"]) for p in config["players"]]
+    runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=object(),
+                       run_files=files, max_turns=5, event_delay_s=0,
+                       baseline_strategies=config["baseline_strategies"],
+                       resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(runner.run())
+    assert terminal_snapshots()
+    assert _completed_run_exists(files.run_dir)
+    after = {path.name: path.read_bytes() for path in files.snapshots_dir.glob("*.json")}
+    assert after == before  # Restored exactly; a normal finalization adds no snapshot variants.
+
+
+def test_completion_ignores_hidden_temporary_files(completed_run):
+    (completed_run.snapshots_dir / ".write-interrupted").write_text("partial")
+    (completed_run.run_dir / ".writer.lock").write_text("")
+    assert _completed_run_exists(completed_run.run_dir)
+
+
+def test_finalizing_a_recovered_run_does_not_backfill_launch_pricing(completed_run):
+    files = completed_run
+    launch = files.run_dir / "launch_pricing_snapshot.json"
+    launch.unlink()
+    files.write_artifact_manifest()
+    config = json.loads(files.run_config_path.read_text())
+    players = [build_single_player_config(player_id=p["player_id"], name=p["name"],
+                                          openrouter_model_id=p["openrouter_model_id"]) for p in config["players"]]
+    runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=object(),
+                       run_files=files, max_turns=5, event_delay_s=0,
+                       baseline_strategies=config["baseline_strategies"],
+                       resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(runner.run())
+    assert not launch.exists()
+    assert _completed_run_exists(files.run_dir)
