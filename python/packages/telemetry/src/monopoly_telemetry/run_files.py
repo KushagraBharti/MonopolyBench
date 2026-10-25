@@ -222,6 +222,12 @@ def _write_evidence(path: Path, text: str, *, encoding: str = "utf-8") -> None:
     atomic_write_text(path, text, encoding=encoding)
 
 
+def evidence_paths(directory: Path, pattern: str = "*.json") -> list[Path]:
+    """Evidence files in a directory. Hidden files are interrupted-write temporaries or
+    locks; inventories and completion checks ignore them, so readers must too."""
+    return sorted(path for path in directory.glob(pattern) if not path.name.startswith("."))
+
+
 def init_run_files(runs_dir: Path, run_id: str) -> RunFiles:
     run_files = build_run_files(runs_dir, run_id)
     run_files.snapshots_dir.mkdir(parents=True, exist_ok=True)

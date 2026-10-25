@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .run_files import RunFiles
+from .run_files import RunFiles, evidence_paths
 
 
 USAGE_ACCOUNTING_VERSION = "usage_accounting_v2"
@@ -33,7 +33,7 @@ def _all_attempt_usage_rows(run_files: RunFiles, decisions: list[dict[str, Any]]
     rows = _attempt_usage_rows(decisions)
     accounted_calls = {row["call_id"] for row in rows if row.get("call_id")}
     legacy_accounted = {(row["decision_id"], row["attempt_index"]) for row in rows if not row.get("call_id")}
-    for path in sorted((run_files.run_dir / "calls").glob("*.json")):
+    for path in evidence_paths(run_files.run_dir / "calls"):
         call = json.loads(path.read_text(encoding="utf-8"))
         if call["call_id"] in accounted_calls or (call["decision_id"], call["attempt_index"]) in legacy_accounted:
             continue

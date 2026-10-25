@@ -119,8 +119,8 @@ class RunManager:
                 raise ValueError("Completed runs cannot be recovered as interrupted runs.")
 
             run_config = _read_json(run_files.run_config_path)
-            fingerprint = run_config.get("treatment_fingerprint")
-            if fingerprint and fingerprint != treatment_fingerprint():
+            # Historical runs have no fingerprint; recovering them would rewrite their evidence.
+            if run_config.get("treatment_fingerprint") != treatment_fingerprint():
                 raise ValueError("Cannot resume under a different executable treatment")
             if run_config.get("run_id") != run_id:
                 raise ValueError("Run configuration does not match the requested run id.")
@@ -518,7 +518,8 @@ class RunManager:
         total_games = 0
         wins = 0
         final_net_worth_values: list[float] = []
-        total_cost = 0.0
+        total_cost: float | None = 0.0
+        known_cost_subtotal = 0.0
         total_tokens = 0
         for run in self.list_runs()["runs"]:
             run_id = str(run.get("run_id") or "")
@@ -542,7 +543,11 @@ class RunManager:
             by_model = _dict(usage.get("by_model"))
             usage_row = _dict(by_model.get(target_model_id))
             if isinstance(usage_row.get("cost"), (int, float)):
-                total_cost += float(usage_row["cost"])
+                known_cost_subtotal += float(usage_row["cost"])
+                if total_cost is not None:
+                    total_cost += float(usage_row["cost"])
+            else:
+                total_cost = None  # Missing or incomplete usage is unknown spending, not zero.
             if isinstance(usage_row.get("total_tokens"), (int, float)):
                 total_tokens += int(usage_row["total_tokens"])
             runs.append({"run_id": run_id, "players": matched_players})
@@ -558,7 +563,8 @@ class RunManager:
                 if final_net_worth_values
                 else None
             ),
-            "total_cost": round(total_cost, 10),
+            "total_cost": round(total_cost, 10) if total_cost is not None else None,
+            "known_cost_subtotal": round(known_cost_subtotal, 10),
             "total_tokens": total_tokens,
             "runs": runs,
         }

@@ -297,3 +297,25 @@ def test_batch_budget_preflight_uses_historical_actual_costs() -> None:
     assert preflight["remaining_budget"] == 0.5
     assert preflight["would_exceed_remaining_budget"] is True
     assert should_stop_for_budget(config, entries) == "remaining_budget_0.5_less_than_historical_max_run_cost_0.6"
+
+
+@pytest.mark.parametrize("second_usage", [{"totals": {"cost": 0.25}, "known_cost_subtotal": 0.25},
+                                          {"totals": {"cost": None}, "known_cost_subtotal": 0.1}, None])
+def test_micro_batch_cost_aggregates_keep_unknown_cost_unknown(tmp_path, second_usage) -> None:
+    import json
+    from monopoly_arena.batch_run import _micro_cost_report, _micro_token_report
+    entries = []
+    for index, usage in enumerate(({"totals": {"cost": 0.5}, "known_cost_subtotal": 0.5}, second_usage)):
+        run_dir = tmp_path / f"micro-{index}"
+        run_dir.mkdir()
+        if usage is not None:
+            (run_dir / "usage.json").write_text(json.dumps(usage))
+        entries.append({"run_dir": str(run_dir), "run_id": f"micro-{index}", "model_id": "test/model"})
+    cost = _micro_cost_report(entries)
+    tokens = _micro_token_report(entries)
+    known = 0.5 + ((second_usage or {}).get("known_cost_subtotal") or 0)
+    expected = 0.75 if second_usage and second_usage["totals"]["cost"] is not None else None
+    assert cost["total_actual_cost"] == expected
+    assert tokens["totals"]["cost"] == expected and tokens["totals"]["known_cost_subtotal"] == known
+    assert cost["by_model"]["test/model"]["cost"] == expected
+    assert cost["by_run"]["micro-0"]["cost"] == 0.5

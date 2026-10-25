@@ -11,6 +11,7 @@ from monopoly_telemetry.commit import write_commit
 
 from monopoly_api.player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig, derive_model_display_name
 from monopoly_api.run_manager import RunManager
+from monopoly_arena.treatment import treatment_fingerprint
 
 
 class FakeRunner:
@@ -185,6 +186,7 @@ def test_recover_run_restores_logged_configuration(tmp_path) -> None:
                 "max_turns": 25,
                 "players": [player.to_status() for player in players],
                 "baseline_strategies": {},
+                "treatment_fingerprint": treatment_fingerprint(),
             }
         )
         run_files.write_event({"seq": 0, "turn_index": 0, "type": "LLM_DECISION_REQUESTED"})
@@ -256,3 +258,37 @@ def test_api_run_identity_includes_full_treatment(monkeypatch, changed):
     else:
         players[0] = replace(players[0], **{changed: {"only": ["openai"]} if changed == "provider" else {"effort": "high"}})
     assert RunManager._generate_run_id(**kwargs) != original
+
+
+@pytest.mark.parametrize("legacy_shape", ["completed_without_marker", "interrupted"])
+def test_recovery_refuses_historical_runs_without_rewriting_them(tmp_path, legacy_shape) -> None:
+    manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+    players = _make_players()
+    run_id = "historical-run"
+    run_files = init_run_files(tmp_path, run_id)
+    run_files.write_run_config({"run_id": run_id, "seed": 303, "max_turns": 5,
+                                "players": [player.to_status() for player in players], "baseline_strategies": {}})
+    run_files.write_event({"seq": 0, "turn_index": 0, "type": "LLM_DECISION_REQUESTED"})
+    if legacy_shape == "completed_without_marker":
+        run_files.write_summary({"run_id": run_id, "reason": "TURN_LIMIT"})
+        run_files.write_json_artifact(run_files.usage_path, {"run_id": run_id, "usage_accounting_version": "usage_accounting_v1"})
+    before = {path: path.read_bytes() for path in run_files.run_dir.rglob("*") if path.is_file()}
+    with pytest.raises(ValueError, match="different executable treatment"):
+        asyncio.run(manager.recover_run(run_id))
+    after = {path: path.read_bytes() for path in run_files.run_dir.rglob("*") if path.is_file()}
+    assert after == before
+
+
+@pytest.mark.parametrize("second_cost", [0.25, None])
+def test_model_detail_keeps_unknown_cost_unknown(tmp_path, second_cost) -> None:
+    import json
+    manager = RunManager(tmp_path, runner_factory=FakeRunner, openrouter_factory=lambda: object())
+    for run_id, cost in (("run-a", 0.5), ("run-b", second_cost)):
+        run_files = init_run_files(tmp_path, run_id)
+        run_files.scorecard_path.write_text(json.dumps({"players": [{"openrouter_model_id": "test/model", "winner": False}]}))
+        row = {"total_tokens": 10, **({"cost": cost} if cost is not None else {"cost": None})}
+        run_files.usage_path.write_text(json.dumps({"by_model": {"test/model": row}}))
+    detail = manager.get_model("test__model")
+    assert detail is not None and detail["game_count"] == 2
+    assert detail["known_cost_subtotal"] == 0.5 + (second_cost or 0)
+    assert detail["total_cost"] == (None if second_cost is None else 0.75)
