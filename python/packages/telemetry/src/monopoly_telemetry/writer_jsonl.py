@@ -48,10 +48,14 @@ def atomic_write(path: Path, data: bytes) -> None:
             os.unlink(name)
 
 
-def read_jsonl_strict(path: Path) -> list[dict[str, Any]]:
+def read_jsonl_strict(path: Path, *, allow_partial_tail: bool = False) -> list[dict[str, Any]]:
+    """Parse every complete row strictly. Readers that can race an in-progress append
+    may ignore an unterminated final fragment; recovery must not."""
     if not path.exists():
         return []
     data = path.read_bytes()
+    if allow_partial_tail:
+        data = data[:data.rfind(b"\n") + 1]
     if data and not data.endswith(b"\n"):
         raise ValueError(f"{path}: incomplete trailing record ({len(data.rsplit(bytes([10]), 1)[-1])} bytes)")
     rows = []

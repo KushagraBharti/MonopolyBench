@@ -60,3 +60,14 @@ def test_strict_jsonl_reports_damage(tmp_path):
     path.write_text('{"ok":1}\nbad\n')
     with pytest.raises(ValueError, match=":2:"):
         read_jsonl_strict(path)
+
+
+def test_live_readers_may_skip_only_an_unterminated_tail(tmp_path):
+    path = tmp_path / "events.jsonl"
+    path.write_bytes(b'{"seq":1}\n{"seq":2,"partial')
+    with pytest.raises(ValueError, match="incomplete trailing record"):
+        read_jsonl_strict(path)
+    assert read_jsonl_strict(path, allow_partial_tail=True) == [{"seq": 1}]
+    path.write_bytes(b'{"seq":1}\n{broken}\n')
+    with pytest.raises(ValueError, match="malformed JSON"):
+        read_jsonl_strict(path, allow_partial_tail=True)

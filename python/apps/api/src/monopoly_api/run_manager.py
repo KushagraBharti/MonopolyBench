@@ -981,8 +981,9 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    # Artifact reads can race a live writer's append; show only complete rows.
     from monopoly_telemetry.writer_jsonl import read_jsonl_strict
-    return read_jsonl_strict(path)
+    return read_jsonl_strict(path, allow_partial_tail=True)
 
 
 def _recovery_player_configs(
