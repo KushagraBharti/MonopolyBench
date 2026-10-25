@@ -229,7 +229,7 @@ class SharedDecisionResolver:
             if current_player.provider is not None:
                 kwargs["provider"] = current_player.provider
             started = _now_ms()
-            result = await self._call_completion(decision, index, kwargs)
+            result = await self._call_completion(decision, index, kwargs, response_condition=condition)
             ended = _now_ms()
             result = await self._with_generation_metadata(result)
             self._write_quality_artifacts(
@@ -290,7 +290,7 @@ class SharedDecisionResolver:
         raise AssertionError("Resolver exceeded its bounded response policy")
 
     async def _call_completion(self, decision: dict[str, Any], attempt: int,
-                               kwargs: dict[str, Any]) -> OpenRouterResult:
+                               kwargs: dict[str, Any], *, response_condition: str = "standard") -> OpenRouterResult:
         if _owns_call_records(self._openrouter):
             # One durable owner per physical call: the client journals each POST,
             # reuses saved responses and enforces its own deadlines and retries.
@@ -301,6 +301,8 @@ class SharedDecisionResolver:
                                   "player_id": decision["player_id"], "turn_index": decision["turn_index"],
                                   "decision_type": decision["decision_type"],
                                   "attempt_index": attempt, "request_hash": request_hash,
+                                  # Evidence only: why this call ran, kept even if the decision never resolves.
+                                  "response_condition": response_condition,
                                   "request": kwargs, "status": "in_flight"}
         if self._run_files is not None:
             key = hashlib.sha256(f'{decision["decision_id"]}:{attempt}'.encode()).hexdigest()

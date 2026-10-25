@@ -52,14 +52,17 @@ def _all_attempt_usage_rows(run_files: RunFiles, decisions: list[dict[str, Any]]
         decision = _dict(participants.get(call["decision_id"]))
         requested = call["request"].get("model")
         participant = decision.get("openrouter_model_id") or requested
+        fallback = bool(requested and participant and requested != participant)
+        # Older call records predate the saved condition; do not guess why a fallback ran.
+        condition = call.get("response_condition") or ("unrecorded" if fallback else "standard")
         rows.append({**normalized, "run_id": run_files.run_id, "decision_id": call["decision_id"],
                      "attempt_index": call["attempt_index"], "player_id": call.get("player_id"),
                      "turn_index": call.get("turn_index"), "decision_type": call.get("decision_type"),
                      "openrouter_model_id": raw.get("model") or requested, "call_id": call["call_id"],
                      "participant_model_id": participant,
                      "participant_model_display_name": decision.get("model_display_name") or participant,
-                     "requested_model_id": requested, "response_condition": call.get("response_condition") or "standard",
-                     "fallback_model_used": bool(requested and participant and requested != participant),
+                     "requested_model_id": requested, "response_condition": condition,
+                     "fallback_model_used": fallback,
                      "call_status": call["status"], "input_tokens": normalized["prompt_tokens"],
                      "output_tokens": normalized["completion_tokens"],
                      "accounting_status": "actual_openrouter_usage" if normalized["usage_seen"] else "missing_openrouter_usage",

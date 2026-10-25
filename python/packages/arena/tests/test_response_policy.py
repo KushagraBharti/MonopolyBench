@@ -278,3 +278,38 @@ def test_usage_nests_fallback_model_under_its_participant(fallback_cost):
         assert fallback["response_conditions"] == ["fallback_without_private_thought"]
         assert fallback["triggers"] == ["explicit_provider_refusal_after_same_model_retry"]
         assert fallback["served_model_ids"] == ["anthropic/claude-opus-4.8"]
+
+
+@pytest.mark.parametrize("saved_condition", [True, False])
+def test_unfinished_fallback_call_keeps_its_trigger(tmp_path, saved_condition):
+    from monopoly_telemetry import init_run_files
+    from monopoly_telemetry.usage import build_usage_report
+    from monopoly_arena.decision_resolver import SharedDecisionResolver
+    from monopoly_arena.prompting import PromptMemory, build_space_key_by_index
+
+    class Client:
+        async def create_chat_completion(self, **kwargs):
+            return OpenRouterResult(True, 200, {"id": "gen", "model": kwargs["model"], "usage": {"cost": 0.02}},
+                                    None, None, "request")
+
+    files = init_run_files(tmp_path, "unfinished-fallback")
+    # The decision started, Opus 4.8 was called, and the run stopped before decision_resolved.
+    files.write_decision({"phase": "decision_started", "decision_id": "d1", "player_id": "p1",
+                          "openrouter_model_id": "anthropic/claude-opus-5.5"})
+    resolver = SharedDecisionResolver(openrouter=Client(), run_files=files,
+                                      prompt_memory=PromptMemory(space_key_by_index=build_space_key_by_index()),
+                                      space_key_by_index=build_space_key_by_index())
+    decision = {"decision_id": "d1", "player_id": "p1", "turn_index": 0, "decision_type": "BUY_OR_AUCTION_DECISION"}
+    asyncio.run(resolver._call_completion(decision, 2, {"model": "anthropic/claude-opus-4.8"},
+                                          response_condition="fallback_without_private_thought"))
+    record_path = next((files.run_dir / "calls").glob("*.json"))
+    if not saved_condition:  # A durable record written before conditions were saved.
+        record = json.loads(record_path.read_text())
+        record.pop("response_condition")
+        record_path.write_text(json.dumps(record))
+    report = build_usage_report(files)
+    assert set(report["by_model"]) == {"anthropic/claude-opus-5.5"}
+    fallback = report["by_model"]["anthropic/claude-opus-5.5"]["fallback_models"]["anthropic/claude-opus-4.8"]
+    assert fallback["cost"] == pytest.approx(0.02) and fallback["decision_ids"] == ["d1"]
+    assert fallback["triggers"] == (["explicit_provider_refusal_after_same_model_retry"] if saved_condition
+                                    else ["unrecognized_condition:unrecorded"])
