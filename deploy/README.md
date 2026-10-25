@@ -99,6 +99,15 @@ and set `SSL_CERT_FILE` to the mounted bundle in a local Compose override.
 
 ## Railway: before the first paid run
 
+Railway uses `deploy/Dockerfile.railway`, selected by `railway.json`. Its builder
+rejects BuildKit secret and bind mounts, so a separate source stage generates
+the build manifest. Local Docker keeps `deploy/Dockerfile` and its optional CA
+secret support. `.railwayignore` excludes historical artifacts and installed
+dependencies from CLI uploads. If the service does not read `railway.json`, set
+`RAILWAY_DOCKERFILE_PATH=deploy/Dockerfile.railway` and copy its runtime settings
+into the service settings. The deploy helper sets `MB_GIT_SHA` before uploading;
+do not leave this variable pointing to an earlier commit when deploying manually.
+
 1. Commit a reviewed, clean tree. Run `bash scripts/verify.sh` (it includes the
    microbench suite).
 2. Create a Railway Pro service with exactly one replica and a 50 GB volume at
@@ -107,6 +116,10 @@ and set `SSL_CERT_FILE` to the mounted bundle in a local Compose override.
    `MB_LOCAL_HTTP=0`. Set `MB_DASHBOARD_PASSWORD` to a private value: the service
    refuses to start with the public default `monopoly`. Session and export secrets
    are generated automatically. Keep the OpenRouter key server-side.
+   A 5 GB Hobby volume cannot satisfy the required 5 GB free-space reserve after
+   filesystem overhead and application data. Expand the volume before research
+   runs; do not reduce the reserve to bypass this admission check. Backup
+   schedules also require a workspace plan that supports them.
 4. Enable OpenAI and Anthropic BYOK in OpenRouter, allow same-provider credit
    fallback, and fund credits for the other seats. There is no application spend cap.
 5. Generate the domain. Use HTTPS: remote session cookies are Secure.

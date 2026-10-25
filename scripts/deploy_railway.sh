@@ -25,6 +25,7 @@ PY
 fi
 python scripts/build_manifest.py --git-sha "$(git rev-parse HEAD)"
 bash scripts/verify.sh
+railway variable set "MB_GIT_SHA=$(git rev-parse HEAD)" --skip-deploys
 railway up
 python - <<'PY'
 import json, pathlib, datetime, os, time, urllib.request
