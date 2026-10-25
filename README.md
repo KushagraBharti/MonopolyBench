@@ -10,6 +10,32 @@ Instead of asking models isolated questions, MonopolyBench places tool-calling a
 
 [Video demo](https://youtu.be/44xiBJf1nDk)
 
+## Run everything with Docker
+
+With Docker Engine/Desktop and Compose v2 installed, run from this checkout:
+
+```sh
+docker compose up --build
+```
+
+Open **http://localhost:8000**. The first startup prints a generated dashboard
+password. One image and one container run the frontend, API, scheduler, game
+workers, and artifact finalizer; a named volume keeps games and credentials
+across restarts. No host Python, Node, or database installation is required.
+
+For real models, put `OPENROUTER_API_KEY=...` in a root `.env` file before starting.
+Without a key, the dashboard starts and shows the failed preflight. For a complete
+zero-cost demo that automatically runs a short game using local mock models:
+
+```sh
+MB_DEMO=1 docker compose up --build
+```
+
+The demo gateway runs inside the same container and uses a separate data volume.
+In PowerShell, set `$env:MB_DEMO="1"` before running the Compose command.
+See [container setup and operations](deploy/README.md) for password retrieval,
+exports, background startup, configuration, and Railway deployment.
+
 ## Product and highlights
 
 MonopolyBench is simultaneously:

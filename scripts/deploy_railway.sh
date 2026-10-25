@@ -23,16 +23,7 @@ if status['active_workers']:
     raise SystemExit('Active games: pause the campaign and let them finish, or use --force-interrupt')
 PY
 fi
-python - <<'PY'
-import hashlib, json, pathlib, subprocess, datetime
-root = pathlib.Path('.')
-sha = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
-data = {'git_sha': sha, 'image_digest': 'source:'+sha,
-        'branch': subprocess.check_output(['git','branch','--show-current'], text=True).strip(),
-        'built_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        'lockfiles': {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in [root/'python/uv.lock',root/'frontend/package-lock.json']}}
-pathlib.Path('build_info.json').write_text(json.dumps(data, sort_keys=True))
-PY
+python scripts/build_manifest.py --git-sha "$(git rev-parse HEAD)"
 bash scripts/verify.sh
 (cd python/packages/microbench && uv run pytest)
 railway up

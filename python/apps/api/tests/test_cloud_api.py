@@ -157,6 +157,46 @@ def test_shared_tailer_disconnects_only_slow_viewer(cloud):
     asyncio.run(check())
 
 
+def test_cancelled_websocket_releases_shared_tailer(cloud):
+    import asyncio
+    import anyio
+    from monopoly_api.auth import Auth, COOKIE
+    from monopoly_api.live import LiveHub, live
+
+    _, store = cloud
+    auth = Auth()
+
+    async def check():
+        hub = LiveHub(store)
+        scope = anyio.CancelScope()
+        # No commits are needed: cancellation after HELLO must still release
+        # the subscription, send/receive tasks, and shared polling task.
+        class Socket:
+            headers = {}
+            cookies = {COOKIE: auth.session()}
+            query_params = {}
+            async def accept(self):
+                pass
+            async def send_json(self, value):
+                scope.cancel()
+            async def receive_text(self):
+                await anyio.sleep_forever()
+            async def close(self, **kwargs):
+                await anyio.sleep(0)
+
+        class Store:
+            def job(self, job_id):
+                return {"job_id": job_id, "run_id": job_id}
+            def rows(self, *args):
+                return store.rows(*args)
+
+        with scope:
+            await live(Socket(), "cancelled-viewer", Store(), auth, hub)
+        assert not hub.tailers
+        assert not [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
+    asyncio.run(check())
+
+
 def test_decision_cache_tails_new_commits_without_rescanning_journal(cloud, monkeypatch, tmp_path):
     import json
     from pathlib import Path

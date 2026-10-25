@@ -5,6 +5,7 @@ import json
 from typing import Any
 from urllib.parse import urlparse
 
+import anyio
 from fastapi import WebSocket, WebSocketDisconnect
 
 from monopoly_arena.job_store import JobStore
@@ -145,11 +146,14 @@ async def live(websocket: WebSocket, job_id: str, store: JobStore, auth: Auth, h
     except (WebSocketDisconnect, asyncio.TimeoutError, RuntimeError, OSError, ValueError):
         pass
     finally:
-        for task in tasks:
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
-        await hub.unsubscribe(tailer, queue)
-        try:
-            await websocket.close()
-        except (RuntimeError, WebSocketDisconnect):
-            pass
+        # ASGI cancellation can arrive while a disconnect is already cleaning
+        # up. Finish releasing the shared tailer even under a cancelled scope.
+        with anyio.CancelScope(shield=True):
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await hub.unsubscribe(tailer, queue)
+            try:
+                await websocket.close()
+            except (RuntimeError, WebSocketDisconnect):
+                pass

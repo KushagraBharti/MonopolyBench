@@ -1,6 +1,6 @@
 # Cloud runner code validation
 
-Local validation on 2026-10-24:
+Local validation on 2026-10-24, extended on 2026-10-25:
 
 The PR adversarial review also covers corrupt committed prefixes with pending
 appends, missing journal records, repair attribution after restart, interrupted
@@ -11,10 +11,10 @@ pending response artifacts remain hidden from the decision inspector. The
 bounded reader cache tails only newly committed journal/decision records; a
 regression verifies that repeated list/bundle requests do not rescan old payloads.
 
-- Full repository verification: contracts, Ruff, mypy, 234 engine/API/arena/
+- Full repository verification: contracts, Ruff, mypy, 245 engine/API/arena/
   telemetry tests, frontend lint and frontend build passed.
 - All 20 microbench tests, which the repository verification script omits,
-  passed (254 Python tests in total).
+  passed (265 Python tests in total).
 - A five-process smoke batch passed, including one killed worker and verified
   package round trips.
 - A five-process uncapped mock batch ended by bankruptcy at turns 160, 143,
@@ -54,6 +54,20 @@ volume. It exercises password login, five completed cards, modal dismissal,
 job-scoped decision pagination, board geometry, static image responses, and a
 390-pixel mobile viewport. The decision inspector and live feeds have bounded
 heights; dashboard styles do not override the existing game panel controls.
+
+The single-service Docker Compose path was also exercised from a build context
+with no host `build_info.json`. One healthy container automatically started its
+internal mock gateway, passed preflight, completed the built-in smoke game,
+passed replay and analysis, and served a verified downloadable package. Removing
+and recreating the container preserved its volume, credentials, authenticated
+session, completed job, and export token without queuing a second demo game.
+Killing the supervisor caused the container to restart and become healthy again.
+Normal mode without an API key started a working authenticated dashboard and
+failed preflight without creating paid jobs. Chromium verified localhost HTTP
+login, the demo banner, board rendering, decision inspection, and session reload
+without page errors. Tests cover volume-mode separation, demo campaign blocking,
+secret persistence, local-only cookie behavior, and build fingerprints. ASGI
+cancellation cleanup now releases the shared game tailer under cancelled scopes.
 
 Not exercised here: Railway deploy/redeploy, backup restoration, real provider
 compatibility, BYOK billing, Windows/macOS export execution, and real-model soak

@@ -26,6 +26,10 @@ class Auth:
     def sign(self, value: str) -> str:
         return hmac.new(self.secret.encode(), value.encode(), hashlib.sha256).hexdigest()
 
+    def cookie_secure(self, request: Request) -> bool:
+        return not (os.getenv("MB_LOCAL_HTTP") == "1" and request.url.scheme == "http"
+                    and request.url.hostname in {"localhost", "127.0.0.1", "::1"})
+
     def session(self) -> str:
         expires = str(int(time.time()) + SESSION_SECONDS)
         return expires + "." + self.sign(expires)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import secrets
@@ -70,20 +71,20 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         return {"ok": True, "mode": "cloud", "git_sha": build_identity()["git_sha"]}
 
     @app.post("/api/auth/login")
-    def login(body: Login):
+    def login(body: Login, request: Request):
         response = JSONResponse({"ok": True})
-        response.set_cookie(COOKIE, auth.login(body.password), httponly=True, secure=True, samesite="lax", max_age=SESSION_SECONDS)
+        response.set_cookie(COOKIE, auth.login(body.password), httponly=True, secure=auth.cookie_secure(request), samesite="lax", max_age=SESSION_SECONDS)
         return response
 
     @app.post("/api/auth/logout")
-    def logout():
+    def logout(request: Request):
         response = JSONResponse({"ok": True})
-        response.delete_cookie(COOKIE, secure=True, httponly=True, samesite="lax")
+        response.delete_cookie(COOKIE, secure=auth.cookie_secure(request), httponly=True, samesite="lax")
         return response
 
     @app.get("/api/status")
     def status():
-        return {"account_stop": store.state("account_stop"), "drain": store.state("drain", False), "free_disk": shutil.disk_usage(store.root).free, "active_workers": len(store.rows("SELECT job_id FROM jobs WHERE status='running'")), "cost": execution_cost(store.rows("SELECT * FROM calls")), "preflight": store.state("preflight"), "models": MODELS}
+        return {"demo": os.getenv("MB_DEMO") == "1", "account_stop": store.state("account_stop"), "drain": store.state("drain", False), "free_disk": shutil.disk_usage(store.root).free, "active_workers": len(store.rows("SELECT job_id FROM jobs WHERE status='running'")), "cost": execution_cost(store.rows("SELECT * FROM calls")), "preflight": store.state("preflight"), "models": MODELS}
 
     @app.get("/api/jobs")
     def jobs(status: str | None = None, kind: str | None = None, campaign: str | None = None, search: str = "", cursor: int = 0, archived: bool = False):
@@ -190,6 +191,8 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
 
     @app.post("/api/campaigns/{campaign_id}/freeze")
     def freeze_campaign(campaign_id: str):
+        if os.getenv("MB_DEMO") == "1":
+            raise HTTPException(409, "Demo mode supports smoke games only; use a separate volume for research campaigns")
         return freeze(store, json.loads(campaign_file(campaign_id).read_text()))
 
     @app.post("/api/campaigns/{campaign_id}/amend")
