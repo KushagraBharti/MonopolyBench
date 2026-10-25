@@ -612,6 +612,29 @@ def test_recovered_terminal_run_persists_game_over_snapshot(completed_run):
     assert after == before  # Restored exactly; a normal finalization adds no snapshot variants.
 
 
+def test_refinalizing_does_not_duplicate_a_terminal_snapshot_variant(completed_run):
+    """Bankruptcy endings save GAME_OVER as a variant of the turn's earlier canonical state."""
+    files = completed_run
+    terminal_turn = load_jsonl(files.events_path)[-1]["turn_index"]
+    canonical = files.snapshots_dir / f"turn_{terminal_turn:04d}.json"
+    terminal = json.loads(canonical.read_text())
+    assert terminal["phase"] == "GAME_OVER"
+    earlier = {**terminal, "phase": "AWAITING_DECISION"}
+    canonical.write_text(json.dumps(earlier, separators=(",", ":"), ensure_ascii=True))
+    files.write_snapshot(terminal)
+    before = sorted(path.name for path in files.snapshots_dir.glob("*.json"))
+    assert f"turn_{terminal_turn:04d}_snapshot_0001.json" in before
+    config = json.loads(files.run_config_path.read_text())
+    players = [build_single_player_config(player_id=p["player_id"], name=p["name"],
+                                          openrouter_model_id=p["openrouter_model_id"]) for p in config["players"]]
+    runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=object(),
+                       run_files=files, max_turns=5, event_delay_s=0,
+                       baseline_strategies=config["baseline_strategies"],
+                       resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(runner.run())
+    assert sorted(path.name for path in files.snapshots_dir.glob("*.json")) == before
+
+
 def test_completion_ignores_hidden_temporary_files(completed_run):
     (completed_run.snapshots_dir / ".write-interrupted").write_text("partial")
     (completed_run.run_dir / ".writer.lock").write_text("")

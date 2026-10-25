@@ -262,8 +262,10 @@ class LlmRunner:
                     await snapshot_handler(self.get_snapshot())
             if snapshot_handler is not None and self._engine.is_game_over():
                 # A run recovered after its terminal commit emits no new events; persist
-                # the terminal state anyway. Identical snapshots are not rewritten.
-                await snapshot_handler(self.get_snapshot())
+                # the terminal state unless these exact bytes are already saved.
+                terminal_snapshot = self.get_snapshot()
+                if self._run_files is None or not self._run_files.snapshot_exists(terminal_snapshot):
+                    await snapshot_handler(terminal_snapshot)
             if self._event_delay_s > 0:
                 await asyncio.sleep(self._event_delay_s)
             if summary_handler is not None:

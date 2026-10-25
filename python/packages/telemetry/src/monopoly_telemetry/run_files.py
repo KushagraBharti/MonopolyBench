@@ -90,6 +90,13 @@ class RunFiles:
         self._write_text(variant_path, payload, encoding="utf-8")
         return variant_path
 
+    def snapshot_exists(self, snapshot: dict[str, Any]) -> bool:
+        """Whether these exact snapshot bytes are already saved for their turn."""
+        payload = json.dumps(snapshot, separators=(",", ":"), ensure_ascii=True)
+        turn_index = int(snapshot.get("turn_index", 0))
+        return any(path.read_text(encoding="utf-8") == payload
+                   for path in self.snapshots_dir.glob(f"turn_{turn_index:04d}*.json"))
+
     def write_summary(self, summary: dict[str, Any]) -> None:
         self.summary_path.parent.mkdir(parents=True, exist_ok=True)
         self._write_text(self.summary_path,
