@@ -71,3 +71,23 @@ def test_live_readers_may_skip_only_an_unterminated_tail(tmp_path):
     path.write_bytes(b'{"seq":1}\n{broken}\n')
     with pytest.raises(ValueError, match="malformed JSON"):
         read_jsonl_strict(path, allow_partial_tail=True)
+
+
+@pytest.mark.parametrize("usage", [{"prompt_tokens": 100, "completion_tokens": None}, {"prompt_tokens": None, "completion_tokens": None},
+                                   {"prompt_tokens": "lots", "completion_tokens": "?"}, None, []])
+def test_cost_estimates_tolerate_missing_token_counts(tmp_path, usage):
+    import json
+    from monopoly_telemetry.execution_cost import execution_cost_report
+    (tmp_path / "calls").mkdir()
+    (tmp_path / "pricing_start.json").write_text(json.dumps({"response_json": {"data": [
+        {"id": "test/model", "pricing": {"prompt": "0.000001", "completion": None}}, "not-an-entry"]}}))
+    (tmp_path / "calls" / "c1.intent.json").write_text(json.dumps({"payload": {"model": "test/model"}, "payload_raw": "x" * 800}))
+    (tmp_path / "calls" / "c1.response.json").write_text(json.dumps({"response_json": {"usage": usage}}))
+    report = execution_cost_report(tmp_path, [{"call_id": "c1", "cost_status": "missing", "total_cost": None}])
+    row = report["call_details"][0]
+    reported = isinstance(usage, dict) and usage.get("prompt_tokens") == 100
+    tokens = 100 if reported else 200  # Without a count: 800 characters / 4.
+    assert row["estimated_input_tokens"] == tokens
+    assert row["estimated_cost"] == pytest.approx(tokens * 0.000001)
+    assert row["estimate_source"] == ("reported_tokens_start_catalog" if reported else "characters_div_four_input_only_start_catalog")
+    assert report["known_total"] == 0 and report["missing_calls"] == 1

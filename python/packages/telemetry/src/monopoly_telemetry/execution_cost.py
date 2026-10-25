@@ -45,7 +45,8 @@ def execution_cost_report(directory: Path, calls: list[dict[str, Any]]) -> dict[
     pricing_file = directory / "pricing_start.json"
     pricing = json.loads(pricing_file.read_text()) if pricing_file.exists() else {}
     catalog = (pricing.get("response_json") or {}).get("data", [])
-    prices = {entry["id"]: entry.get("pricing", {}) for entry in catalog if "id" in entry}
+    prices = {entry["id"]: entry.get("pricing") or {} for entry in (catalog if isinstance(catalog, list) else [])
+              if isinstance(entry, dict) and "id" in entry}
     rows = []
     for call in calls:
         intent_path = directory / "calls" / f"{call['call_id']}.intent.json"
@@ -53,17 +54,36 @@ def execution_cost_report(directory: Path, calls: list[dict[str, Any]]) -> dict[
         intent = json.loads(intent_path.read_text()) if intent_path.exists() else {}
         response = json.loads(response_path.read_text()) if response_path.exists() else {}
         payload = intent.get("payload", {})
-        usage = (response.get("response_json") or {}).get("usage") or {}
+        usage = (response.get("response_json") or {}).get("usage")
+        usage = usage if isinstance(usage, dict) else {}
         price = prices.get(payload.get("model"), {})
+        prompt_price = _price(price.get("prompt"))
         estimated = None
         estimated_tokens = None
         source = None
-        if call.get("cost_status") != "known" and price.get("prompt") is not None:
-            # Character heuristic is deliberately labeled, never used as actual cost.
-            estimated_tokens = usage.get("prompt_tokens") or (len(intent.get("payload_raw", ""))+3)//4
-            output = usage.get("completion_tokens", 0)
-            estimated = estimated_tokens * float(price["prompt"]) + output * float(price.get("completion", 0))
-            source = "reported_tokens_start_catalog" if usage.get("prompt_tokens") else "characters_div_four_input_only_start_catalog"
+        if call.get("cost_status") != "known" and prompt_price is not None:
+            # Character heuristic is deliberately labeled, never used as actual cost. Missing
+            # or null token counts leave that part out of the estimate instead of failing export.
+            reported_input = _count(usage.get("prompt_tokens"))
+            estimated_tokens = reported_input if reported_input else (len(intent.get("payload_raw", ""))+3)//4
+            output = _count(usage.get("completion_tokens")) or 0
+            estimated = estimated_tokens * prompt_price + output * (_price(price.get("completion")) or 0.0)
+            source = "reported_tokens_start_catalog" if reported_input else "characters_div_four_input_only_start_catalog"
         rows.append({**call, "estimated_cost": estimated, "estimated_input_tokens": estimated_tokens, "estimate_source": source})
     return {**execution_cost(calls), "call_details": rows,
             "estimated_unaccounted_cost": sum(row["estimated_cost"] for row in rows if row["estimated_cost"] is not None)}
+
+
+def _count(value: Any) -> int | None:
+    return int(value) if type(value) in {int, float} and math.isfinite(value) and value >= 0 else None
+
+
+def _price(value: Any) -> float | None:
+    """Catalog prices are numeric strings; anything unparseable is unavailable."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number >= 0 else None

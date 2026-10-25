@@ -78,8 +78,8 @@ cancellation cleanup now releases the shared game tailer under cancelled scopes.
 These checks rerun the evidence after merging PR #2. Cloud games now use the v2
 rules, usage accounting v2 and PR #2's strict completion contract.
 
-- Full repository verification: contracts, Ruff, mypy, 430 Python tests
-  (engine 65, API 115, arena 176, telemetry 45, microbench 29), frontend lint and
+- Full repository verification: contracts, Ruff, mypy, 435 Python tests
+  (engine 65, API 115, arena 176, telemetry 50, microbench 29), frontend lint and
   frontend build passed.
 - Each physical call has exactly one durable owner: `CloudClient` journals it, and
   the resolver's local call journal and deadlines step aside. A regression game
