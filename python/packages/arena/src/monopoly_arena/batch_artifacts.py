@@ -325,12 +325,25 @@ def build_run_entry(
 
 
 def batch_actual_cost(run_entries: list[dict[str, Any]]) -> float:
+    """Sum known charges; this is a lower bound when cost coverage is incomplete."""
     total = 0.0
     for entry in run_entries:
         value = _run_actual_cost(entry)
+        if value is None:
+            value = _dict(entry.get("cost_report")).get("known_cost_subtotal")
         if isinstance(value, (int, float)):
             total += float(value)
     return round(total, 10)
+
+
+def batch_cost_coverage(run_entries: list[dict[str, Any]]) -> str:
+    for entry in run_entries:
+        if str(entry.get("status", "")).startswith("not_started"):
+            continue
+        report = _dict(entry.get("cost_report"))
+        if _run_actual_cost(entry) is None or report.get("cost_coverage") == "partial_or_missing":
+            return "partial_or_missing"
+    return "complete"
 
 
 def batch_actual_tokens(run_entries: list[dict[str, Any]]) -> int:
@@ -345,7 +358,15 @@ def batch_actual_tokens(run_entries: list[dict[str, Any]]) -> int:
 def _run_actual_cost(entry: dict[str, Any]) -> float | None:
     cost_report = _dict(entry.get("cost_report"))
     value = cost_report.get("total_actual_cost")
-    return float(value) if isinstance(value, (int, float)) else None
+    if isinstance(value, (int, float)):
+        return float(value)
+    # Historical baseline reports used null for the sum of an empty attempt list.
+    usage = _dict(entry.get("usage"))
+    attempt_count = cost_report.get("attempt_count", usage.get("attempt_count"))
+    coverage = cost_report.get("cost_coverage", usage.get("cost_coverage"))
+    if attempt_count == 0 and coverage == "complete":
+        return 0.0
+    return None
 
 
 def _run_actual_tokens(entry: dict[str, Any]) -> int | None:
@@ -368,6 +389,8 @@ def should_stop_for_budget(config: dict[str, Any], run_entries: list[dict[str, A
         actual = batch_actual_cost(run_entries)
         if actual >= float(budget):
             return f"actual_cost_{actual}_meets_or_exceeds_budget_{float(budget)}"
+        if batch_cost_coverage(run_entries) != "complete":
+            return "incomplete_cost_coverage_cannot_verify_remaining_budget"
         preflight = budget_preflight_estimate(config, run_entries)
         estimate = preflight.get("estimated_next_run_cost")
         remaining = preflight.get("remaining_budget")
@@ -402,6 +425,8 @@ def budget_preflight_estimate(config: dict[str, Any], run_entries: list[dict[str
     estimate = max(historical_costs) if historical_costs else None
     return {
         "source": "historical_max_actual_run_cost" if estimate is not None else "unavailable_no_known_prior_run_cost",
+        "cost_coverage": batch_cost_coverage(run_entries),
+        "remaining_budget_is_upper_bound": batch_cost_coverage(run_entries) != "complete",
         "estimated_next_run_cost": estimate,
         "historical_run_costs": historical_costs,
         "remaining_budget": remaining,
@@ -575,6 +600,7 @@ def _result_entry(entry: dict[str, Any]) -> dict[str, Any]:
 def _leaderboard(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
     by_model: dict[str, dict[str, Any]] = {}
     for entry in run_entries:
+        charged_models: set[str] = set()
         scorecard = _dict(entry.get("scorecard"))
         for player in _list(scorecard.get("players")):
             if not isinstance(player, dict):
@@ -598,7 +624,9 @@ def _leaderboard(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
             _append_number(row["final_net_worth_values"], player.get("final_net_worth_estimate"))
             _append_number(row["rank_values"], player.get("final_rank"))
             _append_number(row["seat_indices"], player.get("seat_index"))
-            _add_cost_for_model(row, entry, model_id)
+            if model_id not in charged_models:
+                _add_cost_for_model(row, entry, model_id)
+                charged_models.add(model_id)
     rows = []
     for row in by_model.values():
         final_values = row.pop("final_net_worth_values")
@@ -614,7 +642,7 @@ def _leaderboard(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
         row["seats_played"] = sorted(set(seat_indices))
         row["cost_adjusted_score"] = (
             row["average_final_net_worth"] / row["total_cost"]
-            if row["average_final_net_worth"] is not None and row["total_cost"] > 0
+            if row["average_final_net_worth"] is not None and row["total_cost"] is not None and row["total_cost"] > 0
             else None
         )
         rows.append(row)
@@ -789,7 +817,9 @@ def _batch_cost_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
                 },
             )
             aggregate["decision_count"] += int(model_row.get("decision_count") or 0)
-            if isinstance(model_row.get("cost"), (int, float)):
+            if model_row.get("cost") is None:
+                aggregate["cost"] = None
+            elif aggregate["cost"] is not None and isinstance(model_row.get("cost"), (int, float)):
                 aggregate["cost"] += float(model_row["cost"])
             for field, source_field in (
                 ("input_tokens", "input_tokens"),
@@ -806,13 +836,16 @@ def _batch_cost_report(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
                 if isinstance(value, (int, float)):
                     aggregate[field] += int(value)
     for row in by_model.values():
-        row["cost"] = round(float(row["cost"]), 10)
+        if row["cost"] is not None:
+            row["cost"] = round(float(row["cost"]), 10)
     return {
         "schema_version": "v1",
         "usage_accounting_version": "batch_usage_accounting_v1",
         "source": "openrouter_actuals_only",
         "local_tokenizer_estimates_used": False,
-        "total_actual_cost": batch_actual_cost(run_entries),
+        "total_actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": batch_actual_cost(run_entries),
+        "cost_coverage": batch_cost_coverage(run_entries),
         "by_run": by_run,
         "by_model": by_model,
     }
@@ -870,7 +903,9 @@ def _batch_usage_summary(run_entries: list[dict[str, Any]]) -> dict[str, Any]:
         "local_tokenizer_estimates_used": False,
         "cost_report": _batch_cost_report(run_entries),
         "token_report": _batch_token_report(run_entries),
-        "actual_cost": batch_actual_cost(run_entries),
+        "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": batch_actual_cost(run_entries),
+        "cost_coverage": batch_cost_coverage(run_entries),
         "actual_tokens": batch_actual_tokens(run_entries),
         "run_count": len(run_entries),
     }
@@ -1003,7 +1038,8 @@ def _budget_report(
     stop_reason: str | None = None,
 ) -> dict[str, Any]:
     total_actual = batch_actual_cost(run_entries)
-    budget = float(config.get("cost_budget") or DEFAULT_BATCH_BUDGET)
+    budget_value = config.get("cost_budget")
+    budget = float(budget_value) if isinstance(budget_value, (int, float)) else DEFAULT_BATCH_BUDGET
     preflight = budget_preflight_estimate(config, run_entries)
     token_preflight = token_budget_preflight_estimate(config, run_entries)
     token_budget = config.get("token_budget")
@@ -1016,7 +1052,10 @@ def _budget_report(
         "token_budget": token_budget_value,
         "cost_budget_unit": config.get("cost_budget_unit"),
         "budget_policy": config.get("budget_policy"),
-        "total_actual_cost": total_actual,
+        "total_actual_cost": total_actual if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": total_actual,
+        "cost_coverage": batch_cost_coverage(run_entries),
+        "remaining_budget_is_upper_bound": batch_cost_coverage(run_entries) != "complete",
         "total_estimated_cost": None,
         "total_unknown_cost": None,
         "total_actual_tokens": total_actual_tokens,
@@ -1024,7 +1063,7 @@ def _budget_report(
         "remaining_token_budget": token_budget_value - total_actual_tokens if token_budget_value is not None else None,
         "preflight": preflight,
         "token_preflight": token_preflight,
-        "stop_policy": "stop_immediately_when_actual_cost_or_tokens_meet_budget_or_preflight_estimate_exceeds_remaining_budget",
+        "stop_policy": "stop_when_cost_coverage_incomplete_or_actuals_meet_budget_or_preflight_exceeds_remaining_budget",
         "stop_reason": stop_reason,
         "credits_before": credits_before,
         "credits_after": credits_after,
@@ -1097,7 +1136,11 @@ def _model_card(model_id: str, run_entries: list[dict[str, Any]], leaderboard: d
         {},
     )
     total_decisions = sum(int(row.get("decision_count") or 0) for row in usage_rows)
-    total_cost = sum(float(row.get("cost") or 0.0) for row in usage_rows)
+    total_cost = (
+        sum(float(row["cost"]) for row in usage_rows)
+        if usage_rows and all(isinstance(row.get("cost"), (int, float)) for row in usage_rows)
+        else None
+    )
     total_tokens = _sum_usage_field(usage_rows, "total_tokens")
     prompt_tokens = _sum_usage_field(usage_rows, "prompt_tokens")
     completion_tokens = _sum_usage_field(usage_rows, "completion_tokens")
@@ -1163,12 +1206,12 @@ def _model_card(model_id: str, run_entries: list[dict[str, Any]], leaderboard: d
             "total_tokens": total_tokens,
             "reasoning_tokens": reasoning_tokens,
             "cached_tokens": cached_tokens,
-            "total_cost": round(total_cost, 10),
-            "cost_per_game": round(total_cost / len(player_rows), 10) if player_rows else None,
-            "cost_per_decision": round(total_cost / total_decisions, 10) if total_decisions else None,
+            "total_cost": round(total_cost, 10) if total_cost is not None else None,
+            "cost_per_game": round(total_cost / len(player_rows), 10) if player_rows and total_cost is not None else None,
+            "cost_per_decision": round(total_cost / total_decisions, 10) if total_decisions and total_cost is not None else None,
             "cost_per_score_point": (
                 round(total_cost / sum(final_net_worth), 10)
-                if final_net_worth and sum(final_net_worth) != 0
+                if total_cost is not None and final_net_worth and sum(final_net_worth) != 0
                 else None
             ),
         },
@@ -1461,7 +1504,9 @@ def _add_cost_for_model(row: dict[str, Any], entry: dict[str, Any], model_id: st
     cost_report = _dict(entry.get("cost_report"))
     by_model = _dict(cost_report.get("by_model"))
     model_cost = _dict(by_model.get(model_id))
-    if isinstance(model_cost.get("cost"), (int, float)):
+    if not isinstance(model_cost.get("cost"), (int, float)):
+        row["total_cost"] = None
+    elif row["total_cost"] is not None:
         row["total_cost"] += float(model_cost["cost"])
 
 

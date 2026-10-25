@@ -18,6 +18,7 @@ from monopoly_engine.board import (
 )
 
 from .player_config import DEFAULT_SYSTEM_PROMPT, PlayerConfig
+from .trade_offer import current_offer_author
 
 
 PROMPT_SCHEMA_VERSION = "v2"
@@ -524,6 +525,8 @@ def build_full_state(
             "cash": player.get("cash"),
             "position": space_key_for_index(position_index, space_key_by_index),
             "in_jail": bool(player.get("in_jail")),
+            "jail_turns": int(player.get("jail_turns", 0)),
+            "bankrupt": bool(player.get("bankrupt")),
             "holdings": build_holdings(str(player.get("player_id"))),
             "get_out_of_jail_cards": int(player.get("get_out_of_jail_cards", 0)),
         }
@@ -1056,9 +1059,9 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
         counterparty if actor_id == initiator else initiator if initiator else counterparty
     )
     history: list[dict[str, Any]] = []
-    trade_history = trade.get("history")
+    trade_history = trade.get("history") or trade.get("history_last_2")
     if not isinstance(trade_history, list):
-        trade_history = trade.get("history_last_2", [])
+        trade_history = []
     for entry in trade_history:
         if not isinstance(entry, dict):
             continue
@@ -1070,9 +1073,7 @@ def build_trade_response_decision_focus(decision: dict[str, Any]) -> dict[str, A
             }
         )
     current_offer_payload = trade.get("current_offer", {})
-    current_offer_from = current_offer_payload.get("from_player_id")
-    if not isinstance(current_offer_from, str):
-        current_offer_from = initiator
+    current_offer_from = current_offer_author(trade)
     raw_offer = current_offer_payload.get("offer")
     raw_request = current_offer_payload.get("request")
     if actor_id == current_offer_from:

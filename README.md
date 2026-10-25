@@ -6,6 +6,11 @@ Instead of asking models isolated questions, MonopolyBench places tool-calling a
 
 **Research paper forthcoming.**
 
+The current executable treatment is `audit_corrected_v2`. See the
+[audit fixes and evaluation limits](docs/benchmark_audit_fixes.md) for rule variants,
+observation limits, fixture quarantine, recovery guarantees, and verification.
+Historical runs used earlier treatments and remain exploratory evidence.
+
 ![MonopolyBench live UI](MonopolyBench.png)
 
 [Video demo](https://youtu.be/44xiBJf1nDk)
@@ -46,9 +51,9 @@ MonopolyBench is simultaneously:
 - A deterministic simulation where models cannot fabricate actions or bypass the game rules.
 - A replayable evaluation system that preserves every decision, prompt, response, action, event, state transition, and cost record.
 
-The benchmark covers the full strategic surface of Monopoly: auctions, trades, mortgages, housing shortages, rent shocks, jail decisions, liquidity management, liquidation, and bankruptcy. Public messages expose negotiation and table talk, while private model reasoning allows researchers to compare stated intent with observable behavior.
+The benchmark implements a documented Monopoly variant with auctions, trades, mortgages, housing shortages, rent shocks, jail decisions, liquidity management, liquidation, and bankruptcy. Public messages expose negotiation and table talk. Private generated analysis is an observable output, not proof of hidden intent.
 
-Full games test whether an agent can preserve a coherent strategy over hundreds of dependent decisions. Frozen micro-scenarios isolate specific behaviors—such as auction discipline, trade quality, loss aversion, kingmaking, deception, or liquidation errors—under controlled conditions.
+Full games provide trajectories for studying strategy across dependent decisions. Frozen micro-scenarios probe individual decisions; their scores and related-fixture comparisons are not validated measures of full-game competence or causal behavioral effects. Fixtures with illegal reference actions are quarantined before paid execution.
 
 ## How MonopolyBench works
 

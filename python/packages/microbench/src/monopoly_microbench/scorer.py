@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
+from monopoly_arena.fixture_validation import validate_fixture_action
+from monopoly_engine.board import HOUSE_COST_BY_GROUP, SPACE_INDEX_BY_KEY
 
 
 def score_action(
@@ -9,10 +11,12 @@ def score_action(
     *,
     fallback_used: bool = False,
 ) -> dict[str, Any]:
-    if fallback_used:
+    legality_errors = validate_fixture_action(scenario["decision_point"], action)
+    if fallback_used or legality_errors:
         return {
             "total": 0.0,
             "label": "invalid",
+            "legality_errors": legality_errors,
             "breakdown": [
                 {
                     "criterion_id": "fallback",
@@ -26,7 +30,12 @@ def score_action(
     breakdown: list[dict[str, Any]] = []
     total = 0.0
     possible = 0.0
+    communication: list[dict[str, Any]] = []
     for criterion in scenario["evaluation"]["rubric"]:
+        if criterion["type"] in {"private_thought_mentions", "public_message_nonempty"}:
+            communication.append({"criterion_id": criterion["criterion_id"],
+                                  "passed": _criterion_passes(scenario, action, criterion)})
+            continue
         max_points = float(criterion["max_points"])
         possible += max_points
         passed = _criterion_passes(scenario, action, criterion)
@@ -43,7 +52,9 @@ def score_action(
         )
     normalized = 0.0 if possible <= 0 else round(total / possible, 6)
     label = "preferred" if normalized >= 0.8 else "acceptable" if normalized >= 0.5 else "bad"
-    return {"total": normalized, "label": label, "breakdown": breakdown}
+    return {"total": normalized, "label": label, "breakdown": breakdown,
+            "communication": communication, "scoring_version": "action_only_v2",
+            "interpretation": "single_fixture_action_quality_not_realized_game_outcome"}
 
 
 def _criterion_passes(scenario: dict[str, Any], action: dict[str, Any], criterion: dict[str, Any]) -> bool:
@@ -81,7 +92,9 @@ def _criterion_passes(scenario: dict[str, Any], action: dict[str, Any], criterio
         cash = _trade_bundle(args, "request").get("cash")
         return isinstance(cash, int) and int(params["min"]) <= cash <= int(params["max"])
     if kind == "trade_completes_focal_monopoly":
-        return bool(params.get("space_key")) and params["space_key"] in _trade_bundle(args, "request").get("properties", [])
+        # A proposal is not an executed transfer. This legacy rubric cannot
+        # establish realized monopoly completion from a requested property.
+        return False
     if kind == "builds_on_group":
         keys = set(params.get("space_keys", []))
         return any(entry.get("space_key") in keys for entry in args.get("build_plan", []))
@@ -120,4 +133,26 @@ def _cash_after_action(scenario: dict[str, Any], action: dict[str, Any]) -> int:
         cash -= int(action.get("args", {}).get("bid_amount", 0))
     if action["action"] == "pay_jail_fine":
         cash -= 50
+    args = action.get("args", {})
+    name = action["action"]
+    if name in {"mortgage_property", "unmortgage_property"}:
+        space = state["board"][SPACE_INDEX_BY_KEY[args["space_key"]]]
+        mortgage = int(space["price"]) // 2
+        cash += mortgage if name == "mortgage_property" else -(mortgage + (mortgage + 9) // 10)
+    if name in {"build_houses_or_hotel", "sell_houses_or_hotel"}:
+        selling = name == "sell_houses_or_hotel"
+        for entry in args["sell_plan" if selling else "build_plan"]:
+            space = state["board"][SPACE_INDEX_BY_KEY[entry["space_key"]]]
+            cost = HOUSE_COST_BY_GROUP[space["group"]] * entry["count"]
+            cash += cost // 2 if selling else -cost
+    if name == "accept_trade":
+        offer = state["trade"]["current_offer"]
+        history = state["trade"].get("history") or state["trade"].get("history_last_2") or []
+        author = offer.get("from_player_id") or (history[-1]["from_player_id"] if history else state["trade"]["initiator_player_id"])
+        give, receive = (offer["offer"], offer["request"]) if author == player_id else (offer["request"], offer["offer"])
+        cash += receive["cash"] - give["cash"]
+        for key in receive["properties"]:
+            space = state["board"][SPACE_INDEX_BY_KEY[key]]
+            if space["mortgaged"]:
+                cash -= ((int(space["price"]) // 2) + 9) // 10
     return cash

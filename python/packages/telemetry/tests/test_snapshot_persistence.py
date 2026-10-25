@@ -356,11 +356,14 @@ def test_write_usage_artifacts_from_openrouter_actuals(tmp_path) -> None:
     assert usage["totals"]["native_total_tokens"] == 17
     assert usage["totals"]["reasoning_tokens"] == 2
     assert usage["totals"]["cached_tokens"] == 3
-    assert usage["totals"]["cost"] == 0.0123
+    assert usage["totals"]["cost"] is None
     assert attempts[0]["accounting_status"] == "actual_openrouter_usage"
+    assert attempts[0]["cost"] == 0.0123
     assert attempts[1]["accounting_status"] == "missing_openrouter_usage"
     assert decisions[0]["accounting_status"] == "partial_openrouter_usage"
-    assert cost_report["total_actual_cost"] == 0.0123
+    assert decisions[0]["cost"] is None
+    assert usage["by_player"]["p1"]["cost"] is None
+    assert cost_report["total_actual_cost"] is None
     assert cost_report["total_estimated_cost"] is None
 
 

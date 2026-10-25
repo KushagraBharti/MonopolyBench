@@ -93,6 +93,11 @@ try {
     }
   }
 
+  Invoke-Step -Name "Python: microbench tests" -ScriptBlock {
+    Push-Location python/packages/microbench
+    try { uv run pytest } finally { Pop-Location }
+  }
+
   Invoke-Step -Name "Frontend: lint" -ScriptBlock {
     Push-Location frontend
     try {

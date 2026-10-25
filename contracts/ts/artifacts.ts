@@ -87,6 +87,19 @@ export interface ReplayStep {
   payload?: Record<string, unknown>;
 }
 
+// Historical saved steps stored event data in a nested envelope.
+export type LegacyReplayStep = Omit<ReplayStep, "event_type"> & {
+  event_type?: string;
+  type?: string;
+  seq?: number | null;
+  event?: {
+    type?: string;
+    seq?: number | null;
+    actor?: ReplayStep["actor"];
+    payload?: Record<string, unknown>;
+  };
+};
+
 export interface ReplayFlag {
   schema_version?: "v1";
   replay_flag_version?: "replay_flag_v1";

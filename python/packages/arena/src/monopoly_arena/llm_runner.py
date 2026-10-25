@@ -9,6 +9,7 @@ from typing import Any, AsyncIterable, Awaitable, Callable
 
 from monopoly_engine import Engine, canonical_event_lines
 from monopoly_engine.board import normalize_space_key
+from monopoly_engine.replay import load_jsonl
 from monopoly_telemetry import (
     RunFiles,
     build_summary,
@@ -30,6 +31,8 @@ from .prompting import (
     build_space_key_by_index,
 )
 from .replay_verification import write_replay_verification_artifacts
+from .treatment import treatment_fingerprint
+from monopoly_telemetry.commit import write_commit
 
 
 DecisionCallback = Callable[[dict[str, Any]], Awaitable[None]]
@@ -170,15 +173,22 @@ class LlmRunner:
             self._applied_decision_ids.add(str(decision["decision_id"]))
 
         pending_decision: dict[str, Any] | None = None
+        at_committed_boundary = False
         if self._resume_at_boundary:
+            # Cloud journals commit single engine steps; replay exactly to the last one.
             while not self._engine.is_game_over() and len(replayed_events) < len(expected_events):
                 _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=1)
                 replayed_events.extend(tail_events)
                 if not tail_events or pending_decision is not None:
                     break
-        elif not self._engine.is_game_over():
-            _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
-            replayed_events.extend(tail_events)
+        else:
+            # A durable commit may end exactly at TURN_ENDED. Do not generate the
+            # next turn until the normal event stream can persist its events.
+            at_committed_boundary = canonical_event_lines(replayed_events) == canonical_event_lines(expected_events)
+            _, _, pending_decision, _ = self._engine.advance_until_decision(max_steps=0)
+            if not self._engine.is_game_over() and not at_committed_boundary:
+                _, tail_events, pending_decision, _ = self._engine.advance_until_decision(max_steps=max_auto_steps)
+                replayed_events.extend(tail_events)
 
         replayed_lines = canonical_event_lines(replayed_events)
         expected_lines = canonical_event_lines(expected_events)
@@ -195,7 +205,8 @@ class LlmRunner:
                 "Interrupted-run event replay mismatch at index "
                 f"{mismatch_index} (replayed={len(replayed_lines)}, recorded={len(expected_lines)})."
             )
-        if pending_decision is None and not self._engine.is_game_over() and not self._resume_at_boundary:
+        if (pending_decision is None and not self._engine.is_game_over()
+                and not self._resume_at_boundary and not at_committed_boundary):
             raise ValueError("Interrupted run has no recoverable pending decision.")
 
         for event in replayed_events:
@@ -230,6 +241,12 @@ class LlmRunner:
 
                 summary_handler = _write_summary
         try:
+            if self._run_files is not None:
+                launch_path = self._run_files.run_dir / "launch_pricing_snapshot.json"
+                if not launch_path.exists():
+                    await self._write_pricing_snapshot_artifact()
+                    self._run_files.write_json_artifact(launch_path, json.loads(
+                        self._run_files.pricing_snapshot_path.read_text(encoding="utf-8")))
             async for event in self._event_stream(on_decision=on_decision):
                 if event_handler is not None:
                     await event_handler(event)
@@ -270,6 +287,21 @@ class LlmRunner:
                     write_replay_verification_artifacts(self._run_files)
                     write_trace_failure_artifacts(self._run_files)
                     self._run_files.write_artifact_manifest()
+                    report = json.loads(self._run_files.replay_report_path.read_text(encoding="utf-8"))
+                    self._run_files.write_json_artifact(self._run_files.run_dir / "completion.json", {
+                        "run_id": self.run_id, "finalized": True, "replay_status": report["status"],
+                        "complete": report["status"] == "passed",
+                    })
+                    if report["status"] != "passed" and self._run_files.events_path.exists():
+                        raise RuntimeError("Finalization failed replay verification; run is not complete")
+        except Exception as exc:
+            if self._run_files is not None:
+                self._run_files.write_json_artifact(self._run_files.run_dir / "failure.json", {
+                    "run_id": self.run_id, "error": str(exc), "complete": False,
+                    "phase": self._engine.state.phase, "turn_index": self._engine.state.turn_index,
+                })
+                write_usage_artifacts(self._run_files)
+            raise
         finally:
             await self._close_openrouter()
 
@@ -293,7 +325,12 @@ class LlmRunner:
                 "reason": "client_has_no_get_models",
             }
         else:
-            result = await method()
+            try:
+                result = await asyncio.wait_for(method(), timeout=15)
+            except asyncio.TimeoutError:
+                self._run_files.write_json_artifact(self._run_files.pricing_snapshot_path, {
+                    "status": "error", "reason": "metadata_deadline_exceeded"})
+                return
             payload = {
                 "schema_version": "v1",
                 "source": "openrouter_get_models",
@@ -310,12 +347,25 @@ class LlmRunner:
         self,
         on_decision: DecisionCallback | None = None,
     ) -> AsyncIterable[dict[str, Any]]:
+        recovered_start_exists = (
+            self._recovered_pending_decision_id is not None
+            and self._run_files is not None
+            and any(row.get("phase") == "decision_started"
+                    and row.get("decision_id") == self._recovered_pending_decision_id
+                    for row in load_jsonl(self._run_files.decisions_path))
+        )
+
         async def write_decision(entry: dict[str, Any]) -> None:
+            if (recovered_start_exists and entry.get("phase") == "decision_started"
+                    and entry.get("decision_id") == self._recovered_pending_decision_id):
+                return
             if on_decision is not None:
                 await on_decision(entry)
             elif self._run_files is not None:
                 self._run_files.write_decision(entry)
 
+        decisions_this_turn = 0
+        last_turn = -1
         while True:
             await self._await_resume()
             async with self._advance_lock:
@@ -327,6 +377,12 @@ class LlmRunner:
                 self._prompt_memory.update(event)
                 yield event
             if decision is not None:
+                if decision["turn_index"] != last_turn:
+                    decisions_this_turn = 0
+                    last_turn = decision["turn_index"]
+                decisions_this_turn += 1
+                if decisions_this_turn > 1000:
+                    raise RuntimeError("No-progress guard: more than 1000 decisions in one turn; run is incomplete")
                 await self._await_resume()
                 outcome = await self._resolve_decision(decision, write_decision)
                 self._pending_resolution = PendingResolution(decision=decision, outcome=outcome)
@@ -346,17 +402,6 @@ class LlmRunner:
                         decision_meta=outcome.decision_meta,
                     )
                     self._applied_decision_ids.add(decision_id)
-                if self._run_files is not None:
-                    self._run_files.write_action(
-                        {
-                            "decision_id": decision["decision_id"],
-                            "actor_player_id": decision["player_id"],
-                            "decision_type": decision["decision_type"],
-                            "turn_index": decision["turn_index"],
-                            "action": outcome.action,
-                            "decision_meta": outcome.decision_meta,
-                        }
-                    )
                 player_config = self._player_configs[decision["player_id"]]
                 resolved_entry = self._build_decision_log_entry(
                     decision=decision,
@@ -372,6 +417,14 @@ class LlmRunner:
                     sequence_meta=outcome.sequence_meta,
                     automated=outcome.automated,
                 )
+                if self._run_files is not None:
+                    action_entry = {
+                        "decision_id": decision["decision_id"], "actor_player_id": decision["player_id"],
+                        "decision_type": decision["decision_type"], "turn_index": decision["turn_index"],
+                        "action": outcome.action, "decision_meta": outcome.decision_meta,
+                    }
+                    write_commit(self._run_files, action_entry, resolved_entry, action_events)
+                    self._run_files.write_action(action_entry)
                 await write_decision(resolved_entry)
                 for event in action_events:
                     await self._await_resume()
@@ -452,6 +505,8 @@ class LlmRunner:
         if self._run_files is None:
             return
         players_payload = _players_payload(self._players)
+        self._run_files.write_json_artifact(self._run_files.run_dir / "recovery_prompts.json",
+                                            {player.player_id: player.system_prompt for player in self._players})
         seat_assignment = _seat_assignment_payload(
             run_id=self.run_id,
             players=self._players,
@@ -464,6 +519,10 @@ class LlmRunner:
         run_config = {
             "schema_version": "v1",
             "run_config_version": "run_config_v1",
+            "treatment_version": "audit_corrected_v2",
+            "treatment_fingerprint": treatment_fingerprint(),
+            "fallback_policy": "finance_before_bankruptcy_v2",
+            "infrastructure_policy": "fail_without_action_v2",
             "run_id": self.run_id,
             "mode": "full_game",
             "seed": self._seed,

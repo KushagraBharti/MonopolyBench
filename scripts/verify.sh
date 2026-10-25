@@ -54,6 +54,9 @@ step "Python: arena tests"
 step "Python: telemetry tests"
 (cd python/packages/telemetry && uv run pytest)
 
+step "Python: microbench tests"
+(cd python/packages/microbench && uv run pytest)
+
 step "Frontend: lint"
 (cd frontend && npm run lint)
 

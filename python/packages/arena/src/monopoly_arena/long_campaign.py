@@ -18,6 +18,7 @@ from typing import Any
 from .baselines import BASELINE_IDS
 from .batch_artifacts import (
     batch_actual_cost,
+    batch_cost_coverage,
     budget_preflight_estimate,
     should_stop_for_budget,
 )
@@ -212,9 +213,7 @@ async def run_campaign(
         if entry["status"] == "failed" and not bool(
             config.get("continue_on_failure", False)
         ):
-            stop_reason = (
-                stop_reason or f"campaign_halted_after_failed_run_{row['run_id']}"
-            )
+            stop_reason = f"campaign_halted_after_failed_run_{row['run_id']}"
 
     metadata_client = factory() if callable(factory) else factory
     endpoint_snapshot_after = await _openrouter_metadata_snapshot(
@@ -250,7 +249,9 @@ async def run_campaign(
         ),
         "failed_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
         "status_counts": _status_counts(run_entries),
-        "actual_cost": batch_actual_cost(run_entries),
+        "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": batch_actual_cost(run_entries),
+        "cost_coverage": batch_cost_coverage(run_entries),
         "stop_reason": stop_reason,
         "campaign_dir": str(paths["campaign_dir"]),
         "prompt_pipeline": _prompt_marker(
@@ -329,6 +330,7 @@ def _build_run_matrix(
                     max_turns=int(config["max_turns"]),
                     actors=row_actors,
                     run_index=run_index,
+                    treatment_config=config,
                 )
                 rows.append(
                     {
@@ -824,9 +826,11 @@ async def _run_campaign_row(
             campaign_row_ended_at_utc=_utc_now(),
         )
 
+    complete = _completed_run_exists(run_dir)
     return _campaign_result_entry(
         row,
-        status="completed",
+        status="completed" if complete else "failed",
+        error=None if complete else "Finalized artifacts failed completion validation",
         run_dir=run_dir,
         campaign_row_started_at_utc=campaign_row_started_at_utc,
         campaign_row_ended_at_utc=_utc_now(),
@@ -1008,8 +1012,74 @@ def _completed_run_exists(run_dir: Path) -> bool:
         "artifact_replay_report.json",
         "trace_summary.json",
         "failure_summary.json",
+        "artifact_manifest.json",
+        "completion.json",
+        "run_config.json",
+        "usage.json",
+        "cost_report.json",
     ]
-    return all((run_dir / name).exists() for name in required)
+    try:
+        from monopoly_engine.replay import load_jsonl
+        from monopoly_telemetry import build_run_files
+        from .replay_verification import build_replay_verification_report
+
+        for name in required:
+            path = run_dir / name
+            if not path.is_file() or path.stat().st_size == 0:
+                return False
+            if name.endswith(".jsonl"):
+                if not load_jsonl(path):
+                    return False
+            else:
+                value = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(value, (dict, list)) or not value:
+                    return False
+                if isinstance(value, dict) and value.get("run_id", run_dir.name) != run_dir.name:
+                    return False
+        completion = json.loads((run_dir / "completion.json").read_text(encoding="utf-8"))
+        if (completion.get("run_id") != run_dir.name or completion.get("complete") is not True
+                or completion.get("finalized") is not True or completion.get("replay_status") != "passed"):
+            return False
+        report = build_replay_verification_report(build_run_files(run_dir.parent, run_dir.name))
+        if report.get("status") != "passed":
+            return False
+        events = load_jsonl(run_dir / "events.jsonl")
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        terminal = events[-1]
+        if (summary.get("winner_player_id") != terminal["payload"].get("winner_player_id")
+                or summary.get("reason") != terminal["payload"].get("reason")
+                or summary.get("turn_count") != terminal.get("turn_index")):
+            return False
+        manifest = json.loads((run_dir / "artifact_manifest.json").read_text(encoding="utf-8"))
+        inventoried: set[str] = set()
+        excluded = {"artifact_manifest.json", "completion.json"}
+        # Human review is post-hoc annotation, not frozen execution evidence.
+        mutable_review_files = {"review_queue.jsonl", "reviews/review_labels.jsonl", "reviews/review_summary.json"}
+        for artifact in manifest["artifacts"]:
+            relative_path = artifact["relative_path"]
+            if Path(relative_path).as_posix() in mutable_review_files:
+                continue
+            path = (run_dir / relative_path).resolve()
+            if not path.is_relative_to(run_dir.resolve()):
+                return False
+            if artifact.get("exists") is True:
+                if relative_path in inventoried or relative_path in excluded:
+                    return False
+                data = path.read_bytes()
+                if (hashlib.sha256(data).hexdigest() != artifact.get("sha256")
+                        or len(data) != artifact.get("bytes")):
+                    return False
+                inventoried.add(relative_path)
+            elif artifact.get("exists") is not False or path.exists():
+                return False
+        actual_files = {str(path.relative_to(run_dir)) for path in run_dir.rglob("*")
+                        if path.is_file() and str(path.relative_to(run_dir)) not in excluded
+                        and path.relative_to(run_dir).as_posix() not in mutable_review_files}
+        if inventoried != actual_files:
+            return False
+        return True
+    except (ValueError, OSError, TypeError, KeyError, AttributeError):
+        return False
 
 
 def _run_dir_is_empty(run_dir: Path) -> bool:
@@ -1235,7 +1305,9 @@ def _write_campaign_dynamic_artifacts(
             "budget_policy": config.get("budget_policy"),
             "cost_budget": config.get("cost_budget"),
             "minimum_available_credits": config.get("minimum_available_credits"),
-            "actual_cost": batch_actual_cost(run_entries),
+            "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+            "known_cost_subtotal": batch_actual_cost(run_entries),
+            "cost_coverage": batch_cost_coverage(run_entries),
             "stop_reason": stop_reason,
             "next_run_preflight": budget_preflight_estimate(config, run_entries),
             "credits_before": credits_before,
@@ -1331,7 +1403,7 @@ def _leaderboard_payload(
     for actor_id, actor_rows in sorted(by_actor.items()):
         net_worth = [_number(row.get("final_net_worth_estimate")) for row in actor_rows]
         ranks = [_number(row.get("final_rank")) for row in actor_rows]
-        costs = [_number(row.get("total_cost")) for row in actor_rows]
+        costs = [float(row["total_cost"]) for row in actor_rows if isinstance(row.get("total_cost"), (int, float))]
         tokens = [_number(row.get("total_tokens")) for row in actor_rows]
         fallbacks = [_number(row.get("fallback_rate")) for row in actor_rows]
         retries = [_number(row.get("retry_rate")) for row in actor_rows]
@@ -1340,6 +1412,10 @@ def _leaderboard_payload(
         bankruptcies = sum(1 for row in actor_rows if row.get("bankrupt"))
         metadata = actor_rows[0]
         row_payload = {
+            "seed_block_inference": {
+                metric: _seed_block_stats(actor_rows, metric)
+                for metric in ("final_net_worth_estimate", "final_rank", "turns_survived")
+            },
             "actor_id": actor_id,
             "actor_type": metadata.get("actor_type"),
             "display_name": metadata.get("display_name"),
@@ -1356,6 +1432,7 @@ def _leaderboard_payload(
             "final_rank": _numeric_stats(ranks),
             "turns_survived": _numeric_stats(turns),
             "total_cost": _numeric_stats(costs),
+            "unknown_cost_count": len(actor_rows) - len(costs),
             "total_tokens": _numeric_stats(tokens),
             "fallback_rate": _numeric_stats(fallbacks),
             "retry_rate": _numeric_stats(retries),
@@ -1404,8 +1481,9 @@ def _statistics_payload(
     ]
     run_turns = [_number(entry["summary"].get("turn_count")) for entry in completed]
     run_costs = [
-        _number(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")))
+        float(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")))
         for entry in completed
+        if isinstance(_nested(entry, ("run_metrics", "usage_metrics", "total_cost")), (int, float))
     ]
     run_decisions = [
         _number(_nested(entry, ("run_metrics", "decision_stats", "total_resolved")))
@@ -1429,6 +1507,7 @@ def _statistics_payload(
             "resolved_decision_count": _numeric_stats(run_decisions),
             "fallback_rate": _numeric_stats(run_fallbacks),
             "total_cost": _numeric_stats(run_costs),
+            "unknown_cost_count": len(completed) - len(run_costs),
         },
         "by_seed": _by_seed_stats(run_entries),
         "seat_effects": _seat_effect_stats(run_entries),
@@ -1461,7 +1540,7 @@ def _baseline_comparison_payload(
     rows: list[dict[str, Any]] = []
     for row in leaderboard.get("rows", []):
         avg_net_worth = _number(row.get("average_final_net_worth"))
-        total_cost = _nested(row, ("total_cost", "mean"))
+        total_cost = _nested(row, ("total_cost", "mean")) if not row.get("unknown_cost_count") else None
         baseline_normalized = (
             round(avg_net_worth / baseline_mean, 6)
             if isinstance(baseline_mean, (int, float)) and baseline_mean != 0
@@ -1478,6 +1557,7 @@ def _baseline_comparison_payload(
                 "average_final_rank": row.get("average_final_rank"),
                 "baseline_normalized_net_worth": baseline_normalized,
                 "average_total_cost": total_cost,
+                "unknown_cost_count": row.get("unknown_cost_count", 0),
                 "net_worth_per_dollar": (
                     round(avg_net_worth / float(total_cost), 6)
                     if isinstance(total_cost, (int, float))
@@ -1518,7 +1598,9 @@ def _execution_result_payload(
         ),
         "failed_count": sum(1 for entry in run_entries if entry["status"] == "failed"),
         "status_counts": _status_counts(run_entries),
-        "actual_cost": batch_actual_cost(run_entries),
+        "actual_cost": batch_actual_cost(run_entries) if batch_cost_coverage(run_entries) == "complete" else None,
+        "known_cost_subtotal": batch_actual_cost(run_entries),
+        "cost_coverage": batch_cost_coverage(run_entries),
         "campaign_dir": str(paths["campaign_dir"]),
         "artifacts": {
             "results": str(paths["results"]),
@@ -1563,6 +1645,22 @@ def _baseline_strategies(actors: list[dict[str, Any]]) -> dict[str, str]:
     }
 
 
+def _cell_treatment_config(config: dict[str, Any] | None) -> dict[str, Any]:
+    config = config or {}
+    return {
+        "max_trade_exchanges": int(config.get("max_trade_exchanges") or 20),
+        "max_auction_actions": int(config.get("max_auction_actions") or 200),
+    }
+
+
+def _actor_treatment(actor: dict[str, Any]) -> dict[str, Any]:
+    # Resolve model behavior at the cell, independently of budget/roster metadata.
+    return {key: actor.get(key) for key in (
+        "seat_index", "player_id", "actor_id", "roster_slot_index", "actor_type",
+        "openrouter_model_id", "reasoning", "provider", "baseline_id", "system_prompt", "display_name",
+    )}
+
+
 def _run_id(
     *,
     campaign_id: str,
@@ -1572,23 +1670,20 @@ def _run_id(
     max_turns: int,
     actors: list[dict[str, Any]],
     run_index: int,
+    treatment_config: dict[str, Any] | None = None,
 ) -> str:
+    from .treatment import treatment_fingerprint
     digest = _sha256_short(
         {
             "campaign_id": campaign_id,
+            "treatment_config": _cell_treatment_config(treatment_config),
+            "treatment_fingerprint": treatment_fingerprint(),
+            "treatment_version": "audit_corrected_v2",
             "seed": seed,
             "repetition_index": repetition_index,
             "permutation_id": permutation_id,
             "max_turns": max_turns,
-            "actors": [
-                {
-                    "seat_index": actor["seat_index"],
-                    "actor_id": actor["actor_id"],
-                    "roster_slot_index": actor["roster_slot_index"],
-                    "actor_type": actor["actor_type"],
-                }
-                for actor in actors
-            ],
+            "actors": [_actor_treatment(actor) for actor in actors],
         }
     )
     return f"{_safe_id(campaign_id)}-{run_index:04d}-{seed}-{digest}"
@@ -1601,22 +1696,19 @@ def _resume_key(
     permutation_id: str,
     actors: list[dict[str, Any]],
 ) -> str:
+    from .treatment import treatment_fingerprint
     return _sha256_short(
         {
             "benchmark_id": config["benchmark_id"],
+            "treatment_config": _cell_treatment_config(config),
+            "treatment_version": "audit_corrected_v2",
+            "treatment_fingerprint": treatment_fingerprint(),
             "campaign_id": config["campaign_id"],
             "seed": seed,
             "repetition_index": repetition_index,
             "permutation_id": permutation_id,
             "max_turns": config["max_turns"],
-            "actors": [
-                {
-                    "seat_index": actor["seat_index"],
-                    "roster_actor_ref": actor["roster_actor_ref"],
-                    "actor_type": actor["actor_type"],
-                }
-                for actor in actors
-            ],
+            "actors": [_actor_treatment(actor) for actor in actors],
         },
         length=16,
     )
@@ -1868,6 +1960,7 @@ def _leaderboard_csv_rows(leaderboard: dict[str, Any]) -> list[dict[str, Any]]:
                 "average_final_net_worth": row.get("average_final_net_worth"),
                 "average_final_rank": row.get("average_final_rank"),
                 "average_cost_per_game": row.get("average_cost_per_game"),
+                "unknown_cost_count": row.get("unknown_cost_count", 0),
                 "average_tokens_per_game": row.get("average_tokens_per_game"),
             }
         )
@@ -2015,6 +2108,7 @@ def _leaderboard_markdown_table(leaderboard: dict[str, Any]) -> str:
                 row.get("average_final_net_worth"),
                 row.get("average_final_rank"),
                 row.get("average_cost_per_game"),
+                row.get("unknown_cost_count", 0),
             )
         )
     return _markdown_table(
@@ -2027,7 +2121,8 @@ def _leaderboard_markdown_table(leaderboard: dict[str, Any]) -> str:
             "Win Rate",
             "Avg Net Worth",
             "Avg Rank",
-            "Avg Cost",
+            "Avg Known Cost",
+            "Games with Unknown Cost",
         ),
     )
 
@@ -2114,6 +2209,20 @@ def _format_markdown_cell(value: Any) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
 
+def _seed_block_stats(rows: list[dict[str, Any]], metric: str) -> dict[str, Any]:
+    blocks: dict[int, list[float]] = {}
+    for row in rows:
+        value, seed = row.get(metric), row.get("seed")
+        if isinstance(seed, int) and isinstance(value, (float, int)) and math.isfinite(value):
+            blocks.setdefault(seed, []).append(float(value))
+    means = [mean(values) for _, values in sorted(blocks.items())]
+    return {"unit": "seed_block", "block_count": len(means),
+            "estimand": "equally_weighted_mean_of_seed_means",
+            "mean": mean(means) if means else None, "ci95": _bootstrap_mean_ci(means),
+            "limited_blocks": len(means) < 10,
+            "pairing": "seed_reuse_does_not_imply_identical_future_draws"}
+
+
 def _numeric_stats(values: list[float]) -> dict[str, Any]:
     filtered = [value for value in values if math.isfinite(value)]
     if not filtered:
@@ -2133,7 +2242,8 @@ def _numeric_stats(values: list[float]) -> dict[str, Any]:
         "min": round(min(filtered), 6),
         "max": round(max(filtered), 6),
         "stdev": round(stdev(filtered), 6) if len(filtered) > 1 else 0.0,
-        "ci95": _bootstrap_mean_ci(filtered),
+        "ci95": None,
+        "inference_note": "descriptive_only_use_seed_block_inference",
     }
 
 
@@ -2146,12 +2256,11 @@ def _bootstrap_mean_ci(values: list[float]) -> dict[str, Any]:
             "resamples": 0,
         }
     if len(values) == 1:
-        value = round(values[0], 6)
         return {
-            "method": "deterministic_bootstrap_mean",
-            "lower": value,
-            "upper": value,
-            "resamples": 1,
+            "method": "insufficient_independent_observations",
+            "lower": None,
+            "upper": None,
+            "resamples": 0,
         }
     resamples = 500
     rng = random.Random(

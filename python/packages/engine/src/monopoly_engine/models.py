@@ -157,6 +157,7 @@ class TradeThread:
             "history": [entry.to_snapshot() for entry in self.history],
             "history_last_2": [entry.to_snapshot() for entry in history_slice],
             "current_offer": {
+                "from_player_id": self.current_offer.from_player_id,
                 "offer": self.current_offer.offer.to_snapshot(),
                 "request": self.current_offer.request.to_snapshot(),
             },

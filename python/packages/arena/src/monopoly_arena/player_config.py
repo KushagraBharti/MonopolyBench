@@ -165,7 +165,9 @@ def build_player_configs(
             merged = dict(entry)
             override = overrides.get(player_id)
             if override:
-                if override.get("openrouter_model_id", entry.get("openrouter_model_id")) != entry.get("openrouter_model_id"):
+                if (override.get("openrouter_model_id")
+                        and override["openrouter_model_id"] != entry.get("openrouter_model_id")
+                        and "provider" not in override):
                     merged.pop("provider", None)
                 merged.update(override)
             merged_entries.append(merged)

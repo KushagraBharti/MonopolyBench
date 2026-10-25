@@ -13,15 +13,16 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     entries: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
         try:
             parsed = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            entries.append(parsed)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path.name}:{line_number}: invalid JSON") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError(f"{path.name}:{line_number}: expected an object")
+        entries.append(parsed)
     return entries
 
 
@@ -57,7 +58,7 @@ def replay_actions(
         events.extend(new_events)
         if decision is None:
             if engine.is_game_over():
-                break
+                raise ValueError("Extra action after terminal game state.")
             raise ValueError("Replay could not reach the next decision before applying an action.")
         if assert_decision_ids:
             expected_id = entry.get("decision_id")
@@ -69,8 +70,6 @@ def replay_actions(
         decision_meta = entry.get("decision_meta") if isinstance(entry.get("decision_meta"), dict) else None
         _, action_events, _, _ = engine.apply_action(action_payload, decision_meta=decision_meta)
         events.extend(action_events)
-        if engine.is_game_over():
-            break
 
     if not engine.is_game_over():
         _, tail_events, _, _ = engine.advance_until_decision(max_steps=max_auto_steps)

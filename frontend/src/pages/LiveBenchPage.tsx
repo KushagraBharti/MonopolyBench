@@ -33,9 +33,10 @@ export const LiveBenchPage = () => {
   const runState = useMemo(() => {
     if (runStatus.running && runStatus.paused) return 'PAUSED';
     if (runStatus.running) return 'RUNNING';
-    if (runStatus.runId) return 'COMPLETE';
+    if (snapshot?.phase === 'GAME_OVER') return 'ENDED';
+    if (runStatus.runId) return 'STOPPED';
     return 'IDLE';
-  }, [runStatus.running, runStatus.paused, runStatus.runId]);
+  }, [runStatus.running, runStatus.paused, runStatus.runId, snapshot?.phase]);
 
   const showAuction = Boolean(snapshot?.auction);
   const showTrade = Boolean(snapshot?.trade);
@@ -114,8 +115,7 @@ export const LiveBenchPage = () => {
   }, [latestEvent, setEventHighlight]);
 
   const isConnected = connection.status === 'connected';
-  const runBadgeLabel =
-    runState === 'RUNNING' ? 'RUNNING' : runState === 'PAUSED' ? 'PAUSED' : runState === 'COMPLETE' ? 'COMPLETE' : 'IDLE';
+  const runBadgeLabel = runState;
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-y-auto bg-neo-bg font-sans text-black lg:h-screen lg:flex-row lg:overflow-hidden">
@@ -156,7 +156,7 @@ export const LiveBenchPage = () => {
                 variant={
                   runState === 'RUNNING' ? 'info' :
                     runState === 'PAUSED' ? 'warning' :
-                      runState === 'COMPLETE' ? 'success' :
+                      runState === 'ENDED' ? 'success' :
                         'neutral'
                 }
                 className="text-[8px] py-0 px-1.5"

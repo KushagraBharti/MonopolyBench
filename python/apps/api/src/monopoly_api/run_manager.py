@@ -23,6 +23,7 @@ from monopoly_telemetry import (
 from monopoly_api.mock_runner import build_idle_snapshot
 from monopoly_arena import LlmRunner, OpenRouterClient, PlayerConfig
 from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT, EXPECTED_PLAYER_COUNT, derive_model_display_name
+from monopoly_arena.treatment import treatment_fingerprint
 from monopoly_api.ws_protocol import make_event, make_hello, make_snapshot
 from monopoly_api.decision_index import DecisionIndex
 
@@ -72,6 +73,9 @@ class RunManager:
             )
             if self._is_running() and self._run_id == run_id:
                 return run_id
+            existing = build_run_files(self._runs_dir, run_id)
+            if existing.events_path.exists() or existing.run_config_path.exists():
+                raise ValueError("Run already exists; use recovery or a distinct run id")
             if self._runner_task is not None and self._runner_task.done():
                 self._runner_task = None
             if self._is_running():
@@ -111,15 +115,25 @@ class RunManager:
             run_files = self._resolve_run_files(run_id)
             if run_files is None:
                 raise FileNotFoundError(f"Run '{run_id}' was not found.")
-            if run_files.summary_path.exists():
+            if (run_files.run_dir / "completion.json").exists() and _read_json(run_files.run_dir / "completion.json").get("complete"):
                 raise ValueError("Completed runs cannot be recovered as interrupted runs.")
 
             run_config = _read_json(run_files.run_config_path)
+            fingerprint = run_config.get("treatment_fingerprint")
+            if fingerprint and fingerprint != treatment_fingerprint():
+                raise ValueError("Cannot resume under a different executable treatment")
             if run_config.get("run_id") != run_id:
                 raise ValueError("Run configuration does not match the requested run id.")
-            events = _read_jsonl(run_files.events_path)
-            actions = _read_jsonl(run_files.actions_path)
-            decisions = _read_jsonl(run_files.decisions_path)
+            from monopoly_telemetry.commit import repair_committed_tails
+            repair_committed_tails(run_files)
+            from monopoly_engine.replay import load_jsonl
+            events = load_jsonl(run_files.events_path)
+            actions = load_jsonl(run_files.actions_path)
+            decisions = load_jsonl(run_files.decisions_path)
+            recovery_prompts = _read_json(run_files.run_dir / "recovery_prompts.json")
+            for entry in run_config.get("players", []):
+                if entry.get("player_id") in recovery_prompts:
+                    entry["system_prompt"] = recovery_prompts[entry["player_id"]]
             if not events:
                 raise ValueError("Interrupted run has no recorded events.")
             players = _recovery_player_configs(run_config, decisions)
@@ -255,12 +269,15 @@ class RunManager:
                 "name": player.name,
                 "openrouter_model_id": player.openrouter_model_id,
                 "system_prompt": player.system_prompt,
+                "provider": player.provider,
+                "reasoning": player.reasoning,
             }
             for player in players
         ]
         seed_blob = json.dumps(
             {
                 "seed": seed,
+                "treatment_fingerprint": treatment_fingerprint(),
                 "players": players_blob,
                 "max_turns": max_turns,
                 "max_trade_exchanges": max_trade_exchanges,
@@ -997,6 +1014,8 @@ def _recovery_player_configs(
             raise ValueError(f"Interrupted run player '{player_id}' used multiple system prompts.")
         if observed_prompts:
             system_prompt = next(iter(observed_prompts))
+        elif isinstance(entry.get("system_prompt"), str) and entry["system_prompt"]:
+            system_prompt = entry["system_prompt"]
         elif player_id in baseline_players:
             system_prompt = DEFAULT_SYSTEM_PROMPT
         else:

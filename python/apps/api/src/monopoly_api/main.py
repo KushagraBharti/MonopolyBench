@@ -123,13 +123,16 @@ async def run_start(body: StartRunRequest) -> dict:
             status_code=400,
             detail=f"Exactly {EXPECTED_PLAYER_COUNT} players are required for LLM runs.",
         )
-    run_id = await run_manager.start_run(
-        seed=seed,
-        players=players,
-        max_turns=max(1, int(body.max_turns or 200)),
-        max_trade_exchanges=max(1, int(body.max_trade_exchanges or 20)),
-        max_auction_actions=max(1, int(body.max_auction_actions or 200)),
-    )
+    try:
+        run_id = await run_manager.start_run(
+            seed=seed,
+            players=players,
+            max_turns=max(1, int(body.max_turns or 200)),
+            max_trade_exchanges=max(1, int(body.max_trade_exchanges or 20)),
+            max_auction_actions=max(1, int(body.max_auction_actions or 200)),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"run_id": run_id}
 
 

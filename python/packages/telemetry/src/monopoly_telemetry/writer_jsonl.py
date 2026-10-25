@@ -64,3 +64,8 @@ def read_jsonl_strict(path: Path) -> list[dict[str, Any]]:
             raise ValueError(f"{path}:{index}: expected object")
         rows.append(row)
     return rows
+
+
+def atomic_write_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+    """Replace a complete file only after its new bytes are durable."""
+    atomic_write(path, text.encode(encoding))

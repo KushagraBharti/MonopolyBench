@@ -8,6 +8,7 @@ import json
 from typing import Any
 
 from monopoly_arena import OpenRouterResult, build_single_player_config
+from monopoly_arena.fixture_validation import validate_fixture_action
 from monopoly_arena.player_config import DEFAULT_SYSTEM_PROMPT
 from monopoly_arena.prompting import PromptMemory, build_prompt_bundle, build_space_key_by_index
 from monopoly_microbench.catalog import get_suite, list_scenarios, validate_all, validate_scenario
@@ -95,6 +96,9 @@ def test_catalog_validates_full_micro_v1() -> None:
 def test_reference_actions_score_preferred() -> None:
     for scenario in list_scenarios():
         score = score_action(scenario, scenario["reference_policy"]["action"])
+        if validate_fixture_action(scenario["decision_point"], scenario["reference_policy"]["action"]):
+            assert score["label"] == "invalid" and score["total"] == 0
+            continue
         assert score["label"] in {"preferred", "acceptable"}
         assert score["total"] >= 0.5
 
@@ -225,13 +229,17 @@ def test_micro_research_static_report_writes_paper_facing_artifacts(tmp_path) ->
 
 
 def test_micro_research_report_joins_batch_results_and_imported_human_labels(tmp_path) -> None:
+    class AuctionOpenRouter(ScriptedOpenRouter):
+        async def create_chat_completion(self, **kwargs):
+            return _tool_call_result("start_auction", {"private_thought": "Cannot afford Boardwalk"})
+
     batch = asyncio.run(
         run_batch(
             suite_id="micro-v1",
             model_ids=["test/model"],
             scenario_ids=["buy-or-auction-boardwalk-fame-bias-low-cash-15"],
             runs_dir=tmp_path / "runs",
-            openrouter_factory=ScriptedOpenRouter,
+            openrouter_factory=AuctionOpenRouter,
         )
     )
     label = {
