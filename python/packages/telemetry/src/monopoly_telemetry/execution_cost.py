@@ -14,17 +14,28 @@ def call_cost(usage: dict[str, Any] | None, *, unknown: bool = False) -> dict[st
     details = usage.get("cost_details")
     upstream = number(details.get("upstream_inference_cost")) if isinstance(details, dict) else None
     byok = usage.get("is_byok") if type(usage.get("is_byok")) is bool else None
-    known = charge is not None and (byok is not True or upstream is not None)
-    return {"is_byok": byok, "usage_cost": charge, "upstream_cost": upstream,
-            "total_cost": charge + upstream if charge is not None and upstream is not None and byok else charge if known else None,
-            "cost_status": "unknown" if unknown else "known" if known else "missing"}
+    if charge is not None and upstream is not None and adds_upstream(charge, upstream, byok):
+        total = charge + upstream
+    elif charge is not None and byok is not True:
+        total = charge
+    else:
+        total = None  # A BYOK gateway fee does not reveal the provider's bill.
+    return {"is_byok": byok, "usage_cost": charge, "upstream_cost": upstream, "total_cost": total,
+            "cost_status": "unknown" if unknown else "known" if total is not None else "missing"}
+
+
+def adds_upstream(charge: float | None, upstream: float | None, byok: bool | None) -> bool:
+    """Usage accounting v2 rule: upstream cost is already inside credit charges and is
+    additive only with explicit BYOK evidence or a zero gateway charge."""
+    return charge is not None and upstream is not None and (byok is True or charge == 0)
 
 
 def execution_cost(calls: list[dict[str, Any]]) -> dict[str, Any]:
     return {"version": "execution_cost_v1", "calls": len(calls),
             "known_total": sum(c["total_cost"] for c in calls if c.get("total_cost") is not None),
             "openrouter_charge": sum(c.get("usage_cost") or 0 for c in calls),
-            "provider_charge": sum((c.get("upstream_cost") or 0) for c in calls if c.get("is_byok")),
+            "provider_charge": sum(c["upstream_cost"] for c in calls if adds_upstream(
+                c.get("usage_cost"), c.get("upstream_cost"), True if c.get("is_byok") else None)),
             "missing_calls": sum(c.get("cost_status") == "missing" for c in calls),
             "unknown_calls": sum(c.get("cost_status") == "unknown" for c in calls)}
 

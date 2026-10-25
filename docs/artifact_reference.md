@@ -121,7 +121,10 @@ Failed or cancelled jobs retain diagnostic evidence.
 
 `execution_cost.json` accounts for every physical call, including unknown
 interrupted calls. Known charges, missing values, unknown charges and labeled
-token-price estimates are separate. Run usage follows usage accounting v2, which
+token-price estimates are separate. Ledger totals use the usage v2 rule: upstream
+inference cost is added only with explicit BYOK or a zero gateway charge, and
+generation metadata fills fields a completion omitted without replacing reported
+values. Run usage follows usage accounting v2, which
 adds BYOK upstream inference cost and keeps unknown costs null; `usage_byok.json`
 is that report labeled for cloud packages.
 

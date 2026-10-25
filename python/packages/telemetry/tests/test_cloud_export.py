@@ -14,6 +14,11 @@ def test_byok_cost_keeps_missing_unknown_and_zero_distinct():
     assert call_cost({"is_byok": True, "cost": 0})["total_cost"] is None
     assert call_cost({})["cost_status"] == "missing"
     assert call_cost({}, unknown=True)["cost_status"] == "unknown"
+    # Usage v2 rule: a zero gateway charge adds the upstream bill even without a BYOK flag,
+    # while a credit charge already includes it.
+    assert call_cost({"cost": 0, "cost_details": {"upstream_inference_cost": 1.25}})["total_cost"] == 1.25
+    assert call_cost({"cost": 0.5, "cost_details": {"upstream_inference_cost": 0.4}})["total_cost"] == 0.5
+    assert call_cost({"cost": 0.1, "is_byok": True, "cost_details": {"upstream_inference_cost": 1}})["total_cost"] == 1.1
 
 
 @pytest.mark.parametrize("usage", [{"cost": "unavailable"}, {"cost": True}, {"cost": float("nan")}, {"cost": 0, "is_byok": True, "cost_details": []}])

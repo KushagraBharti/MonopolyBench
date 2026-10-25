@@ -73,6 +73,37 @@ without page errors. Tests cover volume-mode separation, demo campaign blocking,
 secret persistence, local-only cookie behavior, and build fingerprints. ASGI
 cancellation cleanup now releases the shared game tailer under cancelled scopes.
 
+## Stacked on the `audit_corrected_v2` treatment (2026-10-25)
+
+These checks rerun the evidence after merging PR #2. Cloud games now use the v2
+rules, usage accounting v2 and PR #2's strict completion contract.
+
+- Full repository verification: contracts, Ruff, mypy, 414 Python tests
+  (engine 65, API 113, arena 168, telemetry 39, microbench 29), frontend lint and
+  frontend build passed.
+- Each physical call has exactly one durable owner: `CloudClient` journals it, and
+  the resolver's local call journal and deadlines step aside. A regression game
+  pauses after three failed transport attempts and resumes to the same
+  events/actions as an uninterrupted game. Every decision attempt references a
+  responded ledger call, and no resolver call files exist.
+- Two uncapped five-process mock batches each killed and recovered one worker.
+  All ten games ended by bankruptcy at turns 159, 147, 152, 125 and 143 (both
+  batches were identical), with 1,588 responded calls per batch and none unknown.
+  Both replay verdicts, analysis and every package verification passed. Every
+  exported run also satisfies PR #2's strict completion check, with exactly one
+  terminal `GAME_OVER` snapshot.
+- The Compose demo built from the stacked commit served health with its git SHA,
+  local password login, a completed smoke game with passing replay and analysis,
+  and a token-authorized export that passed `unpack_verified` and the strict
+  completion check. With `MB_LOCAL_HTTP=0`, the image refused to start without a
+  private dashboard password. With one it became healthy, rejected `monopoly`,
+  and accepted the private password.
+- Regressions cover storage-full finalization retry, generation-metadata cost
+  backfill into the call ledger (credit, BYOK, BYOK revealed only by generation
+  metadata, and upstream cost without a BYOK flag, each agreeing with usage v2),
+  the 1,000-decisions-per-turn guard in the cloud worker, and BYOK upstream cost
+  in exported analysis tables.
+
 Not exercised here: Railway deploy/redeploy, backup restoration, real provider
 compatibility, BYOK billing, Windows/macOS export execution, and real-model soak
 performance. The draft campaign remains unfrozen with no seed draw. Follow the

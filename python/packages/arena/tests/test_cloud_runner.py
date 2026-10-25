@@ -601,23 +601,31 @@ def test_storage_full_during_finalization_stays_retryable(tmp_path, monkeypatch,
     assert (final["status"], final["replay_status"], final["analysis_status"]) == ("completed", "passed", "completed")
 
 
-@pytest.mark.parametrize("byok", [False, True])
-def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatch, byok):
+@pytest.mark.parametrize("mode", ["credits", "byok", "byok_flag_only_in_generation", "upstream_without_flag"])
+def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatch, mode):
+    from monopoly_telemetry.execution_cost import execution_cost
+    from monopoly_telemetry.run_files import build_run_files
+    from monopoly_telemetry.usage import build_usage_report
     store, job, execution = setup_job(tmp_path, monkeypatch)
     original = OpenRouterClient.__init__
     count = 0
     def response(request):
         nonlocal count
         if request.method == "GET" and request.url.path.endswith("/generation"):
-            data = {"id": request.url.params["id"], "total_cost": 0 if byok else 1.25, "tokens_prompt": 10, "tokens_completion": 2}
-            if byok:
-                data.update(is_byok=True, upstream_inference_cost=1.25)
+            data = {"id": request.url.params["id"], "total_cost": 1.25, "tokens_prompt": 10, "tokens_completion": 2}
+            if mode != "credits":
+                data.update(total_cost=0, is_byok=True, upstream_inference_cost=1.25)
             return httpx.Response(200, json={"data": data})
         if request.method == "GET":
             return httpx.Response(200, json={"data": []})
         payload = json.loads(request.content)
         count += 1
-        return httpx.Response(200, json={"id": f"gen-{count}", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [{"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}], "usage": {"prompt_tokens": 10, "completion_tokens": 2}})
+        usage = {"prompt_tokens": 10, "completion_tokens": 2}
+        if mode == "byok_flag_only_in_generation":
+            usage.update(cost=0)  # Looks like a known free call until generation reveals BYOK.
+        elif mode == "upstream_without_flag":
+            usage.update(cost=0, cost_details={"upstream_inference_cost": 1.25})
+        return httpx.Response(200, json={"id": f"gen-{count}", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [{"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}], "usage": usage})
     def init(self, **kwargs):
         original(self, **kwargs)
         self._client = httpx.AsyncClient(transport=httpx.MockTransport(response))
@@ -627,9 +635,12 @@ def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatc
     calls = store.rows("SELECT * FROM calls WHERE job_id=?", (job["job_id"],))
     assert len(calls) == count > 0
     assert all(call["cost_status"] == "known" and call["total_cost"] == 1.25 for call in calls)
-    from monopoly_telemetry.execution_cost import execution_cost
-    assert execution_cost(calls)["known_total"] == 1.25 * count
-    assert execution_cost(calls)["missing_calls"] == 0
+    totals = execution_cost(calls)
+    assert totals["known_total"] == 1.25 * count and totals["missing_calls"] == 0
+    assert totals["provider_charge"] == (0 if mode == "credits" else 1.25 * count)
+    # The ledger and usage accounting v2 must agree on the same calls.
+    usage = build_usage_report(build_run_files(store.root / "runs", job["run_id"]))
+    assert usage["totals"]["cost"] == pytest.approx(totals["known_total"])
 
 
 def test_cloud_worker_applies_the_no_progress_guard(tmp_path, monkeypatch):
@@ -647,3 +658,33 @@ def test_cloud_worker_applies_the_no_progress_guard(tmp_path, monkeypatch):
         asyncio.run(play(store, job["job_id"], execution))
     actions = read_jsonl_strict(store.root / "runs" / job["run_id"] / "actions.jsonl")
     assert actions and len({row["turn_index"] for row in actions}) == len(actions)
+
+
+def test_exported_analysis_tables_include_byok_upstream_cost(tmp_path, monkeypatch):
+    import csv
+    from monopoly_arena.finalizer import finalize
+    from monopoly_telemetry.export import unpack_verified
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    original = OpenRouterClient.__init__
+    count = 0
+    def response(request):
+        nonlocal count
+        if request.method == "GET":
+            return httpx.Response(200, json={"data": []})
+        payload = json.loads(request.content)
+        count += 1
+        usage = {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0, "is_byok": True,
+                 "cost_details": {"upstream_inference_cost": 1.25}}
+        return httpx.Response(200, json={"id": f"gen-{count}", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [{"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}], "usage": usage})
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=httpx.MockTransport(response))
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    asyncio.run(play(store, job["job_id"], execution))
+    asyncio.run(finalize(store, job["job_id"]))
+    assert store.job(job["job_id"])["status"] == "completed"
+    unpack_verified(Path(store.rows("SELECT * FROM exports")[0]["path"]), tmp_path / "exported")
+    rows = list(csv.DictReader((tmp_path / "exported/analysis/tables/model_usage.csv").open()))
+    assert rows and sum(float(row["cost"]) for row in rows) == pytest.approx(1.25 * count)
+    assert json.loads((tmp_path / "exported/cloud/usage_byok.json").read_text())["totals"]["cost"] == pytest.approx(1.25 * count)
