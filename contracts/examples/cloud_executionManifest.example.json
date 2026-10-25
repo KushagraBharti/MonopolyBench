@@ -1,9 +1,16 @@
 {
   "git_sha": "example",
   "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-  "execution_policy_version": "execution_policy_v1",
+  "execution_policy_version": "execution_policy_v3",
   "python": "3.12.14",
   "endpoints": {},
+  "response_policy": {
+    "version": "claude_refusal_recovery_v1",
+    "fallback_models": {"anthropic/claude-opus-5.5": "anthropic/claude-opus-4.8"},
+    "stages": ["standard", "same_model_without_private_thought", "fallback_without_private_thought"],
+    "trigger": "explicit_provider_refusal",
+    "max_resolver_calls": 3
+  },
   "prompt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
   "kind": "smoke"
 }

@@ -479,7 +479,8 @@ def test_static_run_artifacts_are_written_without_system_prompt_text(tmp_path) -
     assert run_config["ts_step_ms"] == 5
     assert run_config["max_trade_exchanges"] == 3
     assert run_config["max_auction_actions"] == 9
-    assert run_config["prompt_pipeline"]["status"] == "unchanged"
+    assert run_config["prompt_pipeline"]["status"] == "versioned_refusal_recovery"
+    assert run_config["response_policy"]["fallback_models"] == {"anthropic/claude-opus-5.5": "anthropic/claude-opus-4.8"}
     assert players_payload["players"][0]["player_id"] == "p1"
     assert players_payload["players"][0]["system_prompt_logged"] is False
     assert seat_assignment["assignments"][0]["seat_index"] == 0

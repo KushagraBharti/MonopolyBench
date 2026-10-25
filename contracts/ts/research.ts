@@ -86,7 +86,7 @@ export type LongHorizonCampaignConfigV2 = {
   max_auction_actions: 200
   concurrency: number
   execution_order_seed: number
-  execution_policy_version: 'execution_policy_v1'
+  execution_policy_version: 'execution_policy_v1' | 'execution_policy_v2'
   rerun_policy: { max_reruns_per_cell: 1; same_seed_and_seats: true }
   billing: { enforcement: 'observe'; [provider: string]: string }
   prompt_pipeline: PromptPipelineMarker

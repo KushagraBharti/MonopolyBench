@@ -59,6 +59,8 @@ async def play(store: JobStore, job_id: str, execution_id: str) -> None:
     import hashlib
     if hashlib.sha256(job["config_json"].encode()).hexdigest() != job["config_sha256"]:
         raise ValueError("Frozen job configuration hash mismatch")
+    if json.loads(job["config_json"]).get("execution_policy_version") != VERSION:
+        raise ValueError("Frozen job execution policy differs from current runner")
     frozen_path = store.root / "jobs" / job_id / "job.json"
     if not frozen_path.exists():
         atomic_write(frozen_path, encode(job).encode())
@@ -79,13 +81,17 @@ async def play(store: JobStore, job_id: str, execution_id: str) -> None:
         from dataclasses import asdict
         atomic_write(journal.directory / "pricing_start.json", encode(asdict(pricing)).encode())
         endpoints = {}
+        from .response_policy import REFUSAL_FALLBACKS, policy_manifest
         for player in json.loads(job["config_json"])["players"]:
             model = player["openrouter_model_id"]
             endpoints[model] = asdict(await client._get_json(path=f"/models/{model}/endpoints", auth_required=False))
+            fallback = REFUSAL_FALLBACKS.get(model)
+            if fallback:
+                endpoints[fallback] = asdict(await client._get_json(path=f"/models/{fallback}/endpoints", auth_required=False))
         import platform
         from .player_config import DEFAULT_SYSTEM_PROMPT
-        source_hashes = {name: hashlib.sha256((Path(__file__).parent / name).read_bytes()).hexdigest() for name in ("prompting.py", "decision_resolver.py", "player_config.py", "execution_policy.py")}
-        atomic_write(journal.directory / "execution_manifest.json", encode({**identity, "execution_policy_version": VERSION, "python": platform.python_version(), "endpoints": endpoints, "source_sha256": source_hashes, "prompt_sha256": hashlib.sha256(DEFAULT_SYSTEM_PROMPT.encode()).hexdigest(), "kind": job["kind"]}).encode())
+        source_hashes = {name: hashlib.sha256((Path(__file__).parent / name).read_bytes()).hexdigest() for name in ("prompting.py", "decision_resolver.py", "player_config.py", "execution_policy.py", "response_policy.py")}
+        atomic_write(journal.directory / "execution_manifest.json", encode({**identity, "execution_policy_version": VERSION, "response_policy": policy_manifest(), "python": platform.python_version(), "endpoints": endpoints, "source_sha256": source_hashes, "prompt_sha256": hashlib.sha256(DEFAULT_SYSTEM_PROMPT.encode()).hexdigest(), "kind": job["kind"]}).encode())
     if recover:
         runner = make_runner(store, job, client, files, recover=True)
     else:

@@ -253,13 +253,24 @@
           "type": "string"
         },
         "execution_policy_version": {
-          "const": "execution_policy_v1"
+          "enum": ["execution_policy_v1", "execution_policy_v2", "execution_policy_v3"]
         },
         "python": {
           "type": "string"
         },
         "endpoints": {
           "type": "object"
+        },
+        "response_policy": {
+          "type": "object",
+          "required": ["version", "fallback_models", "stages", "trigger", "max_resolver_calls"],
+          "properties": {
+            "version": {"const": "claude_refusal_recovery_v1"},
+            "fallback_models": {"type": "object", "additionalProperties": {"type": "string"}},
+            "stages": {"type": "array", "items": {"type": "string"}},
+            "trigger": {"const": "explicit_provider_refusal"},
+            "max_resolver_calls": {"const": 3}
+          }
         },
         "prompt_sha256": {
           "type": "string"

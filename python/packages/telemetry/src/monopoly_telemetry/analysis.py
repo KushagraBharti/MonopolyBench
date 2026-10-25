@@ -9,7 +9,7 @@ from .run_files import RunFiles
 
 
 TRACE_ANALYZER_VERSION = "trace_analyzer_v1"
-FAILURE_TAXONOMY_VERSION = "failure_taxonomy_v1"
+FAILURE_TAXONOMY_VERSION = "failure_taxonomy_v2"
 REVIEW_LABEL_VERSION = "review_label_v1"
 
 
@@ -350,7 +350,7 @@ def _build_failure_findings(
                         details={"fallback_reason": decision.get("fallback_reason")},
                     )
                 )
-        for attempt_value in _list(decision.get("attempts")):
+        for attempt_index, attempt_value in enumerate(_list(decision.get("attempts"))):
             attempt = _dict(attempt_value)
             for error in _list(attempt.get("validation_errors")):
                 label = _label_from_validation_error(str(error))
@@ -358,12 +358,12 @@ def _build_failure_findings(
                     _decision_finding(
                         run_id=run_id,
                         finding_type=label,
-                        severity="high" if label in {"schema_failure", "missing_tool_call", "unknown_tool"} else "medium",
+                        severity="high" if label in {"schema_failure", "missing_tool_call", "unknown_tool", "provider_refusal"} else "medium",
                         confidence=1.0,
-                        decision=decision,
+                        decision={**decision, "openrouter_model_id": _dict(attempt.get("raw_response")).get("model") or attempt.get("requested_model") or decision.get("openrouter_model_id")},
                         summary=str(error),
                         human_review_required=False,
-                        details={"validation_error": str(error)},
+                        details={"validation_error": str(error), "attempt_index": attempt_index, "response_condition": attempt.get("response_condition")},
                     )
                 )
     return _with_ids(failures)
@@ -941,6 +941,8 @@ def _summarize_findings(run_id: str, findings: list[dict[str, Any]], kind: str) 
 
 def _label_from_validation_error(error: str) -> str:
     lowered = error.lower()
+    if "provider refused the response" in lowered:
+        return "provider_refusal"
     if "no tool call" in lowered:
         return "missing_tool_call"
     if "exactly one tool call" in lowered or "multiple" in lowered:

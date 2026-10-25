@@ -13,6 +13,7 @@ from statistics import mean, median, stdev
 from typing import Any
 
 from monopoly_telemetry import build_experiment_manifest, build_review_cost_aggregate, usage_calls_jsonl
+from monopoly_telemetry.analysis import FAILURE_TAXONOMY_VERSION
 
 from .player_config import PlayerConfig
 
@@ -1166,7 +1167,7 @@ def _model_card(model_id: str, run_entries: list[dict[str, Any]], leaderboard: d
         "engine_version": None,
         "contract_version": "v1",
         "scoring_version": "scorecard_v1",
-        "failure_taxonomy_version": "failure_taxonomy_v1",
+        "failure_taxonomy_version": FAILURE_TAXONOMY_VERSION,
         "prompt_pipeline": {
             "status": "unchanged",
             "markdown_private_thought_policy": "links_only_no_private_thought_excerpts",

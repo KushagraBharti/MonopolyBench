@@ -245,7 +245,9 @@ const buildAttemptMap = (attempts: DecisionAttempt[]) =>
   new Map(attempts.map((attempt) => [attempt.attempt_index, attempt]));
 
 const getAttemptLabel = (attempt: DecisionAttempt | undefined) =>
-  attempt ? formatAttemptLabel(attempt.attempt_index) : 'Unknown';
+  attempt ? [formatAttemptLabel(attempt.attempt_index), attempt.requested_model,
+    attempt.response_condition?.includes('without_private_thought') ? 'without private thoughts' : null,
+  ].filter(Boolean).join(' · ') : 'Unknown';
 
 const normalizeErrors = (errors: string[] | null | undefined): string | null => {
   if (!errors || errors.length === 0) return null;

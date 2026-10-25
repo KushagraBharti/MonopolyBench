@@ -1,10 +1,14 @@
-"""Cloud-only operational policy. None of these values enter model prompts."""
+"""Cloud execution policy version and operational limits.
+
+v3 adds bounded, attributed Claude refusal recovery to v2's tool/refusal fixes. The
+version is recorded in execution artifacts, never injected into prompts.
+"""
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-VERSION = "execution_policy_v1"
+VERSION = "execution_policy_v3"
 OUTAGE_INTERVAL = 300
 OUTAGE_RETRIES = 12
 UNKNOWN_PER_DECISION = 1
