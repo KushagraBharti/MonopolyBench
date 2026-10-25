@@ -340,6 +340,10 @@ def test_five_turn_run_recovers_after_known_rate_limit_with_full_call_accounting
     assert len(list((files.run_dir / "calls").glob("*.json"))) == usage["attempt_count"]
     starts = [row["decision_id"] for row in load_jsonl(files.decisions_path) if row["phase"] == "decision_started"]
     assert len(starts) == len(set(starts)) == len(actions)
+    # The rejected call is in no resolved decision, but the summary must not hide its unknown cost.
+    summary = json.loads(files.summary_path.read_text())
+    assert usage["totals"]["cost"] is None and summary["token_usage"]["total_cost"] is None
+    assert summary["token_usage"]["known_cost_subtotal"] == usage["known_cost_subtotal"] > 0
 
 
 @pytest.mark.parametrize("interruption", ["before_commit", "before_action", "before_resolution", "mid_events"])
@@ -656,3 +660,41 @@ def test_finalizing_a_recovered_run_does_not_backfill_launch_pricing(completed_r
     asyncio.run(runner.run())
     assert not launch.exists()
     assert _completed_run_exists(files.run_dir)
+
+
+def test_saved_invalid_json_and_successful_retry_resume_without_new_requests(tmp_path, monkeypatch):
+    files = init_run_files(tmp_path, "invalid-json-recovery")
+    players = [build_single_player_config(player_id=f"p{i}", name=f"P{i}", openrouter_model_id="test/model")
+               for i in range(4)]
+
+    class MalformedOnce(RecoveryClient):
+        async def create_chat_completion(self, **kwargs):
+            if self.calls == 0:
+                self.calls += 1
+                return OpenRouterResult(False, 200, None, "Invalid JSON response from OpenRouter",
+                                        "invalid_json", "request-1", None, "{not json")
+            return await super().create_chat_completion(**kwargs)
+
+    first = MalformedOnce()
+    first.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=first,
+                             run_files=files, max_turns=5, event_delay_s=0)
+    def fail(*args, **kwargs):
+        raise OSError("Injected interruption before the action commit")
+    with monkeypatch.context() as patch:
+        patch.setattr("monopoly_arena.llm_runner.write_commit", fail)
+        with pytest.raises(OSError, match="Injected"):
+            asyncio.run(first.runner.run())
+    assert first.calls == 2 and load_jsonl(files.actions_path) == []
+    saved = {path.name: path.read_bytes() for path in (files.run_dir / "calls").glob("*.json")}
+    assert len(saved) == 2
+    recovered = RecoveryClient()
+    recovered.runner = LlmRunner(seed=42, run_id=files.run_id, players=players, openrouter=recovered,
+        run_files=files, max_turns=5, event_delay_s=0,
+        resume_actions=load_jsonl(files.actions_path), resume_events=load_jsonl(files.events_path))
+    asyncio.run(recovered.runner.run())
+    assert _completed_run_exists(files.run_dir)
+    assert all((files.run_dir / "calls" / name).read_bytes() == data for name, data in saved.items())
+    actions = load_jsonl(files.actions_path)
+    first_decision = next(row for row in load_jsonl(files.decisions_path) if row["phase"] == "decision_resolved")
+    assert first_decision["retry_used"] and not first_decision["fallback_used"]
+    assert recovered.calls == len(actions) - 1

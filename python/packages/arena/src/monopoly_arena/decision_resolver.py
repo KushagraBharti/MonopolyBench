@@ -413,7 +413,9 @@ class SharedDecisionResolver:
                     raise RuntimeError("Recovered request differs from durable call intent")
                 if saved.get("status") == "received":
                     cached = OpenRouterResult(**saved["result"])
-                    if cached.ok:
+                    # A malformed body is still a received, definitive outcome; reuse it so the
+                    # corrective retry can continue to its own saved call.
+                    if cached.ok or cached.error_type == "invalid_json":
                         if remaining_paths:
                             raise RuntimeError("Conflicting durable call history after a successful response")
                         return replace(cached, call_id=saved["call_id"])
