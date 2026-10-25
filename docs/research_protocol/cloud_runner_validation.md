@@ -62,6 +62,10 @@ passed replay and analysis, and served a verified downloadable package. Removing
 and recreating the container preserved its volume, credentials, authenticated
 session, completed job, and export token without queuing a second demo game.
 Killing the supervisor caused the container to restart and become healthy again.
+The committed image's source and lockfile fingerprints matched the host. A second
+supervisor crash with five active smoke games recovered all five; every game
+completed with passing replay/analysis and a verified export. Final SIGTERM
+shutdown exited with code 0.
 Normal mode without an API key started a working authenticated dashboard and
 failed preflight without creating paid jobs. Chromium verified localhost HTTP
 login, the demo banner, board rendering, decision inspection, and session reload
