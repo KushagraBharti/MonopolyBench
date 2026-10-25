@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -241,8 +242,11 @@ def _normalize_usage(usage: dict[str, Any], raw: dict[str, Any]) -> dict[str, An
     accounting_source = "missing"
     gateway_charge = float(cost) if isinstance(cost, (int, float)) else None
     details = _dict(usage.get("cost_details"))
-    upstream = details.get("upstream_inference_cost", generation_data.get("upstream_inference_cost"))
-    byok = usage.get("is_byok", raw.get("is_byok", generation_data.get("is_byok")))
+    # An explicit null is missing evidence, so later sources may still supply the value.
+    upstream = next((value for value in (details.get("upstream_inference_cost"), generation_data.get("upstream_inference_cost"))
+                     if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)), None)
+    byok = next((value for value in (usage.get("is_byok"), raw.get("is_byok"), generation_data.get("is_byok"))
+                 if isinstance(value, bool)), None)
     # Upstream cost is already included for credit-billed calls. It is additive
     # only with explicit BYOK evidence, or a zero gateway charge.
     if isinstance(upstream, (int, float)) and (byok is True or gateway_charge == 0):
