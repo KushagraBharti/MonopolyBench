@@ -1,4 +1,4 @@
-export type { CloudJob, CloudCampaign, CloudLive, CloudConfig } from '@contracts/cloud'
+export type { CloudJob, CloudCampaign, CloudLive, CloudConfig, CampaignCell, CampaignPreparation, CampaignReadiness, CampaignPlannedCell } from '@contracts/cloud'
 
 export const CLOUD_API = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '')
 export async function cloudRequest<T>(path: string, body?: unknown): Promise<T> {

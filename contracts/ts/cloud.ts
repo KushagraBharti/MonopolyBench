@@ -16,7 +16,7 @@ export interface CloudConfig {
 }
 export interface CloudJob {
   job_id: string; run_id: string; kind: 'smoke' | 'campaign'; status: JobStatus
-  campaign_id: string | null; config: CloudConfig; snapshot: StateSnapshot | null
+  campaign_id: string | null; cell_index?: number | null; config: CloudConfig; snapshot: StateSnapshot | null
   commit_seq: number; created_at: number; started_at: number | null; last_progress_at: number | null
   ended_at: number | null; outcome: { winner_player_id?: string; reason?: string } | null
   elapsed_seconds: number | null; progress_age_seconds: number | null
@@ -30,7 +30,34 @@ export interface CloudLive {
   job_id: string; run_id: string; commit_seq: number; recovery_generation: number
   snapshot: StateSnapshot | null; events: Event[]; reset: boolean
 }
-export interface CloudCampaign {
-  campaign_id: string; status: string; config?: Record<string, unknown>
-  cells: { cell_index: number; seed: number; job_id: string | null; job_status: string | null; execution_rank: number; rerun_count: number }[]
+export interface CampaignReadiness { can_start: boolean; reasons: string[] }
+/** Planned game for one board seed and one cyclic seat rotation. */
+export interface CampaignPlannedCell {
+  cell_index: number; run_id: string; seed: number; execution_rank: number; models_by_seat: string[]
 }
+export interface CampaignCell extends Partial<CampaignPlannedCell> {
+  cell_index: number; seed: number; execution_rank: number
+  job_id: string | null; job_status: JobStatus | null; rerun_count: number
+  status?: string; not_started_reason?: string | null
+}
+export interface CampaignConfig {
+  campaign_id?: string; study_label?: string; seeds?: number[]; concurrency?: number
+  model_roster?: string; seat_permutation?: string; max_turns?: number | null
+  budget_policy?: string; billing?: Record<string, string>
+  research_freeze?: Record<string, { path: string; sha256: string; content?: unknown }>
+  [key: string]: unknown
+}
+export interface CloudCampaign {
+  campaign_id: string; display_name?: string; status: string; config?: CampaignConfig
+  config_sha256?: string; git_sha?: string; image_digest?: string; created_at?: number
+  readiness?: CampaignReadiness
+  cells: CampaignCell[]
+}
+/** POST /api/campaigns/prepare: persisted seed draw, no games or provider calls. */
+export interface CampaignPrepareRequest { name: string; seed_blocks: number; concurrency: number }
+export interface CampaignPreparation {
+  preparation_id: string; config: CampaignConfig; cells: CampaignPlannedCell[]
+  readiness: CampaignReadiness; git_sha: string; image_digest: string
+}
+/** POST /api/campaigns/create: freezes a preparation; never starts games. */
+export interface CampaignCreateRequest { preparation_id: string; idempotency_key: string }

@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from monopoly_arena.cloud_campaign import freeze, amend, run_config
+from monopoly_arena.campaign_setup import prepare as prepare_campaign, create as create_campaign, readiness
 from monopoly_arena.cloud_preflight import preflight
 from monopoly_arena.execution_policy import MODELS, data_root
 from monopoly_arena.job_store import JobStore
@@ -46,6 +47,13 @@ class Launch(BaseModel):
 class Amendment(BaseModel):
     seeds: list[int]
     reason: str
+
+
+class CampaignSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=80)
+    seed_blocks: int = Field(default=1, ge=1, le=20, strict=True)
+    concurrency: int = Field(default=4, ge=1, le=5, strict=True)
 
 
 def create_cloud_app(root: Path | None = None) -> FastAPI:
@@ -171,13 +179,25 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
         return resolve_repo_root() / "campaigns" / f"{campaign_id}.json"
 
     @app.get("/api/campaigns")
-    def campaigns():
+    def campaigns(summary: bool = False):
         frozen = {row["campaign_id"]: row for row in store.rows("SELECT * FROM campaigns")}
         for path in (resolve_repo_root() / "campaigns").glob("*.json"):
             config = json.loads(path.read_text())
             if config.get("campaign_config_version") == "long_horizon_campaign_config_v2":
                 frozen.setdefault(config["campaign_id"], {"campaign_id": config["campaign_id"], "status": "draft", "config_json": json.dumps(config)})
-        return list(frozen.values())
+        if summary:
+            return [{"campaign_id": key, "status": row["status"],
+                     "display_name": json.loads(row["config_json"]).get("study_label") or key}
+                    for key, row in frozen.items()]
+        return [campaign(campaign_id) for campaign_id in frozen]
+
+    @app.post("/api/campaigns/prepare")
+    def campaign_prepare(body: CampaignSettings):
+        return prepare_campaign(store, **body.model_dump())
+
+    @app.post("/api/campaigns/create")
+    def campaign_create(body: Launch):
+        return campaign(create_campaign(store, body.preparation_id, body.idempotency_key))
 
     @app.get("/api/campaigns/{campaign_id}")
     def campaign(campaign_id: str):
@@ -186,8 +206,14 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
             path = campaign_file(campaign_id)
             if not path.exists():
                 raise KeyError(campaign_id)
-            return {"campaign_id": campaign_id, "status": "draft", "config": json.loads(path.read_text()), "cells": []}
-        return {**rows[0], "config": json.loads(rows[0]["config_json"]), "cells": store.rows("SELECT cells.*,jobs.status AS job_status FROM cells LEFT JOIN jobs ON cells.job_id=jobs.job_id WHERE cells.campaign_id=? ORDER BY cells.execution_rank", (campaign_id,)), "amendments": store.rows("SELECT * FROM campaign_amendments WHERE campaign_id=?", (campaign_id,))}
+            result = {"campaign_id": campaign_id, "status": "draft", "config": json.loads(path.read_text()), "cells": []}
+        else:
+            result = {**rows[0], "config": json.loads(rows[0]["config_json"]), "cells": store.rows("SELECT cells.*,jobs.status AS job_status FROM cells LEFT JOIN jobs ON cells.job_id=jobs.job_id WHERE cells.campaign_id=? ORDER BY cells.execution_rank", (campaign_id,)), "amendments": store.rows("SELECT * FROM campaign_amendments WHERE campaign_id=?", (campaign_id,))}
+        result["display_name"] = result["config"].get("study_label") or campaign_id
+        for cell in result["cells"]:
+            cell["models_by_seat"] = json.loads(cell["seat_order_json"])
+        result["readiness"] = readiness(store, result)
+        return result
 
     @app.post("/api/campaigns/{campaign_id}/freeze")
     def freeze_campaign(campaign_id: str):
@@ -208,6 +234,13 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
                 from monopoly_arena.campaign_export import export_campaign
                 return {"export_id": export_campaign(store, campaign_id)}
             raise HTTPException(409, "Freeze the campaign before running it")
+        if action == "run":
+            if current["status"] == "running":
+                return current
+            if not current["readiness"]["can_start"]:
+                raise HTTPException(409, " ".join(current["readiness"]["reasons"]))
+        elif current["status"] not in {"running", "paused"}:
+            raise HTTPException(409, "Only a running campaign can pause new games.")
         store.execute("UPDATE campaigns SET status=? WHERE campaign_id=?", ("running" if action == "run" else "paused", campaign_id))
         store.audit("campaign_"+action, {"campaign_id": campaign_id}, "dashboard")
         return campaign(campaign_id)
