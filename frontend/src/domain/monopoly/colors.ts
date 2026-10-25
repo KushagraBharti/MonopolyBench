@@ -44,6 +44,10 @@ export const PLAYER_COLORS: Record<string, string> = {
   player_7: PLAYER_COLOR_LIST[7],
 };
 
+/** Seat color by 0-based seat position. Matches getPlayerColor for p1..p4 seat ids. */
+export const getSeatColor = (seatIndex: number): string =>
+  PLAYER_COLOR_LIST[((seatIndex % PLAYER_COLOR_LIST.length) + PLAYER_COLOR_LIST.length) % PLAYER_COLOR_LIST.length];
+
 export const getPlayerColor = (playerId: string): string => {
   if (PLAYER_COLORS[playerId]) return PLAYER_COLORS[playerId];
   let hash = 0;

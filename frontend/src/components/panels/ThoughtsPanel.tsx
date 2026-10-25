@@ -68,10 +68,12 @@ export const ThoughtsPanel = () => {
     const ids = snapshotPlayers.length > 0
       ? snapshotPlayers.map((player) => player.player_id)
       : runPlayers.map((player) => player.player_id);
-    const names = new Map(snapshotPlayers.map((player) => [player.player_id, player.name]));
-    runPlayers.forEach((entry) => {
-      if (!names.has(entry.player_id)) {
-        names.set(entry.player_id, entry.name);
+    // Run identity (the configured participant) wins over the engine's generic snapshot
+    // name, so thoughts are labeled the same way as the feeds and seats.
+    const names = new Map(runPlayers.map((entry) => [entry.player_id, entry.name]));
+    snapshotPlayers.forEach((player) => {
+      if (!names.has(player.player_id)) {
+        names.set(player.player_id, player.name);
       }
     });
     return ids

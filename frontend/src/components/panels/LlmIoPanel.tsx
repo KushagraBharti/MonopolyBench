@@ -244,8 +244,22 @@ const DiffSection = ({
 const buildAttemptMap = (attempts: DecisionAttempt[]) =>
   new Map(attempts.map((attempt) => [attempt.attempt_index, attempt]));
 
+/** Model the provider reported for this attempt, from recorded metadata or the raw response. */
+const getReturnedModel = (attempt: DecisionAttempt | undefined): string | null => {
+  const meta = attempt?.sequence_meta as Record<string, unknown> | null | undefined;
+  if (meta && typeof meta.returned_model === 'string' && meta.returned_model) return meta.returned_model;
+  const response = attempt?.response as Record<string, unknown> | null | undefined;
+  if (response && typeof response.model === 'string' && response.model) return response.model;
+  return null;
+};
+
+const DEFAULT_ACTION_TITLE =
+  'No valid model action was accepted, so the engine applied its deterministic default action. This is not a fallback model.';
+
 const getAttemptLabel = (attempt: DecisionAttempt | undefined) =>
-  attempt ? [formatAttemptLabel(attempt.attempt_index), attempt.requested_model,
+  attempt ? [formatAttemptLabel(attempt.attempt_index),
+    attempt.requested_model ? `requested ${attempt.requested_model}` : null,
+    getReturnedModel(attempt) ? `returned ${getReturnedModel(attempt)}` : null,
     attempt.response_condition?.includes('without_private_thought') ? 'without private thoughts' : null,
   ].filter(Boolean).join(' · ') : 'Unknown';
 
@@ -460,8 +474,8 @@ export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jo
             </NeoBadge>
           )}
           {entry.fallback_used && (
-            <NeoBadge variant="error" className="text-[8px] py-0 px-1">
-              FALLBACK
+            <NeoBadge variant="error" className="text-[8px] py-0 px-1" title={DEFAULT_ACTION_TITLE}>
+              Default action applied
             </NeoBadge>
           )}
         </div>
@@ -540,8 +554,12 @@ export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jo
                   </NeoBadge>
                 )}
                 {activeBundle?.fallback_used && (
-                  <NeoBadge variant="error" className="text-[8px] py-0 px-1">
-                    FALLBACK
+                  <NeoBadge
+                    variant="error"
+                    className="text-[8px] py-0 px-1"
+                    title={activeBundle.fallback_reason ? `${DEFAULT_ACTION_TITLE} Reason: ${activeBundle.fallback_reason}.` : DEFAULT_ACTION_TITLE}
+                  >
+                    Default action applied
                   </NeoBadge>
                 )}
               </div>
@@ -576,6 +594,26 @@ export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jo
                 </button>
               </div>
             </div>
+            {activeBundle && !compareMode && (selectedAttemptItem ?? attemptMap.get(latestAttempt ?? -1)) && (() => {
+              const attempt = selectedAttemptItem ?? attemptMap.get(latestAttempt ?? -1);
+              const returned = getReturnedModel(attempt);
+              return (
+                <dl className="px-2 py-1.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-[10px]">
+                  <dt className="font-bold uppercase text-gray-500">Attempt</dt>
+                  <dd className="font-mono">{formatAttemptLabel(attempt?.attempt_index ?? 0)}</dd>
+                  <dt className="font-bold uppercase text-gray-500">Requested model</dt>
+                  <dd className="font-mono break-all">{attempt?.requested_model ?? 'Not recorded'}</dd>
+                  <dt className="font-bold uppercase text-gray-500">Returned model</dt>
+                  <dd className="font-mono break-all">{returned ?? 'Not reported by the provider'}</dd>
+                  {activeBundle.fallback_used && (
+                    <>
+                      <dt className="font-bold uppercase text-gray-500">Applied action</dt>
+                      <dd>Engine default action{activeBundle.fallback_reason ? ` (${activeBundle.fallback_reason})` : ''}, not a model choice</dd>
+                    </>
+                  )}
+                </dl>
+              );
+            })()}
             {loadingBundle && <div className="p-3 text-[11px] text-gray-500">Loading decision...</div>}
             {bundleError && <div className="p-3 text-[11px] text-neo-pink">{bundleError}</div>}
           </div>

@@ -63,5 +63,8 @@ step "Frontend: lint"
 step "Frontend: build"
 (cd frontend && npm run build)
 
+step "Frontend: state and board regression tests (Node 22.6+)"
+(cd frontend && npm run test:ui)
+
 echo ""
 echo "All checks passed."

@@ -465,7 +465,7 @@ export const ReplayReviewPage = () => {
         <Board
           spaces={snapshot?.board ?? []}
           players={snapshot?.players ?? []}
-          activePlayerId={selectedPlayerId ?? snapshot?.active_player_id ?? null}
+          activePlayerId={selectedPlayerId ?? (snapshot?.phase === 'GAME_OVER' ? null : snapshot?.active_player_id ?? null)}
           highlightState={{ eventHighlight: selectedStep?.payload?.space_index && typeof selectedStep.payload.space_index === 'number' ? [selectedStep.payload.space_index] : null }}
           className="aspect-square w-full min-w-[34rem] max-w-[min(100%,calc(100vh-2rem))] lg:min-w-0"
           centerContent={

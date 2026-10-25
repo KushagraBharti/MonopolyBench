@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/state/store';
 import { NeoBadge } from '@/components/ui/NeoPrimitive';
 import { cn } from '@/components/ui/cn';
 import { LlmIoPanel } from '@/components/panels/LlmIoPanel';
+import { trapTab } from '@/components/ui/focusTrap';
 
 type Tab = 'snapshot' | 'last' | 'stream' | 'raw' | 'llm_io';
 
@@ -37,7 +38,7 @@ const ToggleSwitch = ({ label, active, onClick }: { label: string; active: boole
   </button>
 );
 
-export const Inspector = () => {
+export const Inspector = ({ showLauncher = true }: { showLauncher?: boolean } = {}) => {
   const [showThoughts, setShowThoughts] = useState(false);
 
   const snapshot = useGameStore((state) => state.snapshot);
@@ -52,6 +53,41 @@ export const Inspector = () => {
   const setInspectorTab = useGameStore((state) => state.setInspectorTab);
   const setInspectorFocus = useGameStore((state) => state.setInspectorFocus);
   const setLlmIoSelectedDecisionId = useGameStore((state) => state.setLlmIoSelectedDecisionId);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  const close = useCallback(() => {
+    setInspectorOpen(false);
+    setInspectorFocus(null);
+  }, [setInspectorOpen, setInspectorFocus]);
+
+  // Modal behavior: remember the opener, focus the close button, trap Tab, close on Escape,
+  // and give focus back to the opener once the page behind is interactive again.
+  useEffect(() => {
+    if (!inspectorOpen) return;
+    const active = document.activeElement;
+    openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        // Claimed first (capture phase) so an underlying drawer does not also close.
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      } else {
+        trapTab(event, dialogRef.current);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      const opener = openerRef.current;
+      openerRef.current = null;
+      requestAnimationFrame(() => { if (opener?.isConnected) opener.focus(); });
+    };
+  }, [inspectorOpen, close]);
 
   const lastEvent = events.length > 0 ? events[0] : null;
   const streamEvents = useMemo(() => {
@@ -104,6 +140,7 @@ export const Inspector = () => {
   };
 
   if (!inspectorOpen) {
+    if (!showLauncher) return null;
     return (
       <div className="fixed bottom-4 right-4 z-50">
         <button
@@ -119,12 +156,12 @@ export const Inspector = () => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[3px] p-2 md:p-4 animate-fade-in-up">
-      <div className="w-full max-w-[98vw] md:max-w-[92vw] h-[92vh] md:h-[94vh] flex flex-col bg-neo-bg border-2 border-black/90 shadow-[10px_10px_0px_0px_rgba(0,0,0,0.85)] rounded-[3px] relative overflow-hidden">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="inspector-title" tabIndex={-1} className="w-full max-w-[98vw] md:max-w-[92vw] h-[92vh] md:h-[94vh] flex flex-col bg-neo-bg border-2 border-black/90 shadow-[10px_10px_0px_0px_rgba(0,0,0,0.85)] rounded-[3px] relative overflow-hidden">
 
         {/* Header Bar */}
         <div className="h-11 bg-black text-white flex justify-between items-center px-4 select-none shrink-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-[14px] font-black uppercase tracking-normal">System Inspector</h2>
+            <h2 id="inspector-title" className="text-[14px] font-black uppercase tracking-normal">System Inspector</h2>
             <div className="hidden md:block h-5 w-px bg-white/20" />
             <div className="hidden md:flex font-mono text-[9px] text-gray-500 gap-3">
               <span>RUN: {snapshot?.run_id?.slice(0, 8) ?? 'N/A'}</span>
@@ -144,10 +181,10 @@ export const Inspector = () => {
               </NeoBadge>
             )}
             <button
-              onClick={() => {
-                setInspectorOpen(false);
-                setInspectorFocus(null);
-              }}
+              ref={closeRef}
+              type="button"
+              aria-label="Close inspector"
+              onClick={close}
               className="w-7 h-7 flex items-center justify-center bg-neo-red/90 text-white text-[11px] font-bold hover:bg-red-400 transition-colors rounded-[2px]"
             >
               X

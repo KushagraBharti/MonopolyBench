@@ -119,6 +119,11 @@ export function campaignName(campaign: Pick<CloudCampaign, 'campaign_id' | 'disp
   return campaign.display_name || (typeof campaign.config?.study_label === 'string' ? campaign.config.study_label : '') || campaign.campaign_id
 }
 
+/** Model id per player_id, from the run configuration. Never inferred from seat or color. */
+export function playerModels(config: { players: { player_id: string; openrouter_model_id: string }[] }): Record<string, string> {
+  return Object.fromEntries(config.players.map(p => [p.player_id, p.openrouter_model_id]))
+}
+
 export function jobTitle(job: CloudJob) {
   if (job.kind === 'smoke') return 'Model test'
   if (job.kind === 'single') return 'Single game'
@@ -234,7 +239,13 @@ export function newestFirst<T extends { created_at?: number }>(items: T[]) {
 
 const TERMINAL = new Set(['completed', 'failed', 'cancelled'])
 /** Why a game's download isn't offered yet. Null when it is ready. */
+/** True when the server reports the export bundle could not be built. */
+export function exportFailed(job: Pick<CloudJob, 'export_status'>) {
+  return job.export_status === 'failed' || job.export_status === 'error'
+}
+
 export function downloadWait(job: Pick<CloudJob, 'status' | 'export_status'>) {
   if (job.export_status === 'ready') return null
+  if (exportFailed(job)) return 'Download failed to build. Individual files are still available under Details and research, Artifacts; ask the operator to rebuild the export.'
   return TERMINAL.has(job.status) || job.status === 'finalizing' ? 'Download is being prepared.' : 'Download available after the game finishes.'
 }

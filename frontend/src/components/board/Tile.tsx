@@ -1,241 +1,136 @@
-import { memo, useMemo } from 'react';
+import { memo, type ReactNode } from 'react';
 import type { Space } from '@/net/contracts';
 import { cn } from '@/components/ui/cn';
 import { getGroupColor, getPlayerColor } from '@/domain/monopoly/colors';
+import { getBoardSide } from '@/components/board/utils';
+import './board.css';
 
 interface TileProps {
   space: Space;
   className?: string;
   highlightSource?: 'deed' | 'event' | 'decision' | null;
+  /** Display name for the owner, used in the accessible label. */
+  ownerName?: string | null;
 }
 
-const TrainIcon = () => (
-  <div className="w-7 h-7 flex items-center justify-center bg-black text-white rounded-[2px] shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] transform -rotate-2">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4.5 h-4.5">
-      <path d="M3 11h18M5 11V7a2 2 0 012-2h10a2 2 0 012 2v4M4 11l-1 9h18l-1-9m-4 5a2 2 0 11-4 0 2 2 0 014 0z" />
-      <circle cx="6" cy="18" r="2" fill="white" stroke="none" />
-      <circle cx="18" cy="18" r="2" fill="white" stroke="none" />
-    </svg>
-  </div>
+const icon = (paths: ReactNode, filled = false) => (
+  <svg viewBox="0 0 24 24" className="mb-tile-icon" aria-hidden="true" fill={filled ? 'currentColor' : 'none'} stroke={filled ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {paths}
+  </svg>
 );
 
-const BulbIcon = () => (
-  <div className="w-7 h-7 flex items-center justify-center bg-neo-yellow/90 text-black border-[1.5px] border-black rounded-full shadow-[1px_1px_0_0_rgba(0,0,0,0.4)]">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
-      <path d="M9.5 9h5m-5 3h5m-6.9 8a5 5 0 014.9-6 5 5 0 014.9 6h-9.8z" />
-      <path d="M12 3a6 6 0 00-6 6v7h12V9a6 6 0 00-6-6z" />
-    </svg>
-  </div>
-);
-
-const WaterIcon = () => (
-  <div className="w-7 h-7 flex items-center justify-center bg-neo-cyan/80 text-black border-[1.5px] border-black rounded-full shadow-[1px_1px_0_0_rgba(0,0,0,0.4)]">
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-      <path d="M12 2.6L12 2.6c-.1 0-.1.1-.2.1 0 .1-.2.2-.2.3l-1.3 2.1c-.8 1.4-1.9 2.6-2.5 3.9-.7 1.4-1.1 3-1.1 4.6 0 1.3.5 2.6 1.4 3.5.9.9 2.2 1.4 3.5 1.4s2.6-.5 3.5-1.4c.9-.9 1.4-2.2 1.4-3.5 0-1.6-.4-3.2-1.1-4.6-.6-1.3-1.7-2.6-2.5-3.9l-1.3-2.1c-.1-.1-.1-.2-.2-.3 0 0-.1-.1-.2-.1z" />
-    </svg>
-  </div>
-);
-
-const ChestIcon = () => (
-  <div className="w-7 h-5 flex items-center justify-center opacity-80">
-    <svg viewBox="0 0 24 18" className="w-7 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2" y="6" width="20" height="10" rx="2" />
-      <path d="M2 10h20" />
-      <rect x="10.5" y="9" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-    </svg>
-  </div>
-);
-
+const TrainIcon = () => icon(<><rect x="5" y="3" width="14" height="13" rx="2" /><path d="M5 10h14M9 20l-2 2M15 20l2 2" /><circle cx="9" cy="13" r=".8" fill="currentColor" /><circle cx="15" cy="13" r=".8" fill="currentColor" /></>);
+const BulbIcon = () => icon(<><path d="M9 18h6M10 21h4" /><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z" /></>);
+const WaterIcon = () => icon(<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z" />);
+const ChestIcon = () => icon(<><rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18M5 8V6a2 2 0 012-2h10a2 2 0 012 2v2" /><rect x="10.5" y="11" width="3" height="3" fill="currentColor" /></>);
 const ChanceIcon = () => (
-  <div className="w-8 h-8 flex items-center justify-center opacity-80">
-    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M9 9a3 3 0 016 0c0 2-3 2-3 4" strokeLinecap="round" />
-      <circle cx="12" cy="18" r="1.4" fill="currentColor" stroke="none" />
-    </svg>
-  </div>
+  <span className="mb-tile-glyph" aria-hidden="true">?</span>
 );
+const TaxIcon = () => icon(<><path d="M12 3v18" /><path d="M17 7.5C17 5.6 14.8 4.5 12 4.5S7 5.6 7 7.6c0 4.5 10 2.6 10 7.4 0 2-2.2 3.5-5 3.5s-5-1.4-5-3.4" /></>);
 
-const TaxIcon = () => (
-  <div className="font-black text-lg border-[1.5px] border-black w-7 h-7 flex items-center justify-center bg-gray-50 rounded-[2px] text-neo-red relative overflow-hidden">
-    <span className="z-10 relative">$</span>
-    <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,#000_2px,#000_3px)] opacity-5"></div>
-  </div>
-);
+const formatPrice = (price: number) => `$${price}`;
 
-const HouseIndicator = () => (
-  <div className="w-2.5 h-2.5 bg-neo-green border border-black/80 rounded-[1px]" title="House" />
-);
+const ownerLabel = (space: Space, ownerName?: string | null) => {
+  const parts = [space.name];
+  if (space.price !== null && !space.owner_id) parts.push(`unowned, price ${formatPrice(space.price)}`);
+  if (space.owner_id) parts.push(`owned by ${ownerName ?? space.owner_id}`);
+  if (space.hotel) parts.push('hotel');
+  else if (space.houses > 0) parts.push(`${space.houses} house${space.houses === 1 ? '' : 's'}`);
+  if (space.mortgaged) parts.push('mortgaged');
+  return parts.join(', ');
+};
 
-const HotelIndicator = () => (
-  <div className="w-5 h-3.5 bg-neo-red border border-black/80 rounded-[1px] flex items-center justify-center gap-px" title="Hotel">
-    <div className="w-1 h-1 bg-white/90 rounded-full"></div>
-    <div className="w-1 h-1 bg-white/90 rounded-full"></div>
-    <div className="w-1 h-1 bg-white/90 rounded-full"></div>
-  </div>
-);
-
-const FreeParkingIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.2">
-    <path d="M5 13l2-6h10l2 6" />
-    <path d="M7 13h10v4H7z" />
-    <circle cx="8" cy="18" r="1.3" fill="currentColor" stroke="none" />
-    <circle cx="16" cy="18" r="1.3" fill="currentColor" stroke="none" />
-  </svg>
-);
-
-const GoToJailIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="5" y="4" width="14" height="16" rx="2" />
-    <path d="M9 4v16M12 4v16M15 4v16" />
-  </svg>
-);
-
-export const Tile = memo(({ space, className, highlightSource = null }: TileProps) => {
-  const { name, kind, price, group, owner_id, houses, hotel, mortgaged } = space;
-
-  const groupColor = useMemo(() => getGroupColor(group), [group]);
-  const hasColorBand = !!group && groupColor !== 'transparent';
-
-  const groupUpper = group?.toUpperCase() || '';
-  const isRailroad = kind === 'RAILROAD' || groupUpper === 'RAILROAD';
-  const isUtility = kind === 'UTILITY' || groupUpper === 'UTILITY';
-  const isChest = name.toUpperCase().includes('CHEST');
-  const isChance = name.toUpperCase().includes('CHANCE');
-  const isTax = name.toUpperCase().includes('TAX');
-
-  const ownerColor = useMemo(() => {
-    if (!owner_id) return null;
-    return getPlayerColor(owner_id);
-  }, [owner_id]);
-
-  const highlightClass = highlightSource
-    ? highlightSource === 'event'
-      ? 'ring-2 ring-neo-yellow ring-offset-1 z-10'
-      : highlightSource === 'deed'
-        ? 'ring-2 ring-neo-pink ring-offset-1 z-10'
-        : 'ring-[1.5px] ring-neo-cyan ring-offset-1 z-10'
-    : '';
-
-  if (space.index % 10 === 0) {
+const Corner = ({ space }: { space: Space }) => {
+  if (space.index === 0) {
     return (
-      <div
-        className={cn(
-          'relative w-full h-full border-[1.5px] border-neo-border bg-white flex flex-col items-center justify-center text-center select-none overflow-hidden',
-          highlightClass,
-          className
-        )}
-      >
-        {space.index === 0 && (
-          <div className="w-full h-full bg-[#d4edda] relative flex items-center justify-center">
-            <span className="absolute top-1 left-1 text-[7px] font-black transform -rotate-45 opacity-50 leading-tight">COLLECT<br />$200</span>
-            <span className="text-3xl font-black text-neo-black tracking-normal drop-shadow-[1px_1px_0_rgba(255,255,255,0.4)] transform -rotate-45 relative z-10">GO</span>
-            <div className="absolute bottom-0 right-0 w-7 h-7 border-l-[1.5px] border-t-[1.5px] border-black bg-neo-green/90">
-              <svg viewBox="0 0 24 24" stroke="currentColor" className="w-full h-full p-1 text-white" strokeWidth="3"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
-            </div>
-          </div>
-        )}
-        {space.index === 10 && (
-          <div className="w-full h-full bg-[#f5ddd0] p-0.5 flex relative">
-            <div className="w-2/3 h-full border-[1.5px] border-black bg-neo-orange/90 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 flex justify-evenly">
-                <div className="w-px h-full bg-black/60"></div>
-                <div className="w-px h-full bg-black/60"></div>
-                <div className="w-px h-full bg-black/60"></div>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center z-10">
-                <div className="max-w-full bg-neo-orange border border-black/80 px-1 py-0.5 rotate-[-15deg]">
-                  <span className="block text-center text-[6px] font-black leading-none">IN<br />JAIL</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-center leading-none transform -rotate-90 whitespace-nowrap opacity-70">JUST<br />VISITING</span>
-            </div>
-          </div>
-        )}
-        {space.index === 20 && (
-          <div className="w-full h-full bg-[#fdf5d4] flex flex-col items-center justify-center p-1 relative">
-            <div className="absolute top-0.5 right-0.5 rotate-12 bg-neo-red text-white text-[7px] font-black px-1 border border-black/70 rounded-[1px]">FREE</div>
-            <div className="mt-1">
-              <FreeParkingIcon />
-            </div>
-            <span className="text-[8px] font-bold uppercase mt-0.5 tracking-normal opacity-80">Parking</span>
-          </div>
-        )}
-        {space.index === 30 && (
-          <div className="w-full h-full bg-[#d5e5ee] flex flex-col items-center justify-center p-1 relative">
-            <span className="text-[8px] font-bold uppercase mb-0.5 opacity-70">GO TO</span>
-            <div className="w-9 h-9 border-[1.5px] border-black bg-neo-blue/90 flex items-center justify-center rounded-[2px] relative overflow-hidden">
-              <div className="absolute inset-0 opacity-[0.06] bg-[repeating-linear-gradient(45deg,black,black_1px,transparent_1px,transparent_4px)]"></div>
-              <span className="relative z-10 text-white">
-                <GoToJailIcon />
-              </span>
-            </div>
-            <span className="text-[8px] font-bold uppercase mt-0.5 opacity-70">JAIL</span>
-          </div>
-        )}
+      <div className="mb-corner mb-corner-go">
+        <span className="mb-corner-small">Collect $200 salary as you pass</span>
+        <span className="mb-corner-big">GO</span>
+        <svg viewBox="0 0 48 16" className="mb-go-arrow" aria-hidden="true"><path d="M46 8H6M14 1L4 8l10 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" /></svg>
+      </div>
+    );
+  }
+  if (space.index === 10) {
+    return (
+      <div className="mb-corner mb-corner-jail">
+        <div className="mb-jail-cell"><span>In jail</span></div>
+        <span className="mb-jail-just">Just</span>
+        <span className="mb-jail-visiting">Visiting</span>
+      </div>
+    );
+  }
+  if (space.index === 20) {
+    return (
+      <div className="mb-corner mb-corner-parking">
+        <span className="mb-corner-small">Free</span>
+        <svg viewBox="0 0 24 24" className="mb-corner-icon" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M4 15l2-6h12l2 6v3H4z" /><circle cx="8" cy="18" r="1.6" fill="currentColor" /><circle cx="16" cy="18" r="1.6" fill="currentColor" /></svg>
+        <span className="mb-corner-small">Parking</span>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-corner mb-corner-gotojail">
+      <span className="mb-corner-small">Go to</span>
+      <svg viewBox="0 0 24 24" className="mb-corner-icon" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="3" width="16" height="18" rx="1.5" /><path d="M8 3v18M12 3v18M16 3v18" /></svg>
+      <span className="mb-corner-small">Jail</span>
+    </div>
+  );
+};
+
+/**
+ * One board square. Renders only what the snapshot says: owner, houses, the hotel flag
+ * and the mortgage flag. Color bands face the board center, like a printed board.
+ */
+export const Tile = memo(({ space, className, highlightSource = null, ownerName }: TileProps) => {
+  const { name, kind, price, group, owner_id, houses, hotel, mortgaged } = space;
+  const side = getBoardSide(space.index);
+  const groupColor = getGroupColor(group);
+  const isStreet = kind === 'PROPERTY' && groupColor !== 'transparent';
+
+  if (side === 'corner') {
+    return (
+      <div className={cn('mb-tile', className)} data-side="corner" data-highlight={highlightSource ?? undefined} title={name} role="img" aria-label={name}>
+        <Corner space={space} />
       </div>
     );
   }
 
+  const upper = name.toUpperCase();
+  const glyph = kind === 'RAILROAD' ? <TrainIcon />
+    : kind === 'UTILITY' ? (upper.includes('WATER') ? <WaterIcon /> : <BulbIcon />)
+    : kind === 'COMMUNITY_CHEST' ? <ChestIcon />
+    : kind === 'CHANCE' ? <ChanceIcon />
+    : kind === 'TAX' ? <TaxIcon />
+    : null;
+
   return (
     <div
-      className={cn(
-        'relative flex flex-col border-[1px] border-black/70 bg-[#fcfbf8] h-full w-full select-none overflow-hidden transition-shadow duration-200',
-        highlightClass,
-        className
-      )}
+      className={cn('mb-tile', className)}
+      data-side={side}
+      data-kind={kind}
+      data-highlight={highlightSource ?? undefined}
+      data-mortgaged={mortgaged || undefined}
+      data-owned={Boolean(owner_id) || undefined}
+      title={ownerLabel(space, ownerName)}
+      role="img"
+      aria-label={ownerLabel(space, ownerName)}
     >
-      {hasColorBand ? (
-        <div
-          className="h-[24%] w-full border-b-[1px] border-black/60 relative"
-          style={{ backgroundColor: groupColor }}
-        >
-          <div className="absolute -bottom-1.5 inset-x-0 flex justify-center gap-0.5 z-10">
-            {hotel && <HotelIndicator />}
-            {!hotel && Array.from({ length: houses }).map((_, i) => (
-              <HouseIndicator key={i} />
-            ))}
-          </div>
+      {isStreet ? (
+        <div className="mb-tile-band" style={{ backgroundColor: groupColor }}>
+          {hotel ? (
+            <span className="mb-hotel" aria-hidden="true" />
+          ) : (
+            Array.from({ length: houses }).map((_, i) => <span key={i} className="mb-house" aria-hidden="true" />)
+          )}
         </div>
-      ) : (
-        <div className="h-[8%]" />
-      )}
-
-      <div className="flex-1 flex flex-col items-center p-0.5 text-center w-full relative z-0">
-        <span className="text-[7.5px] font-bold uppercase leading-tight tracking-normal line-clamp-3 mb-0.5 min-h-[2em]">
-          {name}
-        </span>
-
-        <div className="flex-1 flex items-center justify-center scale-[0.85] text-black">
-          {isRailroad && <TrainIcon />}
-          {isUtility && name.toLowerCase().includes('water') && <WaterIcon />}
-          {isUtility && name.toLowerCase().includes('electric') && <BulbIcon />}
-          {isChest && <ChestIcon />}
-          {isChance && <ChanceIcon />}
-          {isTax && <TaxIcon />}
-        </div>
-
-        {!owner_id && price !== null && (
-          <span className="text-[7.5px] font-mono mt-auto text-gray-500">{`$${price}`}</span>
-        )}
+      ) : null}
+      <div className="mb-tile-body">
+        <span className="mb-tile-name">{name}</span>
+        {glyph}
+        {price !== null && !owner_id ? <span className="mb-tile-price">{formatPrice(price)}</span> : null}
       </div>
-
-      {owner_id && (
-        <div
-          className="h-[4px] w-full absolute bottom-0 left-0"
-          style={{ backgroundColor: ownerColor || 'black' }}
-        />
-      )}
-
-      {mortgaged && (
-        <div className="absolute inset-0 bg-white/85 flex items-center justify-center z-20">
-          <div className="border-[1.5px] border-neo-red/80 px-1 py-0.5 transform -rotate-12 bg-white/90">
-            <span className="font-black text-[9px] text-neo-red uppercase tracking-wide block">MORTGAGED</span>
-          </div>
-        </div>
-      )}
+      {owner_id ? <div className="mb-tile-owner" style={{ backgroundColor: getPlayerColor(owner_id) }} aria-hidden="true" /> : null}
+      {mortgaged ? <div className="mb-tile-mortgage" aria-hidden="true"><span>Mortgaged</span></div> : null}
     </div>
   );
 });

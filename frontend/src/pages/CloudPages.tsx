@@ -1,17 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { CLOUD_API, cloudRequest, type CloudJob, type CloudCampaign, type CloudLive, type CloudStatus } from '@/net/jobs'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { CLOUD_API, cloudRequest, type CloudJob, type CloudCampaign, type CloudStatus } from '@/net/jobs'
+import { JobControls } from './cloud/JobControls'
 import { Board } from '@/components/board/Board'
-import { PlayerStackPanel } from '@/components/panels/PlayerStackPanel'
-import { useGameStore } from '@/state/store'
-import { useCloudStore } from '@/state/cloud'
-import { EventFeed } from '@/components/feed/EventFeed'
-import { ChatFeed } from '@/components/feed/ChatFeed'
-import { Inspector } from '@/components/panels/Inspector'
-import { AuctionPanel } from '@/components/panels/AuctionPanel'
-import { TradeInspectorPanel } from '@/components/panels/TradeInspectorPanel'
-import { LlmIoPanel } from '@/components/panels/LlmIoPanel'
 import { Facts, Notice, SeatTokens, Shell, StatusPill } from './cloud/CloudShell'
-import { ACTION_LABELS, campaignName, downloadWait, duration, errorText, jobHome, jobStatus, jobTitle, modelInfo, settingsLine, usePoll, waitingText } from './cloud/cloudUi'
+import { campaignName, downloadWait, duration, errorText, jobStatus, jobTitle, modelInfo, playerModels, settingsLine, usePoll, waitingText } from './cloud/cloudUi'
 import './cloud.css'
 
 export function LoginPage() {
@@ -26,32 +18,6 @@ export function LoginPage() {
   return <main className="cloud-login"><form onSubmit={submit}><span className="cb-brand-mark" aria-hidden="true" /><h1>MonopolyBench</h1><p>Sign in to your cloud workspace.</p><label>Password<input autoFocus type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label><button className="cb-btn cb-btn-primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button><p role="alert">{error}</p></form></main>
 }
 
-function useJobAction(job: CloudJob, onChanged?: (job: CloudJob) => void) {
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState('')
-  const lock = useRef(false)
-  async function act(action: string) {
-    if (lock.current) return
-    if (action === 'cancel' && !window.confirm('Cancel this game? It stops for good and can’t be resumed.')) return
-    lock.current = true; setBusy(action); setError('')
-    try { onChanged?.(await cloudRequest<CloudJob>(`/jobs/${job.job_id}/${action}`, {})) }
-    catch (e) { setError(errorText(e)) }
-    finally { lock.current = false; setBusy('') }
-  }
-  return { act, error, busy }
-}
-
-function JobControls({ job, onChanged }: { job: CloudJob; onChanged?: (job: CloudJob) => void }) {
-  const { act, error, busy } = useJobAction(job, onChanged)
-  return <>
-    {job.allowed_actions.map(action => <button key={action} className={`cb-btn ${action === 'cancel' ? 'cb-btn-danger' : 'cb-btn-ghost'}`} disabled={Boolean(busy)} onClick={() => void act(action)}>{busy === action ? 'Working…' : ACTION_LABELS[action] ?? action}</button>)}
-    {error ? <p className="cb-error" role="alert">{error}</p> : null}
-  </>
-}
-
-function JobActions({ job, onChanged }: { job: CloudJob; onChanged?: (job: CloudJob) => void }) {
-  return <div className="cloud-actions">{job.export_status === 'ready' ? <a className="cb-btn cb-btn-ghost" href={`${CLOUD_API}/jobs/${job.job_id}/export`}>Download game</a> : null}<JobControls job={job} onChanged={onChanged} /></div>
-}
 
 function JobCard({ job, campaignNames, onChanged }: { job: CloudJob; campaignNames: Map<string, string>; onChanged: () => void }) {
   const [label, tone] = jobStatus(job.status)
@@ -60,7 +26,7 @@ function JobCard({ job, campaignNames, onChanged }: { job: CloudJob; campaignNam
   return <article className="cb-card cb-job">
     <header><StatusPill label={label} tone={tone} />{turn != null ? <span className="cb-meta">Turn {turn}</span> : null}</header>
     <a className="cb-job-board" href={`/games/${job.job_id}`} tabIndex={-1} aria-hidden="true">
-      {job.snapshot ? <div className="cloud-thumbnail"><Board spaces={job.snapshot.board} players={job.snapshot.players} activePlayerId={job.snapshot.active_player_id} /></div> : <div className="cloud-placeholder">{waitingText(job.status)}</div>}
+      {job.snapshot ? <div className="cloud-thumbnail"><Board spaces={job.snapshot.board} players={job.snapshot.players} activePlayerId={job.status === 'running' || job.status === 'paused' ? job.snapshot.active_player_id : null} phase={job.snapshot.phase} playerModels={playerModels(job.config)} /></div> : <div className="cloud-placeholder">{waitingText(job.status)}</div>}
     </a>
     <h2><a href={`/games/${job.job_id}`}>{jobTitle(job)}</a></h2>
     {job.campaign_id ? <p className="cb-meta"><a href={`/campaigns/${encodeURIComponent(job.campaign_id)}`}>{campaignNames.get(job.campaign_id) ?? 'Open campaign'}</a></p> : null}
@@ -172,74 +138,4 @@ export function TestsPage() {
   return <JobListPage kind="smoke" />
 }
 
-export function GamePage() {
-  const id = window.location.pathname.split('/')[2]
-  const { data: job, error, replace } = usePoll<CloudJob>(`/jobs/${id}`)
-  const [tab, setTab] = useState('Live')
-  const [connected, setConnected] = useState(false)
-  const snapshot = useCloudStore(s => s.views[id]?.snapshot)
-  const [rows, setRows] = useState<unknown>(null)
-  const [cursor, setCursor] = useState(0)
-  const [decisionPageSize, setDecisionPageSize] = useState(0)
-  const [tabError, setTabError] = useState('')
-  useEffect(() => {
-    let active = true
-    let socket: WebSocket
-    let timer: ReturnType<typeof setTimeout>
-    let commit = 0, generation = -1
-    useGameStore.getState().resetLogs()
-    const connect = () => {
-      const url = new URL(`${CLOUD_API}/jobs/${id}/ws`, window.location.href)
-      url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-      url.searchParams.set('after', String(commit)); url.searchParams.set('generation', String(generation))
-      socket = new WebSocket(url)
-      socket.onopen = () => setConnected(true)
-      socket.onmessage = message => {
-        const envelope: CloudLive = JSON.parse(message.data)
-        if (envelope.type === 'HELLO' || envelope.job_id !== id) return
-        useCloudStore.getState().receive(envelope)
-        const store = useGameStore.getState()
-        if (envelope.reset) store.resetEvents()
-        if (envelope.snapshot) store.setSnapshot(envelope.snapshot)
-        envelope.events.forEach(event => store.pushEvent(event))
-        commit = envelope.commit_seq; generation = envelope.recovery_generation
-      }
-      socket.onclose = event => { setConnected(false); if (event.code === 4401) window.location.assign('/login'); else if (active) timer = setTimeout(connect, 2000) }
-    }
-    connect()
-    return () => { active = false; clearTimeout(timer); socket?.close() }
-  }, [id])
-  useEffect(() => {
-    if (!job) return
-    const gameStore = useGameStore.getState()
-    gameStore.setRunStatus({ runId: job.run_id, running: job.status === 'running', paused: job.status === 'paused', players: job.config.players.map(p => {
-      const fallback = job.config.response_policy?.fallback_models[p.openrouter_model_id]
-      return { ...p, model_display_name: fallback ? `${p.name} with ${fallback.split('/').pop()} fallback` : p.name }
-    }) })
-    const live = useCloudStore.getState().views[id]
-    if (job.snapshot && (!live?.snapshot || job.commit_seq >= live.commit)) gameStore.setSnapshot(job.snapshot)
-  }, [job, id])
-  useEffect(() => {
-    if (tab === 'Live' || tab === 'Decisions') return
-    let active = true
-    const path = '/artifacts'
-    void cloudRequest(`/jobs/${id}${path}`).then(value => { if (active) { setRows(value); setTabError('') } }).catch(e => { if (active) setTabError(String(e)) })
-    return () => { active = false }
-  }, [id, tab, cursor])
-  const current = snapshot?.run_id === job?.run_id ? snapshot : job?.snapshot
-  const [statusLabel, statusTone] = jobStatus(job?.status)
-  const campaignHref = job?.campaign_id ? `/campaigns/${encodeURIComponent(job.campaign_id)}` : null
-  const home = job ? jobHome(job) : null
-  return <Shell section={job ? (job.kind === 'smoke' ? 'tests' : job.kind === 'campaign' ? 'campaigns' : 'games') : null}><div className="cb-game-head">
-    {home ? <a className="cb-back" href={home.href}>{home.label}</a> : <a className="cb-back" href="/games">Games</a>}
-    <h1>{job ? jobTitle(job) : 'Loading game…'}</h1>
-    {job ? <p className="cb-game-status"><StatusPill label={statusLabel} tone={statusTone} /><span className="cb-meta" role="status">{connected ? 'Live' : 'Reconnecting…'}</span>{current ? <span className="cb-meta">Turn {current.turn_index}</span> : null}</p> : null}
-    {job ? <SeatTokens models={job.config.players.map(p => p.openrouter_model_id)} labelled /> : null}
-    {job ? <p className="cb-meta">{settingsLine(job.config)}. Recorded cost {`$${job.cost.known_total.toFixed(2)}`}{job.cost.unknown_calls + job.cost.missing_calls > 0 ? ' (some calls unreported)' : ''}.</p> : null}
-    {job?.snapshot_kind === 'initial_preview' && !snapshot ? <p className="cb-hint">Starting board. The first saved move will appear here when the game begins.</p> : null}
-    {job?.pause_reason && job.status === 'paused' ? <p className="cb-flag" data-tone="warn">Paused: {job.pause_reason.replace(/_/g, ' ')}</p> : null}
-    {job ? <div className="cb-game-controls"><JobActions job={job} onChanged={replace} />{campaignHref ? <a className="cb-btn cb-btn-ghost" href={campaignHref}>All campaign games</a> : null}</div> : null}
-    {job && downloadWait(job) ? <p className="cb-wait">{downloadWait(job)}</p> : null}
-    {job ? <details className="cb-disclosure cb-disclosure-small"><summary>Research details</summary><Facts rows={[['Run ID', <code>{job.run_id}</code>], ['Seed', <code>{job.config.seed}</code>], ['Recorded cost', `$${job.cost.known_total.toFixed(2)}`], ['Replay check', job.replay_status || 'Pending']]} /></details> : null}
-  </div>{error || tabError ? <p className="cb-error" role="alert">{error || tabError}</p> : null}<nav className="cloud-tabs">{['Live', 'Decisions', 'Artifacts', 'Replay', 'Analysis'].map(name => <button aria-pressed={tab === name} key={name} onClick={() => { setTab(name); setCursor(0) }}>{name}</button>)}</nav>{tab === 'Live' ? <>{current ? <div className="cloud-live"><Board spaces={current.board} players={current.players} activePlayerId={current.active_player_id} /><PlayerStackPanel /></div> : <div className="cloud-placeholder cloud-placeholder-large">{job ? waitingText(job.status) : 'Loading…'}</div>}<AuctionPanel visible /><TradeInspectorPanel visible /><div className="cloud-live cloud-feed-panels"><EventFeed /><ChatFeed /></div><Inspector /></> : tab === 'Decisions' ? <><div className="cloud-decisions"><LlmIoPanel jobId={id} cursor={cursor} revision={job?.commit_seq} onPageSize={setDecisionPageSize} /></div><button disabled={cursor === 0} onClick={() => setCursor(Math.max(0, cursor-50))}>Previous</button><button disabled={decisionPageSize < 50} onClick={() => setCursor(cursor+50)}>Next</button></> : <><p>{tab === 'Replay' ? `Replay verdict: ${job?.replay_status || 'pending'}` : 'Open an artifact to inspect its contents.'}</p>{Array.isArray(rows) ? rows.filter((r: { path: string }) => tab === 'Replay' ? r.path.includes('replay') : true).map((r: { path: string; bytes: number }) => <p key={r.path}><a href={`${CLOUD_API}/jobs/${id}/artifacts?path=${encodeURIComponent(r.path)}`}>{r.path}</a> · {r.bytes} bytes</p>) : null}{job?.export_status === 'ready' ? <a href={`${CLOUD_API}/jobs/${id}/export`}>Download game with analysis</a> : null}</>}</Shell>
-}
+export { GamePage } from './cloud/game/GamePage'

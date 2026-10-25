@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { cloudRequest, type CampaignCell, type CloudCampaign, type CloudJob, type CloudStatus } from '@/net/jobs'
 import { Board } from '@/components/board/Board'
 import { CheckConnections, Facts, GameTiles, Notice, SeatTokens, Shell, StatusPill } from './CloudShell'
-import { ACTION_LABELS, boardNumbers, campaignName, campaignStatus, cellCounts, cellJobId, cellStatus, duration, errorText, exportDownload, fileSize, money, needsConnectionCheck, newestFirst, settingsLine, usePoll, waitingText, when } from './cloudUi'
+import { ACTION_LABELS, boardNumbers, campaignName, campaignStatus, cellCounts, cellJobId, cellStatus, duration, errorText, exportDownload, fileSize, money, needsConnectionCheck, newestFirst, playerModels, settingsLine, usePoll, waitingText, when } from './cloudUi'
 
 export function CampaignsRoute() {
   const id = window.location.pathname.split('/')[2]
@@ -275,7 +275,7 @@ function CellCard({ cell, board, campaignPath, canStart, campaignBusy, onCampaig
   return <article className="cb-card cb-cell" aria-labelledby={`cell-${cell.cell_index}`}>
     <header><h3 id={`cell-${cell.cell_index}`}>Game {number}{board ? <small> · Board {board}</small> : null}</h3><StatusPill label={statusLabel} tone={statusTone} /></header>
     {watchHref ? <a className="cb-job-board" href={watchHref} tabIndex={-1} aria-hidden="true">
-      {game?.snapshot ? <div className="cloud-thumbnail"><Board spaces={game.snapshot.board} players={game.snapshot.players} activePlayerId={game.snapshot.active_player_id} /></div>
+      {game?.snapshot ? <div className="cloud-thumbnail"><Board spaces={game.snapshot.board} players={game.snapshot.players} activePlayerId={game.status === 'running' || game.status === 'paused' ? game.snapshot.active_player_id : null} phase={game.snapshot.phase} playerModels={playerModels(game.config)} /></div>
         : <div className="cloud-placeholder">{waitingText(game?.status ?? cell.job_status)}</div>}
     </a> : <div className="cloud-placeholder" aria-hidden="true">Not started</div>}
     {cell.models_by_seat ? <SeatTokens models={cell.models_by_seat} labelled /> : null}

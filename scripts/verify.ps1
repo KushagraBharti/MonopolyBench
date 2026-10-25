@@ -116,6 +116,11 @@ try {
     }
   }
 
+  Invoke-Step -Name "Frontend: state and board regression tests (Node 22.6+)" -ScriptBlock {
+    Push-Location frontend
+    try { npm run test:ui } finally { Pop-Location }
+  }
+
   Write-Host ""
   Write-Host "All checks passed."
 } finally {

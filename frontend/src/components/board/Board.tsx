@@ -4,7 +4,7 @@ import type { Player, Space } from '@/net/contracts';
 import { Tile } from '@/components/board/Tile';
 import { cn } from '@/components/ui/cn';
 import { TokenLayer } from '@/components/board/TokenLayer';
-import { getGridPosition } from '@/components/board/utils';
+import { BOARD_TRACKS, getGridPosition } from '@/components/board/utils';
 import { useGameStore, type StoreState } from '@/state/store';
 
 type BoardHighlightState = {
@@ -21,6 +21,14 @@ interface BoardProps {
     activePlayerId?: string | null;
     highlightState?: BoardHighlightState;
     centerContent?: ReactNode;
+    /** Model id per player_id from the run configuration; tokens show that model's lab logo. */
+    playerModels?: Record<string, string>;
+    /** Accessible name for the board region. */
+    label?: string;
+    /** Display name per player_id for token and owner labels. Defaults to the snapshot name. */
+    playerLabels?: Record<string, string>;
+    /** Engine phase of the shown snapshot. GAME_OVER suppresses the active-turn token. */
+    phase?: string | null;
 }
 
 export const Board = ({
@@ -31,17 +39,37 @@ export const Board = ({
     activePlayerId,
     highlightState,
     centerContent,
+    playerModels,
+    label,
+    playerLabels,
+    phase,
 }: BoardProps) => {
     const { deedHighlight, eventHighlight, decisionHighlight } = useGameStore(
         (state: StoreState) => state.ui
     );
     const snapshot = useGameStore((state: StoreState) => state.snapshot);
 
-    const resolvedDeedHighlight = highlightState?.deedHighlight ?? deedHighlight;
-    const resolvedEventHighlight = highlightState?.eventHighlight ?? eventHighlight;
-    const resolvedDecisionHighlight = highlightState?.decisionHighlight ?? decisionHighlight;
-    const resolvedPlayers = players ?? snapshot?.players ?? [];
-    const resolvedActivePlayerId = activePlayerId ?? snapshot?.active_player_id ?? null;
+    // A board given explicit players renders only its own data: it never borrows the
+    // global live snapshot's highlights or turn holder. null means "none", undefined
+    // means "not specified".
+    const explicit = players !== undefined;
+    const pick = <T,>(key: keyof BoardHighlightState, global: T): T | null => {
+        if (highlightState && highlightState[key] !== undefined) return highlightState[key] as T | null;
+        return explicit ? null : global;
+    };
+    const resolvedDeedHighlight = pick('deedHighlight', deedHighlight);
+    const resolvedEventHighlight = pick('eventHighlight', eventHighlight);
+    const resolvedDecisionHighlight = pick('decisionHighlight', decisionHighlight);
+    const globalPlayers = snapshot?.players;
+    const resolvedPlayers = useMemo(() => players ?? globalPlayers ?? [], [players, globalPlayers]);
+    const resolvedPhase = phase !== undefined ? phase : explicit ? null : snapshot?.phase ?? null;
+    const requestedActive = activePlayerId !== undefined ? activePlayerId : explicit ? null : snapshot?.active_player_id ?? null;
+    const resolvedActivePlayerId = resolvedPhase === 'GAME_OVER' ? null : requestedActive;
+
+    const ownerNames = useMemo(
+        () => new Map(resolvedPlayers.map((player) => [player.player_id, playerLabels?.[player.player_id] ?? player.name])),
+        [resolvedPlayers, playerLabels]
+    );
 
     const highlightSets = useMemo(() => {
         return {
@@ -67,13 +95,14 @@ export const Board = ({
     }, [spaces]);
 
     return (
-        <div className={cn('relative p-3', className)} data-board-root="true">
+        <div className={cn('relative p-3', className)} data-board-root="true" role={label ? 'region' : undefined} aria-label={label}>
             {/* Board Physical Base */}
-            <div className="relative w-full h-full bg-[linear-gradient(145deg,#f9f6f0,#f0eadd)] border-[6px] border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,0.85)] rounded-[2px] overflow-hidden">
-                <div className="absolute inset-[6px] border border-black/15 pointer-events-none rounded-[1px]" />
-
+            <div className="relative w-full h-full bg-[#e4f1e1] border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.85)] overflow-hidden">
                 {/* The Grid */}
-                <div className="absolute inset-0 grid grid-cols-11 grid-rows-11 gap-px bg-[#1a1a1a] p-[2px]">
+                <div
+                    className="absolute inset-0 grid gap-px bg-black"
+                    style={{ gridTemplateColumns: BOARD_TRACKS, gridTemplateRows: BOARD_TRACKS }}
+                >
                     {safeSpaces.map((space) => {
                         const { row, col } = getGridPosition(space.index);
                         return (
@@ -83,10 +112,11 @@ export const Board = ({
                                     gridRow: row,
                                     gridColumn: col,
                                 }}
-                                className="relative bg-white"
+                                className="relative min-w-0 min-h-0"
                             >
                                 <Tile
                                     space={space}
+                                    ownerName={space.owner_id ? ownerNames.get(space.owner_id) ?? null : null}
                                     highlightSource={
                                         resolvedDeedHighlight === space.index
                                             ? 'deed'
@@ -102,18 +132,13 @@ export const Board = ({
                     })}
 
                     {/* Center Board Area */}
-                    <div className="row-start-2 row-end-11 col-start-2 col-end-11 bg-[#f8f5ee] flex items-center justify-center flex-col relative overflow-hidden">
-
-                        {/* Subtle Center Texture */}
-                        <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(circle_at_center,#000_0.8px,transparent_0.8px)] bg-size-[14px_14px]" />
-
-                        {/* Branding */}
+                    <div className="row-start-2 row-end-11 col-start-2 col-end-11 bg-[#cfe5d0] flex items-center justify-center flex-col relative overflow-hidden min-w-0 min-h-0">
                         {centerContent ?? (
                             <div className="z-10 flex h-full w-full max-w-full items-center justify-center">
                                 <img
                                     src="/../logo2.png"
                                     alt="Monopoly Bench"
-                                    className="h-auto max-h-[72%] w-auto max-w-[82%] object-contain drop-shadow-[3px_3px_0_rgba(0,0,0,0.08)]"
+                                    className="h-auto max-h-[60%] w-auto max-w-[70%] object-contain"
                                 />
                             </div>
                         )}
@@ -121,7 +146,7 @@ export const Board = ({
                 </div>
 
                 {/* Token Overlay */}
-                {showTokens ? <TokenLayer players={resolvedPlayers} activePlayerId={resolvedActivePlayerId} /> : null}
+                {showTokens ? <TokenLayer players={resolvedPlayers} activePlayerId={resolvedActivePlayerId} playerModels={playerModels} playerLabels={Object.fromEntries(ownerNames)} /> : null}
             </div>
         </div>
     );

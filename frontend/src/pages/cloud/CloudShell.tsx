@@ -1,4 +1,6 @@
-import { useId, useRef, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { LabLogo } from '@/components/LabLogo'
+import { getSeatColor } from '@/domain/monopoly/colors'
 import { cloudRequest, type CampaignCell } from '@/net/jobs'
 import { cellStatus, errorText, modelInfo, parseBudget, type Tone } from './cloudUi'
 import '../cloud.css'
@@ -47,7 +49,9 @@ export function StatusPill({ label, tone }: { label: string; tone: Tone }) {
 
 export function Token({ model, seat }: { model: string; seat?: number }) {
   const info = modelInfo(model)
-  return <span className="cb-token" style={{ background: info.color, color: info.ink }} title={seat ? `Seat ${seat}: ${info.name}` : info.name} aria-hidden="true">{info.mark}</span>
+  // Logo comes from the model id; the ring color comes from the seat, so repeated models stay distinct.
+  const style = seat ? { '--cb-seat': getSeatColor(seat - 1) } as CSSProperties : undefined
+  return <span className="cb-token" data-seat={seat || undefined} style={style} title={seat ? `Seat ${seat}: ${info.name}` : info.name} aria-hidden="true"><LabLogo model={model} decorative /></span>
 }
 
 /** Models in seat order. Seat 1 moves first. */

@@ -6,6 +6,13 @@ import { getPlayerColor } from '@/domain/monopoly/colors';
 import { formatCardTitle, formatMoney, formatSpaceLabel } from '@/domain/monopoly/formatters';
 import { SPACE_INDEX_BY_KEY } from '@/domain/monopoly/constants';
 import { ThoughtsPanel } from '@/components/panels/ThoughtsPanel';
+import { LabLogo } from '@/components/LabLogo';
+
+/**
+ * Seat identity for message bubbles. Public messages do not record which model answered
+ * (a configured fallback may have), so bubbles name the seat, not a model.
+ */
+export type ChatSeat = { label: string; model: string; title: string };
 
 type FeedSystemTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
@@ -501,12 +508,14 @@ const LlmBubble = ({
   playerId,
   playerLabel,
   modelLabel,
+  seat,
   message,
   onInspect,
 }: {
   playerId: string;
   playerLabel: string;
   modelLabel?: string;
+  seat?: ChatSeat;
   message: string;
   onInspect: () => void;
 }) => {
@@ -514,15 +523,18 @@ const LlmBubble = ({
     <div className="flex flex-col items-start gap-1.5">
       <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase">
         <span
-          className="inline-flex items-center px-2 py-0.5 border-[1.5px] border-black/60 rounded-[2px]"
+          className="inline-flex items-center gap-1 px-2 py-0.5 border-[1.5px] border-black/60 rounded-[2px]"
           style={{ backgroundColor: getPlayerColor(playerId), color: 'white' }}
+          title={seat?.title}
         >
-          {playerLabel}
+          {seat ? <span className="inline-grid place-items-center w-3.5 h-3.5 rounded-full bg-white [&>*]:w-2.5 [&>*]:h-2.5"><LabLogo model={seat.model} decorative /></span> : null}
+          {seat ? seat.label : playerLabel}
         </span>
-        {modelLabel && <span className="text-gray-400 font-mono text-[9px] normal-case">{modelLabel}</span>}
+        {!seat && modelLabel && <span className="text-gray-400 font-mono text-[9px] normal-case">{modelLabel}</span>}
         <button
           type="button"
           onClick={onInspect}
+          aria-label={seat ? `Inspect the decision behind this ${seat.label} message, including which model answered` : undefined}
           className="text-[8px] font-bold uppercase text-gray-400 hover:text-neo-blue transition-colors px-1"
         >
           Inspect
@@ -575,7 +587,7 @@ const GroupCard = ({
   </details>
 );
 
-export const ChatFeed = () => {
+export const ChatFeed = ({ title = 'Game Feed', seats }: { title?: string; seats?: Record<string, ChatSeat> } = {}) => {
   const events = useGameStore((state) => state.events);
   const players = useGameStore((state) => state.runStatus.players ?? []);
   const setInspectorOpen = useGameStore((state) => state.setInspectorOpen);
@@ -615,9 +627,9 @@ export const ChatFeed = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white font-sans">
+    <div className="relative flex flex-col h-full bg-white font-sans">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-black/10 bg-white">
-        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Game Feed</span>
+        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">{title}</span>
         <label className="flex items-center gap-1.5 text-[9px] font-bold uppercase text-gray-400 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -625,7 +637,7 @@ export const ChatFeed = () => {
             onChange={(event) => setShowThoughts(event.target.checked)}
             className="accent-black w-3.5 h-3.5"
           />
-          Thoughts
+          Private thoughts
         </label>
       </div>
       {!autoScroll && (
@@ -685,6 +697,7 @@ export const ChatFeed = () => {
                       playerId={item.playerId}
                       playerLabel={item.playerLabel}
                       modelLabel={modelByPlayerId.get(item.playerId)}
+                      seat={seats?.[item.playerId]}
                       message={item.message}
                       onInspect={() => {
                         setInspectorFocus({ decisionId: item.decisionId, eventId: item.id });
