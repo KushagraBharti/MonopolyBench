@@ -130,3 +130,16 @@ def test_hidden_files_are_not_cost_or_commit_evidence(tmp_path):
     assert build_usage_report(files)["attempt_count"] == 0
     repair_committed_tails(files)  # The interrupted temporary is ignored, not parsed as a commit.
     assert not files.events_path.exists()
+
+
+def test_model_and_player_groups_keep_known_spend_beside_unknown_cost():
+    attempts = [
+        {"run_id": "r", "decision_id": "d1", "attempt_index": 0, "player_id": "p1", "openrouter_model_id": "m",
+         "cost": 1.25, "accounting_status": "actual_openrouter_usage"},
+        {"run_id": "r", "decision_id": "d2", "attempt_index": 0, "player_id": "p1", "openrouter_model_id": "m",
+         "cost": None, "accounting_status": "missing_openrouter_usage"},
+    ]
+    report = _aggregate_usage("r", attempts, _decision_usage_rows(attempts))
+    for group in (report["by_model"]["m"], report["by_player"]["p1"]):
+        assert group["cost"] is None and group["known_cost_subtotal"] == 1.25
+    assert report["known_cost_subtotal"] == 1.25 and report["totals"]["cost"] is None
