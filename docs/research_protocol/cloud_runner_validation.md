@@ -78,8 +78,8 @@ cancellation cleanup now releases the shared game tailer under cancelled scopes.
 These checks rerun the evidence after merging PR #2. Cloud games now use the v2
 rules, usage accounting v2 and PR #2's strict completion contract.
 
-- Full repository verification: contracts, Ruff, mypy, 414 Python tests
-  (engine 65, API 113, arena 168, telemetry 39, microbench 29), frontend lint and
+- Full repository verification: contracts, Ruff, mypy, 417 Python tests
+  (engine 65, API 113, arena 170, telemetry 40, microbench 29), frontend lint and
   frontend build passed.
 - Each physical call has exactly one durable owner: `CloudClient` journals it, and
   the resolver's local call journal and deadlines step aside. A regression game
@@ -100,9 +100,11 @@ rules, usage accounting v2 and PR #2's strict completion contract.
   and accepted the private password.
 - Regressions cover storage-full finalization retry, generation-metadata cost
   backfill into the call ledger (credit, BYOK, BYOK revealed only by generation
-  metadata, and upstream cost without a BYOK flag, each agreeing with usage v2),
-  the 1,000-decisions-per-turn guard in the cloud worker, and BYOK upstream cost
-  in exported analysis tables.
+  metadata, upstream cost without a BYOK flag, and BYOK evidence without an
+  upstream bill, each agreeing with usage v2), the 1,000-decisions-per-turn guard
+  in the cloud worker, BYOK upstream cost in exported analysis tables, and
+  exported analysis that keeps unknown call costs unknown while reporting known
+  subtotals and missing-cost counts.
 
 Not exercised here: Railway deploy/redeploy, backup restoration, real provider
 compatibility, BYOK billing, Windows/macOS export execution, and real-model soak

@@ -122,16 +122,18 @@ class CloudClient(OpenRouterClient):
         payload = result.response_json if result.ok and isinstance(result.response_json, dict) else {}
         data = payload.get("data")
         if isinstance(data, dict):
-            calls = self.store.rows("SELECT call_id,is_byok,usage_cost,upstream_cost,total_cost,cost_status FROM calls WHERE job_id=? AND generation_id=?", (self.job_id, generation_id))
+            calls = self.store.rows("SELECT call_id,is_byok,usage_cost,upstream_cost,total_cost,cost_status FROM calls WHERE job_id=? AND generation_id=? AND cost_status!='unknown'", (self.job_id, generation_id))
             for call in calls:
                 # Fill only what the completion omitted; never replace a reported value.
-                byok = bool(call["is_byok"]) if call["is_byok"] is not None else data.get("is_byok")
-                charge = call["usage_cost"] if call["usage_cost"] is not None else data.get("total_cost")
-                upstream = call["upstream_cost"] if call["upstream_cost"] is not None else data.get("upstream_inference_cost")
+                current = (None if call["is_byok"] is None else bool(call["is_byok"]), call["usage_cost"], call["upstream_cost"])
+                byok = current[0] if current[0] is not None else data.get("is_byok")
+                charge = current[1] if current[1] is not None else data.get("total_cost")
+                upstream = current[2] if current[2] is not None else data.get("upstream_inference_cost")
                 cost = call_cost({"cost": charge, "is_byok": byok, "cost_details": {"upstream_inference_cost": upstream}})
-                if cost["cost_status"] == "known" and (call["cost_status"] != "known" or cost["total_cost"] != call["total_cost"]):
-                    self.store.execute("UPDATE calls SET is_byok=?,usage_cost=?,upstream_cost=?,total_cost=?,cost_status='known' WHERE call_id=?",
-                                       (cost["is_byok"], cost["usage_cost"], cost["upstream_cost"], cost["total_cost"], call["call_id"]))
+                # Persist any change, including a known charge that BYOK evidence makes unknown.
+                if (cost["is_byok"], cost["usage_cost"], cost["upstream_cost"], cost["total_cost"], cost["cost_status"]) != (*current, call["total_cost"], call["cost_status"]):
+                    self.store.execute("UPDATE calls SET is_byok=?,usage_cost=?,upstream_cost=?,total_cost=?,cost_status=? WHERE call_id=?",
+                                       (cost["is_byok"], cost["usage_cost"], cost["upstream_cost"], cost["total_cost"], cost["cost_status"], call["call_id"]))
         return result
 
     async def _get_json(self, **kwargs: Any) -> OpenRouterResult:

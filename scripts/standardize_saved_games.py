@@ -167,6 +167,25 @@ def safe_float(value: Any) -> float:
         return 0.0
 
 
+def optional_float(value: Any) -> float | None:
+    """A missing or malformed cost is unknown, never zero."""
+    if value is None or value == "" or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def cost_fields(costs: pd.Series) -> dict[str, Any]:
+    """Usage v2 semantics: one unknown call makes the total unknown; known spend stays visible."""
+    known = costs.dropna()
+    missing = int(costs.isna().sum())
+    subtotal = round(float(known.sum()), 6)
+    return {"cost": subtotal if missing == 0 else None, "known_cost_subtotal": subtotal, "missing_cost_calls": missing}
+
+
 def ensure_inside(child: Path, parent: Path) -> None:
     child_resolved = child.resolve()
     parent_resolved = parent.resolve()
@@ -341,7 +360,7 @@ def normalize_usage(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "reasoning_tokens": safe_int(row.get("reasoning_tokens")),
                 "total_tokens": safe_int(row.get("total_tokens")),
                 "cached_tokens": safe_int(row.get("cached_tokens") or row.get("cache_read_tokens")),
-                "cost": safe_float(row.get("cost")),
+                "cost": optional_float(row.get("cost")),
                 "latency_ms": safe_int(row.get("latency_ms")),
                 "retry_used": bool(row.get("retry_used")),
                 "fallback_used": bool(row.get("fallback_used")),
@@ -669,9 +688,10 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
 
     model_usage_rows: list[dict[str, Any]] = []
     if not usage_df.empty:
-        numeric_cols = ["input_tokens", "output_tokens", "reasoning_tokens", "total_tokens", "cached_tokens", "cost", "latency_ms"]
+        numeric_cols = ["input_tokens", "output_tokens", "reasoning_tokens", "total_tokens", "cached_tokens", "latency_ms"]
         for column in numeric_cols:
             usage_df[column] = pd.to_numeric(usage_df[column], errors="coerce").fillna(0)
+        usage_df["cost"] = pd.to_numeric(usage_df["cost"], errors="coerce")  # Unknown stays NaN.
         for player_id, group in usage_df.groupby("player_id", dropna=False):
             model_usage_rows.append(
                 {
@@ -686,7 +706,7 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
                     "reasoning_tokens": int(group["reasoning_tokens"].sum()),
                     "total_tokens": int(group["total_tokens"].sum()),
                     "cached_tokens": int(group["cached_tokens"].sum()),
-                    "cost": round(float(group["cost"].sum()), 6),
+                    **cost_fields(group["cost"]),
                     "avg_latency_ms": round(float(group["latency_ms"].mean()), 2),
                     "median_latency_ms": round(float(group["latency_ms"].median()), 2),
                     "p95_latency_ms": round(percentile(group["latency_ms"], 0.95), 2),
@@ -706,7 +726,7 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
                     "turn_index": int(turn_index),
                     "player_id": player_id,
                     "calls": int(len(group)),
-                    "cost": round(float(group["cost"].sum()), 6),
+                    **cost_fields(group["cost"]),
                     "input_tokens": int(group["input_tokens"].sum()),
                     "output_tokens": int(group["output_tokens"].sum()),
                     "reasoning_tokens": int(group["reasoning_tokens"].sum()),
@@ -719,7 +739,7 @@ def generate_analysis(saved_dir: Path) -> dict[str, Any]:
                 {
                     "turn_index": int(turn_index),
                     "calls": int(len(group)),
-                    "cost": round(float(group["cost"].sum()), 6),
+                    **cost_fields(group["cost"]),
                     "input_tokens": int(group["input_tokens"].sum()),
                     "output_tokens": int(group["output_tokens"].sum()),
                     "reasoning_tokens": int(group["reasoning_tokens"].sum()),
@@ -893,11 +913,13 @@ def make_plots(
             ["houses_remaining", "hotels_remaining"],
             "Remaining Buildings",
         )
+    unknown_cost_calls = int(usage_df["cost"].isna().sum()) if not usage_df.empty else 0
+    cost_note = f" (known costs only; {unknown_cost_calls} calls unknown)" if unknown_cost_calls else ""
     if not usage_df.empty:
         per_turn = usage_df.groupby("turn_index", as_index=False)[
             ["cost", "input_tokens", "output_tokens", "reasoning_tokens", "total_tokens", "latency_ms"]
         ].sum()
-        save_line_plot(per_turn, plots_dir / "cost_by_turn.png", "Cost By Turn", "turn_index", ["cost"], "Cost", y_money=True)
+        save_line_plot(per_turn, plots_dir / "cost_by_turn.png", "Cost By Turn" + cost_note, "turn_index", ["cost"], "Cost", y_money=True)
         save_line_plot(
             per_turn,
             plots_dir / "tokens_by_turn.png",
@@ -913,13 +935,13 @@ def make_plots(
         save_line_plot(
             usage_sorted,
             plots_dir / "cumulative_cost_by_call.png",
-            "Cumulative Cost By Call",
+            "Cumulative Cost By Call" + cost_note,
             "call_index",
             ["cumulative_cost"],
             "Cumulative Cost",
             y_money=True,
         )
-        save_line_plot(usage_sorted, plots_dir / "cost_per_call.png", "Cost Per Call", "call_index", ["cost"], "Cost", y_money=True)
+        save_line_plot(usage_sorted, plots_dir / "cost_per_call.png", "Cost Per Call" + cost_note, "call_index", ["cost"], "Cost", y_money=True)
         save_line_plot(
             usage_sorted,
             plots_dir / "latency_per_call.png",
@@ -946,7 +968,8 @@ def make_plots(
         )
     if model_usage_rows:
         model_df = pd.DataFrame(model_usage_rows)
-        save_bar_plot(model_df, plots_dir / "cost_by_model.png", "Cost By Model", "player_id", "cost", "Cost", y_money=True)
+        save_bar_plot(model_df, plots_dir / "cost_by_model.png", "Cost By Model" + cost_note, "player_id",
+                      "known_cost_subtotal", "Cost", y_money=True)
         save_bar_plot(model_df, plots_dir / "calls_by_model.png", "Calls By Model", "player_id", "calls", "Calls")
         save_bar_plot(
             model_df,
@@ -1019,8 +1042,10 @@ def write_reports(
         )
     lines.extend(["", "## Model Usage", "", "| Player | Calls | Cost | Input | Output | Reasoning | Total | P95 Latency Ms |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"])
     for row in model_usage_rows:
+        cost_text = (f"${row['cost']:.6f}" if row["cost"] is not None else
+                     f"unknown (${row['known_cost_subtotal']:.6f} known, {row['missing_cost_calls']} calls missing)")
         lines.append(
-            f"| {row['player_id']} | {row['calls']} | ${row['cost']:.6f} | {row['input_tokens']} | "
+            f"| {row['player_id']} | {row['calls']} | {cost_text} | {row['input_tokens']} | "
             f"{row['output_tokens']} | {row['reasoning_tokens']} | {row['total_tokens']} | {row['p95_latency_ms']} |"
         )
     lines.extend(
@@ -1073,7 +1098,8 @@ def write_reports(
         "",
         "- `run_summary.csv`: one-row run summary and artifact counts.",
         "- `players.csv`: player/model configuration plus final summary values.",
-        "- `model_usage.csv`: token, cost, retry, fallback, and latency totals by player/model.",
+        "- `model_usage.csv`: token, cost, retry, fallback, and latency totals by player/model. "
+        "`cost` is blank when any call cost is unknown; `known_cost_subtotal` and `missing_cost_calls` show coverage.",
         "- `per_call_usage.csv`: one row per OpenRouter call attempt.",
         "- `per_turn_usage_by_player.csv`: token/cost totals by turn and player.",
         "- `per_turn_usage_total.csv`: token/cost totals by turn.",
