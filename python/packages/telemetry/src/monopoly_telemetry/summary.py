@@ -243,6 +243,7 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
     token_usage_seen = False
     cost_total = 0.0
     cost_seen = False
+    cost_missing = False
 
     for entry in resolved:
         for attempt in entry.get("attempts", []):
@@ -263,6 +264,8 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
                 if isinstance(cost, (int, float)):
                     cost_total += float(cost)
                     cost_seen = True
+                else:
+                    cost_missing = True
 
         latency = entry.get("latency_ms")
         if isinstance(latency, int):
@@ -283,8 +286,10 @@ def _build_decision_stats(decisions: list[dict[str, Any]]) -> tuple[dict[str, An
         token_usage = {}
         if token_usage_seen:
             token_usage.update(token_usage_totals)
-        if cost_seen:
-            token_usage["total_cost"] = round(cost_total, 6)
+        if cost_seen or cost_missing:
+            # Match usage accounting v2: one unknown call cost makes the total unknown.
+            token_usage["total_cost"] = None if cost_missing else round(cost_total, 6)
+            token_usage["known_cost_subtotal"] = round(cost_total, 6)
     return stats, token_usage
 
 

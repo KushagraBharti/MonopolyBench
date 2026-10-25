@@ -115,6 +115,7 @@ class LlmRunner:
         self._advance_lock = asyncio.Lock()
         self._applied_decision_ids: set[str] = set()
         self._recovered_pending_decision_id: str | None = None
+        self._resumed_after_events = bool(resume_events)
         if resume_actions is not None or resume_events is not None:
             if resume_actions is None or resume_events is None:
                 raise ValueError("Interrupted-run recovery requires both actions and events.")
@@ -243,7 +244,8 @@ class LlmRunner:
         try:
             if self._run_files is not None:
                 launch_path = self._run_files.run_dir / "launch_pricing_snapshot.json"
-                if not launch_path.exists():
+                # Pricing observed after play began is not launch evidence.
+                if not launch_path.exists() and not self._resumed_after_events:
                     await self._write_pricing_snapshot_artifact()
                     self._run_files.write_json_artifact(launch_path, json.loads(
                         self._run_files.pricing_snapshot_path.read_text(encoding="utf-8")))
@@ -256,6 +258,10 @@ class LlmRunner:
                     "GAME_ENDED",
                 }:
                     await snapshot_handler(self.get_snapshot())
+            if snapshot_handler is not None and self._engine.is_game_over():
+                # A run recovered after its terminal commit emits no new events; persist
+                # the terminal state anyway. Identical snapshots are not rewritten.
+                await snapshot_handler(self.get_snapshot())
             if self._event_delay_s > 0:
                 await asyncio.sleep(self._event_delay_s)
             if summary_handler is not None:

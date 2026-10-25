@@ -1050,6 +1050,10 @@ def _completed_run_exists(run_dir: Path) -> bool:
                 or summary.get("reason") != terminal["payload"].get("reason")
                 or summary.get("turn_count") != terminal.get("turn_index")):
             return False
+        terminal_snapshots = [json.loads(path.read_text(encoding="utf-8"))
+                              for path in (run_dir / "state").glob(f"turn_{terminal['turn_index']:04d}*.json")]
+        if not any(snapshot.get("phase") == "GAME_OVER" for snapshot in terminal_snapshots):
+            return False
         manifest = json.loads((run_dir / "artifact_manifest.json").read_text(encoding="utf-8"))
         inventoried: set[str] = set()
         excluded = {"artifact_manifest.json", "completion.json"}
@@ -1073,7 +1077,8 @@ def _completed_run_exists(run_dir: Path) -> bool:
             elif artifact.get("exists") is not False or path.exists():
                 return False
         actual_files = {str(path.relative_to(run_dir)) for path in run_dir.rglob("*")
-                        if path.is_file() and str(path.relative_to(run_dir)) not in excluded
+                        if path.is_file() and not path.name.startswith(".")
+                        and str(path.relative_to(run_dir)) not in excluded
                         and path.relative_to(run_dir).as_posix() not in mutable_review_files}
         if inventoried != actual_files:
             return False
