@@ -69,6 +69,9 @@ standard rules. Changing them requires another treatment version.
   accounted for, including interrupted/unknown calls.
   Batch leaderboards charge each model once per run even when it occupies multiple
   seats; batch cost summaries and model cards preserve unknown costs.
+  Confirmed zero-call runs cost zero, so baseline-only campaigns continue across
+  cells. Historical empty totals require explicit zero-attempt/complete-coverage
+  evidence before being treated as zero; an absent report is still unknown.
 - Campaign leaderboard inference resamples seed means, labels small block counts,
   and provides no singleton interval. Ordinary ungrouped summaries are descriptive.
   Cyclic rotation balances absolute seats, not all relative opponent positions.

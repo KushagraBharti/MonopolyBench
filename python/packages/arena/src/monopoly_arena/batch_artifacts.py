@@ -358,7 +358,15 @@ def batch_actual_tokens(run_entries: list[dict[str, Any]]) -> int:
 def _run_actual_cost(entry: dict[str, Any]) -> float | None:
     cost_report = _dict(entry.get("cost_report"))
     value = cost_report.get("total_actual_cost")
-    return float(value) if isinstance(value, (int, float)) else None
+    if isinstance(value, (int, float)):
+        return float(value)
+    # Historical baseline reports used null for the sum of an empty attempt list.
+    usage = _dict(entry.get("usage"))
+    attempt_count = cost_report.get("attempt_count", usage.get("attempt_count"))
+    coverage = cost_report.get("cost_coverage", usage.get("cost_coverage"))
+    if attempt_count == 0 and coverage == "complete":
+        return 0.0
+    return None
 
 
 def _run_actual_tokens(entry: dict[str, Any]) -> int | None:

@@ -163,6 +163,9 @@ def _aggregate_usage(
         player_id = str(row.get("player_id") or "unknown")
         _accumulate_group(by_model, model_id, row)
         _accumulate_group(by_player, player_id, row)
+    totals = _totals(decision_rows)
+    if not attempt_rows:
+        totals["cost"] = 0.0  # No provider calls is known zero spending, not missing usage.
     return {
         "schema_version": "v1",
         "usage_accounting_version": USAGE_ACCOUNTING_VERSION,
@@ -175,7 +178,7 @@ def _aggregate_usage(
         "missing_cost_attempt_count": sum(row.get("cost") is None for row in attempt_rows),
         "cost_coverage": "complete" if all(row.get("cost") is not None for row in attempt_rows) else "partial_or_missing",
         "known_cost_subtotal": round(sum(float(row["cost"]) for row in attempt_rows if row.get("cost") is not None), 10),
-        "totals": _totals(decision_rows),
+        "totals": totals,
         "by_model": by_model,
         "by_player": by_player,
     }

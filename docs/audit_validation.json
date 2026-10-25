@@ -6,10 +6,10 @@
   "python_tests": {
     "engine": 63,
     "api": 84,
-    "arena": 109,
+    "arena": 113,
     "telemetry": 24,
     "microbench": 29,
-    "total": 309
+    "total": 313
   },
   "other_checks": [
     "contract examples",
@@ -68,6 +68,22 @@
     }
   ],
   "live_five_turn_smokes": [
+    {
+      "run_id": "audit-v2-pr2-final-review-5turn-42",
+      "seed": 42,
+      "turns": 5,
+      "decisions": 8,
+      "invalid_attempts": 0,
+      "fallbacks": 0,
+      "replay": "passed",
+      "recorded_cost_usd": 0.00175565,
+      "missing_usage_attempt_count": 0,
+      "missing_cost_attempt_count": 0,
+      "model_ids": ["openai/gpt-6-luna"],
+      "executed_treatment_fingerprint": "734f55b22928d75772b681bae8ca772de04a8752c78c647d0e7a07608302a6f9",
+      "fresh_replay_and_completion_recheck": "passed",
+      "replay_step_and_cost_coverage_contracts": "passed"
+    },
     {
       "run_id": "audit-v2-pr2-recovery-review-5turn-7",
       "seed": 7,
@@ -143,7 +159,9 @@
       "model_ids": [
         "openai/gpt-6-luna"
       ],
-      "executed_treatment_fingerprint": null
+      "executed_treatment_fingerprint": null,
+      "current_completion_recheck": "rejected: this early smoke predates the complete inventory fix; original evidence is preserved",
+      "fresh_event_replay_recheck": "passed"
     }
   ],
   "browser": {
@@ -182,7 +200,7 @@
   },
   "quarantined_legacy_fixtures": 11,
   "pr_review_regressions": {
-    "greptile_findings_addressed": 12,
+    "greptile_findings_addressed": 13,
     "coderabbit_findings_addressed": 8,
     "coderabbit_findings_note": "Seven additional fixes plus a quarantine finding already addressed by full-selection preflight; includes three findings outside the diff.",
     "adversarial_cases": [
@@ -210,6 +228,7 @@
       "Unknown action or resolved-decision rows reject recovery before any journal changes",
       "Partial cost coverage preserves known spending and stops both batch and campaign execution before the next game",
       "Batch leaderboards count each model cost once per run, and batch summaries/model cards preserve unknown costs",
+      "Budgeted all-baseline campaigns complete multiple cells with zero provider calls; historical empty totals count as zero only with explicit zero-attempt and complete-coverage evidence",
       "Duplicate HTTP starts return 400 without contacting a provider or modifying saved evidence",
       "Replay timeline producer and historical reader agree on event type, sequence, actor and decision payload"
     ]

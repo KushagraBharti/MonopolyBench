@@ -471,6 +471,15 @@ def test_incomplete_cost_coverage_blocks_next_game_and_preserves_known_spend(bud
     assert should_stop_for_budget({"cost_budget": budget}, entries) is None
 
 
+@pytest.mark.parametrize("attempt_count,should_stop", [(0, False), (1, True), (None, True)])
+def test_legacy_empty_cost_requires_confirmed_zero_calls(attempt_count, should_stop):
+    from monopoly_arena.batch_artifacts import should_stop_for_budget, batch_cost_coverage
+    entries = [{"status": "completed", "usage": {"attempt_count": attempt_count, "cost_coverage": "complete"},
+                "cost_report": {"total_actual_cost": None}}]
+    assert bool(should_stop_for_budget({"cost_budget": 1.0}, entries)) is should_stop
+    assert batch_cost_coverage(entries) == ("partial_or_missing" if should_stop else "complete")
+
+
 def test_replay_steps_expose_timeline_contract_and_preserve_legacy_envelope():
     from monopoly_arena.replay_verification import _build_replay_steps
     event = {"seq": 7, "event_id": "e7", "turn_index": 2, "type": "LLM_DECISION_REQUESTED",
