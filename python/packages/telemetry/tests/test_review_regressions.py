@@ -116,3 +116,17 @@ def test_manifest_ignores_hidden_interrupted_write_and_lock_files(tmp_path):
     listed = {entry["relative_path"] for entry in build_artifact_manifest(files)["artifacts"]}
     assert "events.jsonl" in listed
     assert not any(name.rsplit("/", 1)[-1].startswith(".") for name in listed)
+
+
+def test_hidden_files_are_not_cost_or_commit_evidence(tmp_path):
+    from monopoly_telemetry.usage import build_usage_report
+    files = init_run_files(tmp_path, "hidden-evidence")
+    (files.run_dir / "calls").mkdir()
+    (files.run_dir / "calls" / ".extra.json").write_text(json.dumps({
+        "call_id": "injected", "decision_id": "d", "attempt_index": 0, "status": "received",
+        "request": {"model": "test"}, "result": {"response_json": {"usage": {"cost": 123}}}}))
+    (files.run_dir / "commits").mkdir()
+    (files.run_dir / "commits" / ".write-partial.json").write_text("{not json")
+    assert build_usage_report(files)["attempt_count"] == 0
+    repair_committed_tails(files)  # The interrupted temporary is ignored, not parsed as a commit.
+    assert not files.events_path.exists()

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .run_files import RunFiles
+from .run_files import RunFiles, evidence_paths
 from .writer_jsonl import append_jsonl
 
 
@@ -32,7 +32,7 @@ def repair_committed_tails(files: RunFiles) -> None:
 
     try:
         commits = [json.loads(path.read_text(encoding="utf-8"))
-                   for path in (files.run_dir / "commits").glob("*.json")]
+                   for path in evidence_paths(files.run_dir / "commits")]
         commits.sort(key=lambda commit: commit["events"][0]["seq"])
         expected_by_path = (
             (files.actions_path, [commit["action"] for commit in commits], "decision_id"),

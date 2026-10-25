@@ -275,7 +275,8 @@ export interface ModelDetail {
   win_count: number;
   win_rate?: number | null;
   average_final_net_worth?: number | null;
-  total_cost: number;
+  total_cost: number | null;
+  known_cost_subtotal?: number;
   total_tokens: number;
   runs: Record<string, unknown>[];
 }
