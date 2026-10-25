@@ -141,14 +141,20 @@
 /* While one seat is open the rows drop their swatches for a one-line summary to stay compact. */
 .mbg-roster[data-detail] .mbg-seat-deeds { display: none; }
 .mbg-roster[data-detail] .mbg-seat-summary { position: static; width: auto; height: auto; overflow: visible; clip-path: none; grid-area: deeds; font-size: 12px; color: var(--muted); }
-.mbg-roster[data-detail] .mbg-seat-row { padding-block: 4px; }
+.mbg-roster[data-detail] .mbg-seat-row { padding-block: 4px; grid-template-areas: "token main cash" "token flags deeds"; }
 .mbg-seat[data-open] { box-shadow: 0 0 0 2px var(--ink); }
 .mbg-seat[data-open][data-turn] { box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--yellow); }
-.mbg-detail { flex: 1 1 auto; min-height: 120px; overflow-y: auto; background: var(--card); border: 1.5px solid var(--ink); border-left: 6px solid var(--seat); border-radius: 4px; }
+.mbg-detail { flex: 1 1 120px; min-height: 0; overflow-y: auto; background: var(--card); border: 1.5px solid var(--ink); border-left: 6px solid var(--seat); border-radius: 4px; }
 .mbg-detail-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--card); border-bottom: 1px solid var(--rule); }
 .mbg-detail-head h3 { margin: 0; font-size: 13px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mbg-detail-close { flex: none; padding: 1px 8px; border: 1px solid var(--ink); border-radius: 3px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .mbg-detail .mbg-holdings { border-top: 0; }
+/* Short laptop windows need the compact roster even before a seat is selected. */
+@media (min-width: 1100px) and (max-width: 1599px) and (max-height: 850px) {
+  .mbg-roster .mbg-seat-deeds { display: none; }
+  .mbg-roster .mbg-seat-summary { position: static; width: auto; height: auto; overflow: visible; clip-path: none; grid-area: deeds; font-size: 12px; color: var(--muted); }
+  .mbg-roster .mbg-seat-row { padding-block: 4px; grid-template-areas: "token main cash" "token flags deeds"; }
+}
 .mbg-seat-deeds { grid-area: deeds; display: flex; flex-wrap: wrap; gap: 3px; padding-top: 4px; }
 .mbg-deed {
   position: relative;
