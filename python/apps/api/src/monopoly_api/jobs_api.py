@@ -172,15 +172,36 @@ def create_cloud_app(root: Path | None = None) -> FastAPI:
 
     @app.post("/api/resume-all")
     def resume_all():
+        # Clearing the account stop is the owner's intent. Only account/provider pauses
+        # resume here; operator and campaign holds keep their own Resume/Run controls.
         store.set_state("account_stop", None)
-        waiting = []
-        for job in store.rows("SELECT job_id FROM jobs WHERE status='paused'"):
+        campaigns = {row["campaign_id"]: row["status"] for row in store.rows("SELECT campaign_id,status FROM campaigns")}
+        budgets: dict[str, dict[str, BudgetStatus]] = {}
+        waiting, skipped = [], []
+        for job in store.rows("SELECT * FROM jobs WHERE status='paused' ORDER BY created_at,job_id"):
+            job_id, campaign_id = job["job_id"], job["campaign_id"]
+            if job["pause_reason"] == "operator":
+                reasons = ["Paused by the operator. Resume this game individually."]
+            elif campaign_id and (job["pause_reason"] == "campaign_operator" or campaigns.get(campaign_id) != "running" and not store.state("individual_start:" + job_id)):
+                reasons = ["Held by its campaign. Run the campaign or start this game from the campaign page."]
+            else:
+                if campaign_id and campaign_id not in budgets:
+                    budgets[campaign_id] = campaign_budget_statuses(store, campaign_id)
+                scoped = budgets.get(campaign_id, {})
+                reasons = readiness(store, {"status": "paused", "config": {"seeds": [job["seed"]]}, "git_sha": job["git_sha"], "image_digest": job["image_digest"]},
+                                    require_study=campaign_id is not None, budgets=scoped)["reasons"]
+                budget = scoped.get(job_id) or budget_status(store, job_id)
+                if budget["blocked"] and budget["detail"] not in reasons:
+                    reasons.append(budget["detail"])
+            if reasons:
+                skipped.append({"job_id": job_id, "reasons": reasons})
+                continue
             try:
-                store.resume(job["job_id"])
+                store.resume(job_id)
             except ValueError:
-                waiting.append(job["job_id"])
-        store.audit("resume_all", {}, "dashboard")
-        return {"ok": True, "waiting_for_worker": waiting}
+                waiting.append(job_id)
+        store.audit("resume_all", {"waiting_for_worker": waiting, "skipped": [entry["job_id"] for entry in skipped]}, "dashboard")
+        return {"ok": True, "waiting_for_worker": waiting, "skipped": skipped}
 
     def prepare_games(models: list[str], effort: str, max_turns: int | None, count: int, cost_budget: float | None, kind: str):
         preparation = secrets.token_hex(16)

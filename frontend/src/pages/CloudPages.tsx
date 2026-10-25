@@ -3,7 +3,7 @@ import { CLOUD_API, cloudRequest, type CloudJob, type CloudCampaign, type CloudS
 import { JobControls } from './cloud/JobControls'
 import { Board } from '@/components/board/Board'
 import { Facts, Notice, SeatTokens, Shell, StatusPill } from './cloud/CloudShell'
-import { campaignName, downloadWait, duration, errorText, jobStatus, jobTitle, modelInfo, playerModels, settingsLine, usePoll, waitingText } from './cloud/cloudUi'
+import { campaignName, downloadWait, duration, errorText, jobStatus, jobTitle, modelInfo, playerModels, retryEligibleGames, settingsLine, usePoll, waitingText } from './cloud/cloudUi'
 import './cloud.css'
 
 export function LoginPage() {
@@ -106,7 +106,7 @@ export function JobListPage({ kind }: { kind: ListKind }) {
         {!archived ? <a className="cb-btn cb-btn-primary" href={copy.newHref}>{copy.newLabel}</a> : null}
       </header>
       {status?.demo ? <Notice tone="idle" title="Demo mode" role="status"><p>Games use local mock models. Nothing is charged and nothing counts toward research.</p></Notice> : null}
-      {status?.account_stop ? <Notice tone="bad" title="All games are paused" role="alert"><p>OpenRouter stopped accepting requests. Check your key and credits, then resume.</p><button className="cb-btn cb-btn-secondary" onClick={() => void cloudRequest('/resume-all', {}).then(() => { refresh(); refreshStatus() }).catch(e => setActionError(errorText(e)))}>Resume all games</button></Notice> : null}
+      {status?.account_stop ? <Notice tone="bad" title="Model requests are paused" role="alert"><p>OpenRouter stopped accepting requests. Check your key and credits, then retry eligible games. Games held by you, their campaign or another safety check stay paused.</p><button className="cb-btn cb-btn-secondary" onClick={() => void retryEligibleGames().then(message => { setActionError(message); refresh(); refreshStatus() }).catch(e => setActionError(errorText(e)))}>Retry eligible games</button></Notice> : null}
       <div className="cb-toolbar">
         {!archived ? <nav className="cb-segmented" aria-label={`Filter ${copy.title.toLowerCase()}`}>
           {FILTERS.map(f => <a key={f.label} href={f.status ? `${copy.base}?status=${f.status}` : copy.base} aria-current={activeFilter === f.status ? 'page' : undefined}>{f.label}</a>)}

@@ -105,3 +105,9 @@ export interface GamePrepareRequest {
 export interface GamePreparation { preparation_id: string; configs: CloudConfig[]; created_at: number; [key: string]: unknown }
 /** POST /api/games and /api/smoke: starts the prepared games. */
 export interface GameStartRequest { preparation_id: string; idempotency_key: string }
+/** POST /api/resume-all preserves manual holds and reports games that could not resume. */
+export interface ResumeAllResult {
+  ok: true
+  waiting_for_worker: string[]
+  skipped: { job_id: string; reasons: string[] }[]
+}

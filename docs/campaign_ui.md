@@ -71,6 +71,10 @@ effort/models and an optional threshold for each game.
 Resuming a standalone game or test does not require a fresh campaign connection
 check and remains available in demo mode. It still checks code identity, account
 and maintenance stops, storage and the recorded-spend threshold.
+After an account stop, Retry eligible games clears the account stop and rechecks
+each paused game. Operator pauses and campaign holds remain paused, with their
+individual controls intact. Games failing identity, readiness, storage or budget
+checks also remain paused instead of becoming stranded in Recovering.
 
 The billing policy is unchanged: OpenAI BYOK preferred with OpenRouter-credit
 fallback, Anthropic BYOK preferred, Google/xAI OpenRouter credits, observational

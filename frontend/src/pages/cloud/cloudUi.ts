@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CLOUD_API, cloudRequest, type CampaignCell, type CloudCampaign, type CloudExport, type CloudJob } from '@/net/jobs'
+import type { ResumeAllResult } from '@contracts/cloud'
+
+/** Bulk recovery never overrides manual holds; retain the server's reasons in the UI. */
+export async function retryEligibleGames(): Promise<string> {
+  const result = await cloudRequest<ResumeAllResult>('/resume-all', {})
+  const skipped = result.skipped ?? []
+  const waiting = result.waiting_for_worker ?? []
+  return [
+    skipped.length ? `${skipped.length} games stayed paused. ${[...new Set(skipped.flatMap(job => job.reasons))].join(' ')}` : '',
+    waiting.length ? `${waiting.length} games are finishing an in-flight request. Retry after their workers stop.` : '',
+  ].filter(Boolean).join(' ')
+}
 
 /** Polls a cloud endpoint. `replace` accepts a mutation response and discards older in-flight polls. */
 export function usePoll<T>(path: string) {

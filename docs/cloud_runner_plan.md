@@ -484,7 +484,7 @@ Finalization is its own idempotent job that runs from committed files:
 
 - A missing key, HTTP 401, or HTTP 403 pauses the game as `account_error` before any fallback can happen. It also sets the account-wide stop, so every worker pauses before its next request.
 - For HTTP 402, the worker saves the body and headers and reads `error.metadata.limit_source` and `reason`. Exhausted OpenRouter credits become `account_error` with the account-wide stop. A temporary in-flight credit rejection becomes `credit_admission` and follows the outage retry schedule.
-- After you fix the account, "Resume all" on the dashboard clears the stop and resumes paused games at their saved stage.
+- After you fix the account, "Retry eligible games" clears the stop and resumes eligible games at their saved stage. Manual and campaign holds remain paused; readiness and budget checks still apply.
 
 ### Outage policy v1
 
@@ -651,7 +651,7 @@ All routes sit under `/api` and require the login cookie, except `/api/health` a
 | `GET /api/jobs` | Job summaries with filters for status, kind, campaign, and search, with cursor pagination. |
 | `GET /api/jobs/{job_id}` | Full job detail, including outcome, repairs, pauses, and costs. |
 | `POST /api/jobs/{job_id}/pause`, `/resume`, `/cancel`, `/archive` | Operator controls. The server refuses actions that are not allowed in the current state. |
-| `POST /api/resume-all` | Clear the account-wide stop and resume paused games. |
+| `POST /api/resume-all` | Clear the account-wide stop and retry eligible paused games; preserve manual/campaign holds and report skipped reasons. |
 | `GET /api/jobs/{job_id}/decisions`, `/artifacts`, `/snapshots` | Run-scoped readers, reusing today's artifact readers by run ID. |
 | `WS /api/jobs/{job_id}/ws` | Live view (section 18). |
 | `GET /api/jobs/{job_id}/export` | Stream the job's package ZIP. |

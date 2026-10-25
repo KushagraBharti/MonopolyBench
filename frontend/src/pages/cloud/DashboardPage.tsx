@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { CLOUD_API, cloudRequest, type CloudCampaign, type CloudDashboard, type CloudJob } from '@/net/jobs'
+import { CLOUD_API, type CloudCampaign, type CloudDashboard, type CloudJob } from '@/net/jobs'
 import { CheckConnections, Facts, GameTiles, Notice, SeatTokens, Shell, StatusPill } from './CloudShell'
-import { campaignName, campaignStatus, cellCounts, errorText, exportDownload, exportKindLabel, exportName, exportSource, fileSize, jobStatus, jobTitle, usePoll, when } from './cloudUi'
+import { campaignName, campaignStatus, cellCounts, errorText, exportDownload, exportKindLabel, exportName, exportSource, fileSize, jobStatus, jobTitle, retryEligibleGames, usePoll, when } from './cloudUi'
 
 /** Workspace overview. Counts come from the server over every saved row; the lists are the latest few. */
 export function DashboardPage() {
@@ -29,7 +29,7 @@ export function DashboardPage() {
       </header>
       {error ? <p className="cb-error" role="alert">{error}</p> : null}
       {!data && !error ? <p className="cb-meta" role="status">Loading…</p> : null}
-      {status?.account_stop ? <Notice tone="bad" title="All games are paused" role="alert"><p>OpenRouter stopped accepting requests. Check your key and credits, then resume.</p><button className="cb-btn cb-btn-secondary" onClick={() => void cloudRequest('/resume-all', {}).then(refresh).catch(e => setActionError(errorText(e)))}>Resume all games</button></Notice> : null}
+      {status?.account_stop ? <Notice tone="bad" title="Model requests are paused" role="alert"><p>OpenRouter stopped accepting requests. Check your key and credits, then retry eligible games. Games held by you, their campaign or another safety check stay paused.</p><button className="cb-btn cb-btn-secondary" onClick={() => void retryEligibleGames().then(message => { setActionError(message); refresh() }).catch(e => setActionError(errorText(e)))}>Retry eligible games</button></Notice> : null}
       {status && (!status.preflight?.passed || checkExpired) ? <Notice tone="warn" title="Model connections need a check"><p>A passing check on the current code within six hours is required to save or start campaigns.</p><CheckConnections onDone={() => refresh()} /></Notice> : null}
       {actionError ? <p className="cb-error" role="alert">{actionError}</p> : null}
 
