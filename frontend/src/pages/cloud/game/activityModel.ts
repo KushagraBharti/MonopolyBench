@@ -1,10 +1,11 @@
 /*
  * Pure model for the game activity timeline. Everything here is derived from accepted
  * engine events (and, for decision details, the recorded decision bundle); nothing infers
- * Monopoly legality. Type-only imports keep the module runnable under Node type stripping.
+ * Monopoly legality. Dependencies remain pure and runnable under Node type stripping.
  */
 import type { Event } from '@/net/contracts'
 import type { DecisionAttempt, DecisionBundle } from '@/net/decisions'
+import { isDecisionResolved } from '../../../domain/decisionOutcome.ts'
 
 /** Names supplied by the page so this module needs no board data at runtime. */
 export type ActivityNames = {
@@ -555,7 +556,7 @@ export function describeDecision(bundle: DecisionBundle, participantModel: strin
   }))
   // Provisional response artifacts can exist before an infrastructure failure. Only
   // the canonical resolved decision record establishes that an action was applied.
-  const applied = bundle.summary?.phase === 'decision_resolved' && bundle.final_action !== null && bundle.final_action !== undefined
+  const applied = isDecisionResolved(bundle.summary) && bundle.final_action !== null && bundle.final_action !== undefined
   const defaultActionApplied = applied && bundle.fallback_used === true
   const retried = bundle.retry_used === true || attempts.length > 1
   const finalAction = applied ? actionName(bundle.final_action) : null

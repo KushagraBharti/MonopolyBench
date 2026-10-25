@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildActivity, orderEvents, filterActivity, waitingDecisionId, providerReasoning, describeDecision, returnedModel } from '../src/pages/cloud/game/activityModel.ts'
+import { isDecisionResolved } from '../src/domain/decisionOutcome.ts'
+
+test('inspector and timeline require canonical resolution before labelling a default action applied',()=>{
+  for (const phase of [undefined,null,'decision_started','request_failed']) {
+    assert.equal(isDecisionResolved({phase,fallback_used:true}),false)
+  }
+  assert.equal(isDecisionResolved(null),false)
+  assert.equal(isDecisionResolved({phase:'decision_resolved'}),true)
+})
 
 const names = { player: id => ({p1:'Claude',p2:'GPT',p3:'Gemini',p4:'Grok'}[id] ?? id), space: i => i === 11 ? 'St. Charles Place' : `Space ${i}`, spaceKey: key => key, card: id => id }
 const event = (seq, type, payload = {}, turn = 0, player = 'p1') => ({schema_version:'v1',run_id:'run-a',event_id:`e${seq}`,seq,turn_index:turn,ts_ms:1000-seq,actor:{kind:player?'PLAYER':'ENGINE',player_id:player},type,payload})

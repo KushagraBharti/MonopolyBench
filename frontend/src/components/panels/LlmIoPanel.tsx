@@ -6,6 +6,7 @@ import { cn } from '@/components/ui/cn';
 import { getPlayerColor } from '@/domain/monopoly/colors';
 import type { DecisionAttempt, DecisionBundle, DecisionSummary } from '@/net/decisions';
 import { fetchDecisionBundle, fetchDecisionList } from '@/net/decisions';
+import { isDecisionResolved } from '@/domain/decisionOutcome';
 
 type DiffLine = {
   type: 'add' | 'remove' | 'context';
@@ -471,7 +472,7 @@ export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jo
               RETRY
             </NeoBadge>
           )}
-          {entry.fallback_used && (
+          {isDecisionResolved(entry) && entry.fallback_used && (
             <NeoBadge variant="error" className="text-[8px] py-0 px-1" title={DEFAULT_ACTION_TITLE}>
               Default action applied
             </NeoBadge>
@@ -551,7 +552,7 @@ export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jo
                     RETRY
                   </NeoBadge>
                 )}
-                {activeBundle?.fallback_used && (
+                {isDecisionResolved(activeBundle?.summary) && activeBundle?.fallback_used && (
                   <NeoBadge
                     variant="error"
                     className="text-[8px] py-0 px-1"
@@ -603,7 +604,7 @@ export const LlmIoPanel = ({ jobId, cursor = 0, revision = 0, onPageSize }: { jo
                   <dd className="font-mono break-all">{attempt?.requested_model ?? 'Not recorded'}</dd>
                   <dt className="font-bold uppercase text-gray-500">Returned model</dt>
                   <dd className="font-mono break-all">{returned ?? 'Not reported by the provider'}</dd>
-                  {activeBundle.fallback_used && (
+                  {isDecisionResolved(activeBundle.summary) && activeBundle.fallback_used && (
                     <>
                       <dt className="font-bold uppercase text-gray-500">Applied action</dt>
                       <dd>Engine default action{activeBundle.fallback_reason ? ` (${activeBundle.fallback_reason})` : ''}, not a model choice</dd>
