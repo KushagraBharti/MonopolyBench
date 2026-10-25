@@ -1,5 +1,5 @@
 import type { Space } from '@/net/contracts';
-import boardSpecJson from '@contracts-data/board.json';
+import boardSpecJson from '@contracts-data/board.json' with { type: 'json' };
 
 type SpaceKind = Space['kind'];
 
