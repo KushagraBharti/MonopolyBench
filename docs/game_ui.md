@@ -1,7 +1,8 @@
 # Game table
 
-The cloud game page prioritizes the board, player possessions, public chat and
-the action log. Its controls operate the cloud job; they do not submit Monopoly
+The cloud game page prioritizes the board, player possessions and one activity
+timeline combining public chat with engine actions. Its controls operate the cloud
+job; they do not submit Monopoly
 moves. The engine remains authoritative for positions, ownership, cash, buildings,
 mortgages, jail, bankruptcy and outcomes.
 
@@ -12,6 +13,14 @@ An Anthropic mark does not prove the configured fallback model was used. Exact
 model and response-condition attribution remains available in decision artifacts.
 The static marks are bundled from Lobe Icons; source and license are in
 `frontend/public/labs/`.
+
+Timeline ordering follows event sequence numbers, with turn markers providing
+context. Public messages, private-thought events and raw provider reasoning are
+different records. Private content is disclosed explicitly rather than mixed into
+public chat. Provider reasoning comes from saved decision attempts; a successful
+request can have no readable reasoning or no private-thought field. Those absences
+do not establish a failed decision. The full prompts, retries, validation results
+and requested/returned models remain accessible through decision details.
 
 Connection state and game lifecycle are separate. A connected socket can display
 a paused, cancelled or completed game. A finished snapshot's active-player field

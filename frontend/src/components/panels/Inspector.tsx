@@ -38,7 +38,7 @@ const ToggleSwitch = ({ label, active, onClick }: { label: string; active: boole
   </button>
 );
 
-export const Inspector = ({ showLauncher = true }: { showLauncher?: boolean } = {}) => {
+export const Inspector = ({ showLauncher = true, jobId }: { showLauncher?: boolean; jobId?: string } = {}) => {
   const [showThoughts, setShowThoughts] = useState(false);
 
   const snapshot = useGameStore((state) => state.snapshot);
@@ -281,7 +281,7 @@ export const Inspector = ({ showLauncher = true }: { showLauncher?: boolean } = 
 
             {inspectorTab === 'llm_io' && (
               <div className="flex-1 min-h-0">
-                <LlmIoPanel key={`llm-io-${runId}`} />
+                <LlmIoPanel key={`llm-io-${runId}`} jobId={jobId} />
               </div>
             )}
           </div>

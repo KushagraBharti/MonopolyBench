@@ -244,10 +244,8 @@ const DiffSection = ({
 const buildAttemptMap = (attempts: DecisionAttempt[]) =>
   new Map(attempts.map((attempt) => [attempt.attempt_index, attempt]));
 
-/** Model the provider reported for this attempt, from recorded metadata or the raw response. */
+/** Model in this attempt's response; sequence metadata can describe a later attempt. */
 const getReturnedModel = (attempt: DecisionAttempt | undefined): string | null => {
-  const meta = attempt?.sequence_meta as Record<string, unknown> | null | undefined;
-  if (meta && typeof meta.returned_model === 'string' && meta.returned_model) return meta.returned_model;
   const response = attempt?.response as Record<string, unknown> | null | undefined;
   if (response && typeof response.model === 'string' && response.model) return response.model;
   return null;

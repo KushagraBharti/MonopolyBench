@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CLOUD_API, type CloudJob } from '@/net/jobs'
 import { Board } from '@/components/board/Board'
-import { ChatFeed, type ChatSeat } from '@/components/feed/ChatFeed'
-import { EventFeed } from '@/components/feed/EventFeed'
 import { Inspector } from '@/components/panels/Inspector'
 import { useGameStore } from '@/state/store'
 import { StatusPill } from '../CloudShell'
 import { useJobAction } from '../useJobAction'
 import { ACTION_LABELS, downloadWait, exportFailed, jobHome, jobStatus, jobTitle, playerModels, usePoll, waitingText } from '../cloudUi'
+import { ActivityTimeline } from './ActivityTimeline'
 import { BoardCenter } from './BoardCenter'
 import { PlayerLineup } from './PlayerLineup'
 import { ResearchDrawer, type DrawerTab } from './ResearchDrawer'
@@ -46,21 +45,27 @@ export function GamePage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('Deeds')
-  const [feedTab, setFeedTab] = useState<'chat' | 'log'>('chat')
   const [actionError, setActionError] = useState('')
   const drawerTrigger = useRef<HTMLButtonElement>(null)
-  const closeDrawer = useCallback(() => { setDrawerOpen(false); requestAnimationFrame(() => drawerTrigger.current?.focus()) }, [])
+  // Focus returns to whatever opened the drawer (header button or a timeline link).
+  const drawerOpener = useRef<HTMLElement | null>(null)
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false)
+    const opener = drawerOpener.current
+    drawerOpener.current = null
+    requestAnimationFrame(() => (opener?.isConnected ? opener : drawerTrigger.current)?.focus())
+  }, [])
 
   const seats = useMemo(() => job ? buildSeats(job, snapshot) : [], [job, snapshot])
   const models = useMemo(() => job ? playerModels(job.config) : {}, [job])
   const labels = useMemo(() => Object.fromEntries(seats.map(s => [s.playerId, s.label])), [seats])
-  // Chat bubbles name the seat: the public message does not record which model (primary or fallback) answered.
-  const chatSeats = useMemo(() => Object.fromEntries(seats.map(s => [s.playerId, {
-    label: `Seat ${s.seat}`,
-    model: s.model,
-    title: `Seat ${s.seat}, configured participant ${s.modelName}. Inspect shows which model answered.`,
-  } satisfies ChatSeat])), [seats])
-  const openDrawer = (tab: DrawerTab) => { setDrawerTab(tab); setDrawerOpen(true) }
+  const openDrawer = useCallback((tab: DrawerTab) => {
+    const active = document.activeElement
+    drawerOpener.current = active instanceof HTMLElement && active !== document.body ? active : null
+    setDrawerTab(tab)
+    setDrawerOpen(true)
+  }, [])
+  const openDecisions = useCallback(() => openDrawer('Decisions'), [openDrawer])
 
   useEffect(() => {
     if (!job) return
@@ -68,7 +73,7 @@ export function GamePage() {
       runId: job.run_id,
       running: job.status === 'running',
       paused: job.status === 'paused',
-      // Feeds label players by model; configured fallbacks are shown in the drawer, not here.
+      // The inspector labels players by model; configured fallbacks are shown in the drawer, not here.
       players: job.config.players.map(p => ({ ...p, name: labels[p.player_id] ?? p.name, model_display_name: p.openrouter_model_id })),
     })
   }, [job, labels])
@@ -112,7 +117,7 @@ export function GamePage() {
       <div className="mbg-bar-actions">
         {job?.export_status === 'ready' ? <a className="cb-btn cb-btn-secondary" href={`${CLOUD_API}/jobs/${job.job_id}/export`}>Download game</a> : null}
         {job ? <GameActions job={job} onChanged={replace} onError={setActionError} /> : null}
-        <button ref={drawerTrigger} type="button" className="cb-btn cb-btn-secondary" aria-haspopup="dialog" aria-expanded={drawerOpen} disabled={!job} onClick={() => setDrawerOpen(true)}>Details and research</button>
+        <button ref={drawerTrigger} type="button" className="cb-btn cb-btn-secondary" aria-haspopup="dialog" aria-expanded={drawerOpen} disabled={!job} onClick={() => openDrawer(drawerTab)}>Details and research</button>
       </div>
     </header>
     {notices.length ? <div className="mbg-notices" inert={backdropInert}>{notices.map((n, i) => <p key={i} data-tone={n.tone} role={n.tone === 'bad' ? 'alert' : undefined}>{n.text}</p>)}</div> : <div />}
@@ -138,23 +143,20 @@ export function GamePage() {
         /> : <div className="mbg-placeholder">{job ? waitingText(job.status) : error ? 'Couldn’t load this game.' : 'Loading…'}</div>}
       </section>
 
-      <section className="mbg-feeds" aria-label="Chat and action log">
-        {historyLimited ? <p className="mbg-history-note">Latest {MAX_PANEL_EVENTS} events shown. Earlier messages are in <button type="button" onClick={() => openDrawer('Decisions')}>Decisions</button> and <button type="button" onClick={() => openDrawer('Artifacts')}>artifacts</button>.</p> : null}
-        <div className="mbg-feed-tabs" role="group" aria-label="Show">
-          <button type="button" aria-pressed={feedTab === 'chat'} onClick={() => setFeedTab('chat')}>Chat</button>
-          <button type="button" aria-pressed={feedTab === 'log'} onClick={() => setFeedTab('log')}>Action log</button>
-        </div>
-        <div className="mbg-feed" data-feed="chat" data-current={feedTab === 'chat' || undefined}>
-          <ChatFeed title="Chat and turns" seats={chatSeats} />
-        </div>
-        <div className="mbg-feed" data-feed="log" data-current={feedTab === 'log' || undefined}>
-          <h2 className="mbg-feed-title">Action log</h2>
-          <div className="mbg-feed-body"><EventFeed /></div>
-        </div>
+      <section className="mbg-feeds" aria-labelledby="mba-title">
+        {historyLimited ? <p className="mbg-history-note">Latest {MAX_PANEL_EVENTS} events shown. Earlier messages are in <button type="button" onClick={openDecisions}>Decisions</button> and <button type="button" onClick={() => openDrawer('Artifacts')}>artifacts</button>.</p> : null}
+        {job ? <ActivityTimeline
+          events={events}
+          seats={seats}
+          jobId={job.job_id}
+          runId={job.run_id}
+          live={job.status === 'running' && !gameOver}
+          onOpenDecisions={openDecisions}
+        /> : null}
       </section>
     </main>
 
     {job ? <ResearchDrawer job={job} snapshot={snapshot} seats={seats} open={drawerOpen} tab={drawerTab} onTab={setDrawerTab} onClose={closeDrawer} /> : null}
-    <Inspector showLauncher={false} />
+    <Inspector showLauncher={false} jobId={job?.job_id} />
   </div>
 }
