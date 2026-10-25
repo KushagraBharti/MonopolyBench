@@ -3,7 +3,9 @@
 Cloud campaign v2 uses the four Q4 2026 models at provider-native medium effort,
 standard provider pins, and uncapped games. A game is valid for paper use only
 when it ends by bankruptcy and both state and artifact replay pass. Smoke jobs
-are always separate. Existing E0/E1 settings and prompts are unchanged.
+are always separate. Games execute the `audit_corrected_v2` treatment from
+`docs/benchmark_audit_fixes.md`; the cloud runner adds no prompt or rule changes of
+its own, and existing E0/E1 configurations are unchanged.
 
 All requests use OpenRouter. Each physical completion attempt has a durable
 intent and response, including corrective attempts. An initial invalid output
@@ -28,5 +30,6 @@ before freezing; the repository's Q4 draft deliberately contains no drawn seeds.
 
 Costs distinguish provider-account charges, OpenRouter charges, missing usage,
 and interrupted requests with unknown charges. A known zero charge is different
-from an unknown total. Existing usage artifacts retain their original semantics;
-the execution report is the source for all physical-call costs.
+from an unknown total. Run usage artifacts follow usage accounting v2; the
+execution report remains the source for all physical-call costs, including calls
+that never reached a resolved decision.

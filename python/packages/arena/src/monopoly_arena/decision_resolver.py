@@ -390,6 +390,10 @@ class SharedDecisionResolver:
 
     async def _call_completion(self, decision: dict[str, Any], attempt: int,
                                kwargs: dict[str, Any]) -> OpenRouterResult:
+        if _owns_call_records(self._openrouter):
+            # One durable owner per physical call: the client journals each POST,
+            # reuses saved responses and enforces its own deadlines and retries.
+            return await self._openrouter.create_chat_completion(**kwargs)
         request_hash = hashlib.sha256(json.dumps(kwargs, sort_keys=True).encode()).hexdigest()
         path = None
         record: dict[str, Any] = {"call_id": str(uuid.uuid4()), "decision_id": decision["decision_id"],
@@ -449,7 +453,8 @@ class SharedDecisionResolver:
         if get_generation is None:
             return result
         try:
-            generation_result = await asyncio.wait_for(get_generation(generation_id), timeout=15)
+            timeout = None if _owns_call_records(self._openrouter) else 15
+            generation_result = await asyncio.wait_for(get_generation(generation_id), timeout=timeout)
         except asyncio.TimeoutError:
             return result
         next_response = _attach_generation_metadata(response_json, generation_result)
@@ -933,6 +938,10 @@ class SharedDecisionResolver:
             )
         except OSError:
             raise
+
+
+def _owns_call_records(client: Any) -> bool:
+    return getattr(client, "durable_call_records", False) is True
 
 
 def _now_ms() -> int:

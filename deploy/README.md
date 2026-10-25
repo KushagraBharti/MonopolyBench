@@ -39,9 +39,10 @@ The automatic game is queued once per volume, including across container restart
 
 ### Credentials, storage, and lifecycle
 
-The dashboard password defaults to **`monopoly`**, including when reusing a volume
-from an older build that generated a random password. Set `MB_DASHBOARD_PASSWORD`
-only if you want a different password. Session and export secrets are generated
+The dashboard password defaults to **`monopoly`** for local Docker and demo mode,
+including when reusing a volume from an older build that generated a random password.
+Set `MB_DASHBOARD_PASSWORD` if you want a different password. Any other deployment
+refuses to start with the default, because it is published in this public repository. Session and export secrets are generated
 automatically and persist in `runtime_secrets.json` with mode `0600` inside the
 data volume. The provider key is never written into that file. Retrieve the
 current dashboard password or export token at any time:
@@ -98,20 +99,20 @@ and set `SSL_CERT_FILE` to the mounted bundle in a local Compose override.
 
 ## Railway: before the first paid run
 
-1. Commit a reviewed, clean tree. Run `bash scripts/verify.sh` and
-   `cd python/packages/microbench && uv run pytest`.
+1. Commit a reviewed, clean tree. Run `bash scripts/verify.sh` (it includes the
+   microbench suite).
 2. Create a Railway Pro service with exactly one replica and a 50 GB volume at
    `/data`. Configure daily and weekly backups and disable automatic deploys.
 3. Set the variables in `.env.example` in Railway. Keep `MB_DEMO=0` and
-   `MB_LOCAL_HTTP=0`. The default dashboard password is `monopoly`;
-   `MB_DASHBOARD_PASSWORD` overrides it. Session and export secrets are generated
-   automatically. Keep the OpenRouter key server-side.
+   `MB_LOCAL_HTTP=0`. Set `MB_DASHBOARD_PASSWORD` to a private value: the service
+   refuses to start with the public default `monopoly`. Session and export secrets
+   are generated automatically. Keep the OpenRouter key server-side.
 4. Enable OpenAI and Anthropic BYOK in OpenRouter, allow same-provider credit
    fallback, and fund credits for the other seats. There is no application spend cap.
 5. Generate the domain. Use HTTPS: remote session cookies are Secure.
 6. Set `MB_DEPLOY_URL`, then use `scripts/deploy_railway.sh --force-interrupt`
-   for the initial deployment. Subsequently also set `MB_DASHBOARD_PASSWORD`, then invoke the
-   script without the override. The script refuses a dirty tree and active games.
+   for the initial deployment. Subsequently export the same `MB_DASHBOARD_PASSWORD`
+   locally, then invoke the script without the override. The script refuses a dirty tree and active games.
 7. Run the mock soak and redeploy/backup-restore exercises on Railway before
    paid smoke games. Run real 5–10-turn smoke games and inspect routes, costs,
    both replay reports, recovery, and a downloaded package.

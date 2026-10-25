@@ -16,7 +16,7 @@ from .cloud_client import CloudClient
 from .execution_policy import OperationalPause, VERSION, data_root
 from .job_store import JobStore, encode
 from .journal import Journal, JournalRunFiles
-from .llm_runner import LlmRunner
+from .llm_runner import MAX_DECISIONS_PER_TURN, LlmRunner
 from .player_config import build_single_player_config
 
 
@@ -99,6 +99,8 @@ async def play(store: JobStore, job_id: str, execution_id: str) -> None:
             await asyncio.sleep(10)
 
     heart = asyncio.create_task(heartbeat())
+    turn = runner._engine.state.turn_index
+    decisions_this_turn = sum(row.get("turn_index") == turn for row in read_jsonl_strict(files.actions_path)) if recover else 0
     try:
         while not runner._engine.is_game_over():
             client.boundary()
@@ -113,6 +115,11 @@ async def play(store: JobStore, job_id: str, execution_id: str) -> None:
                             files.write_snapshot(snapshot)
             if decision is None:
                 continue
+            if decision["turn_index"] != turn:
+                turn, decisions_this_turn = decision["turn_index"], 0
+            decisions_this_turn += 1
+            if decisions_this_turn > MAX_DECISIONS_PER_TURN:
+                raise RuntimeError(f"No-progress guard: more than {MAX_DECISIONS_PER_TURN} decisions in one turn; game is incomplete")
             client.begin_decision(decision["decision_id"])
 
             async def log(entry: dict[str, Any]) -> None:

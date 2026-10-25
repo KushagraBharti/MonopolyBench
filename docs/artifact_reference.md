@@ -121,8 +121,9 @@ Failed or cancelled jobs retain diagnostic evidence.
 
 `execution_cost.json` accounts for every physical call, including unknown
 interrupted calls. Known charges, missing values, unknown charges and labeled
-token-price estimates are separate. `usage_byok.json` is an opt-in BYOK-aware
-view; existing `usage.json` retains its original field meanings.
+token-price estimates are separate. Run usage follows usage accounting v2, which
+adds BYOK upstream inference cost and keeps unknown costs null; `usage_byok.json`
+is that report labeled for cloud packages.
 
 ZIP64 packages contain `run/`, `quality_check/`, `analysis/`, `cloud/`,
 `saved_game_manifest.json`, and `storage_manifest.json`. The storage manifest

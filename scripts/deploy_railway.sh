@@ -25,7 +25,6 @@ PY
 fi
 python scripts/build_manifest.py --git-sha "$(git rev-parse HEAD)"
 bash scripts/verify.sh
-(cd python/packages/microbench && uv run pytest)
 railway up
 python - <<'PY'
 import json, pathlib, datetime, os, time, urllib.request

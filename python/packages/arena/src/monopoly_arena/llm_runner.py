@@ -36,6 +36,8 @@ from monopoly_telemetry.commit import write_commit
 
 
 DecisionCallback = Callable[[dict[str, Any]], Awaitable[None]]
+# Fail a run visibly instead of letting a policy loop inside one turn forever.
+MAX_DECISIONS_PER_TURN = 1000
 
 
 DecisionAttempt = DecisionResolutionAttempt
@@ -332,7 +334,9 @@ class LlmRunner:
             }
         else:
             try:
-                result = await asyncio.wait_for(method(), timeout=15)
+                # Durable clients apply their own recorded metadata deadline.
+                timeout = None if getattr(self._openrouter, "durable_call_records", False) is True else 15
+                result = await asyncio.wait_for(method(), timeout=timeout)
             except asyncio.TimeoutError:
                 self._run_files.write_json_artifact(self._run_files.pricing_snapshot_path, {
                     "status": "error", "reason": "metadata_deadline_exceeded"})
@@ -387,8 +391,8 @@ class LlmRunner:
                     decisions_this_turn = 0
                     last_turn = decision["turn_index"]
                 decisions_this_turn += 1
-                if decisions_this_turn > 1000:
-                    raise RuntimeError("No-progress guard: more than 1000 decisions in one turn; run is incomplete")
+                if decisions_this_turn > MAX_DECISIONS_PER_TURN:
+                    raise RuntimeError(f"No-progress guard: more than {MAX_DECISIONS_PER_TURN} decisions in one turn; run is incomplete")
                 await self._await_resume()
                 outcome = await self._resolve_decision(decision, write_decision)
                 self._pending_resolution = PendingResolution(decision=decision, outcome=outcome)

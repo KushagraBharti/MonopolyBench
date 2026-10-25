@@ -520,3 +520,130 @@ def test_shutdown_cancels_inflight_preflight(tmp_path, monkeypatch):
     monkeypatch.setattr("monopoly_arena.supervisor.Supervisor.tick", lambda self: None)
     asyncio.run(asyncio.wait_for(run_supervisor(store, lambda: stopped), timeout=3))
     assert cancelled
+
+
+def test_cloud_outage_pause_resumes_with_one_durable_call_owner(tmp_path, monkeypatch):
+    """PR #2's resolver call journal must not shadow the cloud ledger after a pause."""
+    original = OpenRouterClient.__init__
+    posts = 0
+    def response(request):
+        nonlocal posts
+        if request.method == "POST":
+            posts += 1
+            if 5 <= posts <= 7:  # Three transport attempts fail mid-game, then the job pauses.
+                return httpx.Response(503, json={"error": {"message": "upstream unavailable"}})
+        return mock_transport().handle_request(request)
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=httpx.MockTransport(response))
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    (tmp_path / "reference").mkdir()
+    reference, baseline, reference_execution = setup_job(tmp_path / "reference", monkeypatch)
+    posts = -10_000  # The reference game never sees the outage.
+    asyncio.run(play(reference, baseline["job_id"], reference_execution))
+    posts = 0
+    (tmp_path / "paused").mkdir()
+    store, job, execution = setup_job(tmp_path / "paused", monkeypatch)
+    with pytest.raises(OperationalPause) as exc:
+        asyncio.run(play(store, job["job_id"], execution))
+    assert exc.value.reason == "provider_unavailable"
+    store.pause(job["job_id"], exc.value.reason)
+    store.resume(job["job_id"])
+    asyncio.run(play(store, job["job_id"], store.claim(job["job_id"])))
+    assert store.job(job["job_id"])["status"] == "finalizing"
+    run = store.root / "runs" / job["run_id"]
+    assert not (run / "calls").exists()
+    for name in ("events.jsonl", "actions.jsonl"):
+        assert (run / name).read_bytes() == (reference.root / "runs" / baseline["run_id"] / name).read_bytes()
+    ledger = {row["call_id"]: row for row in store.rows("SELECT * FROM calls WHERE job_id=?", (job["job_id"],))}
+    attempts = [attempt for row in read_jsonl_strict(run / "decisions.jsonl") if row["phase"] == "decision_resolved"
+                for attempt in row["attempts"]]
+    assert attempts and all(ledger[attempt["call_id"]]["state"] == "responded" for attempt in attempts)
+    assert sum(row["state"] == "failed" for row in ledger.values()) == 3
+
+
+@pytest.mark.parametrize("stage", ["summary", "analysis"])
+def test_storage_full_during_finalization_stays_retryable(tmp_path, monkeypatch, stage):
+    import errno
+    import importlib.util
+    from monopoly_arena.finalizer import finalize
+    from monopoly_telemetry.run_files import RunFiles
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    original = OpenRouterClient.__init__
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=mock_transport())
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    asyncio.run(play(store, job["job_id"], execution))
+    full = OSError(errno.ENOSPC, "No space left on device")
+    with monkeypatch.context() as patch:
+        if stage == "summary":
+            patch.setattr(RunFiles, "write_summary", lambda self, summary: (_ for _ in ()).throw(full))
+        else:
+            original_spec = importlib.util.spec_from_file_location
+            def spec(name, location):
+                result = original_spec(name, location)
+                original_exec = result.loader.exec_module
+                def load(module):
+                    original_exec(module)
+                    module.generate_analysis = lambda _: (_ for _ in ()).throw(full)
+                result.loader.exec_module = load
+                return result
+            patch.setattr(importlib.util, "spec_from_file_location", spec)
+        with pytest.raises(OSError):
+            asyncio.run(finalize(store, job["job_id"]))
+    assert store.job(job["job_id"])["status"] == "finalizing"
+    assert not store.rows("SELECT * FROM exports")
+    asyncio.run(finalize(store, job["job_id"]))
+    final = store.job(job["job_id"])
+    assert (final["status"], final["replay_status"], final["analysis_status"]) == ("completed", "passed", "completed")
+
+
+@pytest.mark.parametrize("byok", [False, True])
+def test_generation_cost_backfills_the_physical_call_ledger(tmp_path, monkeypatch, byok):
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    original = OpenRouterClient.__init__
+    count = 0
+    def response(request):
+        nonlocal count
+        if request.method == "GET" and request.url.path.endswith("/generation"):
+            data = {"id": request.url.params["id"], "total_cost": 0 if byok else 1.25, "tokens_prompt": 10, "tokens_completion": 2}
+            if byok:
+                data.update(is_byok=True, upstream_inference_cost=1.25)
+            return httpx.Response(200, json={"data": data})
+        if request.method == "GET":
+            return httpx.Response(200, json={"data": []})
+        payload = json.loads(request.content)
+        count += 1
+        return httpx.Response(200, json={"id": f"gen-{count}", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [{"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}], "usage": {"prompt_tokens": 10, "completion_tokens": 2}})
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=httpx.MockTransport(response))
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    asyncio.run(play(store, job["job_id"], execution))
+    calls = store.rows("SELECT * FROM calls WHERE job_id=?", (job["job_id"],))
+    assert len(calls) == count > 0
+    assert all(call["cost_status"] == "known" and call["total_cost"] == 1.25 for call in calls)
+    from monopoly_telemetry.execution_cost import execution_cost
+    assert execution_cost(calls)["known_total"] == 1.25 * count
+    assert execution_cost(calls)["missing_calls"] == 0
+
+
+def test_cloud_worker_applies_the_no_progress_guard(tmp_path, monkeypatch):
+    from monopoly_arena import llm_runner, worker
+    assert llm_runner.MAX_DECISIONS_PER_TURN == 1000
+    store, job, execution = setup_job(tmp_path, monkeypatch)
+    original = OpenRouterClient.__init__
+    def init(self, **kwargs):
+        original(self, **kwargs)
+        self._client = httpx.AsyncClient(transport=mock_transport())
+        self._api_key = "dummy"
+    monkeypatch.setattr(OpenRouterClient, "__init__", init)
+    monkeypatch.setattr(worker, "MAX_DECISIONS_PER_TURN", 1)
+    with pytest.raises(RuntimeError, match="No-progress guard"):
+        asyncio.run(play(store, job["job_id"], execution))
+    actions = read_jsonl_strict(store.root / "runs" / job["run_id"] / "actions.jsonl")
+    assert actions and len({row["turn_index"] for row in actions}) == len(actions)

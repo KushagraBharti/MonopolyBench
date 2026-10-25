@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import hashlib
 import json
 import os
@@ -19,6 +19,9 @@ from .route_validator import validate_route
 
 
 class CloudClient(OpenRouterClient):
+    # The resolver must not add a second call journal or deadline around this client.
+    durable_call_records = True
+
     def __init__(self, store: JobStore, job_id: str):
         super().__init__(max_retries=0, base_url=os.getenv("MB_OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
         self.store, self.job_id = store, job_id
@@ -64,7 +67,7 @@ class CloudClient(OpenRouterClient):
                 if result.ok or result.error_type == "invalid_json":
                     if result.ok:
                         validate_route(kwargs, result.response_json or {})
-                    return result
+                    return replace(result, call_id=call["call_id"])
             elif call["state"] == "intent":
                 self.store.execute("UPDATE calls SET state='unknown',cost_status='unknown' WHERE call_id=?", (call["call_id"],))
         unknown = self.store.rows("SELECT decision_id FROM calls WHERE job_id=? AND state='unknown'", (self.job_id,))
@@ -100,9 +103,9 @@ class CloudClient(OpenRouterClient):
             self._record_result(call_id, result)
             if result.ok:
                 validate_route(kwargs, result.response_json or {})
-                return result
+                return replace(result, call_id=call_id)
             if result.error_type == "invalid_json":
-                return result
+                return replace(result, call_id=call_id)
             reason = error_pause(result.status_code, result.error_type, result.response_text)
             if reason != "provider_unavailable" or attempt == attempt_limit - 1:
                 raise OperationalPause(reason, result.error_type or "request failed")
@@ -113,6 +116,19 @@ class CloudClient(OpenRouterClient):
         body = result.response_json or {}
         cost = call_cost(body.get("usage"), unknown=result.error_type in {"network_error", "total_timeout"})
         self.store.execute("""UPDATE calls SET state=?,http_status=?,error_type=?,model_returned=?,provider_returned=?,generation_id=?,is_byok=?,usage_cost=?,upstream_cost=?,total_cost=?,cost_status=?,completed_at=COALESCE(completed_at,?) WHERE call_id=?""", ("responded" if result.ok else "failed", result.status_code, result.error_type, body.get("model"), body.get("provider"), body.get("id"), cost["is_byok"], cost["usage_cost"], cost["upstream_cost"], cost["total_cost"], cost["cost_status"], time.time(), call_id))
+
+    async def get_generation(self, generation_id: str) -> OpenRouterResult:
+        result = await super().get_generation(generation_id)
+        payload = result.response_json if result.ok and isinstance(result.response_json, dict) else {}
+        data = payload.get("data")
+        if isinstance(data, dict):
+            cost = call_cost({"cost": data.get("total_cost"), "is_byok": data.get("is_byok"),
+                              "cost_details": {"upstream_inference_cost": data.get("upstream_inference_cost")}})
+            if cost["cost_status"] == "known":
+                # Backfill calls whose completion omitted cost; never replace a reported charge.
+                self.store.execute("UPDATE calls SET is_byok=?,usage_cost=?,upstream_cost=?,total_cost=?,cost_status='known' WHERE job_id=? AND generation_id=? AND cost_status!='known'",
+                                   (cost["is_byok"], cost["usage_cost"], cost["upstream_cost"], cost["total_cost"], self.job_id, generation_id))
+        return result
 
     async def _get_json(self, **kwargs: Any) -> OpenRouterResult:
         # Cache metadata observations to make response reuse deterministic.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import errno
 import json
 from pathlib import Path
 import shutil
@@ -47,6 +48,8 @@ async def finalize(store: JobStore, job_id: str) -> None:
                     raise ValueError(f"Replay verification failed: {path.name}")
             replay_status = "passed"
         except Exception as exc:
+            if _storage_full(exc):
+                raise  # Retryable: the job stays finalizing instead of failing a finished game.
             completed = False
             store.execute("UPDATE jobs SET status='failed',pause_reason=? WHERE job_id=?", (f"Finalization: {exc}", job_id))
         finally:
@@ -89,6 +92,8 @@ async def finalize(store: JobStore, job_id: str) -> None:
                 module.generate_analysis(staging)
                 analysis_status = "completed"
             except Exception as exc:
+                if _storage_full(exc):
+                    raise
                 completed = False
                 analysis_status = "failed"
                 store.execute("UPDATE jobs SET status='failed',analysis_status='failed',pause_reason=? WHERE job_id=?", (f"Analysis: {exc}", job_id))
@@ -112,6 +117,15 @@ async def finalize(store: JobStore, job_id: str) -> None:
         if completed:
             atomic_write(directory / "journal_index.jsonl", (staging / "cloud" / "journal_index.jsonl").read_bytes())
             (directory / "journal.jsonl").unlink(missing_ok=True)
+
+
+def _storage_full(exc: BaseException) -> bool:
+    current: BaseException | None = exc
+    while current is not None:
+        if isinstance(current, OSError) and current.errno in {errno.ENOSPC, errno.EDQUOT}:
+            return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 def main() -> None:

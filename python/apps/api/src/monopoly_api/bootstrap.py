@@ -28,7 +28,12 @@ def prepare_runtime(root: Path) -> bool:
     path = root / "runtime_secrets.json"
     saved = json.loads(path.read_text()) if path.exists() else {}
     values = {name: os.getenv(name) or saved.get(name) or secrets.token_urlsafe(32) for name in SECRET_NAMES[1:]}
-    values["MB_DASHBOARD_PASSWORD"] = os.getenv("MB_DASHBOARD_PASSWORD") or DEFAULT_DASHBOARD_PASSWORD
+    password = os.getenv("MB_DASHBOARD_PASSWORD") or DEFAULT_DASHBOARD_PASSWORD
+    if password == DEFAULT_DASHBOARD_PASSWORD and not demo and os.getenv("MB_LOCAL_HTTP") != "1":
+        # The repository is public, so the default would leave a paid dashboard open.
+        raise ValueError("Set MB_DASHBOARD_PASSWORD to a private value for this deployment; the public "
+                         "default 'monopoly' is only allowed for local Docker (MB_LOCAL_HTTP=1) or demo mode.")
+    values["MB_DASHBOARD_PASSWORD"] = password
     if any(not isinstance(value, str) for value in values.values()) or len(values["MB_SESSION_SECRET"]) < 32:
         raise ValueError("Runtime secrets must be strings; MB_SESSION_SECRET must contain at least 32 characters")
     atomic_write(path, json.dumps(values).encode())

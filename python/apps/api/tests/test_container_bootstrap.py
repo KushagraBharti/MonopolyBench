@@ -18,6 +18,7 @@ def clean_environment(monkeypatch):
 @pytest.mark.parametrize("saved_password", [None, "old-generated-password"])
 def test_default_login_preserves_secrets_without_saving_provider_key(tmp_path, monkeypatch, clean_environment, saved_password):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-provider-key")
+    monkeypatch.setenv("MB_LOCAL_HTTP", "1")
     if saved_password:
         (tmp_path / "runtime_secrets.json").write_text(json.dumps({
             "MB_DASHBOARD_PASSWORD": saved_password, "MB_SESSION_SECRET": "s" * 32,
@@ -46,6 +47,18 @@ def test_explicit_password_override_is_used_for_login(tmp_path, monkeypatch, cle
     with TestClient(create_cloud_app(tmp_path), base_url="https://localhost") as client:
         assert client.post("/api/auth/login", json={"password": "monopoly"}).status_code == 401
         assert client.post("/api/auth/login", json={"password": "custom-password"}).status_code == 200
+
+
+@pytest.mark.parametrize("configured", ["", "monopoly"])
+def test_remote_deployment_refuses_the_public_default_password(tmp_path, monkeypatch, clean_environment, configured):
+    monkeypatch.setenv("MB_DASHBOARD_PASSWORD", configured)
+    monkeypatch.setenv("MB_LOCAL_HTTP", "0")
+    with pytest.raises(ValueError, match="MB_DASHBOARD_PASSWORD"):
+        prepare_runtime(tmp_path)
+    assert not (tmp_path / "runtime_secrets.json").exists()
+    monkeypatch.setenv("MB_DASHBOARD_PASSWORD", "private-deployment-password")
+    prepare_runtime(tmp_path)
+    assert json.loads((tmp_path / "runtime_secrets.json").read_text())["MB_DASHBOARD_PASSWORD"] == "private-deployment-password"
 
 
 def test_demo_overrides_paid_route_and_refuses_shared_research_volume(tmp_path, monkeypatch, clean_environment):
@@ -82,6 +95,7 @@ def test_demo_cannot_freeze_research_campaign(tmp_path, monkeypatch, clean_envir
 
 @pytest.mark.parametrize("url,local,secure", [("http://localhost", True, False), ("http://127.0.0.1", True, False), ("http://public.example", True, True), ("https://localhost", True, True), ("http://localhost", False, True)])
 def test_local_cookie_exception_is_explicit_and_host_limited(tmp_path, monkeypatch, clean_environment, url, local, secure):
+    monkeypatch.setenv("MB_LOCAL_HTTP", "1")
     prepare_runtime(tmp_path)
     monkeypatch.setenv("MB_LOCAL_HTTP", "1" if local else "0")
     import os
