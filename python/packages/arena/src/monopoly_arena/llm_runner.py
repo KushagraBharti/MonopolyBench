@@ -528,6 +528,7 @@ class LlmRunner:
             batch_id=self._seat_assignment_metadata.get("batch_id"),
             batch_run_index=self._seat_assignment_metadata.get("batch_run_index"),
         )
+        from .response_policy import policy_manifest
         run_config = {
             "schema_version": "v1",
             "run_config_version": "run_config_v1",
@@ -535,6 +536,7 @@ class LlmRunner:
             "treatment_fingerprint": treatment_fingerprint(),
             "fallback_policy": "finance_before_bankruptcy_v2",
             "infrastructure_policy": "fail_without_action_v2",
+            "response_policy": policy_manifest(),
             "run_id": self.run_id,
             "mode": "full_game",
             "seed": self._seed,
@@ -559,8 +561,8 @@ class LlmRunner:
                 "canonical_events": "events.jsonl",
             },
             "prompt_pipeline": {
-                "status": "unchanged",
-                "note": "Run metadata only; no prompt-building fields are modified here.",
+                "status": "versioned_refusal_recovery",
+                "note": "Initial and ordinary corrective prompts are unchanged. Explicit Claude refusals can use an action-only retry and a named fallback model.",
             },
         }
         self._run_files.write_run_config(run_config)

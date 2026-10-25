@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from .response_policy import participant_label
 
 
 SYSTEM_PROMPT_V1 = """
@@ -65,9 +66,7 @@ DEFAULT_PROVIDER_BY_MODEL_ID = {
 
 
 def derive_model_display_name(model_id: str) -> str:
-    if "/" in model_id:
-        return model_id.split("/")[-1]
-    return model_id
+    return participant_label(model_id)
 
 
 @dataclass(frozen=True)
@@ -324,3 +323,12 @@ def normalize_provider(provider: Any) -> dict[str, Any] | None:
 def default_provider_for_model(model_id: str) -> dict[str, Any] | None:
     provider = DEFAULT_PROVIDER_BY_MODEL_ID.get(model_id)
     return dict(provider) if provider is not None else None
+
+
+def tool_choice_for_model(model_id: str) -> str:
+    """Require the current Grok participant to invoke a tool, not describe one.
+
+    Keep this model-specific: Opus 5.5 rejects forced tool use. Other models
+    retain their existing request settings until separately evaluated.
+    """
+    return "required" if model_id == "x-ai/grok-4.7" else "auto"

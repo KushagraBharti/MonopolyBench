@@ -1222,6 +1222,43 @@ def build_prompt_bundle(
     )
 
 
+def build_refusal_retry_bundle(
+    decision: dict[str, Any], player: PlayerConfig, *, memory: PromptMemory,
+    space_key_by_index: dict[int, str],
+) -> tuple[PromptBundle, list[dict[str, Any]]]:
+    """Request an action without eliciting or adding a private reasoning note.
+
+    Preserve the game state and existing memory. Only the response instructions
+    and private-note requirements change; this is a separate recorded condition.
+    """
+    from dataclasses import replace
+    system = player.system_prompt.replace(
+        "Each action must include both fields:", "Each action must include Public Message:",
+    ).replace(
+        "- Private Thoughts: visible only to you. Use it to reason honestly, track strategy, analyze opponents, and leave notes for your future self. Be concise but clear.\n", "",
+    ).replace("- Keep both messages token-efficient and concise.", "- Keep the public message token-efficient and concise.").replace(
+        "- Deception in public chat is allowed; private thoughts should reflect true reasoning.",
+        "- Deception in public chat is allowed.",
+    ).replace("- Prefer concise reasoning and communication.", "- Prefer concise communication.")
+    system += "\nReturn only a legal tool call and its public_message. Do not include private_thought or a reasoning transcript.\n"
+    bundle = build_prompt_bundle(decision, replace(player, system_prompt=system), memory=memory,
+                                 space_key_by_index=space_key_by_index)
+
+    def without_private_requirement(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {key: without_private_requirement(item) for key, item in value.items() if key != "private_thought"}
+        if isinstance(value, list):
+            return [without_private_requirement(item) for item in value if item != "private_thought"]
+        return value
+
+    payload = without_private_requirement(bundle.user_payload)
+    payload["response_instruction"] = "Return a legal tool call with public_message. Do not return private_thought or a reasoning transcript."
+    content = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    tools = without_private_requirement(build_openrouter_tools(build_compact_decision(decision)))
+    return PromptBundle(system_prompt=system, user_payload=payload, user_content=content,
+                        messages=[{"role": "system", "content": system}, {"role": "user", "content": content}]), tools
+
+
 def _with_retry_notes(
     decision_focus: dict[str, Any],
     errors: list[str],

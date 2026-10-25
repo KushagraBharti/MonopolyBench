@@ -11,6 +11,7 @@ from monopoly_telemetry.writer_jsonl import atomic_write
 from .execution_policy import MODELS, VERSION
 from .job_store import JobStore, encode
 from .player_config import default_provider_for_model
+from .response_policy import policy_manifest
 from .worker import build_identity
 
 
@@ -25,12 +26,14 @@ def player_specs(models: list[str] | None = None, effort: str = "medium") -> lis
 def run_config(seed: int, run_id: str, models: list[str] | None = None, effort: str = "medium", max_turns: int | None = None) -> dict[str, Any]:
     return {**build_identity(), "seed": seed, "run_id": run_id, "players": player_specs(models, effort),
             "max_turns": max_turns, "max_trade_exchanges": 20, "max_auction_actions": 200,
-            "execution_policy_version": VERSION}
+            "execution_policy_version": VERSION, "response_policy": policy_manifest()}
 
 
 def freeze(store: JobStore, config: dict[str, Any]) -> dict[str, Any]:
     from .research_registry import validate_campaign_config
     validate_campaign_config(config)
+    if config.get("execution_policy_version") != VERSION:
+        raise ValueError("Campaign execution policy must match the current runner")
     import re
     if not re.fullmatch(r"[A-Za-z0-9_-]+", config["campaign_id"]):
         raise ValueError("Unsafe campaign ID")

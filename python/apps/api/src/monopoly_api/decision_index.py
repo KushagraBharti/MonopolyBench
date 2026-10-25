@@ -162,6 +162,8 @@ class DecisionIndex:
                     "error_reason": attempt.get("error_reason"),
                     "tool_action": attempt.get("tool_action"),
                     "sequence_meta": attempt.get("sequence_meta"),
+                    "requested_model": attempt.get("requested_model"),
+                    "response_condition": attempt.get("response_condition"),
                 }
                 for attempt in attempts
             ],
@@ -235,6 +237,8 @@ class DecisionIndex:
                 attempt["error_reason"] = parsed.get("error_reason")
                 attempt["tool_action"] = parsed.get("tool_action")
                 attempt["sequence_meta"] = parsed.get("sequence_meta")
+                attempt["requested_model"] = parsed.get("requested_model")
+                attempt["response_condition"] = parsed.get("response_condition")
         return [attempts[idx] for idx in sorted(attempts)]
 
 

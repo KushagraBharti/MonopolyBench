@@ -12,6 +12,7 @@ export interface CloudPlayer {
 }
 export interface CloudConfig {
   seed: number; run_id: string; players: CloudPlayer[]; max_turns: number | null; git_sha: string
+  response_policy?: { version: string; fallback_models: Record<string, string>; stages: string[]; trigger: string; max_resolver_calls: number }
 }
 export interface CloudJob {
   job_id: string; run_id: string; kind: 'smoke' | 'campaign'; status: JobStatus

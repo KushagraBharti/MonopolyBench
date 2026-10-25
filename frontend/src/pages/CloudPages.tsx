@@ -160,7 +160,10 @@ export function GamePage() {
     return () => { active = false; clearTimeout(timer); socket?.close() }
   }, [id])
   useEffect(() => {
-    if (job) useGameStore.getState().setRunStatus({ runId: job.run_id, running: job.status === 'running', paused: job.status === 'paused', players: job.config.players.map(p => ({ ...p, model_display_name: p.name })) })
+    if (job) useGameStore.getState().setRunStatus({ runId: job.run_id, running: job.status === 'running', paused: job.status === 'paused', players: job.config.players.map(p => {
+      const fallback = job.config.response_policy?.fallback_models[p.openrouter_model_id]
+      return { ...p, model_display_name: fallback ? `${p.name} with ${fallback.split('/').pop()} fallback` : p.name }
+    }) })
   }, [job])
   useEffect(() => {
     if (tab === 'Live' || tab === 'Decisions') return

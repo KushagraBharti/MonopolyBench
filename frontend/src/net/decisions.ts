@@ -17,6 +17,8 @@ export type DecisionSummary = {
 
 export type DecisionAttempt = {
   attempt_index: number;
+  requested_model?: string | null;
+  response_condition?: string | null;
   system_prompt?: string | null;
   user_payload?: unknown | null;
   tools?: unknown | null;

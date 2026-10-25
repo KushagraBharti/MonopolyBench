@@ -161,22 +161,34 @@ def test_operational_errors_do_not_fallback(tmp_path, monkeypatch, status, reaso
     asyncio.run(run())
 
 
-def mock_transport():
+def mock_transport(*, refused=False):
     def response(request):
         if request.method == "GET":
             return httpx.Response(200, json={"data": []})
         payload = json.loads(request.content)
-        return httpx.Response(200, json={"id": "mock", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [{"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}], "usage": {"cost": 0.001, "prompt_tokens": 10, "completion_tokens": 2}})
+        choice = {"message": {"tool_calls": [{"id": "t", "type": "function", "function": {"name": "invalid", "arguments": "{}"}}]}}
+        if refused:
+            # A plausible partial tool call must never be used after refusal.
+            choice.update(finish_reason="content_filter", native_finish_reason="refusal")
+            choice["message"]["refusal"] = "Provider declined."
+            choice["message"]["tool_calls"][0]["function"] = {"name": payload["tools"][0]["function"]["name"], "arguments": json.dumps({"public_message": "rejected partial", "private_thought": "rejected partial"})}
+        if refused == "recover" and payload["model"] == "anthropic/claude-opus-4.8":
+            offered = {t["function"]["name"] for t in payload["tools"]}
+            name = next(name for name in ["buy_property", "end_turn", "drop_out"] if name in offered)
+            choice = {"message": {"tool_calls": [{"id": "fallback", "type": "function", "function": {
+                "name": name, "arguments": json.dumps({"public_message": "fallback model move"}),
+            }}]}, "finish_reason": "tool_calls"}
+        return httpx.Response(200, json={"id": "mock", "model": payload["model"], "provider": payload["provider"]["only"][0], "choices": [choice], "usage": {"cost": 0.001, "prompt_tokens": 10, "completion_tokens": 2}})
     return httpx.MockTransport(response)
 
 
-@pytest.mark.parametrize("analysis_fails", [False, True])
-def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch, analysis_fails):
+@pytest.mark.parametrize("analysis_fails,refused", [(False, False), (True, False), (False, True), (False, "recover")])
+def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch, analysis_fails, refused):
     store, job, execution = setup_job(tmp_path, monkeypatch)
     original = OpenRouterClient.__init__
     def init(self, **kwargs):
         original(self, **kwargs)
-        self._client = httpx.AsyncClient(transport=mock_transport())
+        self._client = httpx.AsyncClient(transport=mock_transport(refused=refused))
         self._api_key = "dummy"
     monkeypatch.setattr(OpenRouterClient, "__init__", init)
     asyncio.run(play(store, job["job_id"], execution))
@@ -184,6 +196,21 @@ def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch, analysis_f
     run = store.root / "runs" / job["run_id"]
     events = read_jsonl_strict(run / "events.jsonl")
     assert events[-1]["type"] == "GAME_ENDED"
+    if refused is True:
+        resolved = [d for d in read_jsonl_strict(run / "decisions.jsonl") if d.get("phase") == "decision_resolved"]
+        assert resolved
+        assert all(d["fallback_reason"] == "provider_refusal_after_retry" for d in resolved)
+        assert all(len(d["attempts"]) == (3 if d["openrouter_model_id"] == "anthropic/claude-opus-5.5" else 2) for d in resolved)
+        assert all(a["outcome"] == "refused" and a["parsed_tool_call"] is None for d in resolved for a in d["attempts"])
+        assert all(a["action"]["private_thought"] == "fallback" for a in read_jsonl_strict(run / "actions.jsonl"))
+        assert "rejected partial" not in (run / "events.jsonl").read_text()
+    if refused == "recover":
+        resolved = [d for d in read_jsonl_strict(run / "decisions.jsonl") if d.get("phase") == "decision_resolved" and d["openrouter_model_id"] == "anthropic/claude-opus-5.5"]
+        assert resolved and all(len(d["attempts"]) == 3 for d in resolved)
+        assert all(not d["fallback_used"] and d["sequence_meta"]["model_fallback_used"] for d in resolved)
+        assert all(d["attempts"][-1]["requested_model"] == "anthropic/claude-opus-4.8" for d in resolved)
+        assert all("private_thought" not in d["final_action"] for d in resolved)
+        assert "rejected partial" not in (run / "events.jsonl").read_text()
     from monopoly_arena.worker import make_runner
     from monopoly_telemetry.run_files import build_run_files
     client = CloudClient(store, job["job_id"])
@@ -215,6 +242,10 @@ def test_worker_full_smoke_and_terminal_replay(tmp_path, monkeypatch, analysis_f
     unpack_verified(Path(package["path"]), tmp_path / "exported")
     assert (tmp_path / "exported" / ("cloud/analysis_error.json" if analysis_fails else "analysis/manifest.json")).exists()
     assert json.loads((tmp_path / "exported/cloud/ledger.json").read_text())["jobs"][0]["replay_status"] == "passed"
+    if refused:
+        findings = read_jsonl_strict(run / "failure_findings.jsonl")
+        assert any(f["finding_type"] == "provider_refusal" and f["severity"] == "high" for f in findings)
+        assert not any(f["finding_type"] == "missing_tool_call" for f in findings)
 
 
 def test_campaign_freeze_and_amend(tmp_path, monkeypatch):
@@ -230,6 +261,26 @@ def test_campaign_freeze_and_amend(tmp_path, monkeypatch):
     assert len(store.rows("SELECT * FROM cells")) == 12
     with pytest.raises(ValueError):
         amend(store, "test", [1], "Duplicate")
+
+
+def test_new_campaign_cannot_claim_the_previous_execution_policy(tmp_path, monkeypatch):
+    store, _, _ = setup_job(tmp_path, monkeypatch)
+    config = json.loads((Path(__file__).resolve().parents[4] / "campaigns" / "monopoly-long-v2-frontier-2026q4.json").read_text())
+    config["execution_policy_version"] = "execution_policy_v1"
+    with pytest.raises(ValueError, match="execution policy"):
+        freeze(store, config)
+    assert store.rows("SELECT * FROM campaigns") == []
+
+
+def test_worker_rejects_old_policy_before_any_model_call(tmp_path, monkeypatch):
+    store, _, _ = setup_job(tmp_path, monkeypatch)
+    config = run_config(42, "previous-policy", max_turns=5)
+    config["execution_policy_version"] = "execution_policy_v1"
+    job = store.create_job(config, kind="smoke", key="previous-policy")
+    with pytest.raises(ValueError, match="execution policy"):
+        asyncio.run(play(store, job["job_id"], store.claim(job["job_id"])))
+    assert store.rows("SELECT * FROM calls") == []
+    assert not (store.root / "runs" / job["run_id"]).exists()
 
 
 def test_freeze_failure_cannot_publish_campaign(tmp_path, monkeypatch):

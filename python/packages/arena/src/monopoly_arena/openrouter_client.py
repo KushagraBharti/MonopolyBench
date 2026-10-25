@@ -427,6 +427,23 @@ def _http_error_type(status_code: int) -> str:
     return "http_4xx"
 
 
+def is_provider_refusal(response: dict[str, Any]) -> bool:
+    """Recognize explicit provider signals, never infer refusal from prose."""
+    if response.get("stop_reason") == "refusal":
+        return True
+    details = response.get("stop_details")
+    if isinstance(details, dict) and details.get("type") == "refusal":
+        return True
+    for choice in response.get("choices") or []:
+        if (choice.get("finish_reason") in {"content_filter", "refusal"}
+                or choice.get("native_finish_reason") == "refusal"):
+            return True
+        message = choice.get("message") or choice.get("delta") or {}
+        if message.get("refusal"):
+            return True
+    return False
+
+
 class _StreamingCompletionAccumulator:
     def __init__(self, *, request_id: str | None) -> None:
         self._id = request_id
@@ -436,6 +453,10 @@ class _StreamingCompletionAccumulator:
         self._reasoning_parts: list[str] = []
         self._tool_calls: dict[int, dict[str, Any]] = {}
         self._finish_reason: str | None = None
+        self._native_finish_reason: str | None = None
+        self._refusal_parts: list[str] = []
+        self._refused = False
+        self._stop_metadata: dict[str, Any] = {}
 
     def apply_chunk(self, chunk: dict[str, Any]) -> list[dict[str, Any]]:
         if self._id is None:
@@ -445,10 +466,19 @@ class _StreamingCompletionAccumulator:
         if self._created is None:
             self._created = chunk.get("created")
         events: list[dict[str, Any]] = []
+        self._refused = self._refused or is_provider_refusal(chunk)
+        for key in ("stop_reason", "stop_details"):
+            if chunk.get(key) is not None:
+                self._stop_metadata[key] = chunk[key]
         choice = (chunk.get("choices") or [{}])[0]
         delta = choice.get("delta") or {}
         if choice.get("finish_reason") is not None:
             self._finish_reason = choice.get("finish_reason")
+        if choice.get("native_finish_reason") is not None:
+            self._native_finish_reason = choice.get("native_finish_reason")
+        refusal = delta.get("refusal")
+        if isinstance(refusal, str) and refusal:
+            self._refusal_parts.append(refusal)
         reasoning = delta.get("reasoning") or delta.get("reasoning_content")
         if isinstance(reasoning, str) and reasoning:
             self._reasoning_parts.append(reasoning)
@@ -495,16 +525,20 @@ class _StreamingCompletionAccumulator:
             message["reasoning"] = reasoning
         if self._tool_calls:
             message["tool_calls"] = [self._tool_calls[index] for index in sorted(self._tool_calls)]
+        if self._refusal_parts:
+            message["refusal"] = "".join(self._refusal_parts)
+        choice: dict[str, Any] = {
+            "index": 0,
+            "message": message,
+            "finish_reason": "content_filter" if self._refused else self._finish_reason,
+        }
+        if self._native_finish_reason is not None:
+            choice["native_finish_reason"] = self._native_finish_reason
         return {
             "id": self._id,
             "object": "chat.completion",
             "created": self._created,
             "model": self._model,
-            "choices": [
-                {
-                    "index": 0,
-                    "message": message,
-                    "finish_reason": self._finish_reason,
-                }
-            ],
+            "choices": [choice],
+            **self._stop_metadata,
         }

@@ -12,14 +12,16 @@ from typing import Any, Awaitable, Callable
 from monopoly_telemetry import RunFiles
 
 from .action_validation import validate_action_payload
-from .openrouter_client import OpenRouterResult
-from .player_config import PlayerConfig
+from .openrouter_client import OpenRouterResult, is_provider_refusal
+from .player_config import PlayerConfig, tool_choice_for_model, default_provider_for_model
+from .response_policy import REFUSAL_FALLBACKS, policy_manifest
 from .prompting import (
     PromptBundle,
     PromptMemory,
     build_compact_decision,
     build_openrouter_tools,
     build_prompt_bundle,
+    build_refusal_retry_bundle,
 )
 
 
@@ -47,6 +49,8 @@ class DecisionResolutionAttempt:
     outcome: str | None = None
     reason: str | None = None
     call_id: str | None = None
+    requested_model: str | None = None
+    response_condition: str = "standard"
 
 
 @dataclass(slots=True)
@@ -165,13 +169,15 @@ class SharedDecisionResolver:
                     "fallback_used": outcome.fallback_used,
                     "fallback_reason": outcome.fallback_reason,
                     "sequence_meta": outcome.sequence_meta,
+                    "requested_model": attempt_item.requested_model if isinstance(attempt_item, DecisionResolutionAttempt) else None,
+                    "response_condition": attempt_item.response_condition if isinstance(attempt_item, DecisionResolutionAttempt) else "standard",
                 }
                 self._run_files.write_prompt_artifacts(
                     decision_id=decision["decision_id"],
                     attempt_index=attempt_index,
                     system_prompt=prompt_item.system_prompt,
                     user_payload=prompt_item.user_payload,
-                    tools=tools,
+                    tools=item.get("tools", tools),
                     response=response_payload(item.get("result")),
                     parsed=parsed,
                 )
@@ -200,193 +206,88 @@ class SharedDecisionResolver:
             return outcome
 
         request_start_ms = _now_ms()
-        await emit(
-            self.build_decision_log_entry(
-                decision=decision,
-                player_config=player_config,
-                phase="decision_started",
-                action=None,
-                attempts=[],
-                retry_used=False,
-                fallback_used=False,
-                fallback_reason=None,
-                request_start_ms=request_start_ms,
-                prompt_messages=prompt_bundle.messages,
-                prompt_payload=prompt_bundle.user_payload,
-                prompt_payload_raw=prompt_bundle.user_content,
-            )
-        )
-        tool_choice = "auto"
-        parallel_tool_calls = False
-        create_kwargs: dict[str, Any] = {
-            "model": player_config.openrouter_model_id,
-            "messages": prompt_bundle.messages,
-            "tools": tools,
-            "tool_choice": tool_choice,
-            "parallel_tool_calls": parallel_tool_calls,
-        }
-        if player_config.reasoning is not None:
-            create_kwargs["reasoning"] = player_config.reasoning
-        if player_config.provider is not None:
-            create_kwargs["provider"] = player_config.provider
-        result = await self._call_completion(decision, 0, create_kwargs)
-        response_end_ms = _now_ms()
-        result = await self._with_generation_metadata(result)
-        request_payload_raw = result.request_payload_raw or self._build_request_payload_raw(
-            model=player_config.openrouter_model_id,
-            messages=prompt_bundle.messages,
-            tools=tools,
-            tool_choice=tool_choice,
-            parallel_tool_calls=parallel_tool_calls,
-            reasoning=player_config.reasoning,
-            provider=player_config.provider,
-        )
-        self._write_quality_artifacts(
-            decision_id=decision["decision_id"],
-            attempt_index=0,
-            request_text=request_payload_raw,
-            response_text=result.response_text,
-        )
-        attempt = self._attempt_from_response(
-            prompt_bundle,
-            result,
-            request_start_ms,
-            response_end_ms,
-            include_prompt=False,
-        )
-        attempts.append(attempt)
-        action, errors, error_reason, sequence_meta = self._build_action_from_attempt(decision, attempt)
-        outcome_sequence_meta = sequence_meta
-        artifact_attempts.append(
-            {
-                "attempt_index": 0,
-                "prompt_bundle": prompt_bundle,
-                "result": result,
-                "attempt": attempt,
-                "action": action,
-                "errors": list(attempt.validation_errors),
-                "error_reason": error_reason,
+        await emit(self.build_decision_log_entry(
+            decision=decision, player_config=player_config, phase="decision_started",
+            action=None, attempts=[], retry_used=False, fallback_used=False, fallback_reason=None,
+            request_start_ms=request_start_ms, prompt_messages=prompt_bundle.messages,
+            prompt_payload=prompt_bundle.user_payload, prompt_payload_raw=prompt_bundle.user_content,
+        ))
+        current_player = player_config
+        current_bundle = prompt_bundle
+        current_tools = tools
+        condition = "standard"
+        recovery_chain = False
+        target = REFUSAL_FALLBACKS.get(player_config.openrouter_model_id)
+        for index in range(3):
+            tool_choice = tool_choice_for_model(current_player.openrouter_model_id)
+            kwargs: dict[str, Any] = {
+                "model": current_player.openrouter_model_id, "messages": current_bundle.messages,
+                "tools": current_tools, "tool_choice": tool_choice, "parallel_tool_calls": False,
             }
-        )
-
-        if not result.ok and result.error_type != "invalid_json":
-            outcome = self._build_decision_outcome(
-                action=self._fallback_action(decision),
-                attempts=attempts,
-                retry_used=False,
-                fallback_used=True,
-                fallback_reason=_map_openrouter_error(result.error_type),
-                sequence_meta=outcome_sequence_meta,
-            )
-            write_artifacts(outcome)
-            raise RuntimeError(f"Infrastructure failure; no game action applied: {result.error_type}: {result.error}")
-
-        if errors:
-            retry_bundle = build_prompt_bundle(
-                decision,
-                player_config,
-                memory=self._prompt_memory,
-                space_key_by_index=self._space_key_by_index,
-                retry_errors=errors,
-                retry_outcome=error_reason,
-            )
-            retry_start_ms = _now_ms()
-            retry_kwargs = {
-                "model": player_config.openrouter_model_id,
-                "messages": retry_bundle.messages,
-                "tools": tools,
-                "tool_choice": tool_choice,
-                "parallel_tool_calls": parallel_tool_calls,
-            }
-            if player_config.reasoning is not None:
-                retry_kwargs["reasoning"] = player_config.reasoning
-            if player_config.provider is not None:
-                retry_kwargs["provider"] = player_config.provider
-            retry_result = await self._call_completion(decision, 1, retry_kwargs)
-            retry_end_ms = _now_ms()
-            retry_result = await self._with_generation_metadata(retry_result)
-            retry_request_payload_raw = retry_result.request_payload_raw or self._build_request_payload_raw(
-                model=player_config.openrouter_model_id,
-                messages=retry_bundle.messages,
-                tools=tools,
-                tool_choice=tool_choice,
-                parallel_tool_calls=parallel_tool_calls,
-                reasoning=player_config.reasoning,
-                provider=player_config.provider,
-            )
+            if current_player.reasoning is not None:
+                kwargs["reasoning"] = current_player.reasoning
+            if current_player.provider is not None:
+                kwargs["provider"] = current_player.provider
+            started = _now_ms()
+            result = await self._call_completion(decision, index, kwargs)
+            ended = _now_ms()
+            result = await self._with_generation_metadata(result)
             self._write_quality_artifacts(
-                decision_id=decision["decision_id"],
-                attempt_index=1,
-                request_text=retry_request_payload_raw,
-                response_text=retry_result.response_text,
+                decision_id=decision["decision_id"], attempt_index=index,
+                request_text=result.request_payload_raw or json.dumps(kwargs, ensure_ascii=True, separators=(",", ":")),
+                response_text=result.response_text,
             )
-            retry_attempt = self._attempt_from_response(
-                retry_bundle,
-                retry_result,
-                retry_start_ms,
-                retry_end_ms,
-                include_prompt=True,
-            )
-            attempts.append(retry_attempt)
-            retry_action, retry_errors, retry_error_reason, retry_sequence_meta = self._build_action_from_attempt(
-                decision,
-                retry_attempt,
-            )
-            outcome_sequence_meta = retry_sequence_meta
-            artifact_attempts.append(
-                {
-                    "attempt_index": 1,
-                    "prompt_bundle": retry_bundle,
-                    "result": retry_result,
-                    "attempt": retry_attempt,
-                    "action": retry_action,
-                    "errors": list(retry_attempt.validation_errors),
-                    "error_reason": retry_error_reason,
-                }
-            )
-            if not retry_result.ok and retry_result.error_type != "invalid_json":
-                outcome = self._build_decision_outcome(
-                    action=self._fallback_action(decision),
-                    attempts=attempts,
-                    retry_used=True,
-                    fallback_used=True,
-                    fallback_reason=_map_openrouter_error(retry_result.error_type),
-                    sequence_meta=outcome_sequence_meta,
-                )
+            attempt = self._attempt_from_response(current_bundle, result, started, ended, include_prompt=index > 0)
+            attempt.requested_model = current_player.openrouter_model_id
+            attempt.response_condition = condition
+            attempts.append(attempt)
+            validation_decision = decision
+            if condition != "standard":
+                validation_decision = {**decision, "micro_prompt_condition": "no_private_thought"}
+            action, errors, reason, sequence_meta = self._build_action_from_attempt(validation_decision, attempt)
+            sequence_meta = {**(sequence_meta or {}), "response_policy": policy_manifest(),
+                "response_condition": condition,
+                "requested_model": current_player.openrouter_model_id,
+                "returned_model": (result.response_json or {}).get("model"),
+                "model_fallback_used": current_player.openrouter_model_id != player_config.openrouter_model_id}
+            artifact_attempts.append({"attempt_index": index, "prompt_bundle": current_bundle,
+                "tools": current_tools, "result": result, "attempt": attempt, "action": action,
+                "errors": list(attempt.validation_errors), "error_reason": reason})
+            infrastructure_failure = not result.ok and result.error_type != "invalid_json"
+            if infrastructure_failure:
+                outcome = self._build_decision_outcome(action=self._fallback_action(decision), attempts=attempts,
+                    retry_used=index > 0, fallback_used=True, fallback_reason=_map_openrouter_error(result.error_type),
+                    sequence_meta=sequence_meta)
                 write_artifacts(outcome)
-                raise RuntimeError(f"Infrastructure failure; no game action applied: {retry_result.error_type}: {retry_result.error}")
-            if retry_errors:
-                outcome = self._build_decision_outcome(
-                    action=self._fallback_action(decision),
-                    attempts=attempts,
-                    retry_used=True,
-                    fallback_used=True,
-                    fallback_reason=_fallback_reason_after_retry(retry_error_reason),
-                    sequence_meta=outcome_sequence_meta,
-                )
+                raise RuntimeError(f"Infrastructure failure; no game action applied: {result.error_type}: {result.error}")
+            if not errors:
+                outcome = self._build_decision_outcome(action=action or self._fallback_action(decision), attempts=attempts,
+                    retry_used=index > 0, fallback_used=False, fallback_reason=None, sequence_meta=sequence_meta)
                 write_artifacts(outcome)
                 return outcome
-            outcome = self._build_decision_outcome(
-                action=retry_action or self._fallback_action(decision),
-                attempts=attempts,
-                retry_used=True,
-                fallback_used=False,
-                fallback_reason=None,
-                sequence_meta=outcome_sequence_meta,
-            )
+            if index == 0:
+                recovery_chain = reason == "provider_refusal" and target is not None
+                if recovery_chain:
+                    condition = "same_model_without_private_thought"
+                    current_bundle, current_tools = build_refusal_retry_bundle(decision, current_player,
+                        memory=self._prompt_memory, space_key_by_index=self._space_key_by_index)
+                else:
+                    current_bundle = build_prompt_bundle(decision, current_player, memory=self._prompt_memory,
+                        space_key_by_index=self._space_key_by_index, retry_errors=errors, retry_outcome=reason)
+                continue
+            if index == 1 and recovery_chain and reason == "provider_refusal" and target:
+                condition = "fallback_without_private_thought"
+                current_player = replace(player_config, openrouter_model_id=target,
+                                         provider=default_provider_for_model(target))
+                current_bundle, current_tools = build_refusal_retry_bundle(decision, current_player,
+                    memory=self._prompt_memory, space_key_by_index=self._space_key_by_index)
+                continue
+            outcome = self._build_decision_outcome(action=self._fallback_action(decision), attempts=attempts,
+                retry_used=True, fallback_used=True, fallback_reason=_fallback_reason_after_retry(reason),
+                sequence_meta=sequence_meta)
             write_artifacts(outcome)
             return outcome
-
-        outcome = self._build_decision_outcome(
-            action=action or self._fallback_action(decision),
-            attempts=attempts,
-            retry_used=False,
-            fallback_used=False,
-            fallback_reason=None,
-            sequence_meta=outcome_sequence_meta,
-        )
-        write_artifacts(outcome)
-        return outcome
+        raise AssertionError("Resolver exceeded its bounded response policy")
 
     async def _call_completion(self, decision: dict[str, Any], attempt: int,
                                kwargs: dict[str, Any]) -> OpenRouterResult:
@@ -468,7 +369,10 @@ class SharedDecisionResolver:
         decision: dict[str, Any],
         outcome: DecisionResolutionOutcome,
     ) -> DecisionResolutionOutcome:
-        errors = validate_decision_action(decision, outcome.action)
+        validation_decision = decision
+        if (outcome.sequence_meta or {}).get("response_condition") in {"same_model_without_private_thought", "fallback_without_private_thought"}:
+            validation_decision = {**decision, "micro_prompt_condition": "no_private_thought"}
+        errors = validate_decision_action(validation_decision, outcome.action)
         if not errors and self._rules_validator is not None:
             errors = self._rules_validator(decision, outcome.action)
         if not errors:
@@ -542,6 +446,8 @@ class SharedDecisionResolver:
                 "reason": attempt.reason,
                 "openrouter_request_id": attempt.openrouter_request_id,
                 "call_id": attempt.call_id,
+                "requested_model": attempt.requested_model,
+                "response_condition": attempt.response_condition,
                 "openrouter_status_code": attempt.openrouter_status_code,
                 "error_type": attempt.error_type,
                 "error_message": attempt.error_message,
@@ -645,6 +551,15 @@ class SharedDecisionResolver:
         *,
         check_rules: bool = True,
     ) -> tuple[dict[str, Any] | None, list[str], str | None, dict[str, Any] | None]:
+        # A provider may return a complete-looking tool call before refusing.
+        # Refusal takes precedence over parsing, schema checks and game legality.
+        if is_provider_refusal(attempt.raw_response or {}):
+            errors = ["Provider refused the response"]
+            attempt.validation_errors = errors
+            attempt.parsed_tool_call = None
+            attempt.parsed_tool_calls = None
+            _mark_attempt(attempt, "refused", "provider_refusal")
+            return None, errors, "provider_refusal", None
         parsed_tool_calls = attempt.parsed_tool_calls or []
         if not parsed_tool_calls:
             errors = attempt.validation_errors or ["Missing tool call"]
@@ -664,9 +579,11 @@ class SharedDecisionResolver:
             _mark_attempt(attempt, "malformed", _malformed_reason_from_errors(errors))
             return None, errors, "malformed", None
         errors = validate_decision_action(decision, action)
+        if getattr(attempt, "response_condition", "standard") != "standard" and "private_thought" in action:
+            errors.append("Unexpected private_thought in action-only response")
         if errors:
             attempt.validation_errors.extend(errors)
-            _mark_attempt(attempt, "malformed", _malformed_reason_from_errors(errors))
+            _mark_attempt(attempt, "malformed", "unexpected_private_thought" if "Unexpected private_thought in action-only response" in errors else _malformed_reason_from_errors(errors))
             return action, errors, "malformed", None
         if check_rules and self._rules_validator is not None:
             rule_errors = self._rules_validator(decision, action)
@@ -974,6 +891,8 @@ def _mark_attempt(
 
 
 def _fallback_reason_after_retry(reason: str | None) -> str:
+    if reason == "provider_refusal":
+        return "provider_refusal_after_retry"
     if reason == "malformed":
         return "malformed_after_retry"
     if reason == "illogical":
@@ -1022,6 +941,8 @@ def _illogical_reason_from_errors(errors: list[str]) -> str:
 
 
 def parse_tool_calls(response_json: dict[str, Any]) -> tuple[list[dict[str, Any]] | None, str | None]:
+    if is_provider_refusal(response_json):
+        return None, "Provider refused the response"
     choices = response_json.get("choices", [])
     if not choices:
         return None, "No choices in response"
