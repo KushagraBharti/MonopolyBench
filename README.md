@@ -18,8 +18,8 @@ With Docker Engine/Desktop and Compose v2 installed, run from this checkout:
 docker compose up --build
 ```
 
-Open **http://localhost:8000**. The first startup prints a generated dashboard
-password. One image and one container run the frontend, API, scheduler, game
+Open **http://localhost:8000** and log in with password **`monopoly`**; no username
+is needed. One image and one container run the frontend, API, scheduler, game
 workers, and artifact finalizer; a named volume keeps games and credentials
 across restarts. No host Python, Node, or database installation is required.
 
@@ -33,7 +33,7 @@ MB_DEMO=1 docker compose up --build
 
 The demo gateway runs inside the same container and uses a separate data volume.
 In PowerShell, set `$env:MB_DEMO="1"` before running the Compose command.
-See [container setup and operations](deploy/README.md) for password retrieval,
+See [container setup and operations](deploy/README.md) for optional settings,
 exports, background startup, configuration, and Railway deployment.
 
 ## Product and highlights

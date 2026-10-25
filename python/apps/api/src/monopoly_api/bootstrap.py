@@ -11,6 +11,7 @@ from monopoly_arena.execution_policy import data_root
 from monopoly_telemetry.writer_jsonl import atomic_write
 
 SECRET_NAMES = ("MB_DASHBOARD_PASSWORD", "MB_SESSION_SECRET", "MB_EXPORT_TOKEN")
+DEFAULT_DASHBOARD_PASSWORD = "monopoly"
 
 
 def prepare_runtime(root: Path) -> bool:
@@ -26,17 +27,17 @@ def prepare_runtime(root: Path) -> bool:
 
     path = root / "runtime_secrets.json"
     saved = json.loads(path.read_text()) if path.exists() else {}
-    generated_password = not os.getenv("MB_DASHBOARD_PASSWORD") and not saved.get("MB_DASHBOARD_PASSWORD")
-    values = {name: os.getenv(name) or saved.get(name) or secrets.token_urlsafe(32) for name in SECRET_NAMES}
+    values = {name: os.getenv(name) or saved.get(name) or secrets.token_urlsafe(32) for name in SECRET_NAMES[1:]}
+    values["MB_DASHBOARD_PASSWORD"] = os.getenv("MB_DASHBOARD_PASSWORD") or DEFAULT_DASHBOARD_PASSWORD
     if any(not isinstance(value, str) for value in values.values()) or len(values["MB_SESSION_SECRET"]) < 32:
         raise ValueError("Runtime secrets must be strings; MB_SESSION_SECRET must contain at least 32 characters")
     atomic_write(path, json.dumps(values).encode())
     path.chmod(0o600)
     os.environ.update(values)
-    if generated_password:
-        print("Generated dashboard password: " + values["MB_DASHBOARD_PASSWORD"], flush=True)
+    if values["MB_DASHBOARD_PASSWORD"] == DEFAULT_DASHBOARD_PASSWORD:
+        print("Dashboard login: password 'monopoly' (no username).", flush=True)
     else:
-        print("Dashboard credentials loaded. Retrieve the password with: python -m monopoly_api.bootstrap --show-password", flush=True)
+        print("Dashboard login: password set by MB_DASHBOARD_PASSWORD (no username).", flush=True)
     if demo:
         # Explicitly replace inherited credentials and routes before any child
         # process starts. Test mode also rejects every non-loopback gateway.

@@ -12,8 +12,8 @@ from the repository root:
 docker compose up --build
 ```
 
-Open **http://localhost:8000** and use the generated password printed on the first
-startup. Docker builds the React frontend and installs the locked Python runtime;
+Open **http://localhost:8000** and log in with password **`monopoly`**; no username
+is needed. Docker builds the React frontend and installs the locked Python runtime;
 the resulting single image runs all processes in one container. No host Python,
 Node, uv, Redis, or external database is needed. The health check waits for the API.
 Add `-d --wait` to start in the background and wait for a healthy container.
@@ -39,10 +39,12 @@ The automatic game is queued once per volume, including across container restart
 
 ### Credentials, storage, and lifecycle
 
-Missing dashboard, session, and export credentials are generated and saved in
-`runtime_secrets.json` with mode `0600` inside the data volume. Explicit environment
-values take precedence. The provider key is never written into that file.
-Retrieve the saved dashboard password or export token at any time:
+The dashboard password defaults to **`monopoly`**, including when reusing a volume
+from an older build that generated a random password. Set `MB_DASHBOARD_PASSWORD`
+only if you want a different password. Session and export secrets are generated
+automatically and persist in `runtime_secrets.json` with mode `0600` inside the
+data volume. The provider key is never written into that file. Retrieve the
+current dashboard password or export token at any time:
 
 ```sh
 docker compose exec monopolybench python -m monopoly_api.bootstrap --show-password
@@ -101,9 +103,9 @@ and set `SSL_CERT_FILE` to the mounted bundle in a local Compose override.
 2. Create a Railway Pro service with exactly one replica and a 50 GB volume at
    `/data`. Configure daily and weekly backups and disable automatic deploys.
 3. Set the variables in `.env.example` in Railway. Keep `MB_DEMO=0` and
-   `MB_LOCAL_HTTP=0`. Set distinct long dashboard and export credentials and a
-   session secret of at least 32 characters, or retrieve the auto-generated ones
-   from the service. Keep the OpenRouter key server-side.
+   `MB_LOCAL_HTTP=0`. The default dashboard password is `monopoly`;
+   `MB_DASHBOARD_PASSWORD` overrides it. Session and export secrets are generated
+   automatically. Keep the OpenRouter key server-side.
 4. Enable OpenAI and Anthropic BYOK in OpenRouter, allow same-provider credit
    fallback, and fund credits for the other seats. There is no application spend cap.
 5. Generate the domain. Use HTTPS: remote session cookies are Secure.

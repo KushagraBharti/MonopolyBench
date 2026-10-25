@@ -15,16 +15,37 @@ def clean_environment(monkeypatch):
         monkeypatch.setenv(name, "")
 
 
-def test_generated_credentials_persist_without_saving_provider_key(tmp_path, monkeypatch, clean_environment):
+@pytest.mark.parametrize("saved_password", [None, "old-generated-password"])
+def test_default_login_preserves_secrets_without_saving_provider_key(tmp_path, monkeypatch, clean_environment, saved_password):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-provider-key")
+    if saved_password:
+        (tmp_path / "runtime_secrets.json").write_text(json.dumps({
+            "MB_DASHBOARD_PASSWORD": saved_password, "MB_SESSION_SECRET": "s" * 32,
+            "MB_EXPORT_TOKEN": "existing-export-token",
+        }))
     assert not prepare_runtime(tmp_path)
     first = json.loads((tmp_path / "runtime_secrets.json").read_text())
     assert set(first) == set(SECRET_NAMES)
+    assert first["MB_DASHBOARD_PASSWORD"] == "monopoly"
+    if saved_password:
+        assert first["MB_SESSION_SECRET"] == "s" * 32
+        assert first["MB_EXPORT_TOKEN"] == "existing-export-token"
     assert (tmp_path / "runtime_secrets.json").stat().st_mode & 0o777 == 0o600
+    with TestClient(create_cloud_app(tmp_path), base_url="https://localhost") as client:
+        assert client.post("/api/auth/login", json={"password": "monopoly"}).status_code == 200
+        assert client.get("/api/jobs").status_code == 200
     for name in SECRET_NAMES:
         monkeypatch.delenv(name)
     prepare_runtime(tmp_path)
     assert json.loads((tmp_path / "runtime_secrets.json").read_text()) == first
+
+
+def test_explicit_password_override_is_used_for_login(tmp_path, monkeypatch, clean_environment):
+    monkeypatch.setenv("MB_DASHBOARD_PASSWORD", "custom-password")
+    prepare_runtime(tmp_path)
+    with TestClient(create_cloud_app(tmp_path), base_url="https://localhost") as client:
+        assert client.post("/api/auth/login", json={"password": "monopoly"}).status_code == 401
+        assert client.post("/api/auth/login", json={"password": "custom-password"}).status_code == 200
 
 
 def test_demo_overrides_paid_route_and_refuses_shared_research_volume(tmp_path, monkeypatch, clean_environment):
