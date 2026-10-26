@@ -113,7 +113,7 @@ function SetupStep({ setup, onChange, onSubmit, busy, error }: { setup: Setup; o
 
       <fieldset className="cb-field" aria-describedby={`${ids}-conc-hint`}>
         <legend>Games at the same time</legend>
-        <p className="cb-hint" id={`${ids}-conc-hint`}>More at once finishes sooner. 4 is recommended.</p>
+        <p className="cb-hint" id={`${ids}-conc-hint`}>Up to this many games can play at once. Games may wait if the server's available slots are already in use. 4 is recommended.</p>
         <div className="cb-choices">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <label key={n} className="cb-choice"><input type="radio" name="concurrency" checked={setup.concurrency === n} onChange={() => onChange({ ...setup, concurrency: n })} /><span>{n}</span></label>)}
         </div>

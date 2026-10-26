@@ -847,7 +847,7 @@ Paths under `python/` unless noted. "New" marks a new file.
 5. Run the v3 preflight against the four real routes at medium effort.
 6. Run real-model smoke games of 5 to 10 turns: five at once, one interrupted by a redeploy, and one exported to the laptop with hash checks. Confirm BYOK costs appear for the OpenAI and Anthropic seats and credit costs for Gemini and Grok.
 7. Create the campaign file with its first seed blocks, draw seeds, freeze it, and record the code version.
-8. Press Run on the campaign. Five games start, and each finished game starts the next cell. Export after each batch of finished games.
+8. Press Run on the campaign. Games start up to the lower of its saved concurrency and the configured shared worker slots. Each finished game frees a slot for the next cell. Export after each batch of finished games.
 
 ## 23. Operations runbook
 
@@ -873,7 +873,7 @@ Paths under `python/` unless noted. "New" marks a new file.
 | A game runs very long without a turn cap | The dashboard marks it past turn 300 with its spend. You decide whether to cancel. |
 | Games take longer than 4 hours | They keep running. 3 to 4 hours is a target, not a guarantee. |
 | Uncapped spending | Every cost is recorded and shown. Account errors stop all workers instead of producing fallback moves. Retry limits stop runaway loops. |
-| Your OpenAI or Anthropic rate limits are low | Smoke tests run five games at once first. BYOK calls fall back to OpenRouter credits on the same provider, and the switch is recorded. |
+| Your OpenAI or Anthropic rate limits are low | Run smoke tests at the intended worker count first. BYOK fallback depends on the account's OpenRouter integration settings; record any funding-route switch. |
 | A provider outage overnight | Outage policy v1 pauses and retries for an hour, then waits for you. |
 | A crash in a file-write window | The journal repairs it. Contradictory files fail visibly and the cell is rerun. |
 | Railway restarts or deploys mid-campaign | Auto-deploy is off. The 180-second drain and repair on boot handle restarts. |

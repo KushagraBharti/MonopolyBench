@@ -57,7 +57,7 @@ def readiness(store: JobStore, campaign: dict[str, Any], *, require_study: bool 
 
 def prepare(store: JobStore, *, name: str, seed_blocks: int, concurrency: int, cost_budget: float | None = None) -> dict[str, Any]:
     if not name.strip() or len(name) > 80 or not 1 <= seed_blocks <= 20 or not 1 <= concurrency <= MAX_ACTIVE_GAMES:
-        raise ValueError("Choose a campaign name, 4 to 80 games in balanced groups of four, and 1 to 5 simultaneous games.")
+        raise ValueError(f"Choose a campaign name, 4 to 80 games in balanced groups of four, and 1 to {MAX_ACTIVE_GAMES} simultaneous games.")
     template = research_dir().parents[1] / "campaigns" / "monopoly-q4-recovery-v3-four-game-relay-20261025.json"
     config = json.loads(template.read_text())
     preparation_id = uuid.uuid4().hex
