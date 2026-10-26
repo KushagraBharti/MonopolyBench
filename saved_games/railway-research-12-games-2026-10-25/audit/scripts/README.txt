@@ -1,0 +1,1 @@
+Historical scripts used for this import. Download and audit ran before the owner requested a flat game layout. The finalization script moved the games to their peer folders and updated the indexes. Do not rerun these migration scripts blindly. Use verify_collection.py for a repeatable read-only integrity and replay check in the final layout.
