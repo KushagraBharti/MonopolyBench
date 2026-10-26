@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import type { Space, StateSnapshot } from '@/net/contracts'
 import { LabLogo } from '@/components/LabLogo'
 import { getGroupColor } from '@/domain/monopoly/colors'
+import { getGroupDisplayName, normalizeGroupKey } from '@/domain/monopoly/constants'
 import { portfolioMetrics } from '@/domain/monopoly/portfolio'
 import { useGameStore } from '@/state/store'
 import { money, type Seat } from './gameModel'
@@ -30,16 +31,19 @@ function BuildingPieces({ space }: { space: Space }) {
 /** Visible deed name and state; clicking only highlights the authoritative board square. */
 function PropertyChip({ space, selected, onSelect }: { space: Space; selected: boolean; onSelect: () => void }) {
   const color = space.kind === 'PROPERTY' ? getGroupColor(space.group) : space.kind === 'RAILROAD' ? '#1a1a1a' : '#8a96a3'
+  const groupKey = normalizeGroupKey(space.group) ?? (space.kind === 'RAILROAD' ? 'RAILROAD' : space.kind === 'UTILITY' ? 'UTILITY' : null)
+  const group = groupKey ? getGroupDisplayName(groupKey) : 'Property'
   const state = [buildingText(space), space.mortgaged ? 'Mortgaged' : ''].filter(Boolean).join(', ')
   return <li>
     <button type="button" className="mbg-property-chip" aria-pressed={selected}
-      aria-label={`${space.name}${state ? `, ${state}` : ''}. Highlight on board`}
+      aria-label={`${space.name}, ${group}${state ? `, ${state}` : ''}. Highlight on board`}
       data-mortgaged={space.mortgaged || undefined} style={{ '--deed': color } as CSSProperties} onClick={onSelect}>
       <span className="mbg-property-name">{space.name}</span>
-      {space.hotel || space.houses > 0 || space.mortgaged ? <span className="mbg-property-state">
+      <span className="mbg-property-state">
+        <span>{group}</span>
         {space.hotel || space.houses > 0 ? <BuildingPieces space={space} /> : null}
         {space.mortgaged ? <span>Mortgaged</span> : null}
-      </span> : null}
+      </span>
     </button>
   </li>
 }
