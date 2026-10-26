@@ -18,7 +18,7 @@ from monopoly_arena.campaign_setup import prepare as prepare_campaign, create as
 from monopoly_arena.campaign_controls import pause_campaign, run_campaign, cancel_campaign, start_cell
 from monopoly_arena.budget import BudgetStatus, budget_status, campaign_budget_statuses
 from monopoly_arena.cloud_preflight import preflight
-from monopoly_arena.execution_policy import MODELS, data_root
+from monopoly_arena.execution_policy import MODELS, MAX_ACTIVE_GAMES, data_root
 from monopoly_arena.job_store import JobStore
 from monopoly_telemetry.execution_cost import execution_cost
 from monopoly_telemetry.inventory import safe_path
@@ -64,7 +64,7 @@ class CampaignSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=80)
     seed_blocks: int = Field(default=1, ge=1, le=20, strict=True)
-    concurrency: int = Field(default=4, ge=1, le=5, strict=True)
+    concurrency: int = Field(default=4, ge=1, le=MAX_ACTIVE_GAMES, strict=True)
     cost_budget: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
 
 

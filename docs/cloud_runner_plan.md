@@ -42,7 +42,7 @@ Every full game from now on counts for the paper, so the very first full game mu
 
 When this plan is done:
 
-- One Railway service runs up to five games at once and queues the rest in a fixed, preregistered order.
+- One Railway service supports up to eight games at once and queues the rest in a fixed, preregistered order. The default worker-slot setting remains five.
 - Each game runs in its own worker process. Closing the browser or the laptop changes nothing.
 - A crash, deploy, or platform restart is repaired or resumed automatically. A game that cannot be repaired fails visibly with all evidence kept, and its campaign cell is rerun once.
 - Every artifact is written in the same layout as a local run, plus records of every HTTP call and every repair.
@@ -171,7 +171,7 @@ BYOK does not change what a model sees or how the game plays. It changes who pay
 - computes the call's cost as described in section 13, keeping every raw usage field
 - records when a seat switches between your key and OpenRouter credits, without stopping the game
 
-Your OpenAI and Anthropic account rate limits apply to BYOK calls. Five games make at most five concurrent calls per provider. The smoke tests run five games at once to show whether your account tiers allow that.
+Your OpenAI and Anthropic account rate limits apply to BYOK calls. Eight games make at most eight concurrent calls per provider. A five-turn smoke test at the intended worker count checks observed capacity; it cannot guarantee availability or throughput for a full campaign.
 
 ## 6. Architecture
 
@@ -232,7 +232,7 @@ Every deploy and every platform restart stops the container. The design treats t
 | `MB_DASHBOARD_PASSWORD` | long random string | Dashboard login. Secret. |
 | `MB_SESSION_SECRET` | 32 or more random bytes, hex | Signs the login cookie. Secret. |
 | `MB_EXPORT_TOKEN` | long random string | Read-only token for the export command. Secret. |
-| `MB_MAX_ACTIVE_GAMES` | `5` | Worker slots. |
+| `MB_MAX_ACTIVE_GAMES` | `5` | Shared worker slots, supported maximum 8. |
 | `MB_DISK_RESERVE_GB` | `5` | Free space the supervisor keeps before starting calls. |
 | `MB_REQUEST_DEADLINE_S` | `1200` | Total deadline per HTTP completion request. |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `180` | Time between SIGTERM and SIGKILL on deploy. |
@@ -847,7 +847,7 @@ Paths under `python/` unless noted. "New" marks a new file.
 5. Run the v3 preflight against the four real routes at medium effort.
 6. Run real-model smoke games of 5 to 10 turns: five at once, one interrupted by a redeploy, and one exported to the laptop with hash checks. Confirm BYOK costs appear for the OpenAI and Anthropic seats and credit costs for Gemini and Grok.
 7. Create the campaign file with its first seed blocks, draw seeds, freeze it, and record the code version.
-8. Press Run on the campaign. Five games start, and each finished game starts the next cell. Export after each batch of finished games.
+8. Press Run on the campaign. Games start up to the lower of its saved concurrency and the configured shared worker slots. Each finished game frees a slot for the next cell. Export after each batch of finished games.
 
 ## 23. Operations runbook
 
@@ -873,7 +873,7 @@ Paths under `python/` unless noted. "New" marks a new file.
 | A game runs very long without a turn cap | The dashboard marks it past turn 300 with its spend. You decide whether to cancel. |
 | Games take longer than 4 hours | They keep running. 3 to 4 hours is a target, not a guarantee. |
 | Uncapped spending | Every cost is recorded and shown. Account errors stop all workers instead of producing fallback moves. Retry limits stop runaway loops. |
-| Your OpenAI or Anthropic rate limits are low | Smoke tests run five games at once first. BYOK calls fall back to OpenRouter credits on the same provider, and the switch is recorded. |
+| Your OpenAI or Anthropic rate limits are low | Run smoke tests at the intended worker count first. BYOK fallback depends on the account's OpenRouter integration settings; record any funding-route switch. |
 | A provider outage overnight | Outage policy v1 pauses and retries for an hour, then waits for you. |
 | A crash in a file-write window | The journal repairs it. Contradictory files fail visibly and the cell is rerun. |
 | Railway restarts or deploys mid-campaign | Auto-deploy is off. The 180-second drain and repair on boot handle restarts. |
