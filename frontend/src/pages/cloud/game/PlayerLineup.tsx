@@ -39,11 +39,10 @@ function PropertyChip({ space, selected, onSelect }: { space: Space; selected: b
       aria-label={`${space.name}, ${group}${state ? `, ${state}` : ''}. Highlight on board`}
       data-mortgaged={space.mortgaged || undefined} style={{ '--deed': color } as CSSProperties} onClick={onSelect}>
       <span className="mbg-property-name">{space.name}</span>
-      <span className="mbg-property-state">
-        <span>{group}</span>
+      {space.hotel || space.houses > 0 || space.mortgaged ? <span className="mbg-property-state">
         {space.hotel || space.houses > 0 ? <BuildingPieces space={space} /> : null}
         {space.mortgaged ? <span>Mortgaged</span> : null}
-      </span>
+      </span> : null}
     </button>
   </li>
 }
