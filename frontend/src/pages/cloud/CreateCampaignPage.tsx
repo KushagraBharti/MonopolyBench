@@ -115,7 +115,7 @@ function SetupStep({ setup, onChange, onSubmit, busy, error }: { setup: Setup; o
         <legend>Games at the same time</legend>
         <p className="cb-hint" id={`${ids}-conc-hint`}>More at once finishes sooner. 4 is recommended.</p>
         <div className="cb-choices">
-          {[1, 2, 3, 4, 5].map(n => <label key={n} className="cb-choice"><input type="radio" name="concurrency" checked={setup.concurrency === n} onChange={() => onChange({ ...setup, concurrency: n })} /><span>{n}</span></label>)}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <label key={n} className="cb-choice"><input type="radio" name="concurrency" checked={setup.concurrency === n} onChange={() => onChange({ ...setup, concurrency: n })} /><span>{n}</span></label>)}
         </div>
       </fieldset>
 

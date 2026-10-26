@@ -13,6 +13,8 @@ OUTAGE_INTERVAL = 300
 OUTAGE_RETRIES = 12
 UNKNOWN_PER_DECISION = 1
 UNKNOWN_PER_GAME = 3
+MAX_ACTIVE_GAMES = 8
+DEFAULT_ACTIVE_GAMES = 5
 MODELS = ["anthropic/claude-opus-5.5", "openai/gpt-6.1-sol", "google/gemini-4-argon", "x-ai/grok-4.7"]
 
 

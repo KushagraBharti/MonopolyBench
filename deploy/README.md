@@ -1,6 +1,6 @@
 # Container and Railway cloud runner
 
-The cloud runtime uses one API, one supervisor, up to five game processes, one
+The cloud runtime uses one API, one supervisor, up to eight game processes, one
 finalizer, and SQLite WAL on a persistent volume. Local mode is unchanged.
 
 ## One-command local startup
@@ -161,6 +161,14 @@ For an interactive local dashboard, use the Docker demo above. The separate
 harness is useful for fault injection and uncapped multi-game verification.
 
 ## Operations
+
+`MB_MAX_ACTIVE_GAMES` sets the shared game-worker slots, capped at the supported
+maximum of eight. The default remains five; set it to eight explicitly after
+checking service resources and provider quotas. A campaign's saved concurrency
+is a second, lower limit. Paused/cancelled workers retain their slots until their
+processes exit, so replacement requests cannot exceed the shared limit. One
+separate finalizer can also run. Increasing this setting does not change prompts,
+game rules, model effort or the frozen concurrency of existing campaigns.
 
 - Account banner: fix the key or credits, then Resume all. No fallback move is
   applied for an account or transport failure.

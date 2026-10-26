@@ -23,7 +23,7 @@ def save(client, prepared, key="save-test-key"):
 
 def test_prepare_save_export_preserve_review_and_do_not_start(setup_client, tmp_path):
     client, store, _ = setup_client
-    prepared = prepare(client, seed_blocks=2, concurrency=3)
+    prepared = prepare(client, seed_blocks=2, concurrency=8)
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
     from monopoly_arena.research_registry import research_dir
@@ -71,7 +71,7 @@ def test_preparations_reserve_distinct_seeds_and_enforce_bounds(setup_client):
     b = prepare(client)
     assert not set(a["config"]["seeds"]) & set(b["config"]["seeds"])
     assert set(a["config"]["seeds"]) <= set(b["config"]["research_freeze"]["seed_draw"]["content"]["excluded_seeds"])
-    for invalid in [{"seed_blocks": 0}, {"seed_blocks": 21}, {"seed_blocks": True}, {"concurrency": 6}, {"name": ""}, {"models": []}]:
+    for invalid in [{"seed_blocks": 0}, {"seed_blocks": 21}, {"seed_blocks": True}, {"concurrency": 0}, {"concurrency": 9}, {"concurrency": True}, {"name": ""}, {"models": []}]:
         assert client.post("/api/campaigns/prepare", json={"name": "Test", **invalid}).status_code == 422
     assert client.post("/api/campaigns/prepare", json={"name": "   "}).status_code == 409
     assert save(client, a).status_code == 200

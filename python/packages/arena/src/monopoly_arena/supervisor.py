@@ -14,7 +14,7 @@ from typing import Callable
 from .cloud_campaign import enqueue_cells
 from .campaign_controls import resume_campaign_jobs
 from .cloud_preflight import preflight
-from .execution_policy import data_root
+from .execution_policy import data_root, MAX_ACTIVE_GAMES, DEFAULT_ACTIVE_GAMES
 from .job_store import JobStore, CampaignClosed
 from .worker import writer_lock
 
@@ -92,7 +92,7 @@ class Supervisor:
         for job in ready:
             if job["job_id"] in self.children:
                 continue
-            if active >= min(5, int(os.getenv("MB_MAX_ACTIVE_GAMES", "5"))):
+            if active >= min(MAX_ACTIVE_GAMES, int(os.getenv("MB_MAX_ACTIVE_GAMES", str(DEFAULT_ACTIVE_GAMES)))):
                 break
             campaign_id = job["campaign_id"]
             if campaign_id and campaign_active[campaign_id] >= campaign_limits.get(campaign_id, 1):

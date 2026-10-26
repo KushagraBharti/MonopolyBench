@@ -42,7 +42,7 @@ Every full game from now on counts for the paper, so the very first full game mu
 
 When this plan is done:
 
-- One Railway service runs up to five games at once and queues the rest in a fixed, preregistered order.
+- One Railway service supports up to eight games at once and queues the rest in a fixed, preregistered order. The default worker-slot setting remains five.
 - Each game runs in its own worker process. Closing the browser or the laptop changes nothing.
 - A crash, deploy, or platform restart is repaired or resumed automatically. A game that cannot be repaired fails visibly with all evidence kept, and its campaign cell is rerun once.
 - Every artifact is written in the same layout as a local run, plus records of every HTTP call and every repair.
@@ -171,7 +171,7 @@ BYOK does not change what a model sees or how the game plays. It changes who pay
 - computes the call's cost as described in section 13, keeping every raw usage field
 - records when a seat switches between your key and OpenRouter credits, without stopping the game
 
-Your OpenAI and Anthropic account rate limits apply to BYOK calls. Five games make at most five concurrent calls per provider. The smoke tests run five games at once to show whether your account tiers allow that.
+Your OpenAI and Anthropic account rate limits apply to BYOK calls. Eight games make at most eight concurrent calls per provider. A five-turn smoke test at the intended worker count checks observed capacity; it cannot guarantee availability or throughput for a full campaign.
 
 ## 6. Architecture
 
@@ -232,7 +232,7 @@ Every deploy and every platform restart stops the container. The design treats t
 | `MB_DASHBOARD_PASSWORD` | long random string | Dashboard login. Secret. |
 | `MB_SESSION_SECRET` | 32 or more random bytes, hex | Signs the login cookie. Secret. |
 | `MB_EXPORT_TOKEN` | long random string | Read-only token for the export command. Secret. |
-| `MB_MAX_ACTIVE_GAMES` | `5` | Worker slots. |
+| `MB_MAX_ACTIVE_GAMES` | `5` | Shared worker slots, supported maximum 8. |
 | `MB_DISK_RESERVE_GB` | `5` | Free space the supervisor keeps before starting calls. |
 | `MB_REQUEST_DEADLINE_S` | `1200` | Total deadline per HTTP completion request. |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `180` | Time between SIGTERM and SIGKILL on deploy. |

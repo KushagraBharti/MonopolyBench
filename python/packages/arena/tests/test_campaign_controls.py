@@ -71,6 +71,60 @@ def workers(processes):
     return [child for child in processes if "monopoly_arena.worker" in child.command]
 
 
+@pytest.mark.parametrize(("configured", "expected"), [(None, 5), (4, 4), (8, 8), (99, 8)])
+def test_eight_slot_capacity_is_global_and_bounded(store, processes, monkeypatch, configured, expected):
+    if configured is None:
+        monkeypatch.delenv("MB_MAX_ACTIVE_GAMES")
+    else:
+        monkeypatch.setenv("MB_MAX_ACTIVE_GAMES", str(configured))
+    for index in range(10):
+        store.create_job(run_config(index, f"capacity-{index}"), kind="smoke", key=f"capacity-{index}")
+    supervisor = Supervisor(store)
+    supervisor.tick()
+    supervisor.tick()
+    assert len(supervisor.children) == expected
+    assert len(workers(processes)) == expected
+    assert len(store.rows("SELECT * FROM jobs WHERE status='queued'")) == 10 - expected
+
+
+@pytest.mark.parametrize("campaign_limit", [4, 8])
+def test_eight_workers_preserve_campaign_pause_cancel_and_lower_campaign_limit(
+    store, processes, monkeypatch, campaign_limit
+):
+    monkeypatch.setenv("MB_MAX_ACTIVE_GAMES", "8")
+    config = json.loads((Path(__file__).resolve().parents[4] / "campaigns" / "monopoly-long-v2-frontier-2026q4.json").read_text())
+    config.update(campaign_id="eight-slots", seeds=[10, 11, 12], execution_order_seed=42, concurrency=campaign_limit)
+    freeze(store, config)
+    run_campaign(store, config["campaign_id"])
+    supervisor = Supervisor(store)
+    supervisor.tick()
+    assert len(supervisor.children) == campaign_limit
+    paused = next(iter(supervisor.children))
+    store.pause(paused, "operator")
+    # A requested pause does not release capacity until that worker actually exits.
+    supervisor.tick()
+    assert len(workers(processes)) == campaign_limit
+    supervisor.children[paused].returncode = 0
+    supervisor.tick()
+    assert paused not in supervisor.children
+    assert len(supervisor.children) == campaign_limit
+    pause_campaign(store, config["campaign_id"])
+    for child in supervisor.children.values():
+        child.returncode = 0
+    supervisor.tick()
+    assert not supervisor.children
+    run_campaign(store, config["campaign_id"])
+    supervisor.tick()
+    assert len(supervisor.children) == campaign_limit
+    assert store.job(paused)["status"] == "paused"
+    cancel_campaign(store, config["campaign_id"])
+    for child in supervisor.children.values():
+        child.returncode = 0
+    supervisor.tick()
+    assert not supervisor.children
+    assert all(job["status"] == "cancelled" for job in jobs(store))
+
+
 def test_run_materializes_all_four_jobs_without_launching(store, campaign, processes):
     assert len(cells(store, campaign)) == 4
     assert not jobs(store)
