@@ -42,7 +42,6 @@ export function GamePage() {
   const deedHighlight = useGameStore(s => s.ui.deedHighlight)
   const inspectorOpen = useGameStore(s => s.inspectorOpen)
   const snapshot = job && stored?.run_id === job.run_id ? stored : null
-  const [selected, setSelected] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('Deeds')
   const [actionError, setActionError] = useState('')
@@ -123,9 +122,9 @@ export function GamePage() {
     {notices.length ? <div className="mbg-notices" inert={backdropInert}>{notices.map((n, i) => <p key={i} data-tone={n.tone} role={n.tone === 'bad' ? 'alert' : undefined}>{n.text}</p>)}</div> : <div />}
 
     <main className="mbg-main" inert={backdropInert} data-stopped={job?.status === 'cancelled' || job?.status === 'failed' || undefined}>
-      <section className="mbg-players" data-detail={selected ? true : undefined} aria-labelledby="mbg-players-title">
+      <section className="mbg-players" aria-labelledby="mbg-players-title">
         <h2 id="mbg-players-title" className="mbg-h">Players</h2>
-        <PlayerLineup seats={seats} snapshot={snapshot} turnPlayerId={turnHolder} turnLabel={job?.status === 'running' ? 'Turn' : 'Turn holder'} winnerId={winnerId} selected={selected} onSelect={setSelected} />
+        <PlayerLineup seats={seats} snapshot={snapshot} turnPlayerId={turnHolder} turnLabel={job?.status === 'running' ? 'Turn' : 'Turn holder'} winnerId={winnerId} />
       </section>
 
       <section className="mbg-board-area" id="mbg-board" aria-label="Board">

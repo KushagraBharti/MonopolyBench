@@ -2,23 +2,18 @@ import type { CSSProperties } from 'react'
 import type { Space, StateSnapshot } from '@/net/contracts'
 import { LabLogo } from '@/components/LabLogo'
 import { getGroupColor } from '@/domain/monopoly/colors'
-import { GROUP_ORDER, SPECIAL_GROUP_ORDER, GROUP_TILE_INDEXES, getGroupDisplayName, normalizeGroupKey, type GroupKey } from '@/domain/monopoly/constants'
+import { getGroupDisplayName, normalizeGroupKey } from '@/domain/monopoly/constants'
+import { portfolioMetrics } from '@/domain/monopoly/portfolio'
 import { useGameStore } from '@/state/store'
 import { money, type Seat } from './gameModel'
 
 type Props = {
   seats: Seat[]
   snapshot: StateSnapshot | null
-  /** Player whose turn it is, only while the game is live. */
   turnPlayerId: string | null
-  /** Flag text for the turn player, e.g. "Turn holder" while paused. */
   turnLabel?: string
   winnerId: string | null
-  selected: string | null
-  onSelect: (playerId: string | null) => void
 }
-
-const GROUPS: GroupKey[] = [...GROUP_ORDER, ...SPECIAL_GROUP_ORDER]
 
 function buildingText(space: Space) {
   if (space.hotel) return 'Hotel'
@@ -26,103 +21,73 @@ function buildingText(space: Space) {
   return ''
 }
 
-/** Small deed swatch: group color, house pips or hotel, hatched when mortgaged. */
-function Deed({ space }: { space: Space }) {
-  const color = space.kind === 'PROPERTY' ? getGroupColor(space.group) : space.kind === 'RAILROAD' ? '#1a1a1a' : '#8a96a3'
-  return <span className="mbg-deed" data-mortgaged={space.mortgaged || undefined} style={{ '--deed': color } as CSSProperties} title={[space.name, buildingText(space), space.mortgaged ? 'mortgaged' : ''].filter(Boolean).join(', ')}>
-    {space.hotel ? <i className="mbg-deed-hotel" /> : space.houses > 0 ? <b>{space.houses}</b> : null}
+function BuildingPieces({ space }: { space: Space }) {
+  return <span className="mbg-building-pieces" aria-hidden="true">
+    {space.hotel ? <svg viewBox="0 0 18 14" className="mbg-hotel-piece"><path d="M1 5 9 1l8 4v8H1Z" fill="#d52a30" stroke="#76171b" /><path d="M4 6h2v2H4zm4 0h2v2H8zm4 0h2v2h-2zM4 10h2v2H4zm8 0h2v2h-2z" fill="#fff4dd" /><path d="M8 10h2v3H8z" fill="#76171b" /></svg>
+      : Array.from({ length: space.houses }, (_, index) => <svg key={index} viewBox="0 0 14 14" className="mbg-house-piece"><path d="m1 6 6-5 6 5v7H1Z" fill="#239348" stroke="#12532a" /><path d="M6 9h3v4H6z" fill="#d8efdb" /></svg>)}
   </span>
 }
 
-function Holdings({ seat, snapshot }: { seat: Seat; snapshot: StateSnapshot | null }) {
-  const deedHighlight = useGameStore(s => s.ui.deedHighlight)
-  const setDeedHighlight = useGameStore(s => s.setDeedHighlight)
-  const player = seat.player
-  const derivedWorth = snapshot?.derived?.net_worth_estimate_by_player?.[seat.playerId]
-  const byGroup = new Map<GroupKey, Space[]>()
-  for (const space of seat.holdings) {
-    const key = normalizeGroupKey(space.group) ?? (space.kind === 'RAILROAD' ? 'RAILROAD' : space.kind === 'UTILITY' ? 'UTILITY' : null)
-    if (!key) continue
-    byGroup.set(key, [...(byGroup.get(key) ?? []), space])
-  }
-  const bankruptTo = player?.bankrupt_to ? snapshot?.players.find(p => p.player_id === player.bankrupt_to)?.name ?? player.bankrupt_to : null
-  return <div className="mbg-holdings">
-    <dl className="mbg-facts">
-      <div><dt>Cash</dt><dd>{player ? money(player.cash) : '—'}</dd></div>
-      <div><dt>Deeds</dt><dd>{seat.holdings.length}</dd></div>
-      <div><dt>Mortgaged</dt><dd>{seat.holdings.filter(s => s.mortgaged).length}</dd></div>
-      <div><dt>Jail cards</dt><dd>{player?.get_out_of_jail_cards ?? 0}</dd></div>
-      {typeof derivedWorth === 'number' ? <div><dt>Net worth (server estimate)</dt><dd>{money(derivedWorth)}</dd></div> : null}
-      {player?.in_jail ? <div><dt>In jail</dt><dd>{player.jail_turns} turn{player.jail_turns === 1 ? '' : 's'} served</dd></div> : null}
-      {player?.bankrupt ? <div><dt>Bankrupt</dt><dd>{bankruptTo ? `to ${bankruptTo}` : 'to the bank'}</dd></div> : null}
-    </dl>
-    <p className="mbg-model-id"><code>{seat.model}</code></p>
-    {seat.holdings.length === 0 ? <p className="mbg-muted">No deeds.</p> : <ul className="mbg-groups">
-      {GROUPS.filter(g => byGroup.has(g)).map(group => {
-        const owned = byGroup.get(group) ?? []
-        return <li key={group}>
-          <span className="mbg-group-head"><i style={{ background: group === 'RAILROAD' ? '#1a1a1a' : group === 'UTILITY' ? '#8a96a3' : getGroupColor(group) }} />{getGroupDisplayName(group)}<small>{owned.length} of {GROUP_TILE_INDEXES[group]?.length ?? owned.length}</small></span>
-          <ul>{owned.map(space => <li key={space.index}>
-            <button type="button" aria-pressed={deedHighlight === space.index} onClick={() => setDeedHighlight(deedHighlight === space.index ? null : space.index)}>
-              <span>{space.name}</span>
-              <span className="mbg-deed-state">{[buildingText(space), space.mortgaged ? 'Mortgaged' : ''].filter(Boolean).join(' · ')}</span>
-            </button>
-          </li>)}</ul>
-        </li>
-      })}
-    </ul>}
-  </div>
+/** Visible deed name and state; clicking only highlights the authoritative board square. */
+function PropertyChip({ space, selected, onSelect }: { space: Space; selected: boolean; onSelect: () => void }) {
+  const color = space.kind === 'PROPERTY' ? getGroupColor(space.group) : space.kind === 'RAILROAD' ? '#1a1a1a' : '#8a96a3'
+  const groupKey = normalizeGroupKey(space.group) ?? (space.kind === 'RAILROAD' ? 'RAILROAD' : space.kind === 'UTILITY' ? 'UTILITY' : null)
+  const group = groupKey ? getGroupDisplayName(groupKey) : 'Property'
+  const state = [buildingText(space), space.mortgaged ? 'Mortgaged' : ''].filter(Boolean).join(', ')
+  return <li>
+    <button type="button" className="mbg-property-chip" aria-pressed={selected}
+      aria-label={`${space.name}, ${group}${state ? `, ${state}` : ''}. Highlight on board`}
+      data-mortgaged={space.mortgaged || undefined} style={{ '--deed': color } as CSSProperties} onClick={onSelect}>
+      <span className="mbg-property-name">{space.name}</span>
+      {space.hotel || space.houses > 0 || space.mortgaged ? <span className="mbg-property-state">
+        {space.hotel || space.houses > 0 ? <BuildingPieces space={space} /> : null}
+        {space.mortgaged ? <span>Mortgaged</span> : null}
+      </span> : null}
+    </button>
+  </li>
 }
 
-function deedSummary(seat: Seat) {
-  const mortgaged = seat.holdings.filter(s => s.mortgaged).length
-  const deeds = `${seat.holdings.length} deed${seat.holdings.length === 1 ? '' : 's'}`
-  return mortgaged ? `${deeds}, ${mortgaged} mortgaged` : deeds
-}
-
-/**
- * All four seats stay visible as compact rows. The selected seat's holdings open in a
- * separate section below the roster that scrolls on its own, so no row is pushed away.
- */
-export function PlayerLineup({ seats, snapshot, turnPlayerId, turnLabel = 'Turn', winnerId, selected, onSelect }: Props) {
+/** Every player's finances and possessions are visible without opening a card. */
+export function PlayerLineup({ seats, snapshot, turnPlayerId, turnLabel = 'Turn', winnerId }: Props) {
+  const deedHighlight = useGameStore(state => state.ui.deedHighlight)
+  const setDeedHighlight = useGameStore(state => state.setDeedHighlight)
   if (seats.length === 0) return <p className="mbg-muted">Waiting for players…</p>
-  const open = seats.find(s => s.playerId === selected) ?? null
-  return <div className="mbg-roster" data-detail={open ? true : undefined}>
-    <ol className="mbg-lineup" aria-label="Players in seat order">
+  const rows = seats.map(seat => seat.player?.bankrupt && !seat.holdings.length ? 'auto' : 'minmax(0, max-content)').join(' ')
+  return <div className="mbg-roster">
+    <ol className="mbg-lineup" aria-label="Players in seat order" style={{ '--seat-rows': rows } as CSSProperties}>
       {seats.map(seat => {
-        const p = seat.player
-        const isOpen = open?.playerId === seat.playerId
-        const isTurn = turnPlayerId === seat.playerId
-        return <li key={seat.playerId} className="mbg-seat" data-turn={isTurn || undefined} data-bankrupt={p?.bankrupt || undefined} data-open={isOpen || undefined} style={{ '--seat': seat.color } as CSSProperties}>
-          <button type="button" className="mbg-seat-row" aria-expanded={isOpen} aria-controls={isOpen ? 'mbg-holdings' : undefined} onClick={() => onSelect(isOpen ? null : seat.playerId)}>
+        const player = seat.player
+        const metrics = portfolioMetrics(player, seat.holdings, snapshot?.derived?.net_worth_estimate_by_player?.[seat.playerId])
+        const creditor = player?.bankrupt_to ? seats.find(other => other.playerId === player.bankrupt_to)?.label ?? player.bankrupt_to : 'the bank'
+        return <li key={seat.playerId} className="mbg-seat" data-turn={turnPlayerId === seat.playerId || undefined}
+          data-bankrupt={player?.bankrupt || undefined} style={{ '--seat': seat.color } as CSSProperties}>
+          <header className="mbg-seat-header">
             <span className="mbg-seat-token"><LabLogo model={seat.model} decorative /></span>
-            <span className="mbg-seat-main">
-              <span className="mbg-seat-name">{seat.modelName}</span>
-              <span className="mbg-seat-sub">Seat {seat.seat}{p?.name && p.name !== `Player ${seat.seat}` ? ` · ${p.name}` : ''}</span>
-            </span>
-            <span className="mbg-seat-cash">{p ? money(p.cash) : '—'}</span>
-            <span className="mbg-seat-flags">
-              {isTurn ? <span className="mbg-flag" data-kind="turn">{turnLabel}</span> : null}
+            <div className="mbg-seat-main"><h3 className="mbg-seat-name">{seat.modelName}</h3><span className="mbg-seat-sub">Seat {seat.seat}</span></div>
+            <div className="mbg-seat-flags">
+              {turnPlayerId === seat.playerId ? <span className="mbg-flag" data-kind="turn">{turnLabel}</span> : null}
               {winnerId === seat.playerId ? <span className="mbg-flag" data-kind="winner">Winner</span> : null}
-              {p?.in_jail ? <span className="mbg-flag" data-kind="jail">In jail</span> : null}
-              {p && p.get_out_of_jail_cards > 0 ? <span className="mbg-flag" title="Get out of jail free cards">Jail card ×{p.get_out_of_jail_cards}</span> : null}
-              {p?.bankrupt ? <span className="mbg-flag" data-kind="out">Bankrupt</span> : null}
-            </span>
-            {/* Swatches are visual only; the summary carries the same facts for assistive tech. */}
-            <span className="mbg-seat-summary">{seat.holdings.length ? deedSummary(seat) : 'No deeds'}</span>
-            <span className="mbg-seat-deeds" aria-hidden="true">
-              {seat.holdings.length ? seat.holdings.map(space => <Deed key={space.index} space={space} />) : <span className="mbg-muted">No deeds</span>}
-            </span>
-          </button>
+              {player?.in_jail ? <span className="mbg-flag" data-kind="jail">In jail</span> : null}
+              {player?.bankrupt ? <span className="mbg-flag" data-kind="out">Bankrupt</span> : null}
+            </div>
+          </header>
+          <dl className="mbg-seat-finances">
+            <div><dt>Cash</dt><dd>{player ? money(player.cash) : '—'}</dd></div>
+            <div><dt>Net worth <span>{metrics.worthSource === 'server' ? 'server estimate' : 'book value'}</span></dt><dd>{metrics.netWorth === null ? '—' : money(metrics.netWorth)}</dd></div>
+          </dl>
+          <p className="mbg-portfolio-summary">
+            <span>{metrics.deeds} {metrics.deeds === 1 ? 'deed' : 'deeds'}</span>
+            {metrics.houses ? <span>{metrics.houses} {metrics.houses === 1 ? 'house' : 'houses'}</span> : null}
+            {metrics.hotels ? <span>{metrics.hotels} {metrics.hotels === 1 ? 'hotel' : 'hotels'}</span> : null}
+            {metrics.mortgaged ? <span>{metrics.mortgaged} mortgaged</span> : null}
+            {player?.get_out_of_jail_cards ? <span>{player.get_out_of_jail_cards} jail {player.get_out_of_jail_cards === 1 ? 'card' : 'cards'}</span> : null}
+          </p>
+          {seat.holdings.length ? <div className="mbg-property-scroll" tabIndex={0} role="region" aria-label={`${seat.label}, seat ${seat.seat} properties`}>
+            <ul className="mbg-seat-properties">{seat.holdings.map(space => <PropertyChip key={space.index} space={space} selected={deedHighlight === space.index} onSelect={() => setDeedHighlight(deedHighlight === space.index ? null : space.index)} />)}</ul>
+          </div> : <p className="mbg-empty-portfolio">{player?.bankrupt ? `Assets passed to ${creditor}.` : player ? 'No properties yet.' : 'Waiting for the first snapshot.'}</p>}
         </li>
       })}
     </ol>
-    {open ? <section id="mbg-holdings" className="mbg-detail" aria-label={`Seat ${open.seat} holdings`} style={{ '--seat': open.color } as CSSProperties}>
-      <header className="mbg-detail-head">
-        <h3>Seat {open.seat} · {open.modelName}</h3>
-        <button type="button" className="mbg-detail-close" onClick={() => onSelect(null)}>Close</button>
-      </header>
-      <Holdings seat={open} snapshot={snapshot} />
-    </section> : null}
+    <p className="mbg-worth-note">Book value includes deeds and building purchase values, less mortgage principal. It isn’t cash available to spend.</p>
   </div>
 }

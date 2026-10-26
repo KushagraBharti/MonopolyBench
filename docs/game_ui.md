@@ -6,6 +6,18 @@ job; they do not submit Monopoly
 moves. The engine remains authoritative for positions, ownership, cash, buildings,
 mortgages, jail, bankruptcy and outcomes.
 
+Player cards show cash, net worth and named possessions without opening a player.
+Each deed shows its property group, buildings and mortgage state; selecting it
+highlights that deed on the board. Long portfolios scroll within their cards so
+all four players' finances remain visible. At desktop widths of 1280px and above,
+players, board and activity occupy three columns; smaller screens stack them.
+
+Net worth uses the snapshot's estimate when supplied. Otherwise the UI labels it
+as book value: cash plus deed purchase prices and building purchase values, less
+mortgage principal. A hotel includes five house-cost equivalents. Missing valuation
+inputs display an unavailable value. This is display accounting, not liquidation
+value, spendable cash or a client-side determination of the winner.
+
 Lab marks identify the model configured for a seat. Seat colors identify players
 and property ownership, including games where several seats use the same model.
 Campaign rotations therefore change lab marks without changing the seat colors.
