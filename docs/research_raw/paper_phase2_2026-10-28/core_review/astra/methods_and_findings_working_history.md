@@ -1,0 +1,61 @@
+# Astra: economic and social section proposals
+
+Working coauthor prose; the complete catalog and trajectory review is still in progress. Each paragraph must retain the evidence limits when incorporated into a shared draft.
+
+## Attempted construction and executed construction
+
+The same applied end-turn can arise from deliberate restraint or a failed attempt to build. We therefore join each economic decision to all recorded attempts, validation results and the applied action. An end-turn selected by deterministic fallback is retained in the configured agent's trajectory, but is not coded as a chosen refusal to develop. We separately record whether the attempted plan concerns the focal group and whether its exact allocation can be executed legally at the recorded state.
+
+All 61 defaulted Opus build requests admitted a legal construction with the same requested purchases, obtained by interleaving individual operations. Exact-prefix replay and immediate construction checks confirm affordability, inventory and final development. This provides an observed explanation for particular undeveloped assets without establishing how the agent would perform under another recovery policy. The distinction cannot be generalized from the validation error alone: several Sol requests first failed the even-building check while also requesting more construction than the available cash could finance.
+
+A corrective retry that ends in a legal build need not preserve the requested quantity. Sol's G2d243 source check finds an initially feasible seven-house allocation replaced by three houses, followed by three more in the next decision. We therefore distinguish any-build recovery, actual purchased quantity, and feasibility of executing the original allocation. The last is what our61 exact-allocation checks establish; it is not an observed repaired-policy outcome.
+
+## Opportunity, financing and physical supply
+
+We distinguish a build offered immediately from one reachable after the player's legal financing actions. In game 14, a completed dark-blue group remains mortgaged; legal redemption is affordable, but the empty house supply prevents subsequent construction. In game 4, an unmortgaged completed group and sufficient cash already exist, yet physical inventory blocks the next house. The latter player also holds houses elsewhere and deliberately avoids conversions that would release them. Scarcity can therefore coexist with a strategic decision to preserve one's own inventory and income. A shortage does not imply a unique responsible opponent, optimal refusal, or a determined game outcome.
+
+## Liquidation and surrender
+
+Current mortgage menus are insufficient to establish a debtor's maximum resources because selling the last building can unlock additional collateral. We test the full legal debt-resolution sequence where the paper distinguishes avoidable surrender from insolvency. Two extraction calculations understated final resources by omitting these unlocked mortgages; the corrected values still leave the players unable to pay. Conversely, the existence of any listed financing action does not establish that the debt can be covered. Local ability to pay is separate from whether an earlier investment was sound or an alternative strategy would win.
+
+Financing-feasible bankruptcy is an applied-outcome category, not a common cognitive mechanism. Following Sol's challenge, Astra read G12 d249's original response and independently executed its content's two-house sale, followed by three legal one-house sales. The $250 debt is paid, leaving $43 and two houses, without a mortgage. The applied function declares bankruptcy even though its own note ultimately says not to declare. This differs from G17 d234's explicit maximum that omits collateral unlocked by sales. Intermediate mistakes in G12's note remain; its final correct recommendation is neither a privileged belief record nor proof of an intended action or provider cause.
+
+Evidence: `final_liquidations.json`, `default_build_plans.json`, `supply_constraint_checks.json`, and their associated scripts. More complete social and cross-game synthesis remains pending the full review.
+
+The hotel rule supplies a stronger limitation than cash accounting alone. In game 7, Opus holds pink buildings at levels four, four and hotel while the bank has no houses. The hotel cannot be downgraded, the lower-level houses cannot be sold first, and the group cannot be mortgaged while built. Exact replay of both permitted mortgage orders raises cash from $290 to $440 and then triggers automatic bankruptcy against $750. Nominal building and mortgage value would be $1,310 if all could be liquidated. That value is inaccessible. The sale menu was already empty at an earlier decision with two bank houses, so the later purchase of the last two houses did not newly cause the restriction. This example is an automatic elimination after financing attempts, not a chosen surrender. Evidence: `g07_hotel_lock.json`.
+
+## Negotiation frequency, access and selection
+
+We report how often a player initiates a trade on an eligible management turn and how many proposals it makes on turns when it does initiate. Proposal frequency per offered decision is retained with the number of menus per turn. A model that performs more mortgages or separate building actions receives more menus even if its turn-level willingness to negotiate is unchanged. Turn-based counting removes this particular granularity effect. It does not remove selection from survival, jail choices or management access. Received offers likewise depend on prior bargaining and holdings, so acceptance and counteroffer rates describe behavior on encountered offers rather than comparable response skill at a fixed offer distribution.
+
+The independent source reconstruction agrees across both decision and turn units. The ordering of initiation propensity survives the change of unit, while intensity adds information that a single talkative-versus-quiet label loses. For example, frequent proposal initiation and repeated proposals within one turn are distinct behaviors. Opportunity counts and conditional rates should appear together. Numerical outputs are in `negotiation_units.json`; uncertainty must respect repeated decisions within players, games and seed blocks.
+
+## Claims, omissions and financial feasibility
+
+An objectively misleading financial pitch need not produce identifiable persuasion. In game 13, a seller argues that a lower offer leaves it unable to cover a prospective rent bill while its recorded explanation acknowledges an available mortgage. A legal acceptance-plus-mortgage branch confirms enough funds. The buyer later accepts a higher price, but its insurance rationale is already present before the misleading counteroffer. The episode supports an omission and a completed negotiation. It does not establish a changed belief or the causal value of the omission. It also does not violate the game's explicit permission to deceive in public bargaining.
+
+Coding must use the complete statement and its financial boundary. A bid limit conditioned on retaining savings is not an assertion of total cash. A proposed payment can finance construction when combined with existing cash, even if it is smaller than the full construction cost. Several game-13 extractor labels failed these checks. These counterexamples motivate source-grounded adjudication; their selected nature prevents treating them as an estimated error rate.
+
+## Model-facing histories and observed recovery
+
+One formatter assumption treats the original negotiation roles as current roles after counters change authorship. It reverses who gives what in some accepted summaries, misattributes the author in some rejection summaries, and names the countering player as its own partner in some counter summaries. The counter subtype still carries the correct actor and its offered bundles; it is internally inconsistent rather than an independently reversed settlement. Exact matching against recorded prompts establishes which agents received these strings. It does not establish that they trusted them.
+
+Game 14 decision140 is a useful local counterexample. Grok's returned explanation calls its accepted Mediterranean trade description confusing, checks its holdings and reconstructs the actual sale for $100 correctly. The same response makes unrelated property-group errors. We therefore report transaction-specific recovery, not a globally corrected state model or immunity to later error. Correct structured negotiation history can also accompany a contradictory timeline during a response; exposure should be assessed across the actual prompt rather than one field alone.
+
+## Development expenditure, inherited assets and realized receipts
+
+We aggregate103 game/player/color-group units with recorded construction, totaling $103,450 of building expenditure. These groups receive $93,000 in developed-property rent over their owners' games. This is whole-game accounting, not a return caused by the construction: one inherited group already receives $450 before its owner's first new purchase. Even receipts after that purchase cannot isolate the benefit of the new houses from existing inherited buildings, prior trades or stochastic landings. Sale proceeds, residual structures and bankruptcy estates remain separate components.
+
+Forty spending units receive no developed rent;26 also cause no elimination. These are zero realized rent outcomes within observed follow-up, not failed investments. The time left in the game, prior estate transfers, competing groups, threatened rents and other players' choices can all matter. A late winner's expansion with little remaining exposure is not comparable to an early investment facing many opponent turns.
+
+Construction includes hotel upgrades. A house-only acquisition-route scan misses the game10 winner's150 hotel conversion on inherited light blues. Including both house and hotel purchases gives58 winner-developed groups,34 containing an inherited deed at their first own construction. The first group each winner develops contains a traded deed in13 games and only purchased/auctioned deeds in7. This traces the latest acquisition of each deed, not every earlier transfer or a causal contribution to victory.
+
+The winner receives54 of60 bankrupt estates, including19 of20 terminal eliminations and35 of40 earlier ones. The terminal component is partly mechanical because only the final survivors remain. Fifty-seven eliminations settle rent on a creditor's developed color property; the two railroad debts and one tax debt are separate. These classifications were checked against delivered liquidation reasons, creditors, positions and event-reconstructed buildings, rather than position alone.
+
+## Physical stock and rule propositions
+
+Event-reconstructed bank stock matches all6,989 initial decision states. Nine games reach zero houses, and those same nine expose a zero stock to an initial recorded decision. Exhaustion still does not establish that another player had the ownership, cash, mortgage status and desire to build. The G4/G14 legal-state checks provide specific feasible-action restrictions; a corpus-wide restriction count remains unfinished. Nor does retaining houses prove that an opponent could not eventually finance or otherwise change its options.
+
+Rule propositions should be coded by decision and recorded channel. Grok states the mortgaged-railroad counting rule both correctly and incorrectly during a single auction with unchanged owned rails. Opus and Sol also provide correct statements alongside mistakes elsewhere. A correct rule statement can coexist with an invalid implication, such as overlooking the restored rent on a redeemed deed itself. Explanations are evidence about recorded statements, not privileged measurements of stable knowledge, belief or intent.
+
+Expected110 redemption versus the engine's111 charge is a discrepancy between the model's forecast and the applied implementation. It is not enough to call the model arithmetically wrong: the fee formula and floating-point behavior are not specified by the basic legal-action list. Any knowledge-error interpretation must consider the actual rules and prices delivered to that decision.

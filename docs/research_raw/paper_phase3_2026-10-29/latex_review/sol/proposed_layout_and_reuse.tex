@@ -1,0 +1,55 @@
+% Sol concrete first-render fixes, for Astra's review and integration.
+% All source rows remain unchanged. Short headers need the existing full notes.
+
+% T5: replace long unwrapped headers; keep all 11 columns and 103 rows.
+% First render overruns text width by 33.9 pt and overlaps the rotated header.
+% Example header within the existing landscape longtable:
+% Game & Seat / agent & Group & Win & Outlay & Sales & After-spend rent &
+% Whole-game rent & Inherited & Creditor elim. & First event \\
+% Or use explicit L widths for the three long descriptive headers.
+
+% T8: raw canonical identifiers must not acquire prose hyphenation.
+% Existing xurl package permits breaks in \path without invented hyphens.
+% Example replacement of one Reason cell, keeping the raw code unchanged:
+% \path{ELECTED_CHAIRMAN_PAY_EACH_PLAYER_50}
+% Generator: emit a raw-code wrapper for this cell, bypassing tex() only for
+% the wrapper; the raw code itself contains no braces/backslashes.
+
+% Stable cross-references for an exhibit index in figures_and_tables.tex.
+% These refer to labels already present in all nine snippets.
+\begin{tabularx}{\linewidth}{@{}lYY@{}}
+\toprule
+Figure & Question & Native data and use \\
+\midrule
+\ref{fig:f01_evidence_chain} & What evidence connects capability, conduct and a norm? &
+Conceptual diagram, not an alignment score. Introduction and methods. \\
+\ref{fig:f02_seed_rotation_winners} & How do results vary across seed and seat? &
+Table~\ref{tab:t01_cohort}; descriptive design overview with one-based seats. \\
+\ref{fig:f03_negotiation_profiles} & How often does an agent initiate or repeat proposals? &
+Table~\ref{tab:t02_negotiation}; counts and alternative denominators. \\
+\ref{fig:f04_opportunity_and_deployment} & Which traded sets develop, and what accompanies the non-builds? &
+Tables~\ref{tab:t03_trade_groups}, \ref{tab:t04_bilateral_completion} and
+\ref{tab:t09_entry_nonbuild_records}; whole-path and conditional counts. \\
+\ref{fig:f05_spending_and_receipts} & How do receipts vary across spending units and inheritance histories? &
+Table~\ref{tab:t05_spending_units}; 103 units. Not ROI. \\
+\ref{fig:f06_elimination_financing} & Can legal own actions pay the current debt? &
+Table~\ref{tab:t06_eliminations}; 60 eliminations, including automatic cases and the hotel lock. \\
+\ref{fig:f07_build_recovery} & Does retry preserve the proposed purchases? &
+Table~\ref{tab:t07_build_recovery}; preserved, changed and default outcomes. \\
+\ref{fig:f08_social_chronology} & What do omission, exposure, correction and settlement establish? &
+Selected original-checked contrasts with channel provenance, not prevalence. \\
+\ref{fig:f09_cash_trajectories} & What do trade-free wins and a traded/inherited route look like? &
+Table~\ref{tab:t08_cash_trajectories}; cash, not wealth. \\
+\bottomrule
+\end{tabularx}
+
+% Generator idempotence: never append the fingerprint note unconditionally.
+% Build the complete T1 text, including the two full fingerprint paragraphs,
+% before a single write(), or append only if a table rewrite actually occurred.
+
+% Readable explicit T2 conditions, if no separate four-condition table exists.
+\tablenote{Configured response conditions: Sol and Gemini use the standard
+corrective-retry policy. Opus uses refusal recovery to action-only requests,
+which affects the retry budget. Grok uses required tool choice and the
+standard corrective-retry policy. These conditions qualify the activity
+counts; eligibility remains endogenous.}

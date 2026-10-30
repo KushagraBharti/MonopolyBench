@@ -1,0 +1,95 @@
+{
+  "review": "round3 claims and empirical sufficiency",
+  "baseline_pdf_sha256": "ae3f786298ef597a69dddbd6c7c788ce746776ca230e685a44ce5e89ddc8cad1",
+  "recommendation": "Weak accept as a focused empirical audit and artifact paper after bounded corrections; general evaluator improvement is untested.",
+  "blocking_numerical_or_historical_certificate_error_found": false,
+  "strongest_remaining_rejection_reason": "The generic scientific increment is limited: familiar provenance, reachability and delivery checks are demonstrated on retrospectively selected populations in one implementation, without a transfer or annotation-accuracy evaluation. The manuscript acknowledges this boundary, so this is contribution adequacy rather than a hidden false claim.",
+  "findings": [
+    {
+      "id": "CR-01",
+      "severity": "medium",
+      "kind": "evidence-scope mismatch in figure",
+      "status": "correction recommended before acceptance",
+      "location": "PDF p.12, financing figure; tools/build_exhibits.py:116-131; sections/economic_results.tex:52",
+      "exact_text": "Accessible own finance (game dollars)",
+      "evidence": [
+        "The generator plots accessible for all 60 rows and uses this axis label. In data/t06_eliminations.json, accessible equals full in 59 rows.",
+        "Current run_audit.py:273-283 certifies 56 cases directly from the upper bound and stops the three payment witnesses at the first payment. It does not maximize accessible finance for those 59 cases.",
+        "The G12 Sol payment witness leaves 38 after paying 500, while the plotted accessible value is 748. A payment witness establishes feasibility, not that higher maximum.",
+        "The original chart PNG and the extracted PDF both show the same label. This question was suggested by the parent after my initial position; I independently checked the generator, data and result objects."
+      ],
+      "limit": "I did not disprove the historical accessible=full values or independently rerun the earlier maximum-finance audit. The 56/3/1 classification survives. The issue is that the current certificate presentation does not establish the chart's stronger maximum-access interpretation.",
+      "replacement": "Plot nominal own-finance upper bounds for all 60 primary points and label the axis accordingly. Show G7's exact accessible 440 as a separate marker connected to its 1310 bound. State that the positive witnesses establish payment rather than maximum liquidation. Alternatively retain accessible maxima with a separately specified endpoint, proof and source reference.",
+      "bounded_fix": "Change the generator and caption only, using the existing full values and verified G7 endpoint; no new model experiment is needed."
+    },
+    {
+      "id": "CR-02",
+      "severity": "low",
+      "kind": "unit and contribution clarity",
+      "status": "clarification recommended; existing counts are correct",
+      "location": "sections/claim_protocol.tex:27; artifact README Inputs and outputs; sections/audit_appendix.tex:14",
+      "exact_text": "The portable artifact contains the fixed 126-case manifest, original action streams, per-event reference digests, settings, an unchanged engine and board copy, pinned dependencies, witnesses and negative certificates.",
+      "evidence": [
+        "The 126 records contain 60 elimination cases and 66 default cases. The default cases contain 132 attempts and multiple diagnostics, not one homogeneous certificate each.",
+        "There are 70 well-formed target attempts: 63 reachable and seven above cash. One target is malformed and 61 attempts have no parseable target. At decision level, 63 of 66 contain a reachable target; all 66 have some construction witness.",
+        "Independent source checks matched all 126 cases and 132 attempt records. The paper largely preserves these units, but the count is easy to compress into an inflated 126-certificates claim."
+      ],
+      "limit": "This is not an accusation that the manuscript currently claims 126 independent trials. It does not. The suggested clarification protects the method's stated contribution.",
+      "replacement": "The 126 entries are case records, not homogeneous proofs: sixty elimination prefixes and sixty-six default decisions. Attempt-level diagnostics and decision-level existence claims are reported separately; malformed or absent targets receive no impossibility certificate.",
+      "bounded_fix": "Add this sentence near the first 126-case description, or include the claim-unit table supplied in review.md."
+    },
+    {
+      "id": "CR-03",
+      "severity": "low",
+      "kind": "reproducibility provenance clarity",
+      "status": "clarification recommended; source linkage passed",
+      "location": "sections/validation.tex:32",
+      "exact_text": "The accompanying portable certificate bundle reproduces the 126-case census without access to the repository checkout after dependency installation.",
+      "evidence": [
+        "run_audit.py:291 and 317 consume cases.json; check_default consumes its copied attempts. The portable inputs do not include complete original decisions.jsonl records.",
+        "freeze_inputs.py defines selection and extraction, but requires the original saved games. Source-line and file hashes enable external linkage rather than portable re-extraction.",
+        "My separate canonical-source check matched 80 source-file hashes, 252 start/resolution line hashes, the entire case population and all 132 retained attempts."
+      ],
+      "limit": "The package does reproduce the frozen cases' outcomes. This wording risks conflating that operation with independently establishing population completeness from original resolution records.",
+      "replacement": "The portable bundle re-executes the frozen 126-case census without the repository checkout. Completeness and copied attempt fields were checked separately against the original resolution and bankruptcy records.",
+      "bounded_fix": "Replace one sentence; keep the separate source-linkage verification in the provenance table."
+    },
+    {
+      "id": "CR-04",
+      "severity": "low",
+      "kind": "conditional denominator clarity",
+      "status": "optional clarity improvement; no incorrect denominator found",
+      "location": "sections/economic_results.tex:44; sections/recovery_table.tex",
+      "exact_text": "Following an uneven-building rejection, the original purchase multiset is preserved in 20/25 Sol, 6/18 Gemini and 5/5 Grok decisions that end in construction.",
+      "evidence": [
+        "The condition 'that end in construction' is explicit and makes these fractions correct.",
+        "The all-rejection denominators in the same table are 29 Sol, 19 Gemini, 61 Opus and 5 Grok. Exact-target applied recovery across those populations is 20/29, 6/19, 0/61 and 5/5.",
+        "Opus's refusal-recovery condition has already consumed its retry budget, so neither denominator supports a model-only comparison."
+      ],
+      "replacement": "Across all decisions with that rejection, exact-target recovery is 20/29 for Sol, 6/19 for Gemini and 5/5 for Grok; Opus has 0/61 applied recoveries under its exhausted retry condition despite 61 reachable targets. These differ from fractions conditional on a successful construction resolution.",
+      "bounded_fix": "Add one sentence after the existing conditional fractions; no new analysis is needed."
+    },
+    {
+      "id": "CR-05",
+      "severity": "low",
+      "kind": "test-description precision",
+      "status": "wording correction recommended",
+      "location": "sections/claim_protocol.tex:27",
+      "exact_text": "Nine adversarial tests reject altered inputs and invalid certificates.",
+      "evidence": [
+        "All nine supplied tests pass in the reviewed package.",
+        "The tests include positive witness execution, target-multiset comparison, a guarded search regression, and rejected engine actions. They are not nine independent attempts to pass invalid serialized certificates to a standalone proof checker.",
+        "The runner constructs results by live engine execution; it does not expose a general API to validate arbitrary externally supplied certificate objects."
+      ],
+      "replacement": "Nine regression tests exercise input integrity, witness legality, purchase preservation, payment completion and refusal to certify an unsupported sale graph.",
+      "bounded_fix": "Replace the sentence. Optionally add that the runner constructs and executes the retained proofs rather than acting as a general external certificate checker."
+    }
+  ],
+  "resolved_or_not_reasserted": [
+    "Generic atomic-sale graph completeness is not claimed by the current guarded implementation; its sole historical negative graph remains valid under the documented mortgage-only restriction.",
+    "The 573 ENDs with no detected conflict are not described as verified voluntary holds in the current manuscript.",
+    "The 43/63 and 34/42 development rates have explicit, distinct denominators and are not used as independent-trial or model-capability estimates.",
+    "The current title, abstract and conclusion do not promise a model ranking, general deception rate, causal persuasion estimate, or capability-alignment trend.",
+    "The current related work no longer relies on older broad claims that competitors lack all retries, failure accounting or counterfactual rerunning. I did not independently re-browse those sources."
+  ]
+}

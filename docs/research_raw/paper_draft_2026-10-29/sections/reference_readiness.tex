@@ -1,0 +1,41 @@
+% New offline diagnostics. These are not part of the twenty-game LLM cohort.
+\subsection{Reference-policy readiness and scenario validity}
+\label{sec:agenda-reference-readiness}
+
+The availability of a baseline implementation or a scenario library does not establish a validated comparator. Before using either to answer questions about strategic quality, adaptation or transfer, we audited the six supplied policies and all 130 static scenarios against the unchanged engine. We also conducted a small pilot with a locally frozen protocol of baseline-only games. These new executions are distinct from the historical twenty-game LLM cohort and contain no model queries.
+
+\paragraph{Protocol and endpoints.}
+We froze a local protocol before execution, using two purpose-chosen seeds, six homogeneous four-player rosters and four rotations of one mixed roster containing builder, always-buy, cash-conservative and random-legal policies. This yields twenty primary games. The engine remained uncapped; the evaluator stopped observation after 1,000 applied decisions and treated that endpoint as censoring, without assigning a net-worth winner. Invalid policy actions would stop a run and be reported, rather than trigger repair or fallback. We repeated two configurations with identical run identity and seed. The pilot tests execution, repertoire and censoring. Its small, selected seed set cannot estimate a population ranking or a seat effect. In particular, the random-legal policy derives its action randomization from the decision identity, including the run identifier; different rotation identifiers do not preserve identical policy draws.
+
+\paragraph{Live-policy results.}
+The twenty games applied 19,494 decisions and emitted 179,816 events with no invalid generated action and no fallback. Nineteen games reached the observation limit. The remaining mixed-roster game terminated after 494 decisions with a builder-policy win. No policy initiated a trade in the pilot, and only 44 construction actions occurred. The two same-configuration repeats matched complete event streams, action streams and final snapshots. A separate replay of all twenty retained action streams reproduced every event and final snapshot. These checks establish reproducibility under this implementation, not strategic competence or an absence of eventual termination in the censored games.
+
+\paragraph{Static fixtures expose different failures.}
+For each supplied scenario, we constructed each policy's action and checked its economic legality at the supplied decision and board state, using the same engine validator used by the fixture runner. Of 780 policy--scenario choices, 75 were rejected. The six policies' counts are shown in Table~\ref{tab:agenda-fixture-legality}. Eleven of the 130 supplied reference actions were also rejected. Examples include construction on an incomplete or split-owned red group, a purchase or auction for an already-owned deed, a hotel downgrade with only two bank houses, and a proposed transfer involving a deed owned by a third player. These checks validate the action against the fixture's current pending decision; they do not reconstruct a historical path or hidden random state.
+
+\begin{table}[htbp]
+\centering
+\caption{Economic legality of generated actions on the 130 supplied static scenarios. These are fixture-conditioned results, not live-game failure rates. The pilot's live decisions had no invalid actions.}
+\label{tab:agenda-fixture-legality}
+\begin{tabular}{lrr}
+\toprule
+Policy & Legal & Rejected \\
+\midrule
+Always buy & 114 & 16 \\
+Auction aggressive & 122 & 8 \\
+Builder & 107 & 23 \\
+Cash conservative & 122 & 8 \\
+No trade & 122 & 8 \\
+Random legal & 118 & 12 \\
+\midrule
+Total & 705 & 75 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The rejection counts should not be attributed wholesale to baseline strategy. Many fixture option lists name properties that the supplied board does not permit the actor to mortgage or develop. The policies normally rely on engine-generated options, and the live pilot produced no such invalid actions. A follow-up static-state diagnostic flagged 55 scenarios for at least one inconsistency under the standard stock-conservation or development conditions. All 55 had a house-stock discrepancy; overlapping flags included split ownership, mortgages within developed groups, a hotel-stock discrepancy, and ten liquidation shortfalls inconsistent with stated cash and debt. A deliberately nonconserving scarcity intervention might be a useful artificial task, but its altered condition must be declared. Sixty-eight scenarios pass both the reference-action and specified static-invariant screens. This identifies candidates for independent task adjudication, not certified capability probes: passing this small checklist does not prove state reachability or reference-action optimality.
+
+The scoring library also measures more than executed strategy: 128 of 130 scenarios assign points to private-note keyword matches, with a median weight of 15.8\% and a maximum of 25.7\%. Such criteria can measure expression of prescribed concepts; they are not independent evidence of sound strategic choices. The supplied preferred actions remain hand-authored preferences rather than certified expected-utility optima. Forty-one scenarios induce identical action names and arguments from all six policies, further limiting their role as diverse comparators. In forced proposal fixtures the policies can emit empty bundles; none constructs a meaningful bargaining strategy.
+
+These diagnostics answer a concrete validity question: the current library and policies cannot simply be relabeled as a validated strategic-capability battery. They supply executable infrastructure, but further scenario adjudication, opponent design and target definition are required. No reference fixture or production policy was repaired during this audit. The engine source is byte-identical to the engine bundled in the historical executable audit, so the reported fixture discrepancies do not arise from using a different engine version.
+

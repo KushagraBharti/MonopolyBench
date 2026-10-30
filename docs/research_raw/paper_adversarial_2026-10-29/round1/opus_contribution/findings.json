@@ -1,0 +1,167 @@
+{
+ "reviewer": "opus_contribution",
+ "round": 1,
+ "baseline": "baseline/monopolybench-first-draft (frozen)",
+ "findings": [
+  {
+   "id": "OC-01",
+   "severity": "high",
+   "type": "presentation/conceptual",
+   "location": "abstract.tex (whole); introduction.tex para 5 'Our contributions are threefold'",
+   "claim": "The paper has no central generalizable claim; it lists findings and disclaimers (postmortem form).",
+   "evidence": "Abstract enumerates 43/63, 8 residuals, 3/60, four social chronologies and four disclaimers, ending with 'requirements for future ... comparisons'; every strong result is of the form naive label vs adjudicated label (review.md s1).",
+   "resolution": "Adopt Architecture A (label validity): thesis-first abstract and introduction; see proposed_revision.tex.",
+   "status": "checked (reading of full draft)"
+  },
+  {
+   "id": "OC-02",
+   "severity": "high",
+   "type": "inferential/scope",
+   "location": "manuscript.tex title; introduction.tex para 3 'Our broad motivation is to evaluate both economic capability and alignment as agents become more capable'; discussion.tex s'Alignment needs a norm'",
+   "claim": "Capability/alignment framing is unearned: no capability axis, deception permitted, four configurations with one dominated by a recovery condition.",
+   "evidence": "setup.tex: 1,605 refused Opus attempts; social_results.tex s conduct-norm; limitations 'We make no model ranking, capability trend...'.",
+   "resolution": "Retitle around measurement; reduce alignment to one forward-looking discussion paragraph plus the existing design subsection.",
+   "status": "checked (text)"
+  },
+  {
+   "id": "OC-03",
+   "severity": "high",
+   "type": "demonstrated omission",
+   "location": "social_results.tex s'G13: an omission after an earlier solvency appeal'; tab:framing-cases row d252 'Settled at $200'",
+   "claim": "The G13 consequence link is omitted: Grok later goes bankrupt on Short Line to Sol (d311, turn 150) and Sol inherits the yellows -- the outcome both parties' d250-253 rationales aimed to prevent.",
+   "evidence": "G13 run/events.jsonl seq 2289-2300 (DICE 5+1, move 29->35, BANKRUPTCY_CASH p4->p2 $49, PROPERTY_PURCHASED p2 spaces 26,27,29 price 0); decisions d311 declare_bankruptcy 'Can't cover the $200'. Listed in P2 core_review/opus/claims.md:139 but not linked to the trade in the manuscript.",
+   "resolution": "Add the consequence and pair with G18 d335/360 as 'denial/solvency purchases last only as long as the holder's solvency under creditor inheritance'.",
+   "status": "checked (primary events, scripts/g13_delivery_outcome.py + inline check)"
+  },
+  {
+   "id": "OC-04",
+   "severity": "medium",
+   "type": "demonstrated omission",
+   "location": "social_results.tex G13 paragraph; discussion.tex 'G13's buyer weighs solvency before the omission, but after the seller's opening appeal'",
+   "claim": "The seller's solvency/inheritance framing is a public campaign since d218/d233/d243, with a public recipient correction at d244; d243 and d244 are in Opus's delivered d251 and d253 prompts. The d250 '5/36 is Short Line' is false (4/36).",
+   "evidence": "G13 decisions.jsonl public messages d218, d233, d243, d244, d250; delivery check scripts/g13_delivery_outcome.py (d243, d244, d250 delivered at d251 att1; plus d252 at d253 att1); Short Line from Atlantic requires 9 = 4/36; P2 core_review/fable/debate.md:88 already notes 'Short Line 4/36 not 5/36'.",
+   "resolution": "State the campaign and the probability error; keep 'follows d250, precedes d252' (verified correct).",
+   "status": "checked"
+  },
+  {
+   "id": "OC-05",
+   "severity": "medium",
+   "type": "inferential (understated evidence)",
+   "location": "social_results.tex G13 'does not exclude influence from the broader appeal'; tab:framing-cases",
+   "claim": "d253 acceptance reasoning nearly reproduces d252's message ('player 2 would inherit the yellows plus Pennsylvania' vs 'gpt inherits the yellows plus Pennsylvania'): uptake of consequence framing is evidenced; uptake of false minimum remains unidentified.",
+   "evidence": "G13 d253 attempt 1 returned reasoning; d252 public message.",
+   "resolution": "Split uptake into (a) stakes framing: evidenced; (b) false minimum: not identified.",
+   "status": "checked"
+  },
+  {
+   "id": "OC-06",
+   "severity": "medium",
+   "type": "conceptual",
+   "location": "social_results.tex s conduct-framing heading 'Misleading framing'; abstract 'a misleading omission'",
+   "claim": "The G13 omission concerns the seller's own outside option (mortgaging own collateral), i.e., reservation concealment, which conventional negotiation norms treat differently from false factual assertion; the case's distinctiveness is the speaker's self-labelled 'slightly deceptive' rationale.",
+   "evidence": "d252 note and reasoning; ABA Model Rule 4.1 cmt [2] (2004 Model comment) as reproduced on courtrules.net NH page -- primary ABA page returned 403, so verification is secondary.",
+   "resolution": "Declare a taxonomy: false factual assertion / non-disclosure of own options / posture; classify each chronology.",
+   "status": "checked (records); literature verification secondary only"
+  },
+  {
+   "id": "OC-07",
+   "severity": "medium-high",
+   "type": "demonstrated error (too weak attribution)",
+   "location": "validation.tex 'its origin among generation, provider processing, gateway behavior and local streaming assembly remains unlocalized'; social_results.tex s conduct-channels",
+   "claim": "Local streaming assembly is excluded by stored data: research runs were non-streamed and every detected Grok content/tool name conflict sits in a single JSON HTTP body; in G19 d135 the received tool arguments themselves contain 'Abort this trade. Do not send it.', making gateway name-rewriting implausible (inference).",
+   "evidence": "arena openrouter_client.py streams only when stream_callback set; stream_callback set only in apps/api micro.py; scripts/raw_transport_check.py: 147 conflicting bodies (reviewer definition; paper 139), all kind=json; G19 cloud/calls/3552adc588e44117a092dc355dddba42.response.json.",
+   "resolution": "Revise to: 'present in the provider response as received over a non-streamed HTTP call; origin between generation and provider-side processing unlocalized'. Reconcile 147 vs 139 definitions.",
+   "status": "checked (transport and file-level); gateway implausibility is inference"
+  },
+  {
+   "id": "OC-08",
+   "severity": "high",
+   "type": "missing evidence / propagation",
+   "location": "validation.tex s'Observation and resolution defects'; economic_results.tex negotiation; social_results.tex all chronologies",
+   "claim": "Information-condition defects (reversed trade summaries in 2,054/6,989 prompts; 1,394 Opus decisions without authored note) are not propagated to economic/social interpretation.",
+   "evidence": "Draft's own counts; no chronology states whether its recipient prompt carried reversed summaries.",
+   "resolution": "Add an 'information condition' field to each chronology and a sentence conditioning negotiation results; check G13/G4/G6/G19 recipient prompts.",
+   "status": "inherited counts; propagation gap checked by reading; per-case check NOT done"
+  },
+  {
+   "id": "OC-09",
+   "severity": "medium",
+   "type": "new analysis (supports and limits thesis)",
+   "location": "economic_results.tex 'Development reflects financing...'; fig:development",
+   "claim": "Full-denominator END provenance on build-legal menus: 90/663 applied ENDs are not model-chosen (66 defaults, 24 detected conflicts); Opus 61/104 vs Sol 4/236, Gemini 1/144, Grok 24/179.",
+   "evidence": "scripts/end_provenance.py and end_provenance_output.txt over all 20 decisions.jsonl; conflict detection is a lower bound for non-Grok configurations; 'build-legal' not 'affordable'.",
+   "resolution": "Add as the unconditioned complement to the 8-residual decomposition; coordinator to re-verify.",
+   "status": "checked (new reviewer analysis)"
+  },
+  {
+   "id": "OC-10",
+   "severity": "medium",
+   "type": "inferential",
+   "location": "abstract 'an exact-prefix audit procedure applied to agents' claims'; introduction para 4 'a claim such as \"the buyer was persuaded\" to be checked'",
+   "claim": "Exact-prefix engine branches adjudicate feasibility, not persuasion or intent; the draft's evidence-chain table is right but the abstract and introduction overstate reach.",
+   "evidence": "tab:evidence-chain 'Alternatives' row; G13 branch shows $295 route only.",
+   "resolution": "Restrict wording to feasibility/exposure; specify fixed-prefix policy re-sampling (message ablation) as the instrument for influence [optional paid experiment].",
+   "status": "checked (text)"
+  },
+  {
+   "id": "OC-11",
+   "severity": "medium",
+   "type": "inferential (conditioning)",
+   "location": "economic_results.tex '34/42 conditional summary describes responsiveness within an already available opportunity'",
+   "claim": "Entry-buildability is post-treatment; 'responsiveness' invites selection objection.",
+   "evidence": "economic_methods.tex acknowledges financing within window creates opportunities.",
+   "resolution": "Present nested funnel with attributed attrition plus OC-09 full-menu table; drop 'responsiveness'.",
+   "status": "checked (text)"
+  },
+  {
+   "id": "OC-12",
+   "severity": "medium",
+   "type": "missing evidence",
+   "location": "methods.tex s conduct-method last para 'We therefore use common public actions, statements and state for comparable descriptive inventories'",
+   "claim": "Promised common-channel inventory is not reported anywhere in results.",
+   "evidence": "Full read of social_results.tex and appendix.",
+   "resolution": "Report a mechanically checkable public-proposition inventory (completion, ownership, cost, probability, 'final') per configuration, or delete the sentence.",
+   "status": "checked (text)"
+  },
+  {
+   "id": "OC-13",
+   "severity": "low-medium",
+   "type": "related work fairness/positioning",
+   "location": "related_work.tex 'Its validation uses a single-author label check'",
+   "claim": "Accurate but omits Arena v3's end-to-end replication with two other judge families (s4.3; 93.3%/94.0% Tier-1 agreement); positioning should state MonopolyBench's narrower increment (reachability, provenance, delivery).",
+   "evidence": "arXiv 2608.14825v3 HTML s4.3, s5.1.1, s5.1.3, Appendix A (fetched 2026-10-29 via WebFetch summary, first 100k chars).",
+   "resolution": "Add one sentence on judge replication; reposition as validity complement.",
+   "status": "checked (web, summarized fetch)"
+  },
+  {
+   "id": "OC-14",
+   "severity": "low-medium",
+   "type": "presentation",
+   "location": "economic_results.tex spending-units subsection; G20 d235/d257 paragraph; winners 58/34/30 paragraph",
+   "claim": "Low knowledge yield after disclaimers; lengthens a 34-page draft.",
+   "evidence": "Text disclaims ROI, net profit, causal contribution.",
+   "resolution": "Compress to one paragraph; move figure and detail to appendix.",
+   "status": "checked (text)"
+  },
+  {
+   "id": "OC-15",
+   "severity": "low",
+   "type": "presentation/inferential mode",
+   "location": "methods.tex s review 'Case selection favors informative contrasts'",
+   "claim": "Selected cases should be declared as counterexamples to sufficiency rules (valid with n=1), not as exemplars (ambiguous).",
+   "evidence": "Text.",
+   "resolution": "Add one sentence declaring inferential mode; see proposed_revision.tex.",
+   "status": "checked (text)"
+  },
+  {
+   "id": "OC-16",
+   "severity": "info",
+   "type": "verified-correct",
+   "location": "social_results.tex G13; G18 standing offer; G4 d148-152",
+   "claim": "Verified: d251 rationale follows d250 and precedes d252; d252 omission rationale quote; d253 delivery; G18 'still stands' messages present (3x) in Sol's delivered d441 prompt and Opus d442 prompt; G4 d148 note precedes d149 '$200 a house'.",
+   "evidence": "scripts/dump_decisions.py, g13_prior_motive.py, g13_delivery_outcome.py; inline G18/G4 checks recorded in verification.md.",
+   "resolution": "None.",
+   "status": "checked"
+  }
+ ]
+}

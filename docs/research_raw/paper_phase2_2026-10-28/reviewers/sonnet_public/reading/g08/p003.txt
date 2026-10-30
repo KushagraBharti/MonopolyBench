@@ -1,0 +1,431 @@
+# game 8 page 3  decisions #183..#269  seats: p1=Grok, p2=Opus, p3=Sol, p4=Argon
+
+#183 t87 p4/Argon POST  $[p1:704 p2:1272 p3:771 p4:*218]  JAILED:p2
+  STATE: p1/Grok $704 BV1574  | LB:VER~0 OR:STJ0,TEN0,NYA0 RD:IND~0 UT:ELE~,WW~ ## p2/Opus $1272 BV2012 JAIL  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0 ## p3/Sol $771 BV3151  | PK:STC3,STA3,VIR3 RD:ILL0 RR:RDG,PRR,BO,SL ## p4/Argon $218 BV1548  | YL:MAR0 GR:NCA0 DB:PKP0,BW0
+  ctx: buildable=PKP,BW mortgageable#4 trade_with=p1,p2,p3
+  > mortgage_property NCA
+  "Raising capital for Dark Blue development—mortgaging North Carolina Avenue."
+  post: MORT p4 NCA +$150
+#184 t87 p4/Argon POST  $[p1:704 p2:1272 p3:771 p4:*368]  JAILED:p2
+  ctx: buildable=PKP,BW unmortgageable=NCA mortgageable#3 trade_with=p1,p2,p3
+  > mortgage_property MAR
+  "Mortgaging Marvin Gardens as well to fund Dark Blue houses."
+  post: MORT p4 MAR +$140
+#185 t87 p4/Argon POST  $[p1:704 p2:1272 p3:771 p4:*508]  JAILED:p2
+  H: p4/Argon $508 BV1548  | YL:MAR~0 GR:NCA~0 DB:PKP0,BW0
+  ctx: buildable=PKP,BW unmortgageable=MAR,NCA mortgageable#2 trade_with=p1,p2,p3
+  > build_houses_or_hotel PKP+1 BW+1
+  "Putting up a house on Park Place and a house on Boardwalk."
+  post: $p4 -400 BUILD; HOUSE+1 p4 PKP; HOUSE+1 p4 BW
+#186 t87 p4/Argon POST  $[p1:704 p2:1272 p3:771 p4:*108]  JAILED:p2
+  ctx: sellable=PKP,BW mortgageable#0 trade_with=p1,p2,p3
+  > end_turn
+  "Dark Blue is open for business. Passing the dice."
+  post: p4 rolls 1+2; p4->COMMUNITY_CHEST; CARD p4 CO:INCOME_TAX_REFUND_COLLECT_20; $p4 +20 INCOME_TAX_REFUND_COLLECT_20
+#187 t88 p4/Argon POST  $[p1:704 p2:1272 p3:771 p4:*128]  JAILED:p2
+  ctx: sellable=PKP,BW mortgageable#0 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+  post: p1 rolls 5+2; p1->NYA
+#188 t89 p1/Grok POST  $[p1:*704 p2:1272 p3:771 p4:128]  JAILED:p2
+  H: p1/Grok $704 BV1574  | LB:VER~0 OR:STJ0,TEN0,NYA0 RD:IND~0 UT:ELE~,WW~
+  ctx: buildable=STJ,TEN,NYA unmortgageable=VER,ELE,IND,WW mortgageable#3 trade_with=p2,p3,p4
+  > build_houses_or_hotel STJ+2 TEN+2 NYA+2  [ATT illogical(std)>valid(std)]
+  "Orange is open. Two houses across the set — mind the landing."
+  post: $p1 -600 BUILD; HOUSE+1 p1 STJ; HOUSE+1 p1 TEN; HOUSE+1 p1 NYA; HOUSE+1 p1 STJ; HOUSE+1 p1 TEN; HOUSE+1 p1 NYA
+#189 t89 p1/Grok POST  $[p1:*104 p2:1272 p3:771 p4:128]  JAILED:p2
+  ctx: buildable=STJ,TEN,NYA sellable=STJ,TEN,NYA unmortgageable=VER,ELE,WW mortgageable#0 trade_with=p2,p3,p4
+  > end_turn
+  "Orange stays lit. Your move."
+#190 t90 p2/Opus JAIL  $[p1:104 p2:*1272 p3:771 p4:128]  JAILED:p2
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "No rush. The dice can decide."
+  post: p2 rolls 2+1; p3 rolls 6+4; p3->PEA
+#191 t91 p3/Sol BUY?  $[p1:104 p2:1272 p3:*771 p4:128]  JAILED:p2
+  ctx: land PEA $320 grp=GREEN own 0/3 rent0=28
+  > buy_property
+  "I'll buy Pennsylvania Avenue."
+  post: BUY p3 PEA $320
+#192 t91 p3/Sol POST  $[p1:104 p2:1272 p3:*451 p4:128]  JAILED:p2
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 2+4; p4->IND
+#193 t92 p4/Argon POST  $[p1:104 p2:1272 p3:451 p4:*128]  JAILED:p2
+  H: p4/Argon $128 BV1568  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1 ## p2/Opus $1272 BV2012 JAIL  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0
+  ctx: sellable=PKP,BW mortgageable#0 trade_with=p1,p2,p3
+  > propose_trade to p2: OFFER NCA for REQUEST $275
+  "Claude (p2), want to pick up North Carolina Avenue to pair with your Pacific Avenue for $275? That also lets me put 2nd houses up on Park Place and Boardwalk right now while p3 is sitting on Pennsylvania Avenue—just 3 and 5 spaces away."
+#194 t92 p2/Opus TRESP  $[p1:104 p2:*1272 p3:451 p4:128]  JAILED:p2
+  H: p2/Opus $1272 BV2012 JAIL  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0 ## p4/Argon $128 BV1568  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1
+  ctx: TRADE from p4 idx0 (max 20): you GIVE $275 / you GET NCA
+  > counter_trade: OFFER $200 for REQUEST MAR  [ATT refused(std)>valid(nothought)]
+  "Without Pennsylvania, NC doesn't do much for me. I'll pay $200 cash for Marvin Gardens, and that's money you can put into Dark Blue right away."
+#195 t92 p4/Argon TRESP  $[p1:104 p2:1272 p3:451 p4:*128]  JAILED:p2
+  H: p4/Argon $128 BV1568  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1 ## p2/Opus $1272 BV2012 JAIL  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0
+  ctx: TRADE from p2 idx1 (max 20): you GIVE MAR / you GET $200 || hist: p4:NCA>$275
+  > counter_trade: OFFER NCA for REQUEST $150
+  "I can't part with Marvin Gardens while Atlantic Avenue is still sitting unowned in the bank, since you have the cash to win any auction on Atlantic and immediately drop hotels on Yellow. However, I'll let North Carolina Avenue go for $150—giving you 2/3 of Green and leverage over p3's Pennsylvania Avenue, while letting me put a second house on Boardwalk right before p3 rolls."
+#196 t92 p2/Opus TRESP  $[p1:104 p2:*1272 p3:451 p4:128]  JAILED:p2
+  H: p2/Opus $1272 BV2012 JAIL  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0 ## p4/Argon $128 BV1568  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1
+  ctx: TRADE from p4 idx2 (max 20): you GIVE $150 / you GET NCA || hist: p4:NCA>$275 ; p2:$200>MAR
+  > counter_trade: OFFER $300 for REQUEST MAR  [ATT refused(std)>valid(nothought)]
+  "NC doesn't help me while p3 holds Pennsylvania. Final offer: $300 cash for mortgaged Marvin Gardens. That's double its mortgage value and enough for two more houses on Dark Blue right now."
+#197 t92 p4/Argon TRESP  $[p1:104 p2:1272 p3:451 p4:*128]  JAILED:p2
+  H: p4/Argon $128 BV1568  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1 ## p2/Opus $1272 BV2012 JAIL  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0
+  ctx: TRADE from p2 idx3 (max 20): you GIVE MAR / you GET $300 || hist: p4:NCA>$275 ; p2:$200>MAR ; p4:NCA>$150
+  > reject_trade
+  "I'll pass on trading Marvin Gardens while Atlantic Avenue is still unowned."
+#198 t92 p4/Argon POST  $[p1:104 p2:1272 p3:451 p4:*128]  JAILED:p2
+  ctx: sellable=PKP,BW mortgageable#0 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+  post: p1 rolls 3+1; p1->IND
+#199 t93 p1/Grok POST  $[p1:*104 p2:1272 p3:451 p4:128]  JAILED:p2
+  ctx: buildable=STJ,TEN,NYA sellable=STJ,TEN,NYA unmortgageable=VER,ELE,WW mortgageable#0 trade_with=p2,p3,p4
+  > end_turn
+  "Orange stays at two. Your move."
+#200 t94 p2/Opus JAIL  $[p1:104 p2:*1272 p3:451 p4:128]  JAILED:p2
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "Letting the dice decide."
+  post: p2 rolls 3+2; $p2 -50 JAIL_FINE; p2->PRR; RENT p2>p3 $200 @PRR
+#201 t94 p2/Opus POST  $[p1:104 p2:*1022 p3:651 p4:128]
+  H: p2/Opus $1022 BV1762  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0 ## p1/Grok $104 BV1574  | LB:VER~0 OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~
+  ctx: mortgageable#4 trade_with=p1,p3,p4
+  > propose_trade to p1: OFFER $160 for REQUEST VER  [ATT refused(std)>valid(nothought)]
+  "Grok, $160 cash for mortgaged Vermont. That's over 3x what the mortgage pays you, and enough for your third round of houses on Orange."
+#202 t94 p1/Grok TRESP  $[p1:*104 p2:1022 p3:651 p4:128]
+  H: p1/Grok $104 BV1574  | LB:VER~0 OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~ ## p2/Opus $1022 BV1762  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0
+  ctx: TRADE from p2 idx0 (max 20): you GIVE VER / you GET $160
+  > counter_trade: OFFER VER for REQUEST $250
+  "Vermont is the light-blue lock, not a $50 mortgage stub. $250 cash and it's yours."
+#203 t94 p2/Opus TRESP  $[p1:104 p2:*1022 p3:651 p4:128]
+  H: p2/Opus $1022 BV1762  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0 ## p1/Grok $104 BV1574  | LB:VER~0 OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~
+  ctx: TRADE from p1 idx1 (max 20): you GIVE $250 / you GET VER || hist: p2:$160>VER
+  > counter_trade: OFFER $200 for REQUEST VER  [ATT refused(std)>valid(nothought)]
+  "Meet in the middle: $200 cash. I still have to pay to lift the mortgage, and Oriental isn't owned yet. That's two more houses for Orange right now."
+#204 t94 p1/Grok TRESP  $[p1:*104 p2:1022 p3:651 p4:128]
+  H: p1/Grok $104 BV1574  | LB:VER~0 OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~ ## p2/Opus $1022 BV1762  | BR:MED0 LB:CON0 YL:VEN0 GR:PAC0
+  ctx: TRADE from p2 idx2 (max 20): you GIVE VER / you GET $200 || hist: p2:$160>VER ; p1:VER>$250
+  > accept_trade
+  "Alright, $200. Vermont's yours — mortgage and all. Orange isn't for sale."
+  post: TRADE-ACCEPTED idx2 init=p2; $p2 -200 TRADE_CASH; $p1 +200 TRADE_CASH; XFER VER p1>p2 [mortgaged]; $p2 -5 MORTGAGE_INTEREST
+#205 t94 p2/Opus POST  $[p1:304 p2:*817 p3:651 p4:128]
+  ctx: unmortgageable=VER mortgageable#4 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Pleasure doing business, Grok. Dice to you."
+  post: p3 rolls 6+4; p3->INCOME_TAX (passGO); GO p3+200; $p3 -200 TAX_INCOME
+#206 t95 p3/Sol POST  $[p1:304 p2:817 p3:*651 p4:128]
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 5+6; p4->PEA; RENT p4>p3 $28 @PEA
+#207 t96 p4/Argon POST  $[p1:304 p2:817 p3:679 p4:*100]
+  ctx: sellable=PKP,BW mortgageable#0 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+  post: p1 rolls 5+2; p1->GO_TO_JAIL; p1->JAIL; JAILED p1 (GO_TO_JAIL); p2 rolls 1+6; p2->CHANCE; CARD p2 CH:BUILDING_LOAN_MATURES_RECEIVE_150; $p2 +150 BUILDING_LOAN_MATURES_RECEIVE_150
+#208 t98 p2/Opus POST  $[p1:304 p2:*967 p3:679 p4:100]  JAILED:p1
+  ctx: unmortgageable=VER mortgageable#4 trade_with=p1,p3,p4
+  > unmortgage_property VER  [ATT refused(std)>valid(nothought)]
+  "Lifting the mortgage on Vermont. Light Blue is coming back."
+  post: UNMORT p2 VER -$56
+#209 t98 p2/Opus POST  $[p1:304 p2:*911 p3:679 p4:100]  JAILED:p1
+  H: p2/Opus $911 BV1751  | BR:MED0 LB:VER0,CON0 YL:VEN0 GR:PAC0 ## p4/Argon $100 BV1540  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > propose_trade to p4: OFFER $350 for REQUEST MAR  [ATT refused(std)>valid(nothought)]
+  "Gemini, I've raised it to $350 for mortgaged Marvin. You're down to $100 cash, and with this you could put hotels on Dark Blue. I'd still have to win Atlantic before Yellow does anything."
+#210 t98 p4/Argon TRESP  $[p1:304 p2:911 p3:679 p4:*100]  JAILED:p1
+  H: p4/Argon $100 BV1540  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1 ## p2/Opus $911 BV1751  | BR:MED0 LB:VER0,CON0 YL:VEN0 GR:PAC0
+  ctx: TRADE from p2 idx0 (max 20): you GIVE MAR / you GET $350
+  > counter_trade: OFFER MAR for REQUEST $575
+  "Since Atlantic is still unowned and I can't build until my turn anyway, the risk of giving you 2/3 of Yellow is high. I'll only part with Marvin Gardens for $575 cash—enough for me to build three houses on Dark Blue."
+#211 t98 p2/Opus TRESP  $[p1:304 p2:*911 p3:679 p4:100]  JAILED:p1
+  H: p2/Opus $911 BV1751  | BR:MED0 LB:VER0,CON0 YL:VEN0 GR:PAC0 ## p4/Argon $100 BV1540  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1
+  ctx: TRADE from p4 idx1 (max 20): you GIVE $575 / you GET MAR || hist: p2:$350>MAR
+  > counter_trade: OFFER $400 for REQUEST MAR  [ATT refused(std)>valid(nothought)]
+  "$575 is too much for a mortgaged card I'd still have to pay to unmortgage, with Atlantic still open. $400 cash is my final offer. That's 4x what the mortgage pays you, and it's money you can build with right now."
+#212 t98 p4/Argon TRESP  $[p1:304 p2:911 p3:679 p4:*100]  JAILED:p1
+  H: p4/Argon $100 BV1540  | YL:MAR~0 GR:NCA~0 DB:PKP1,BW1 ## p2/Opus $911 BV1751  | BR:MED0 LB:VER0,CON0 YL:VEN0 GR:PAC0
+  ctx: TRADE from p2 idx2 (max 20): you GIVE MAR / you GET $400 || hist: p2:$350>MAR ; p4:MAR>$575
+  > accept_trade
+  "Deal. $400 for Marvin Gardens works for me."
+  post: TRADE-ACCEPTED idx2 init=p2; $p2 -400 TRADE_CASH; $p4 +400 TRADE_CASH; XFER MAR p4>p2 [mortgaged]; $p2 -14 MORTGAGE_INTEREST
+#213 t98 p2/Opus POST  $[p1:304 p2:*497 p3:679 p4:500]  JAILED:p1
+  STATE: p1/Grok $304 BV1724 JAIL  | OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~ ## p2/Opus $497 BV1477  | BR:MED0 LB:VER0,CON0 YL:VEN0,MAR~0 GR:PAC0 ## p3/Sol $679 BV3379  | PK:STC3,STA3,VIR3 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL ## p4/Argon $500 BV1800  | GR:NCA~0 DB:PKP1,BW1
+  ctx: unmortgageable=MAR mortgageable#5 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Thanks, Gemini. Dice to you."
+  post: p3 rolls 3+2; p3->CON; RENT p3>p2 $8 @CON
+#214 t99 p3/Sol POST  $[p1:304 p2:505 p3:*671 p4:500]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 5+4; p4->BAL (passGO); GO p4+200
+#215 t100 p4/Argon BUY?  $[p1:304 p2:505 p3:671 p4:*700]  JAILED:p1
+  ctx: land BAL $60 grp=BROWN own 0/2 rent0=4
+  > buy_property
+  "I'll buy Baltic Avenue for $60."
+  post: BUY p4 BAL $60
+#216 t100 p4/Argon POST  $[p1:304 p2:505 p3:671 p4:*640]  JAILED:p1
+  ctx: buildable=PKP,BW sellable=PKP,BW unmortgageable=NCA mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+#217 t101 p1/Grok JAIL  $[p1:*304 p2:505 p3:671 p4:640]  JAILED:p1
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "I'll take my chances on doubles. No rush to walk into that pink wall."
+  post: p1 rolls 2+3; p2 rolls 3+4; p2->MAR
+#218 t102 p2/Opus POST  $[p1:304 p2:*505 p3:671 p4:640]  JAILED:p1
+  ctx: unmortgageable=MAR mortgageable#5 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Holding my cash for now. Dice to you."
+  post: p3 rolls 2+4; p3->PRR
+#219 t103 p3/Sol POST  $[p1:304 p2:505 p3:*671 p4:640]  JAILED:p1
+  H: p3/Sol $671 BV3371  | PK:STC3,STA3,VIR3 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > build_houses_or_hotel STC+1 STA+1 VIR+1
+  "Four houses across the pinks."
+  post: $p3 -300 BUILD; HOUSE+1 p3 STC; HOUSE+1 p3 STA; HOUSE+1 p3 VIR
+#220 t103 p3/Sol POST  $[p1:304 p2:505 p3:*371 p4:640]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 5+6; p4->VIR
+#221 t104 p4/Argon LIQ  $[p1:304 p2:505 p3:371 p4:*640]  JAILED:p1
+  H: p4/Argon $640 BV2000  | BR:BAL0 GR:NCA~0 DB:PKP1,BW1 ## p3/Sol $371 BV3371  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $700 to p3 (RENT) shortfall=$60 mortgageable=BAL sellable=PKP,BW
+  > sell_houses_or_hotel PKP-1
+  "Selling a house on Park Place to cover the $700 rent."
+  post: $p4 +100 SELL_BUILDING; HOUSE-1 p4 PKP; RENT p4>p3 $700 @VIR
+#222 t104 p4/Argon POST  $[p1:304 p2:505 p3:1071 p4:*40]  JAILED:p1
+  ctx: sellable=BW mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+#223 t105 p1/Grok JAIL  $[p1:*304 p2:505 p3:1071 p4:40]  JAILED:p1
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Still rolling for doubles. That pink wall can wait."
+  post: p1 rolls 2+4; p2 rolls 1+4; p2->PEA; RENT p2>p3 $28 @PEA
+#224 t106 p2/Opus POST  $[p1:304 p2:*477 p3:1099 p4:40]  JAILED:p1
+  ctx: unmortgageable=MAR mortgageable#5 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Holding steady. Dice to you."
+  post: p3 rolls 5+5 DBL; p3->BO
+#225 t107 p3/Sol POST  $[p1:304 p2:477 p3:*1099 p4:40]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p3 rolls 5+3; p3->COMMUNITY_CHEST; CARD p3 CO:LIFE_INSURANCE_COLLECT_100; $p3 +100 LIFE_INSURANCE_COLLECT_100
+#226 t108 p3/Sol POST  $[p1:304 p2:477 p3:*1199 p4:40]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 2+5; p4->KEN
+#227 t109 p4/Argon BUY?  $[p1:304 p2:477 p3:1199 p4:*40]  JAILED:p1
+  ctx: land KEN $220 grp=RED own 0/3 rent0=18  [buy NOT legal: only start_auction]
+  > start_auction
+  "Sending Kentucky Avenue to auction."
+  post: AUC-START by p4 on KEN
+#228 t109 p1/Grok AUCT  $[p1:*304 p2:477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$0 leader=None min=1 active=p1,p2,p3,p4 n=0
+  > bid_auction $1
+  "I'll take a look. Not paying up for a red that can't be completed."
+#229 t109 p2/Opus AUCT  $[p1:304 p2:*477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$1 leader=p1 min=2 active=p1,p2,p3,p4 n=1
+  > bid_auction $20  [ATT refused(std)>valid(nothought)]
+  "$20 for a lonely red."
+#230 t109 p3/Sol AUCT  $[p1:304 p2:477 p3:*1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$20 leader=p2 min=21 active=p1,p2,p3,p4 n=2
+  > bid_auction $100
+  "$100 for Kentucky."
+#231 t109 p4/Argon AUCT  $[p1:304 p2:477 p3:1199 p4:*40]  JAILED:p1
+  ctx: AUC KEN hi=$100 leader=p3 min=101 active=p1,p2,p3,p4 n=3
+  > drop_out
+  "I'm out."
+#232 t109 p1/Grok AUCT  $[p1:*304 p2:477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$100 leader=p3 min=101 active=p1,p2,p3 n=4
+  > drop_out
+  "Too rich for a red that can't be finished. I'm out."
+#233 t109 p2/Opus AUCT  $[p1:304 p2:*477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$100 leader=p3 min=101 active=p2,p3 n=5
+  > bid_auction $110  [ATT refused(std)>valid(nothought)]
+  "$110. Not letting the reds go cheap."
+#234 t109 p3/Sol AUCT  $[p1:304 p2:477 p3:*1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$110 leader=p2 min=111 active=p2,p3 n=6
+  > bid_auction $120
+  "$120."
+#235 t109 p2/Opus AUCT  $[p1:304 p2:*477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$120 leader=p3 min=121 active=p2,p3 n=7
+  > bid_auction $130  [ATT refused(std)>valid(nothought)]
+  "$130. Reds stay split."
+#236 t109 p3/Sol AUCT  $[p1:304 p2:477 p3:*1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$130 leader=p2 min=131 active=p2,p3 n=8
+  > bid_auction $140
+  "$140."
+#237 t109 p2/Opus AUCT  $[p1:304 p2:*477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$140 leader=p3 min=141 active=p2,p3 n=9
+  > bid_auction $150  [ATT refused(std)>valid(nothought)]
+  "$150. Reds stay split."
+#238 t109 p3/Sol AUCT  $[p1:304 p2:477 p3:*1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$150 leader=p2 min=151 active=p2,p3 n=10
+  > bid_auction $160
+  "$160."
+#239 t109 p2/Opus AUCT  $[p1:304 p2:*477 p3:1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$160 leader=p3 min=161 active=p2,p3 n=11
+  > bid_auction $170  [ATT refused(std)>valid(nothought)]
+  "$170. Reds stay split."
+#240 t109 p3/Sol AUCT  $[p1:304 p2:477 p3:*1199 p4:40]  JAILED:p1
+  ctx: AUC KEN hi=$170 leader=p2 min=171 active=p2,p3 n=12
+  > drop_out
+  "It's yours for $170."
+  post: BUY p2 KEN $170; AUC-END KEN SOLD winner=p2 bid=170
+#241 t109 p4/Argon POST  $[p1:304 p2:307 p3:1199 p4:*40]  JAILED:p1
+  ctx: sellable=BW mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+#242 t110 p1/Grok JAIL  $[p1:*304 p2:307 p3:1199 p4:40]  JAILED:p1
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Still sitting. Dice."
+  post: p1 rolls 6+1; $p1 -50 JAIL_FINE; p1->COMMUNITY_CHEST; CARD p1 CO:GO_TO_JAIL; p1->JAIL; JAILED p1 (COMMUNITY_CHEST_CARD); p2 rolls 2+1; p2->PKP; RENT p2>p4 $70 @PKP
+#243 t111 p2/Opus POST  $[p1:254 p2:*237 p3:1199 p4:110]  JAILED:p1
+  STATE: p1/Grok $254 BV1674 JAIL  | OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~ ## p2/Opus $237 BV1437  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0 ## p3/Sol $1199 BV4199  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL ## p4/Argon $110 BV1270  | BR:BAL0 GR:NCA~0 DB:PKP0,BW1
+  ctx: unmortgageable=MAR mortgageable#6 trade_with=p1,p3,p4
+  > propose_trade to p4: OFFER $70 for REQUEST BAL  [ATT refused(std)>valid(nothought)]
+  "p4: $70 cash for Baltic. That's more than its mortgage value, and you could use the cushion against p3's railroads."
+#244 t111 p4/Argon TRESP  $[p1:254 p2:237 p3:1199 p4:*110]  JAILED:p1
+  H: p4/Argon $110 BV1270  | BR:BAL0 GR:NCA~0 DB:PKP0,BW1 ## p2/Opus $237 BV1437  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0
+  ctx: TRADE from p2 idx0 (max 20): you GIVE BAL / you GET $70
+  > reject_trade
+  "No thanks, I'm not looking to give you the Brown monopoly for $70."
+#245 t111 p2/Opus POST  $[p1:254 p2:*237 p3:1199 p4:110]  JAILED:p1
+  ctx: unmortgageable=MAR mortgageable#6 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Fair enough, p4. Offer stays open if you change your mind. Rolling on."
+  post: p3 rolls 6+3; p3->COMMUNITY_CHEST (passGO); GO p3+200; CARD p3 CO:SCHOOL_FEES_PAY_50; $p3 -50 SCHOOL_FEES_PAY_50
+#246 t112 p3/Sol POST  $[p1:254 p2:237 p3:*1349 p4:110]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 6+5; p4->NCA
+#247 t113 p4/Argon POST  $[p1:254 p2:237 p3:1349 p4:*110]  JAILED:p1
+  ctx: sellable=BW mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+#248 t114 p1/Grok JAIL  $[p1:*254 p2:237 p3:1349 p4:110]  JAILED:p1
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling. Jail's safer than the street right now."
+  post: p1 rolls 5+1; p2 rolls 1+4; p2->COMMUNITY_CHEST (passGO); GO p2+200; CARD p2 CO:ADVANCE_TO_GO; p2->GO (passGO); GO p2+200
+#249 t115 p2/Opus POST  $[p1:254 p2:*637 p3:1349 p4:110]  JAILED:p1
+  H: p2/Opus $637 BV1837  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0 ## p4/Argon $110 BV1270  | BR:BAL0 GR:NCA~0 DB:PKP0,BW1
+  ctx: unmortgageable=MAR mortgageable#6 trade_with=p1,p3,p4
+  > propose_trade to p4: OFFER $130 for REQUEST BAL  [ATT refused(std)>valid(nothought)]
+  "p4: I'll raise it to $130 for Baltic, more than twice its mortgage value. You're on $110 and p3's railroads and pinks are coming for you. Browns are the weakest set on the board, and this cash keeps you alive."
+#250 t115 p4/Argon TRESP  $[p1:254 p2:637 p3:1349 p4:*110]  JAILED:p1
+  H: p4/Argon $110 BV1270  | BR:BAL0 GR:NCA~0 DB:PKP0,BW1 ## p2/Opus $637 BV1837  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0
+  ctx: TRADE from p2 idx0 (max 20): you GIVE BAL / you GET $130
+  > reject_trade
+  "No thanks, p2. I'm right before GO and not looking to walk into developed Browns for $130."
+#251 t115 p2/Opus POST  $[p1:254 p2:*637 p3:1349 p4:110]  JAILED:p1
+  ctx: unmortgageable=MAR mortgageable#6 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Fair enough, p4. My offer stays open. Rolling on."
+  post: p3 rolls 3+3 DBL; p3->VER; RENT p3>p2 $6 @VER
+#252 t116 p3/Sol POST  $[p1:254 p2:643 p3:*1343 p4:110]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p3 rolls 5+1; p3->VIR
+#253 t117 p3/Sol POST  $[p1:254 p2:643 p3:*1343 p4:110]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 5+4; p4->MED (passGO); GO p4+200; RENT p4>p2 $2 @MED
+#254 t118 p4/Argon POST  $[p1:254 p2:645 p3:1343 p4:*308]  JAILED:p1
+  ctx: buildable=PKP sellable=BW unmortgageable=NCA mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+#255 t119 p1/Grok JAIL  $[p1:*254 p2:645 p3:1343 p4:308]  JAILED:p1
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Staying put. The street is more expensive than the fine."
+  post: p1 rolls 6+1; p2 rolls 6+1; p2->CHANCE; CARD p2 CH:PAY_POOR_TAX_15; $p2 -15 PAY_POOR_TAX_15
+#256 t120 p2/Opus POST  $[p1:254 p2:*630 p3:1343 p4:308]  JAILED:p1
+  ctx: unmortgageable=MAR mortgageable#6 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Rolling on. p4, Baltic offer still stands whenever you want cash."
+  post: p3 rolls 4+5; p3->IND
+#257 t121 p3/Sol POST  $[p1:254 p2:630 p3:*1343 p4:308]  JAILED:p1
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 6+4; p4->STC
+#258 t122 p4/Argon LIQ  $[p1:254 p2:630 p3:1343 p4:*308]  JAILED:p1
+  H: p4/Argon $308 BV1468  | BR:BAL0 GR:NCA~0 DB:PKP0,BW1 ## p3/Sol $1343 BV4343  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $625 to p3 (RENT) shortfall=$317 mortgageable=BAL sellable=BW
+  > sell_houses_or_hotel BW-1
+  "Selling my house on Boardwalk to raise cash for rent."
+  post: $p4 +100 SELL_BUILDING; HOUSE-1 p4 BW
+#259 t122 p4/Argon LIQ  $[p1:254 p2:630 p3:1343 p4:*408]  JAILED:p1
+  H: p4/Argon $408 BV1368  | BR:BAL0 GR:NCA~0 DB:PKP0,BW0 ## p3/Sol $1343 BV4343  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $625 to p3 (RENT) shortfall=$217 mortgageable=BAL,PKP,BW sellable=-
+  > mortgage_property BW
+  "Mortgaging Boardwalk to help cover the rent."
+  post: MORT p4 BW +$200
+#260 t122 p4/Argon LIQ  $[p1:254 p2:630 p3:1343 p4:*608]  JAILED:p1
+  H: p4/Argon $608 BV1368  | BR:BAL0 GR:NCA~0 DB:PKP0,BW~0 ## p3/Sol $1343 BV4343  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $625 to p3 (RENT) shortfall=$17 mortgageable=BAL,PKP sellable=-
+  > mortgage_property BAL
+  "Mortgaging Baltic Avenue to cover the rest of the rent."
+  post: MORT p4 BAL +$30; RENT p4>p3 $625 @STC
+#261 t122 p4/Argon POST  $[p1:254 p2:630 p3:1968 p4:*13]  JAILED:p1
+  H: p4/Argon $13 BV743  | BR:BAL~0 GR:NCA~0 DB:PKP0,BW~0 ## p2/Opus $630 BV1830  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0
+  ctx: mortgageable#1 trade_with=p1,p2,p3
+  > propose_trade to p2: OFFER BAL for REQUEST $140
+  "p2, since I just had to mortgage Baltic to survive St. Charles, I'll take you up on your offer—make it $140 for Baltic Avenue and we have a deal."
+#262 t122 p2/Opus TRESP  $[p1:254 p2:*630 p3:1968 p4:13]  JAILED:p1
+  H: p2/Opus $630 BV1830  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0 ## p4/Argon $13 BV743  | BR:BAL~0 GR:NCA~0 DB:PKP0,BW~0
+  ctx: TRADE from p4 idx0 (max 20): you GIVE $140 / you GET BAL
+  > counter_trade: OFFER $120 for REQUEST BAL  [ATT refused(std)>valid(nothought)]
+  "p4, Baltic's mortgaged now, so I'm paying to unmortgage it on top of the price. $120 cash right now, which takes you from $13 to $133. Fair deal and it keeps you alive."
+#263 t122 p4/Argon TRESP  $[p1:254 p2:630 p3:1968 p4:*13]  JAILED:p1
+  H: p4/Argon $13 BV743  | BR:BAL~0 GR:NCA~0 DB:PKP0,BW~0 ## p2/Opus $630 BV1830  | BR:MED0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0
+  ctx: TRADE from p2 idx1 (max 20): you GIVE BAL / you GET $120 || hist: p4:BAL>$140
+  > accept_trade
+  "Deal. $120 for Baltic Avenue works for me."
+  post: TRADE-ACCEPTED idx1 init=p4; $p2 -120 TRADE_CASH; $p4 +120 TRADE_CASH; XFER BAL p4>p2 [mortgaged]; $p2 -3 MORTGAGE_INTEREST
+#264 t122 p4/Argon POST  $[p1:254 p2:507 p3:1968 p4:*133]  JAILED:p1
+  ctx: mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Passing the dice."
+#265 t123 p1/Grok JAIL  $[p1:*254 p2:507 p3:1968 p4:133]  JAILED:p1
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling. Fifty dollars doesn't buy a safe street."
+  post: p1 rolls 4+5; $p1 -50 JAIL_FINE; p1->NYA
+#266 t123 p1/Grok POST  $[p1:*204 p2:507 p3:1968 p4:133]
+  ctx: buildable=STJ,TEN,NYA sellable=STJ,TEN,NYA unmortgageable=ELE,IND,WW mortgageable#0 trade_with=p2,p3,p4
+  > end_turn
+  "Passing the dice."
+  post: p2 rolls 4+3; p2->VIR
+#267 t124 p2/Opus LIQ  $[p1:204 p2:*507 p3:1968 p4:133]
+  H: p2/Opus $507 BV1737  | BR:MED0,BAL~0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC0 ## p3/Sol $1968 BV4968  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $700 to p3 (RENT) shortfall=$193 mortgageable=MED,VER,CON,KEN,VEN,PAC sellable=-
+  > mortgage_property PAC  [ATT refused(std)>valid(nothought)]
+  "Paying up, p3. Still standing."
+  post: MORT p2 PAC +$150
+#268 t124 p2/Opus LIQ  $[p1:204 p2:*657 p3:1968 p4:133]
+  H: p2/Opus $657 BV1737  | BR:MED0,BAL~0 LB:VER0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC~0 ## p3/Sol $1968 BV4968  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $700 to p3 (RENT) shortfall=$43 mortgageable=MED,VER,CON,KEN,VEN sellable=-
+  > mortgage_property VER  [ATT refused(std)>valid(nothought)]
+  "Covering the rest. Still in this, p3."
+  post: MORT p2 VER +$50; RENT p2>p3 $700 @VIR
+#269 t124 p2/Opus POST  $[p1:204 p2:*7 p3:2668 p4:133]
+  ctx: mortgageable#4 trade_with=p1,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Still standing. p3, enjoy it while it lasts. Rolling on."
+  post: p3 rolls 3+3 DBL; p3->MAR

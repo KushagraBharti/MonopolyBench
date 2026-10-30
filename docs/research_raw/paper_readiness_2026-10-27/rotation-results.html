@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MonopolyBench seed and rotation outcomes</title>
+<style>
+body { margin: 0; color: var(--foreground); font-family: var(--font-sans); }
+#rotation-results { width: 100%; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+button { font: inherit; color: var(--foreground); cursor: pointer; }
+.mode { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; }
+.mode[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+table { width: 100%; border-spacing: 4px; table-layout: fixed; }
+th { font-weight: 400; color: var(--muted-foreground); padding: 5px 0; }
+th:first-child { width: 40px; }
+td { padding: 0; }
+.cell { display: block; width: 100%; padding: 16px 0; border: 0; border-radius: var(--radius); background: color-mix(in srgb, var(--series) 20%, transparent); }
+.cell[aria-pressed="true"] { outline: 2px solid var(--ring); outline-offset: -2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; background: var(--series); }
+#detail { min-height: 40px; margin-top: 12px; color: var(--muted-foreground); }
+.note { margin-top: 8px; color: var(--muted-foreground); }
+</style>
+</head>
+<body>
+<figure id="rotation-results" style="margin:0" aria-label="Winning models and seats over five seed blocks and four rotations">
+<div class="controls" aria-label="Outcome view"><span>Winner by</span><button class="mode" id="model" aria-pressed="true" type="button">Model</button><button class="mode" id="seat" aria-pressed="false" type="button">Seat</button></div>
+<table aria-label="Game outcomes, rows are seed blocks and columns are rotations">
+<thead><tr><th>Seed</th><th>Rot. 1</th><th>Rot. 2</th><th>Rot. 3</th><th>Rot. 4</th></tr></thead><tbody id="grid"></tbody>
+</table>
+<div class="legend" id="legend"></div>
+<div id="detail" aria-live="polite"></div>
+<figcaption class="note">20 recorded games. Seats are numbered P1–P4. Shared dice sequences do not imply identical player opportunities.</figcaption>
+</figure>
+<script>
+const root = document.getElementById('rotation-results');
+const seeds = [751774554,2506298840,2573692901,3648314310,2766649504];
+const names = {SOL:'Sol',GEM:'Gemini',OPU:'Opus',GROK:'Grok'};
+const colors = {SOL:1,GEM:2,OPU:3,GROK:4};
+const games = [
+['GEM',3],['GEM',2],['GEM',1],['GROK',1],
+['SOL',2],['SOL',1],['SOL',4],['SOL',3],
+['SOL',2],['GEM',2],['GROK',2],['OPU',2],
+['OPU',1],['SOL',1],['GEM',1],['SOL',3],
+['SOL',2],['OPU',4],['GEM',1],['GEM',4]
+];
+let mode = 'model';
+let selected = 0;
+function draw() {
+  root.querySelector('#grid').replaceChildren();
+  for (let block=0;block<5;block++) {
+    const row=document.createElement('tr');
+    const label=document.createElement('th');
+    label.scope='row'; label.textContent=String(block+1); row.append(label);
+    for (let rotation=0;rotation<4;rotation++) {
+      const index=block*4+rotation;
+      const [model,seat]=games[index];
+      const cell=document.createElement('td');
+      const button=document.createElement('button');
+      button.type='button'; button.className='cell';
+      button.textContent=mode==='model'?model:'P'+seat;
+      button.style.setProperty('--series','var(--chart-'+(mode==='model'?colors[model]:seat)+')');
+      button.setAttribute('aria-pressed',String(index===selected));
+      button.setAttribute('aria-label','Game '+(index+1)+', seed '+seeds[block]+', rotation '+(rotation+1)+', winner '+names[model]+', seat P'+seat);
+      button.addEventListener('click',()=>{selected=index;draw();root.querySelectorAll('.cell')[index].focus();});
+      cell.append(button);row.append(cell);
+    }
+    root.querySelector('#grid').append(row);
+  }
+  root.querySelector('#legend').replaceChildren();
+  const labels=mode==='model'?['Sol','Gemini','Opus','Grok']:['P1','P2','P3','P4'];
+  labels.forEach((label,i)=>{
+    const span=document.createElement('span');span.className='key';
+    const swatch=document.createElement('span');swatch.className='swatch';swatch.style.setProperty('--series','var(--chart-'+(i+1)+')');swatch.setAttribute('aria-hidden','true');
+    span.append(swatch,document.createTextNode(label));root.querySelector('#legend').append(span);
+  });
+  const [model,seat]=games[selected];
+  root.querySelector('#detail').textContent='Game '+(selected+1)+' · Seed '+seeds[Math.floor(selected/4)]+' · '+names[model]+' won from P'+seat;
+  for (const id of ['model','seat']) root.querySelector('#'+id).setAttribute('aria-pressed',String(id===mode));
+}
+for (const id of ['model','seat']) root.querySelector('#'+id).addEventListener('click',()=>{mode=id;draw();});
+draw();
+</script>
+</body>
+</html>

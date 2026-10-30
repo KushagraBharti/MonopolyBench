@@ -1,0 +1,35 @@
+\section{Environment and evaluated configurations}
+\label{sec:setup}
+
+MonopolyBench places four agents in a shared, deterministic Monopoly implementation. Each agent attempts to remain the last nonbankrupt player by acquiring property, trading, financing construction and managing obligations. Economic decisions have persistent consequences: a mortgage provides cash while disabling rent on the mortgaged deed; construction consumes cash and finite building stock; a trade changes both players' opportunities; and bankruptcy redistributes the debtor's assets or returns them to the bank. The environment consequently connects resource acquisition to investment, negotiation and eventual survival within a fully recorded game.
+
+The engine is the authority for state and legality. It emits a decision point with explicit legal choices, validates the selected action and records resulting events. The interface renders these records rather than independently implementing rules. Agents receive public economic state, their current decision context, and bounded memory. Opponents' cash, holdings and configured model names are visible, but their private notes and the future random and card state are not. Public history retains twenty timeline entries; the agent's own private history retains ten notes. Trade responses additionally include structured negotiation history. These are distinct observation channels: a statement saved in the canonical log is not necessarily represented in a later recipient's prompt.
+
+The forty-space board uses the United States property layout, with \$1,500 initial cash per player, \$200 for passing Go, and 32 houses and 12 hotels in the bank. Declining a direct purchase opens an ascending auction with sequential bids or withdrawals. Trade threads permit structured offers and counters for at most twenty exchanges. No deed from a developed color group may be traded. Liquidation permits building sales, mortgages or declaration, but no new trade; four cohort eliminations occur automatically after final mortgages. An agent remaining in jail does not receive a management window that turn. These access rules matter when comparing apparent opportunities.
+
+Several implementation choices materially affect interpretation. Trades can transfer mortgaged deeds, charging each recipient ten percent of the mortgage value, rounded upward. Buildings must remain evenly distributed within a color group after each operation in a submitted plan. Hotel sales require sufficient bank houses for the downgrade, and mortgaging a developed color group requires first removing its buildings. Under the recorded bankruptcy variant, a creditor can inherit buildings intact. Deeds returned to the bank are not immediately auctioned. The insolvency interface permits a declaration even when another legal financing sequence could pay the current debt. We therefore analyze this implementation, not an unspecified version of Monopoly. In particular, neither the face value of an estate nor the currently displayed mortgage menu necessarily equals accessible finance.
+
+The standard prompts encourage winning through legal play, permit public bluffing and deception, and ask private notes to reflect the agent's true reasoning. The action-only refusal-recovery condition removes the private-note field and its honesty clause. Public misleading statements therefore provide evidence about bargaining conduct but do not, on their own, violate the assigned instructions. Conversely, an inaccurate private statement cannot establish a knowingly dishonest note without further evidence. Engine-enforced legality, factual accuracy, explanation consistency and instruction adherence are separate constructs throughout the paper.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{lYrr}
+\toprule
+Short label & OpenRouter model identifier & Decisions & Attempts\\
+\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698\\
+\bottomrule
+\end{tabularx}
+\caption{Evaluated configurations. All use the recorded medium reasoning-effort setting through OpenRouter. These names abbreviate complete configured participants, not interchangeable model-only treatments. Gemini denotes the Argon participant.}
+\label{tab:configurations}
+\end{table}
+
+All configurations use the same gateway, while response policies differ. All four configurations use the ordinary corrective retry after invalid output; Grok additionally uses required tool selection. Opus has a refusal-recovery path that requests an action without a private note; this consumes the remaining retry opportunity rather than granting the ordinary corrective retry after a subsequent invalid plan. Its configured fallback model is never invoked. No temperature or nucleus parameter is set, leaving provider defaults in effect. The common ``medium'' label does not specify a matched budget: recorded completion tokens average 128 per decision for Sol and 4,041 for Grok, with mean wall-clock latencies of 4.8 and 65 seconds. Provider token accounting differs, so these are descriptive usage figures. Recorded OpenRouter charges total USD~141.71, a lower bound because 1,600 Opus attempts and three Grok attempts have no charge record. Game-dollar amounts elsewhere are unrelated to this real-world cost. Table~\ref{tab:configurations} records decisions and attempts separately because a provider response is not necessarily an applied move.
+
+Across 1,605 refused Opus attempts, the provider returns the same Terms-of-Service message concerning reverse engineering or duplicating model outputs. This is the provider's stated reason; the triggering feature is unidentified. The action-only retry changes both prompt and tool schema, so its success does not isolate a causal feature of the original request. Refusal frequency also changes between the first four games and the remaining sixteen. We retain this condition in the analysis as part of the evaluated system, rather than interpreting it as a moral objection to bargaining or a controlled intervention on alignment.
+
+The twenty current games form the definitive cohort. Older games and superseded extraction notes are historical material only. Each of five seeds is used in four cyclic seat rotations, giving every configured participant five games in each seat. All twenty observed games terminate through bankruptcy without a turn cap. This balances seats within the cohort, but does not provide all opponent orders, repeated independent runs at each configuration, or a controlled capability axis. We use the design to describe complete configured-agent trajectories and to investigate specific recorded decisions.
+

@@ -1,0 +1,70 @@
+# Round-3 review of claims and empirical sufficiency
+
+The revised central claim is earned as a bounded audit of this corpus. I reproduced its 50,918 events and all 126 case results, then checked the census and retained construction attempts against the canonical local records. I found no new error in the 56/3/1 elimination classification or the 63/66 default-target result. The financing figure still conflates a resource bound with established accessible finance. That needs correction or a separate proof and provenance statement.
+
+My recommendation is weak accept as a focused empirical audit and artifact paper after the bounded corrections below. This is not a strong general method result. The strongest remaining rejection argument is limited scientific increment: the paper combines familiar provenance, reachability, and delivery checks, demonstrates them in one retrospectively selected implementation, and does not show that a general evaluator becomes more accurate by adopting them. The revised manuscript acknowledges that limit. Rejecting it for failing to provide a model ranking or a deception rate would evaluate a claim it no longer makes.
+
+## What the contribution now establishes
+
+The manuscript has moved beyond advice to inspect logs carefully. Section 3.4 defines an auditable object consisting of a historical prefix, actor, intervention class, and endpoint. It states different stopping rules for existence and impossibility. The implementation preserves the requested construction multiset, executes witnesses through the original engine, and returns no negative certificate when its search is incomplete. The finite result is also more than one chosen anecdote: selection covers every elimination and every fallback in the declared twenty-game cohort.
+
+Three findings make the method consequential within that population. First, three applied eliminations have legal payment routes, while a fourth nominally solvent estate is inaccessible at its debt decision. Second, 63 fallback decisions contain an executable rearrangement of a submitted target even though all 70 well-formed submitted encodings fail validation. Third, the END partition separates observed action provenance from an inferred preference for reserves. These are reproducible classification changes under declared predicates. They do not quantify how often actual external evaluators make the corresponding mistakes.
+
+The social examples supply a different kind of evidence. A settlement can accompany explicit correction of its premise. That defeats the rule that settlement alone establishes recorded endorsement. It does not measure latent belief, refute every possible influence of the message, or establish a persuasion effect. The current main text generally maintains this boundary. G13 is explicitly unresolved on the false-minimum belief and the marginal price effect. The paper gains credibility by retaining that unresolved result instead of treating every example as a successful detection.
+
+There is no new general search theorem, general annotation model, or universally applicable semantic test here. The reusable contribution is the specification of proof obligations and a concrete implementation for two claim families. Its value depends on a venue accepting a careful finite-corpus measurement study and an executable artifact as a research contribution.
+
+## Are the title, abstract, and conclusion earned?
+
+The title, "MonopolyBench: Verifying Behavioral Claims from Agent Trajectories," is defensible, although broad. The abstract immediately distinguishes actions, model choice, alternatives, and influence, and then supplies the actual population and endpoints. The conclusion limits the result to a bounded method and finite-corpus demonstration. These qualifications are integral to the argument rather than a late attempt to withdraw stronger results.
+
+I would retain the title. A subtitle such as "A finite-corpus audit" would further reduce ambiguity but is optional. The abstract's specific counts survived my checks. Its claim that the work establishes a bounded method is supported in the sense of an executable procedure for stated claim families. It is not evidence of general evaluator accuracy, transfer, or improved prediction. The conclusion already says what remains unresolved and should retain that language.
+
+The most useful bounded revision is one compact table that maps each claim type to a valid output and an explicit non-result. For example, a reachable construction target yields an engine-accepted witness preserving counts; a cash-deficient target yields an impossibility statement only without financing; a channel conflict yields an observed discrepancy and abstention about coherent intent; a recipient correction yields a statement about the record, not its latent belief. Such a table would make the contribution easier to reuse without adding experiments or inflating novelty.
+
+## What the 126 cases mean
+
+"126 certificates" is a potentially misleading shorthand. The manuscript usually says cases or prefixes, which is better. There are 60 elimination cases and 66 default-decision cases. A default decision contains multiple attempts and several diagnostic outputs, so these are not 126 homogeneous proofs or independent demonstrations of a behavioral failure.
+
+| Unit | Count | What is checked |
+|---|---:|---|
+| Elimination prefixes | 60 | Current-debt feasibility using only own permitted sales and mortgages |
+| Upper-bound negatives | 56 | Even the enlarged asset budget falls below the debt |
+| Payment witnesses | 3 | A legal sequence pays the current debt; no optimality or future survival claim |
+| Mortgage-only negative graph | 1 | G7 d339 exhausts its one permitted financing continuation |
+| Default decision prefixes | 66 | All recorded attempts plus existence of some legal construction |
+| Attempts inside default decisions | 132 | 70 well-formed targets, one malformed target, and 61 without a parseable target |
+| Well-formed target outcomes | 70 | 63 reachable targets and seven above current cash; all original encodings invalid |
+| Default decisions containing a reachable target | 63 | Existence of at least one such target among that decision's attempts |
+
+The seven unaffordable attempts do not imply seven wholly unreachable decisions, since a decision can contain another reachable attempt. A malformed or absent target does not receive an impossibility proof. All 66 decisions have a witness for some construction, a separate and weaker endpoint. Nothing in this accounting gives an intent label, an alternate winner, an estimated success rate under a changed resolver, or a score for 126 independent trials.
+
+The result is concentrated. My source census finds defaults in seven games; G5 and G13 contribute 55 of 66, and Opus contributes 61 of 66. The 70 well-formed attempts contain 19 distinct deed/kind/count multisets, with one multiset appearing 25 times. That last number is only a diagnostic of repeated targets, since equal targets can begin at different states. These facts do not invalidate a census, but they limit the apparent breadth of the 63 witnesses. The existing per-game table exposes this concentration; one sentence in the results would make its implication clearer.
+
+## Method soundness under the current restriction
+
+The previously discovered atomic-search flaw is not a current falsification of the historical result. I knew of the flaw from the assignment before reading and do not claim its discovery. I read the current guard and reran all nine supplied tests. `exhaustive_financing` rejects any expanded state whose legal action names include `sell_houses_or_hotel`. The G7 test confirms a single Oriental mortgage edge, no sale action, and bankruptcy at 440 against debt 750. The synthetic bundled-sale regression both triggers refusal to certify and demonstrates the engine-accepted payment route that the old search omitted.
+
+The upper bound remains valid for the declared intervention because each sale consumes salvage and each mortgage consumes clear-deed capacity; relaxing stock and selling constraints enlarges the budget. Construction ordering is explicitly incomplete, but the seven well-formed unsuccessful targets exceed cash without financing. Thus those negatives use the resource bound rather than search failure. I also independently compared all 63 successful construction witnesses' emitted purchase counts and construction debits with their targets. They match.
+
+These are live engine executions with trusted source inputs. The bundle is not a separate general-purpose checker that accepts arbitrary externally supplied certificates. Its tests cover selected integrity and regression properties. The sentence "Nine adversarial tests reject altered inputs and invalid certificates" should say more precisely what the tests exercise. This wording issue does not undermine the executions I repeated.
+
+## Remaining corrections and clarifications
+
+1. **Align the financing plot with its proof.** Page 12 labels its horizontal axis "Accessible own finance (game dollars)." The generator plots `accessible` for all sixty estates; 59 values equal `full`. The new runner computes an upper bound for the 56 negative cases and stops the three positive routes at payment. Those checks do not certify all displayed maxima. For example, the new G12 Sol witness reaches payment with 38 left, while the chart plots 748 as accessible finance. Both may be true under a separately defined liquidation budget, but the payment witness does not establish the latter. Prefer plotting nominal upper bounds for all cases and separately marking G7's exact accessible 440. Alternatively retain the old values with a clearly specified maximum-finance endpoint and its own source evidence. I did not disprove all 59 equality values; this is an evidence-scope mismatch, not a reversal of the 56/3/1 classification.
+2. **Distinguish re-executing the census from re-deriving its selection.** The portable runner consumes `cases.json` and copied attempt fields. It cannot independently extract omitted fallback decisions or check the copied fields against full original resolution records because those records are outside the small bundle. The saved hashes allow external linkage, and my independent source check succeeded. The current sentence that the bundle "reproduces the 126-case census without access to the repository checkout" should specify that it re-executes a frozen census whose completeness and transcription were checked separately.
+3. **Expose the recovery denominator beside the conditional fraction.** The 20/25, 6/18, and 5/5 figures correctly condition on decisions ending in construction. They do not measure exact-target recovery across all rejected decisions. Across all uneven-rejection decisions, the corresponding counts are 20/29, 6/19, and 5/5; Opus has 0/61 applied recoveries under its exhausted retry condition despite 61 reachable targets. The table already permits this reconstruction. One additional sentence would prevent the successful-retry conditional from being read as general recovery reliability. No cross-model causal comparison follows from either denominator.
+
+## Generalization and the strongest rejection case
+
+The narrow principle that a failed search cannot establish impossibility generalizes by logic. So does the distinction between recorded speech and a recipient's delivered input. The observed frequencies and practical value of the workflow do not generalize from these games. The conditions include a particular building validator, an action-only refusal-recovery path, required tool selection for one configuration, a summary-formatting defect, and intact estate inheritance. All can affect where this audit finds discrepancies.
+
+A skeptical reviewer can therefore say that the substantive findings are a well-executed benchmark postmortem, while the general advice was already understood. The manuscript cannot answer that objection with a larger decision count, four model coauthor endorsements, or the word "certificate." Its best answer is the concrete proof contract and a self-contained set of examples that another reader can execute and dispute. That answer supports a modest methods/artifact contribution. It does not establish that other benchmarks need the same repairs or that annotation improves after adopting this method.
+
+A new benchmark comparison or blinded annotation study would test a stronger contribution, but neither is required to make the present claims true. Within the authorized scope, the bounded fixes are to clarify the typed outputs, align the figure, and retain the explicit separation between finite verification and general evaluation quality. I found no reason to demand paid model experiments to rescue the revised title or conclusion.
+
+## Review provenance and limits
+
+`initial_position.md` was written before I opened earlier reviews. I read the complete frozen LaTeX, its tables, and appendices; extracted all 36 PDF pages; and visually inspected the financing figure. After the initial position I consulted round-1 contribution/novelty and round-2 certificate, resolution, and related-work reports. Some older claims, such as treating the 573 unmatched ENDs as model-chosen or declaring all competitor attempt accounting absent, are not valid grounds for this review. The current manuscript corrects them. The parent separately suggested the financing-figure scope question after my initial assessment; my code/data inspection confirmed that issue.
+
+I independently reran the current artifact and checked the original census, source hashes, attempt fields, and successful construction event multisets. I did not independently rerun the whole economic event reduction, all delivered-memory checks, every social case, or the literature/source-release audit. I did not measure human annotation validity, provider internals, latent belief, or causal persuasion. No manuscript, engine, prompt, or canonical game file was modified. Detailed commands and residual scope are in `verification.md`.

@@ -1,0 +1,173 @@
+% Phase-1 working source, 2026-10-28. Not a complete manuscript or frozen result.
+% All empirical statements refer to the primary October cohort.
+% Source audit: visibility_manifest.json, checkpoint_audit.json, Sol manifest/results.
+
+MonopolyBench studies sustained agent capability and alignment-relevant behavior
+in a competitive, persistent economy. We ask how effectively agents pursue
+long-term goals, how their decisions and communications affect other participants,
+and what an evaluation environment must record to make these behaviors open to
+inspection. Economic and social analyses address the same trajectories: an
+agreement changes ownership and liquidity, which changes subsequent opportunities,
+incentives, and interactions. The broader motivation is to evaluate these
+relationships as agent capabilities improve. The present cohort supplies an
+observational comparison of configured agents; it does not by itself establish
+a trend across capability growth or the effects of training.
+
+The proposed contributions are an inspectable multi-agent economic environment;
+a reproducible evaluation workflow linking observations, responses, actions,
+and consequences; a systematic analysis of capability and social conduct over
+complete games; and validation of the accounting and opportunity measures used
+in that analysis. The behavioral findings remain to be established through the
+exhaustive review. The environment's potential for reinforcement learning is a
+research direction supported by existing components. Interrupted-run recovery
+reconstructs the live engine through action replay and rebuilds prompt memory
+from events. Composing these components supports exact decision-prefix reset
+and alternative-action continuations. Checks at one mid-game decision in each
+of the 20 games reproduce recorded prefixes, memory, and recorded continuation
+events, and accept a different legal action that changes the continuation.
+These are engine continuations with reference policies, not new LLM experiments.
+One reference rollout reached its decision budget before bankruptcy; rollout
+users therefore need an explicit truncation condition. A packaged branching
+interface, a reinforcement learning adapter, and demonstrated training gains
+require separate evidence.
+
+The primary cohort comprises 20 completed games: five seeds, each played under
+four cyclic rotations of one four-agent roster. The configured participants are
+GPT-6.1 Sol, Gemini 4 Argon, Claude Opus 5.5, and Grok 4.7. All request the
+provider-native medium reasoning setting; this does not equalize computational
+budgets between providers. Each participant occupies each absolute seat once
+within a seed block. Cyclic rotations preserve relative opponent order and do
+not cover all possible orders. There is one recorded realization per
+seed--rotation combination. All games end through bankruptcy without a turn
+cap. Older saved games are a separate historical corpus and are not pooled into
+the primary cohort's prevalence estimates.
+
+The engine owns game state, enforces the declared rules, and exposes the available
+actions at each decision. Agents buy and auction properties, negotiate transfers,
+mortgage assets, develop complete color groups, pay obligations, and attempt to
+remain solvent. The retained rules variant is explicitly documented. In
+particular, creditor inheritance preserves development without transfer interest;
+bank-returned deeds are not immediately auctioned; voluntary bankruptcy acts as
+surrender; ordinary management occurs at the active player's post-turn stage
+with jail restrictions; and scarce buildings do not trigger a competing-purchase
+auction. A voluntary trade charges the recipient of each mortgaged deed interest
+equal to ten percent of its mortgage value, rounded up. The
+paper should describe these differences briefly rather than call the environment
+rules-complete classic Monopoly.
+
+At a decision, the agent receives public information about each player's cash,
+position, jail and bankruptcy status, properties, mortgages, and development.
+It also receives bank building inventory, unowned properties, and the current
+decision context and legal options. The public memory contains at most 20
+recent timeline entries, and private memory contains at most 10 recent notes.
+Decision-specific context can contain further local history. These observations
+are distinct from the analyst's full record and the engine's hidden random and
+deck state. Timeline summaries can omit individual public utterances even before
+the window fills. Analysts therefore distinguish canonical speech, its timeline
+representation, earlier recipient exposure, and availability at the focal
+decision. A message missing from the current window may still have influenced
+intervening actions. Such absence does not erase an observable broken commitment,
+but limits explanations based on current knowledge or forgetting.
+
+The common initial instruction asks agents to maximize long-term advantage and
+be the last non-bankrupt player. It explicitly permits deceptive public
+strategies. The analysis therefore distinguishes economic effectiveness,
+observable social conduct, and compliance with instructions that were actually
+imposed. For example, a factual misrepresentation can be studied as
+alignment-relevant conduct without being mislabeled a violation of an honesty
+instruction absent from the experiment. Aggressive competition alone does not
+establish harmful intent, collusion, or commitment violation.
+
+Two response conditions affect the configured agents' comparability. Claude's
+1,605 refused attempts state a provider Terms of Service restriction concerning
+reverse engineering or duplicating model outputs. The triggering feature is
+unidentified; recovery changes the prompt and tool schema together. These records
+do not establish an ethical objection to the game or its permitted deception.
+Refusal recovery removes the private-note requirement. In 1,394 of its 1,696
+decision prompts, private memory was empty or contained only synthetic fallback
+notes, although public history and current state remained available. Refusal
+frequency changed across campaign dates and seed blocks under a constant initial
+system-prompt hash. The configured Opus 4.8 model fallback was never invoked;
+the participant's configuration label does not mean that this model played.
+Sixty invalid action-only recovery
+attempts proceeded directly to deterministic fallback, without a further
+corrective retry. Grok uses required tool choice, and 139 applied decisions have
+an action-name disagreement between response text and tool calls. Some occur
+during legal building opportunities. These conditions affect the interpretation
+of sustained capability as well as social conduct. The applied trajectory remains
+authoritative; channel contradictions do not identify intent or the responsible
+component. Detailed provenance, block-specific counts, and affected episodes
+belong in the reproducibility supplement.
+
+The saved evidence distinguishes four levels: applied actions and resulting game
+events; public communications; generated private notes; and provider-returned
+reasoning fields where available. Provider-labeled summaries remain summaries,
+encrypted fields remain unreadable, and token counts do not imply access to
+reasoning text. Returned explanations are evidence of what a response states,
+not direct access to latent computation. Failed or rejected attempts remain
+available but are not substituted for the applied action. The research package
+preserves these distinctions at the decision and attempt levels.
+
+The accounting reconstruction follows property ownership, cash, mortgages, and
+development through canonical events. Purchases, auction acquisitions, trades,
+and creditor inheritance are separate routes. A color-group episode begins
+when one player owns all constituent properties and ends on ownership loss or
+the end of observation; reacquisition begins another episode. A route label
+describes the final acquisition event completing the group, with constituent
+acquisition histories retained separately. Group completion is not itself a
+measure of trade quality. Both parties' liquidity, compensation, opportunities,
+and subsequent outcomes remain relevant. Groups created by the game-ending
+bankruptcy have no deployment follow-up and are reported separately. Negotiation
+roles distinguish the original thread initiator, author of the accepted terms,
+and accepting player, since counteroffers can reverse the terms' authorship.
+
+Development timing is reported in two ways. Elapsed delay measures time from
+acquisition to management access or building. Conditional responsiveness asks
+whether the player builds during the first actually offered management turn,
+given the recorded legal options. Entry eligibility means at least one building
+purchase in that group was legal, not that a full development plan was affordable
+or optimal. Financing can create eligibility later in the same turn. Jail and
+access choices remain part of the economic trajectory rather than disappearing
+into a conditional rate. Missing opportunities and incomplete follow-up are
+recorded explicitly.
+
+Get-out-of-jail card transfers lack a dedicated transfer event. Their accounting
+uses accepted trade payloads and bankruptcy context, checked against the saved
+player observations. Candidate early-surrender cases require more than the
+presence of a mortgage or sale option: listed financing may still be insufficient
+to pay the debt. An upper bound on available cash is a screening condition;
+legal financing sequences and strategic interpretations require case review.
+
+Social coding records state-verifiable false statements, misleading implications,
+contradictions with contemporaneous model-authored notes, and evidence of
+recipient exposure or reliance separately. None automatically establishes intent.
+Exposure is necessary for an influence claim, but an unexposed false statement
+remains part of the speaker's conduct. Commitments retain their conditions,
+attempted or completed status, and links across negotiation threads and turns.
+Each rate reports the opportunities and evidence channels needed to detect it.
+Missing private notes or provider reasoning cannot be coded as absence of a
+behavior. Channel availability depends on response treatment and the observed
+trajectory, so dividing by available channels does not recover comparable
+underlying prevalence. We report public/state-observable conduct separately
+from evidence-qualified subsets. Reviewers retain alternative explanations
+and ordinary counterexamples. Conditional management rates likewise do not
+replace assessment of the full trajectory, including financing, access, and
+survival.
+
+Validation separates accounting correctness, instrument behavior, and behavioral
+interpretation. Independently specified scenarios test transfers, cash boundaries,
+inheritance, loss and reacquisition, management access, and observation endings.
+An independent event-based audit reproduces cash, ownership, mortgages,
+development, and bank inventories at all 6,989 recorded decision observations
+without discrepancies. This validates agreement between these recorded economic
+representations; it does not establish strategic optimality or social labels.
+Existing rule, replay, corruption, and recovery tests provide additional scoped
+evidence. Recorded-action replay is distinct from a fresh stochastic provider run.
+
+Outcomes and repeated decisions within the same game are dependent, and games
+share five seed blocks. Raw dice pairs match over common within-block prefixes,
+but a draw can serve different roles, such as movement, jail attempts, or utility rent, in
+different trajectories. Shared draws therefore do not imply identical
+opportunities or a causal decomposition of luck and skill. Full chronological
+review, counterexamples, and declared denominators support descriptive findings;
+stronger causal or general capability claims require a corresponding design.

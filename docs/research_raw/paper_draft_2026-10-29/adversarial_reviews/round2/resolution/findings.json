@@ -1,0 +1,86 @@
+{
+  "review_scope": "Canonical resolution census, content/tool name conflicts, received HTTP localization, and focal formatter exposure",
+  "reviewed_script_sha256": "e59c1988972f9d69b00f7ce480eb6eb6abbc9c482c607ffede911740540f8c06",
+  "reviewed_output_sha256": "e798bce3843cc73e945f3b68249d572d80a58060173309c3fe43fcdb552ca918",
+  "findings": [
+    {
+      "id": "R2-RES-01",
+      "severity": "minor",
+      "status": "confirmed_metadata_bug",
+      "claim": "All focal located_timeline_length values are incorrectly zero.",
+      "source": "audit_conditions.py:111",
+      "correct_path": "game_state.memory.public_timeline_last_20",
+      "correction": "Use the actual key, optionally record the JSON path, and regenerate conditions_audit.json.",
+      "impact": "The 30 focal cases in G4/G6/G11/G13/G18/G19 have 20 rows; G20 d000001 and d000004 have 1 and 4. Independently reconstructed exposure matches remain correct and occur only in this timeline.",
+      "evidence": "independent_results.json:focal_records"
+    },
+    {
+      "id": "R2-RES-02",
+      "severity": "material_interpretive_limit",
+      "status": "count_verified_scope_required",
+      "claim": "The 139, 147, and 148 counts refer to different attempt and parser populations.",
+      "selected_strict_json": 138,
+      "unselected_strict_json": 9,
+      "selected_malformed_explicit_name": 1,
+      "selected_inclusive": 139,
+      "all_attempt_strict_json": 147,
+      "all_attempt_inclusive": 148,
+      "malformed_case": {
+        "game": 19,
+        "decision_id": "campaign-8d77f7b822c6458fa9a5be0e884f74ef-6-f542507ff9-dec-000224",
+        "attempt_index": 0,
+        "content_name": "declare_bankruptcy",
+        "received_tool_name": "mortgage_property"
+      },
+      "correction": "Keep the malformed textual-name case separate and do not call discarded attempts selected actions.",
+      "evidence": "independent_results.json:conflicts; parser_probe_results.json"
+    },
+    {
+      "id": "R2-RES-03",
+      "severity": "material_interpretive_limit",
+      "status": "channel_bias_confirmed",
+      "claim": "No detected name conflict is not a common-channel consistency or intention measure.",
+      "evidence": "All 1,957 selected Sol and 1,668 selected Gemini assistant-content fields are empty. Of Grok's 155 nonconflicting construction-listed ENDs, 129 have matching named JSON, 15 unnamed JSON, and 11 other unparsed content.",
+      "correction": "Describe a narrow parser result, retain empty/unparsed subcategories, and avoid voluntary-action or intent-rate labels.",
+      "sources": ["independent_results.json:parser_counts", "independent_results.json:end_records", "audit_conditions.py:26-34"]
+    },
+    {
+      "id": "R2-RES-04",
+      "severity": "material_interpretive_limit",
+      "status": "denominator_and_condition_verified",
+      "claim": "The END table concerns repeated construction-tool-listed decisions, and 42 of 43 nonfallback Opus ENDs use the action-only retry condition.",
+      "total_tool_listed_decisions": 1225,
+      "applied_end": 663,
+      "engine_default_end": 66,
+      "selected_name_conflict_end": 24,
+      "no_detected_name_conflict_end": 573,
+      "correction": "Do not relabel the denominator as first opportunities or verified legal build sequences, and do not attribute all Opus selected ENDs to the original prompt condition.",
+      "evidence": "independent_results.json:counts; independent_results.json:end_records"
+    },
+    {
+      "id": "R2-RES-05",
+      "severity": "verified_claim",
+      "status": "local_streaming_excluded_upstream_unresolved",
+      "claim": "All 148 detected conflicts are present in saved nonstreamed raw HTTP JSON bodies.",
+      "checks": ["HTTP 200", "stream omitted", "single choice", "single tool call", "raw body equals saved response_json", "response choices equal canonical attempt choices", "content and tool arguments match"],
+      "limit": "This excludes this application's streaming assembly for these records. It cannot identify provider, OpenRouter, or latent model causation.",
+      "evidence": "independent_results.json:conflicts; python/packages/arena/src/monopoly_arena/openrouter_client.py:80-164"
+    },
+    {
+      "id": "R2-RES-06",
+      "severity": "verified_claim",
+      "status": "focal_exposure_reproduced",
+      "claim": "All focal positive and negative known-formatter-row annotations match independent historical formatter reconstruction and selected request bodies.",
+      "initial_prompt_timelines_reconstructed": 6989,
+      "initial_prompt_timelines_matching": 6989,
+      "focal_selected_payloads_verified_against_request": 32,
+      "independently_classified_bad_rows": {"counter_self_partner": 232, "accepted_reversed": 44, "rejected_offer_misattributed": 26},
+      "limit": "Presence is delivery, not attention or causal influence. Absence applies only to these known defects and this prompt.",
+      "evidence": "independent_results.json:focal_records; independent_results.json:independently_derived_bad_rows"
+    }
+  ],
+  "not_independently_observable": ["Provider-internal generation", "OpenRouter-internal transformation", "Model attention or latent intention", "Causal persuasion"],
+  "not_performed_in_this_scope": ["Fresh engine replay", "Executable legality of every construction-tool-listed decision", "Semantic relabeling of every reasoning and message field"],
+  "canonical_or_shared_files_modified": false,
+  "model_calls": 0
+}

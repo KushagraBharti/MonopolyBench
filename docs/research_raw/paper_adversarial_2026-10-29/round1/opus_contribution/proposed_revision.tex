@@ -1,0 +1,123 @@
+% Proposal from round-1 reviewer opus_contribution. NOT integrated; the coordinator owns manuscript edits.
+% Architecture A: label validity. Replaces the abstract's thesis, Introduction paragraphs 3-6, and the
+% G13 paragraph in Section "Social conduct". Numbers marked [R] come from this reviewer's read-only
+% script (scripts/end_provenance.py) and need coordinator re-verification before use. Other numbers are
+% the draft's retained figures. Uses existing preamble macros (\decision, \game).
+
+% ---------------------------------------------------------------- Title
+% What Agent Logs Do Not Say: Resolution, Reachability and Delivery in
+% Long-Horizon Multi-Agent Economic Competition
+
+% ---------------------------------------------------------------- Abstract (replacement)
+Evaluations of long-horizon agents routinely read behavioral labels off logs: an agent
+declined to invest, could have paid its debt, made an offer, informed a rival, or was
+persuaded. We show that such labels fail in a structured way, and we identify where. In
+twenty complete four-player games of MonopolyBench (6,989 decisions, 8,679 response
+attempts), three layers separate model text from state change. The response-resolution
+layer decides whether an applied action is model-authored. The accessibility layer
+separates displayed menus and nominal wealth from reachable legal sequences. The
+delivery layer separates canonical speech and harness summaries from what a recipient
+received. Of 663 applied end-of-turn actions on menus where construction was legal, 90
+were not model-chosen holds; for one configuration the figure is 61 of 104, against
+under 2\% for two others. All 61 of that configuration's defaulted construction plans
+execute when the same purchases are reordered. Of 60 eliminations, 56 are insolvent
+under a generous nominal bound, but every one of the four remaining cases changes label
+under legal-sequence execution. A harness summary reversed giving directions in 44 of
+113 accepted trades and reached 2,054 prompts. In social exchanges, settlements occur
+while recipients correct the false premise, and a received offer can contradict the
+proposer's own accompanying note. Exact-prefix engine execution adjudicates feasibility
+and exposure; it does not identify persuasion or intent, which require re-sampling the
+recipient policy at a fixed prefix. Behavioral rates computed without these layers are
+partly measurements of the harness.
+
+% ---------------------------------------------------------------- Introduction core (replaces paras 3-6)
+\paragraph{The problem.}
+A growing literature measures how language agents invest, bargain, deceive and keep
+commitments over long interactions, and reports rates: of misaligned messages, of promises
+enacted, of trades accepted, of avoidable failures~\cite{li2026arena,wu2026agentmonopoly,hu2026finboardbench}.
+Each rate presupposes a label that maps a logged record to a behavior. An END action is
+read as a choice to hold, a bankruptcy declaration as surrender of a solvent position, a
+sent offer as the proposer's intent, a logged message as information the recipient
+had, and a closed deal as evidence of persuasion. These mappings are rarely tested,
+because testing them requires knowing which response produced the applied action, which
+legal sequences were reachable from the exact state, and what each recipient's prompt
+actually contained.
+
+\paragraph{Three layers.}
+MonopolyBench records all three. The \emph{resolution} layer comprises refusals,
+corrective retries, recovery prompts, deterministic fallbacks and forced tool choice; it
+determines whether an applied action is model-authored and under which prompt condition.
+The \emph{accessibility} layer is the gap between what a menu displays or a balance sheet
+implies and what a legal sequence of the agent's own actions can reach, under rules such
+as even selling and finite building stock. The \emph{delivery} layer is the gap between
+canonical events and each recipient's bounded memory and harness-written summaries. We
+restore exact historical prefixes and execute specified legal sequences through the
+engine, and we reconstruct every delivered memory window, to adjudicate labels against
+these layers.
+
+\paragraph{What we find.}
+Naive labels are usually right on average and often wrong where analysts look. Of the
+663 END actions applied while construction was legal, 573 are model-chosen by provenance;
+the remaining 90 are engine defaults or received tool calls whose action contradicts the
+accompanying content [R]. The error is concentrated by configuration: 61 of 104 for a
+participant whose provider refused its standard prompt in 1,605 decisions, against four
+of 236 and one of 144 for two others [R]. A cross-model ``propensity to hold cash'' would
+therefore rank harness conditions. Among sixty eliminations, the nominal-value label is
+correct for the 56 that no own-asset liquidation could rescue. It changes for all four
+remaining cases: three admit a legal current-debt payment, while one has \$1,310 in nominal
+value but only \$440 accessible because a hotel cannot be downgraded. In the delivery
+layer, one summary assumption reversed giving directions in 44 accepted trades and
+reached 2,054 prompts, and 149 nonempty public messages never entered any timeline.
+Finally, our own analysis produced fluent, mutually agreed narratives that the record
+contradicted. These include a misdated productive group, a single construction step
+mistaken for cumulative spending, and a menu field read as a prohibition.
+
+\paragraph{Social claims as a stress test.}
+Social exchanges show the limits of the instruments as clearly as their reach. In two
+settled trades the recipient states the correct proposition while accepting, so
+settlement does not imply uptake of a false premise. In another, the received proposal
+carries a private note instructing that it not be sent. The raw provider response,
+which was not streamed, contains both the proposal and a contradictory end-of-turn call.
+So ``sent'' does not imply ``intended'', and the divergence originates upstream of our
+harness. These are counterexamples to sufficiency rules, and one checked counterexample
+suffices to reject a rule. They are not prevalence estimates. Where the question is
+whether a message \emph{changed} a recipient's choice, engine branches are the wrong
+instrument: they can show that a seller's implied constraint was false, not that a buyer
+would have paid less without hearing it. That question requires re-querying the
+recipient policy at the identical prefix with the message ablated, which the validated
+prefix-restoration machinery supports and which we specify as the next experiment.
+
+\paragraph{Contributions.}
+(i) A decomposition of log-derived behavioral labels into resolution, accessibility and
+delivery layers, with full-denominator naive-versus-adjudicated comparisons in a cohort
+of complete long-horizon games. (ii) An exact-prefix legal-sequence procedure that
+adjudicates feasibility claims made by agents and by analysts, together with an explicit
+account of the claims it cannot adjudicate. (iii) Evidence that label error is
+configuration-specific. Cross-model behavioral comparisons should therefore report
+action provenance and information condition before reporting rates. The cohort supports
+no model ranking, capability trend or misalignment rate. Public deception was permitted,
+and capability was not varied. We do not claim that any other benchmark exhibits our
+specific error rates. We claim only that the layers exist in any harness with retries,
+fallbacks, tool calling and bounded memory, and that their contribution is measurable
+when the record is complete.
+
+% ---------------------------------------------------------------- G13 paragraph (replacement)
+\paragraph{\game{13}: an omission whose premise both parties shared, and whose purpose failed.}
+From \decision{13}{218} Grok (seat~4) repeatedly offers mortgaged Pennsylvania Avenue,
+first to Sol, arguing that its bankruptcy would transfer the yellows. Sol publicly
+corrects one such claim at \decision{13}{244}, and both messages are in Opus's delivered
+timeline at \decision{13}{251}. At \decision{13}{250} Grok makes the same appeal to Opus,
+misstating the Short Line risk as 5/36; from Atlantic it is 4/36. Opus counters at \$130,
+and its returned reasoning notes that the payment ``keeps p4 solvent enough to cover Short
+Line rent to p2''. At \decision{13}{252} Grok says that \$130 ``leaves me \$35 short''. The
+cash figure is true. A Ventnor mortgage would reach \$295, as an exact-prefix branch
+confirms. Grok's applied note acknowledges that route, and its returned reasoning plans to
+omit it as ``slightly deceptive'', betting that the buyer ``may not calculate the
+mortgage''. The omitted fact is the seller's own outside option, not a false assertion
+about the board. At \decision{13}{253} Opus accepts \$200, reasoning that ``player~2 would
+inherit the yellows plus Pennsylvania''. This nearly reproduces the d252 message, so
+uptake of the seller's consequence framing is evidenced. Uptake of the false minimum is
+neither evidenced nor excluded. The shared premise did not hold for long. At
+\decision{13}{311}, 43 turns later, Grok lands on Short Line, declares bankruptcy, and Sol
+inherits the yellows. As with the denial purchase in game~18, buying a rival's solvency
+under creditor inheritance lasts only as long as that solvency.

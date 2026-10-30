@@ -1,0 +1,39 @@
+# Research questions: answers and remaining experiments
+
+This is the status of the research-agenda revision, not a claim that all eleven broad scientific questions have been empirically solved. The six guiding screenshots remain unchanged in research_guidance_2026-10-29/images/. The manuscript now states an observable target, result and interpretation boundary for each question. The original outline is unchanged.
+
+| Question | What this paper now answers | What remains unresolved |
+|---|---|---|
+| **Q1. Strategic reasoning and rationality** | Complete offer accounting shows that own color-group completion is insufficient for acceptance: 34 acceptances, 113 counters and 74 rejections among 221 legal opportunities. Source-linked explanations include rival consequences. Legal witnesses distinguish executable financing/construction from incorrect ceilings and invalid encodings. | Whether the chosen trade or investment maximizes expected utility; regret and exploitability relative to an adjudicated comparator. A legal alternative is not an optimal policy. |
+| **Q2. Opponent modeling and theory of mind** | A fresh reading of all 240 fixed-sample public/private records finds 36 prospective opponent capacity/outcome passages. Checked endpoints separate realized public-capacity forecasts, unelicited responses, and opportunities that never arrive. | Calibrated predictions of private beliefs or intentions; accuracy on a prospectively defined forecast population; prediction benefits relative to no opponent model. |
+| **Q3. Cooperation, negotiation and deception** | All 526 threads and 920 responses are reconstructed with author orientation, legal acceptance, cash, interest, and group consequences. All 74 own-completion rejections have source-linked reason coding; both readers' disagreements remain visible. Eight contextual transcript incidents show misleading framing, coordination, corrections, withdrawal, execution conflicts and disclosure. | Fairness, welfare, negotiation skill, agreement bias and causal persuasion; validated deception or coalition rates. Public deception is authorized in this task and therefore is not automatically instruction misalignment. |
+| **Q4. Long-horizon planning and memory** | Every one of 59 sampled forward-looking own-action records has a disposition. An eight-policy landing subset is followed to game end: six have no target opportunity, one purchases, one encounters a legal purchase but applies an auction despite a buy note. Longer and shorter chronologies show sustained targets, reordered routes and revisions. | A general planning success rate or causal benefit of memory. The sample is public-unflagged and channels differ; many plans are contingent or lack an exact endpoint. |
+| **Q5. Adaptability and learning** | Full-corpus construction recurrence distinguishes error exposure, successful immediate repair, same-turn continuation and later submission. Of 44 observed next submissions after an applied-build repair, four repeat the error; the broader corrective-request population has nine repeats among 50 next submissions. Auction and financing records show revisions without assigning improvement. | Learning caused by feedback, durable retention, cross-game learning or adaptation to an unfamiliar opponent. These need matched opportunities and randomized feedback/memory conditions. |
+| **Q6. Economic decisions and risk** | Development outlay, paid rent, inheritance, collateral and liquidation are connected. Every elimination/default has a scoped certificate or witness. Nominal equity and accessible finance differ in the hotel-lock case. Typed transfers prevent treating estate assets or unpaid rent as earned cash. | Ex ante asset pricing, risk-adjusted returns, causal investment value and optimal reserves under an explicit continuation distribution. |
+| **Q7. Emergent and collective behavior** | Separate networks cover trade cash, traded deeds, paid rent, estate cash and inherited deeds. Winners receive 202 of 227 nonterminal inherited deeds; terminal transfers are partitioned. Coordination is shown through actual speech and responses. | Incidence/stability of coalitions or collusion, price-war dynamics, and causal effects of communication on coordination. A dense trade network is not itself collusion. |
+| **Q8. Validity and generalization** | Original games and the separate pilot replay. Source and mutation checks test the measurement chain. All 130 supplied scenarios and six reference policies are audited: eleven preferred actions fail legality, and 19 of 20 baseline-only games hit the observation cap. | Transfer across unfamiliar opponents, models, rules and tasks; uncertainty from a powered independent-seed design. Passing 68 limited fixture screens does not certify 68 valid capability tasks. |
+| **A. Strategic skill versus strategic-sounding text** | Particular propositions, plans and actions can disagree with one another. Positive follow-through and source-verified counterexamples are both retained. | A calibrated population explanation-to-value relationship or validated monitoring score. |
+| **B. General intelligence versus multi-agent intelligence** | The paper explains why four heterogeneous systems cannot estimate this relationship and specifies independent capability, within-family tiers, resource controls and held-out tests. | **Not empirically answered.** No independent capability axis or new model battery was run. A design is not a result. |
+| **C. Skill versus luck and opponent exploitation** | Particular execution failures, financing mistakes, transfer routes and seed/seat dependence are observable. Equal seed is distinguished from equal opportunity; eventual-winner concentration is not treated as causal. | A causal skill/chance/opponent decomposition, robust opponent-adjusted rankings, or counterfactual winners. |
+
+## Completed in this revision
+
+- Complete negotiation and typed-flow analyses.
+- Full public/private-field coding of the existing 240-decision sample and source-checked temporal endpoints.
+- Full-corpus error recurrence with correction and opportunity denominators.
+- Twenty new offline baseline-only games, two exact repeats, complete replay, and a 130-scenario readiness audit.
+- Fresh adversarial reviews, visible semantic disagreements, LaTeX integration and reproducible package checks.
+- An appendix specifying unexecuted designs and their missing prerequisites.
+
+## Hypothetical studies outside this paper's authorized scope
+
+The user has ruled out all new controlled evaluations. The following list records what stronger empirical claims would require; it is not an active plan or a prerequisite for completing this paper. The paper will use the existing evidence and state the resulting limits.
+
+1. Adjudicate held-out local tasks and meaningful negotiating opponents; the present fixtures and simple policies are not a validated strategic oracle.
+2. Fix estimands, sequence units, primary outcomes, model/opponent roster and precision targets before collecting model responses.
+3. Implement and test versioned feedback, memory, opponent-shift and message interventions without changing historical prompts.
+4. Add an independent capability axis and within-family tiers for question B.
+5. Establish current OpenRouter pricing, token/retry bounds and an enforced spending ledger before paid execution.
+6. Run the controlled studies, report censoring/failures and held-out results, and adjudicate semantic claims independently.
+
+No new controlled evaluations, model queries, games or training runs are authorized. The spending-cap question is withdrawn, not pending. Further work is limited to existing-data analysis, evidence review and manuscript improvement. Questions not identifiable from those records remain explicit limitations. The previously completed offline pilot is historical work; no additional pilot is planned.

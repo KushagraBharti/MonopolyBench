@@ -1,0 +1,70 @@
+{
+  "review_type": "independent executable artifact audit",
+  "reviewed_runner_sha256": "7d5b01f7ff4447dd17a982268f4533dfc9b12bfb071571c7c0b3cd092e7ea4a0",
+  "reviewed_archive_sha256": "9d825ce485f2ed9d9a98a70e373b7e34182be5461e67bfe8e77bd42e9551c840",
+  "rechecked_runner_sha256": "6fd0b059d7bc9a5a96c7fbc5ffb38948eaebabf0b9677a84da7a7076b4b1fb3a",
+  "findings": [
+    {
+      "id": "CERT-01",
+      "severity": "high",
+      "title": "Atomic financing exhaustion can issue a false impossibility certificate",
+      "status": "reproduced in original artifact; coordinator guard passed bounded recheck",
+      "location": ["reviewed_source/run_audit.py:168", "reviewed_source/run_audit.py:219", "portable_original/historical-claim-audit/vendor/monopoly_engine/engine.py:2854"],
+      "failure": "The atomic graph omits legal bundled sales accepted by the unchanged engine, but check_elimination interprets graph exhaustion as impossibility for own sales and mortgages.",
+      "fixture": "Inventory-conserving synthetic state: cash 0; Brown houses 1/1; Dark Blue hotels 1/1; bank houses 0; another player holds 30 houses. The debtor lands on that player's Illinois Avenue with three houses, producing engine-computed rent 750.",
+      "observed_false_certificate": "exhaustive_financing_impossibility after 6 nonterminal states",
+      "contradictory_witness": "One accepted sell plan sells each Dark Blue hotel and its four replacement houses, raises 1000, pays 750, leaves 250.",
+      "historical_corpus_impact": "No changed historical result found. G7 d339 has no offered sell action, and an attempted bundled sale rejects before plan validation. Its sole financing edge is Oriental mortgage followed by bankruptcy.",
+      "executable_repro": "PYTHONDONTWRITEBYTECODE=1 python3 docs/research_raw/paper_adversarial_2026-10-29/round2/certificates/adversarial_checks.py",
+      "evidence": ["adversarial_results.json", "adversarial_run.log", "reviewed_source/run_audit.py"],
+      "correction": "Refuse negative graph certification if any expanded state offers sell_houses_or_hotel unless enumeration is complete for bundled sales.",
+      "recheck": "recheck_fix.py verifies the coordinator's guard refuses the counterexample, the bundled payment remains legal, G7 remains certified, and all 126 results are unchanged except graph_scope.",
+      "recheck_evidence": ["fix_recheck.json", "fix_recheck.log", "recheck_run.log"]
+    }
+  ],
+  "tested_limitations": [
+    {
+      "severity": "informational",
+      "topic": "Payment predicate assumes live financing provenance",
+      "result": "payment_in accepts an invented same-amount BUILD debit. This does not produce a false historical witness because the runner executes only live sales/mortgages and the reviewer separately verified original debt reason/amount.",
+      "evidence": "extra_results.json",
+      "executable_repro": "PYTHONDONTWRITEBYTECODE=1 python3 docs/research_raw/paper_adversarial_2026-10-29/round2/certificates/extra_checks.py"
+    },
+    {
+      "severity": "informational",
+      "topic": "State key applies within one fixed debt search",
+      "result": "A commuting three-mortgage graph reduces 10 nonterminal paths to 7 states without changing menus or pending debt. The key does not support merging states from different debts or post-payment futures.",
+      "evidence": "extra_results.json"
+    },
+    {
+      "severity": "informational",
+      "topic": "Negative-certificate intervention scope",
+      "result": "Bound certificates cover present-debt own sales/mortgages. G7 covers its mortgage-only legal graph. Neither covers earlier management, trades, assistance, future turns, or future survival.",
+      "evidence": ["adversarial_results.json", "extra_results.json"]
+    }
+  ],
+  "fresh_verification": {
+    "canonical_games": 20,
+    "canonical_events": 50918,
+    "unique_cases_at_verified_prefixes": 126,
+    "eliminations": 60,
+    "defaults": 66,
+    "upper_bound_certificates": 56,
+    "payment_witnesses": 3,
+    "historical_graph_certificates": 1,
+    "default_decisions_with_reachable_recorded_target": 63,
+    "default_decisions_with_some_legal_construction": 66,
+    "wellformed_targets_invalid_as_encoded": 70,
+    "reachable_target_attempts": 63,
+    "insufficient_cash_target_attempts": 7,
+    "malformed_target_attempts": 1,
+    "no_parseable_target_attempts": 61,
+    "unchanged_original_and_vendor_source_files": 88,
+    "historical_atomic_successors_checked": 139,
+    "bundled_tests_passed_before_finding": 8,
+    "original_portable_replay_equals_original_saved_results": true
+  },
+  "additional_failures": "None found in population selection within the inherited cohort, original source linkage, historical prefixes, upper-bound arithmetic, the three payment witnesses, construction purchase preservation, or the finite G7 negative certificate.",
+  "inherited_not_fresh": ["twenty-game cohort choice", "retrospective claim definitions", "prior expected outcomes", "recorded actor/model labels before source comparison"],
+  "reviewer_mutation_scope": "Only files beneath round2/certificates; live artifact changes were made by coordinator and tracked separately."
+}

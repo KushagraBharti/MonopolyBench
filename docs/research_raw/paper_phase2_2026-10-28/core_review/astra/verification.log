@@ -1,0 +1,392 @@
+Final phase-2 focused verification. Canonical files are read-only inputs.
+Preflight detected a stale script digest in final_liquidations.json; rerunning its current source reconciles that derived report.
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_final_liquidations.py
+{"game": 19, "decision_id": "campaign-8d77f7b822c6458fa9a5be0e884f74ef-6-f542507ff9-dec-000322", "components": {"cash": 242, "house_salvage": 50, "all_unmortgaged_deed_capacity": 220}, "ceiling_reached_legally": 512, "owed": 1100, "shortfall_after_maximum": 588}
+{"game": 20, "decision_id": "campaign-8d77f7b822c6458fa9a5be0e884f74ef-7-a8adf27ba7-dec-000354", "components": {"cash": 130, "house_salvage": 150, "all_unmortgaged_deed_capacity": 60}, "ceiling_reached_legally": 340, "owed": 1275, "shortfall_after_maximum": 935}
+{"game": 20, "decision_id": "campaign-8d77f7b822c6458fa9a5be0e884f74ef-7-a8adf27ba7-dec-000310", "components": {"cash": 225, "house_salvage": 0, "all_unmortgaged_deed_capacity": 325}, "ceiling_reached_legally": 550, "owed": 600, "shortfall_after_maximum": 50}
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_default_build_plans.py
+[
+  {
+    "model": "anthropic/claude-opus-5.5",
+    "default_decisions": 61,
+    "plan_checks": {
+      "same_allocation_constructed_legally": 61
+    }
+  },
+  {
+    "model": "google/gemini-4-argon",
+    "default_decisions": 1,
+    "plan_checks": {
+      "same_allocation_constructed_legally": 1,
+      "malformed_plan": 1
+    }
+  },
+  {
+    "model": "openai/gpt-6.1-sol",
+    "default_decisions": 4,
+    "plan_checks": {
+      "unaffordable_same_allocation": 7,
+      "same_allocation_constructed_legally": 1
+    }
+  }
+]
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_development_aggregation.py
+{
+  "unit": "One game/player/colour-group with any HOUSE_BUILT or HOTEL_BUILT; not an incrementally isolated investment return.",
+  "built_units": 103,
+  "winner_built_units": 58,
+  "winner_built_units_containing_inherited_deed": 34,
+  "spend": 103450,
+  "developed_rent_whole_game": 93000,
+  "rent_before_first_own_build": 450,
+  "zero_developed_rent_units": 40,
+  "zero_developed_rent_and_no_elimination": 26,
+  "winner_units_with_no_house_build": [
+    {
+      "game": 10,
+      "player": "p2",
+      "group": "LIGHT_BLUE",
+      "winner": true,
+      "spend": 150,
+      "sale_proceeds": 0,
+      "developed_rent_whole_game": 0,
+      "developed_rent_before_first_own_build": 0,
+      "developed_rent_from_first_own_build": 0,
+      "first_build_seq": 1363,
+      "first_house_seq": null,
+      "latest_deed_routes_at_first_build": {
+        "6": "inheritance",
+        "8": "inheritance",
+        "9": "inheritance"
+      },
+      "observed_complete_ownership_intervals": 1,
+      "eliminations": 1
+    }
+  ],
+  "built_units_with_observed_reacquisition": [],
+  "prebuild_inherited_rent_units": [
+    {
+      "game": 2,
+      "player": "p2",
+      "group": "LIGHT_BLUE",
+      "winner": true,
+      "spend": 200,
+      "sale_proceeds": 0,
+      "developed_rent_whole_game": 850,
+      "developed_rent_before_first_own_build": 450,
+      "developed_rent_from_first_own_build": 400,
+      "first_build_seq": 1540,
+      "first_house_seq": 1540,
+      "latest_deed_routes_at_first_build": {
+        "6": "inheritance",
+        "8": "inheritance",
+        "9": "inheritance"
+      },
+      "observed_complete_ownership_intervals": 1,
+      "eliminations": 0
+    }
+  ],
+  "winners_with_trades": 18,
+  "winner_first_built_routes": [
+    {
+      "game": 1,
+      "group": "LIGHT_BLUE",
+      "routes": {
+        "6": "trade",
+        "8": "purchase_or_auction",
+        "9": "trade"
+      }
+    },
+    {
+      "game": 2,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "trade",
+        "39": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 3,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "trade",
+        "39": "trade"
+      }
+    },
+    {
+      "game": 4,
+      "group": "ORANGE",
+      "routes": {
+        "16": "trade",
+        "18": "purchase_or_auction",
+        "19": "trade"
+      }
+    },
+    {
+      "game": 5,
+      "group": "GREEN",
+      "routes": {
+        "31": "purchase_or_auction",
+        "32": "trade",
+        "34": "trade"
+      }
+    },
+    {
+      "game": 6,
+      "group": "ORANGE",
+      "routes": {
+        "16": "purchase_or_auction",
+        "18": "purchase_or_auction",
+        "19": "trade"
+      }
+    },
+    {
+      "game": 7,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "trade",
+        "39": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 8,
+      "group": "PINK",
+      "routes": {
+        "11": "purchase_or_auction",
+        "13": "trade",
+        "14": "trade"
+      }
+    },
+    {
+      "game": 9,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "purchase_or_auction",
+        "39": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 10,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "purchase_or_auction",
+        "39": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 11,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "purchase_or_auction",
+        "39": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 12,
+      "group": "DARK_BLUE",
+      "routes": {
+        "37": "purchase_or_auction",
+        "39": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 13,
+      "group": "ORANGE",
+      "routes": {
+        "16": "purchase_or_auction",
+        "18": "purchase_or_auction",
+        "19": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 14,
+      "group": "ORANGE",
+      "routes": {
+        "16": "purchase_or_auction",
+        "18": "purchase_or_auction",
+        "19": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 15,
+      "group": "ORANGE",
+      "routes": {
+        "16": "purchase_or_auction",
+        "18": "purchase_or_auction",
+        "19": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 16,
+      "group": "BROWN",
+      "routes": {
+        "1": "trade",
+        "3": "purchase_or_auction"
+      }
+    },
+    {
+      "game": 17,
+      "group": "ORANGE",
+      "routes": {
+        "16": "trade",
+        "18": "purchase_or_auction",
+        "19": "trade"
+      }
+    },
+    {
+      "game": 18,
+      "group": "BROWN",
+      "routes": {
+        "1": "purchase_or_auction",
+        "3": "trade"
+      }
+    },
+    {
+      "game": 19,
+      "group": "LIGHT_BLUE",
+      "routes": {
+        "6": "purchase_or_auction",
+        "8": "purchase_or_auction",
+        "9": "trade"
+      }
+    },
+    {
+      "game": 20,
+      "group": "GREEN",
+      "routes": {
+        "31": "purchase_or_auction",
+        "32": "purchase_or_auction",
+        "34": "trade"
+      }
+    }
+  ],
+  "winner_creditor": 54,
+  "terminal_winner_creditor": 19,
+  "colour_rent_eliminations": 57,
+  "bank_zero_games": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    9,
+    12,
+    14,
+    18
+  ],
+  "initial_prompt_bank_zero_games": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    9,
+    12,
+    14,
+    18
+  ],
+  "decision_bank_states_matched": 6989
+}
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_negotiation_units.py
+{
+  "event_counts": {
+    "TRADE_PROPOSED": 526,
+    "TRADE_COUNTERED": 394,
+    "TRADE_REJECTED": 413,
+    "TRADE_ACCEPTED": 113
+  },
+  "role_mismatches": {
+    "TRADE_PROPOSED": 0,
+    "TRADE_COUNTERED": 232,
+    "TRADE_ACCEPTED": 44,
+    "TRADE_REJECTED": 26
+  },
+  "affected_initial_prompts_by_type": {
+    "TRADE_PROPOSED": 0,
+    "TRADE_COUNTERED": 2022,
+    "TRADE_ACCEPTED": 682,
+    "TRADE_REJECTED": 383
+  },
+  "accepted_rejected_union": 1015,
+  "all_four_types_union": 2054,
+  "repeated_identities_resolved_chronologically": 21,
+  "initiation": {
+    "claude-opus-5.5": {
+      "eligible_decisions": 1050,
+      "proposals": 240,
+      "eligible_turns": 660,
+      "proposing_turns": 160,
+      "zero_proposal_games": 0
+    },
+    "gpt-6.1-sol": {
+      "eligible_decisions": 1133,
+      "proposals": 132,
+      "eligible_turns": 834,
+      "proposing_turns": 83,
+      "zero_proposal_games": 1
+    },
+    "gemini-4-argon": {
+      "eligible_decisions": 1001,
+      "proposals": 18,
+      "eligible_turns": 766,
+      "proposing_turns": 16,
+      "zero_proposal_games": 8
+    },
+    "grok-4.7": {
+      "eligible_decisions": 897,
+      "proposals": 136,
+      "eligible_turns": 676,
+      "proposing_turns": 106,
+      "zero_proposal_games": 0
+    }
+  }
+}
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_g01_sample.py
+G01 sample financing, rent and jail checks pass.
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_g05_sample.py
+G05 sample completion and construction checks pass.
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_g07_sample.py
+G07 final sample checks pass.
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_review_integrity.py
+Traceback (most recent call last):
+  File "/Users/kushagra/CS-Projects/MonopolyBench/docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_review_integrity.py", line 115, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kushagra/CS-Projects/MonopolyBench/docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_review_integrity.py", line 98, in main
+    assert target.exists(), f'{name}: {link}'
+           ~~~~~~~~~~~~~^^
+AssertionError: review_handoff.md: verification.log
+exit_code=1
+
+Integrity link preflight ran before verification.log existed. The log now exists; rerun link checks.
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_review_integrity.py
+{"status": "passed", "catalog_per_coauthor": 614, "sample_per_coauthor": 240, "source_hash_checks": 2077, "script_checks": 45, "links": 105, "hashed_files": 1490}
+exit_code=0
+
+$ python/.venv/bin/ruff check docs/research_raw/paper_phase2_2026-10-28/core_review/astra
+All checks passed!
+exit_code=0
+
+$ python/.venv/bin/python docs/research_raw/paper_phase2_2026-10-28/core_review/astra/check_review_integrity.py
+{"status": "passed", "catalog_per_coauthor": 614, "sample_per_coauthor": 240, "source_hash_checks": 2077, "script_checks": 45, "links": 105, "hashed_files": 1502}
+exit_code=0
+
+$ python/.venv/bin/ruff check docs/research_raw/paper_phase2_2026-10-28/core_review/astra
+All checks passed!
+exit_code=0

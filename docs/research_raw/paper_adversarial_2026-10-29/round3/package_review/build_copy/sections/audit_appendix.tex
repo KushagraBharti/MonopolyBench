@@ -1,0 +1,33 @@
+\section{Executable claim certificates and population ledger}
+\label{app:certificates}
+
+The accompanying \artifact{artifacts/historical-claim-audit.zip} is a separate behavioral reproduction package, not just the manuscript's plotting data. Its fixed inputs contain all twenty original applied-action streams, engine settings, a reference digest for every canonical event, and 126 case records selected from resolution and bankruptcy markers. It includes the unchanged engine and board under the repository license, pinned dependencies, the runner, tests and expected results. Full provider explanations are not needed for these mechanical claims and are not included in that small package.
+
+After extracting it, install \artifact{requirements.txt} in a fresh Python environment, run \artifact{python run_audit.py --output reproduced.json}, then \artifact{python test_certificates.py}. Python 3.14.7 was used. After dependency installation, execution requires no network service, model account, repository checkout or original saved-game directory. Input digests are checked before replay; the regenerated output preserves the original-event checks, each prefix, atomic construction witnesses, payment routes and negative certificates.
+
+The liquidation upper bound is cash plus all clear-deed mortgage capacity and half-cost salvage for every building level. Every allowed mortgage consumes one clear-deed capacity; every sale consumes finite salvage. Removing even-selling and inventory constraints can only increase that budget. Thus a bound below debt certifies inability to self-finance that debt, even if a search misses a legal sequence. A bound above debt says nothing about accessibility without further evidence.
+
+Positive witnesses execute through the unchanged validator and transition code. An initial implementation also attempted to certify impossibility by exhausting atomic sales and mortgages. Adversarial review found a counterexample: with no bank houses, a debtor can have a sale action available on browns while a bundled dark-blue hotel-and-house sale is accepted by the engine's final-state checks. Atomic search misses that route. The preserved synthetic test uses actual \$750 Illinois rent, and the bundled sale pays with \$250 left. The revised checker refuses graph-based negative certification whenever an expanded state offers any building-sale action. It would report such a residual as unresolved, not impossible.
+
+The sole historical graph certificate, G7 d339, is unaffected. Its legal action names are mortgage and declare bankruptcy. A bundled building sale fails the action-name gate. Its only mortgage triggers bankruptcy below the debt. Exhausting that mortgage-only graph is complete at the recorded decision. The checker does not claim to solve arbitrary batch-sale problems, and the regression demonstrates why that restriction is necessary.
+
+The 66 default decisions contain 132 attempts: 70 well-formed construction targets, one malformed target and 61 without a parseable target. All 70 well-formed encodings are invalid. Atomic expansion preserves each deed/kind count; 63 targets execute and seven exceed current cash. These are attempt counts. At decision level, 63 contain at least one reachable target. Cases with no parseable plan remain distinct from targets proved unaffordable.
+
+\input{sections/per_game_audit_table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}L{2.9cm}YY@{}}
+\toprule
+Evidence layer & Performed check & Independence and scope\\\midrule
+Economic state & Event reductions reconcile all 6,989 initial states and the retained economic totals. & Separate implementations; later expected targets were peer-informed. Not blind semantic annotation.\\
+Historical actions & Portable runner matches all 50,918 events and 126 claim prefixes. & New execution, then a fresh reviewer re-executes and checks original selection and vendor files.\\
+Local certificates & Payment and construction witnesses execute; 56 debts fail the upper bound; one mortgage-only graph is exhausted. & Reviewer found and tested the generic atomic-search flaw. Finite historical classifications survived the guard.\\
+Resolution and delivery & Fresh audit reproduces the END partition, selected name conflicts and focal delivered rows. & Another reviewer reconstructs timelines and checks raw request/response bodies. Parser and channel limits remain.\\
+Social interpretation & Original-checked chronologies, preserved initial labels and corrections. & Shared targets and model-assisted review; no human gold standard or annotation-accuracy estimate.\\
+Manuscript & Retained datasets generate tables/figures; LaTeX, citations and rendered pages checked. & Build validation is distinct from verifying a behavioral claim.\\
+\bottomrule
+\end{tabularx}
+\caption{Verification provenance. Independent execution, independent implementation and independent semantic judgment are different claims. Expected counts were known before the new mechanical checks.}
+\label{tab:verification-provenance}
+\end{table}

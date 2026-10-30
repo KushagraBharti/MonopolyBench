@@ -1,0 +1,140 @@
+% Proposed replacement text from the Fable novelty review (round 1, 2026-10-29).
+% Each block names the target file and the passage it replaces or follows.
+% Nothing here has been applied to the shared draft. All comparator statements
+% below were checked against the sources listed in sources.md on 2026-10-29.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 1. abstract.tex — replace sentences 1–3 and the final sentence.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REPLACE: "Long-horizon agents must acquire resources ... economic events."
+In long-horizon multi-agent play, an applied action is not always a chosen one. We study twenty complete four-player games of MonopolyBench, a deterministic environment that records, for every decision, the legal menu, each response attempt, the retry or fallback that resolved it, the memory delivered to the agent and the resulting economic events. Across 6,989 decisions and 8,679 attempts by four frontier configurations, we find that a measurable share of economically consequential actions were produced by response resolution rather than by the agent's stated plan: all 61 construction plans defaulted to an end-turn action were affordable and legal when the identical purchases were reordered; one of three payable bankruptcies was declared by a received tool call whose accompanying text requested a house sale; and three of eight unbuilt entry-buildable groups ended through a received action that conflicted with its content.
+% KEEP the existing middle sentences from "Forty-three of sixty-three ..." through "... without authored private notes."
+% REPLACE final sentence:
+The cohort therefore establishes neither an instruction-misalignment rate nor a capability--alignment trend. It contributes an empirical account; an exact-prefix adjudication procedure, stated as a reusable test with three certificate types, applied both to agents' claims and to our own research labels; and the requirements for future controlled, norm-explicit comparisons.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 2. introduction.tex — paragraph 2, replace the DECE clause; paragraph 5, add
+%    one sentence; paragraph 6, replace the contributions paragraph.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REPLACE: "and DECE evaluates complete model--harness configurations under controlled economic conditions"
+and DECE evaluates complete model--harness configurations, with matched harness studies, across ten score-based Eurogames that have no inter-player dialogue~\cite{wu2026agentmonopoly,hu2026finboardbench,zhang2026dece}.
+
+% ADD after "The results support a detailed capability profile rather than a ranking."
+We do not propose a leaderboard score: with five seed blocks and one condition per configuration, win totals estimate nothing, and the unit of evidence in this paper is the audited decision rather than the game.
+
+% REPLACE contributions paragraph:
+Our contributions are threefold. First, we provide an integrated account of complete economic and social trajectories that preserves acquisition routes, bilateral transaction consequences, financing access, response provenance and downstream outcomes. Because every attempt, retry and fallback is recorded, the account separates actions an agent chose from actions its configuration produced; no comparator we inspected reports attempt chains as a measured object. Second, we state an exact-prefix adjudication procedure (Section~\ref{sec:prefix-procedure}) that restores a recorded decision prefix in the engine, executes a specified sequence of the actor's own legal actions, and returns one of three certificates: a feasible route, an exhaustive local infeasibility, or a rule lock. We apply it to agents' claims and to our own research labels. Third, we validate the recorded system and identify concrete requirements for future norm-explicit evaluation and training environments. We do not claim to have introduced replay, multiplayer economics or factual checking of agent communication; the specific differences from the closest systems are stated in Section~\ref{sec:related} and Table~\ref{tab:capability-matrix}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 3. economic_methods.tex — insert after the paragraph beginning "To test a
+%    financing or construction claim, we restore ..." in the subsection
+%    "Local legal-sequence tests".
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection*{Exact-prefix adjudication procedure}
+\label{sec:prefix-procedure}
+\begin{center}
+\fbox{\begin{minipage}{0.95\linewidth}\small
+\textbf{Input.} A game $g$, a decision index $k$, a claim $\phi$ about the acting player $p$ at that decision (for example ``$p$ can pay its current debt $D$'', or ``$p$'s submitted purchase multiset $M$ is affordable and legal''), and a declared local endpoint $E$ (debt paid; multiset completed; menu exhausted).
+
+\textbf{Step 1: restore.} Re-execute the recorded action stream of $g$ through decision $k-1$ in the engine from the saved seed and roster. Require that the regenerated events, the pending decision identifier and the rebuilt memory window equal the recorded ones; otherwise abort and report a replay failure.
+
+\textbf{Step 2: search.} From the restored state, execute only actions legal for $p$ at each step, without consuming another player's decision. Diagnostic alterations (an opponent's acceptance, altered bank stock) must be declared as conditions and are reported separately.
+
+\textbf{Step 3: certify.} Return one of: (a) \emph{feasible route}: an explicit legal sequence reaching $E$, with the terminal cash; (b) \emph{infeasible}: either the nominal bound $U<D$ (Equation~\ref{eq:sol-upper}) or an exhaustive enumeration of the permitted sale and mortgage orders that never reaches $E$; (c) \emph{rule lock}: $U\ge D$ but every permitted order is blocked by a stated rule (bank-house shortage, even-selling), with the blocking rule named.
+
+\textbf{Output.} The certificate, the sequence or enumeration, the endpoint state, and the list of declared conditions. The procedure never asserts what the agent or any opponent would have done after $E$.
+\end{minipage}}
+\end{center}
+In this paper the procedure is applied to sixty eliminations (fifty-six infeasible by bound, three feasible routes, one rule lock), to sixty-one defaulted construction plans (all feasible after reordering), and to the specific reserve, budget and restructuring cases named in Section~\ref{sec:sol-economic-results}. It is also applied to our own labels: two writing-stage summaries and one analyst financing restriction were corrected by it (Section~\ref{sec:discussion}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 4. economic_results.tex — insert after the paragraph beginning "All sixty-three
+%    trade-completed group episodes have an observed first management window."
+%    Numbers from data/t03_trade_groups.json and t09_entry_nonbuild_records.json
+%    (analysis/results.json).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrrrr}\toprule
+Agent & Trade-completed & Built in window & Never buildable in window & Buildable later, unbuilt & Entry-buildable, unbuilt & Entry non-build causes\\\midrule
+Sol & 17 & 16 & 0 & 0 & 1 & 1 default\\
+Gemini & 18 & 17 & 0 & 1 & 0 & ---\\
+Opus$^\dagger$ & 15 & 7 & 5 & 1 & 2 & 2 defaults\\
+Grok & 13 & 3 & 4 & 1 & 5 & 3 received conflicts, 2 stated holds\\\midrule
+All & 63 & 43 & 9 & 3 & 8 & 3 / 3 / 2\\
+\bottomrule\end{tabular}
+\caption{Decomposition of the first management window after trade completion, by configured agent. ``Never buildable'' means no legal construction at any decision in the window, usually because the acquired or related deeds were mortgaged and redemption was unaffordable. The columns separate access, financing and resolution; they are descriptive counts in a finite cohort, not a ranking. $^\dagger$Opus resolved 1,604 of 1,696 decisions under the action-only refusal-recovery prompt (Section~\ref{sec:setup}).}
+\label{tab:first-window-decomposition}
+\end{table}
+Table~\ref{tab:first-window-decomposition} states what Figure~\ref{fig:development} shows by configuration. The visible gap between Sol and Gemini on one side and Opus and Grok on the other is mostly a gap in access: nine of the twenty unbuilt groups are never buildable at any decision in the window, and all nine belong to Opus or Grok, whose trade-completed groups more often arrive mortgaged or with insufficient cash to redeem them. The remaining eleven unbuilt groups are the ones that test choice and resolution: three became buildable only later in the window and were not built, and eight were buildable on entry, of which three ended through engine defaults after failed attempts, three through received actions conflicting with their accompanying content, and two through stated holds. The decomposition does not rank the agents. It shows that a first-window build rate conflates acquisition financing, response resolution and reserve choices, and that the three must be separated before any of them is read as willingness or skill.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 5. Dagger footnote for every exhibit containing an Opus row (Tables 1–4,
+%    Figures 2–4). Add to each caption:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% $^\dagger$Opus: 1,604 of 1,696 decisions resolved under the action-only refusal-recovery prompt without a private note (Section~\ref{sec:setup}); its counts describe that configured condition.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 6. related_work.tex — replace the first two paragraphs and add the matrix.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Long-horizon economic agents.}
+Vending-Bench evaluates autonomous operation of a simulated business and motivates economic capability as a safety-relevant property~\cite{backlund2025vendingbench}. Vending-Bench~2 extends the author-reported environment to a simulated year with note-taking tools and adversarial suppliers~\cite{andon2026vb2}. The multiplayer Arena communication study is the closest comparison for our social results: it analyzes 2,583 emails from twenty year-long runs of thirteen frontier models, combining a language-model judge, deterministic checks of extracted factual claims against simulator logs, and reasoning-summary analysis, and it measures the enactment of 525 verifiable transfer promises~\cite{li2026arena}. Its agents receive no conduct instruction, its label validation is a single-author consistency check on fifty emails, and its environment is not publicly redistributed, so our comparison is to its reported method rather than to re-runnable data. Its deterministic verification applies to claims that the simulator's pricing, transfer and inventory logs can resolve, and it returns an insufficient-data verdict otherwise. In MonopolyBench every proposition about ownership, cash, charges and development is decidable from the complete event log, and every feasibility claim is decidable by engine execution from the recorded prefix. We do not claim that multiplayer economics, state-checked statements or longitudinal communication analysis are new. Our cases add exact historical action menus, engine-executed financing sequences, per-attempt resolution records and an explicit permission for public deception.
+
+\paragraph{Monopoly and board-game economies.}
+AgentMonopoly studies economic and social behavior, persona control and within-family model sizes in a closely related game~\cite{wu2026agentmonopoly}. Its paper and Apache-2.0 repository provide legal-action lists in the prompt, a deterministic seeded engine, per-turn session snapshots and a dashboard mode for playing back recorded sessions; the inspected code has no function that restores a recorded state or re-executes the engine from it, and prompts and raw model outputs are not stored as fields~\cite{agentmonopoly2026repo}. Its limitations caution against treating explanations as direct evidence of computation. Three protocol differences bound the comparison. Its bankruptcy rule eliminates a cash-negative player with no mortgage-and-sale liquidation phase, so our accessible-finance tests address a mechanic it does not have; in the inspected code a player-creditor nevertheless inherits buildings intact, as in our declared variant. Its trade is a single offer answered by acceptance or rejection, so the counteroffer attribution problem of Section~\ref{sec:sol-economic-results} cannot arise there. Its prompt encourages deceit and bluffing but states that the public message ``must match the reality of your action'', whereas ours imposes no such constraint. Invalid outputs there are forced to a pass action without a corrective retry and are not reported numerically; here every attempt, retry and fallback is a recorded object. Its eight open-weight models range from 8B to 32B parameters at temperature zero; a 150-step cap invokes a net-worth winner. Our four frontier configurations use provider-default sampling and the observed games end by uncapped bankruptcy. The inspected paper reports 140 games while the repository table totals 120, and the repository runner read on the same date applies a 600-turn default without the net-worth rule; we compare to the paper's stated protocol and retain the discrepancies rather than infer a shared count.
+
+FinBoardBench evaluates one focal model against three fixed opponents across three board games, including Monopoly liquidity and investment summaries and judge-rated trade quality~\cite{hu2026finboardbench}. Its Monopoly trades are structured proposals with accept, reject and counter responses and a reason field. On bankruptcy to a player it returns buildings to the bank and passes the deeds to the creditor, whereas our creditor inherits buildings intact; this difference is central to why our rent receipts are not a comparable ROI score, and we evaluate all four players rather than a focal seat. DECE evaluates complete model--harness configurations across ten score-based Eurogames with matched harness studies, persisted state, legal interfaces and replay-and-resume~\cite{zhang2026dece}. We adopt its complete-system framing without claiming its controlled harness comparisons; its games have no inter-player dialogue or trading, and its primary results do not report invalid-action handling. Cattle Trade provides another auction and bargaining comparison in which heuristic code agents outperform most tested models~\cite{muller2026cattletrade}. The present cohort contains no corresponding policy-baseline evaluation. Table~\ref{tab:capability-matrix} summarizes the inspected capabilities.
+
+\begin{table}[t]
+\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{2.9cm}YYYYY@{}}
+\toprule
+Capability & This cohort & AgentMonopoly (paper v2; repo main) & Arena comm.\ study (v3) & FinBoardBench (v1) & DECE (v1)\\
+\midrule
+Players evaluated & All four, frontier via OpenRouter & All four; eight open 8B--32B, temp.\ 0 & 3--5 per run; 13 frontier & One focal vs.\ three fixed & Three per match; 12 configurations\\
+Legal-action menu recorded per decision & Yes & Yes (prompt list) & Not stated (tool calls) & Yes (phase templates) & Yes (action IDs)\\
+Response attempts, retries, fallbacks recorded and reported & Yes: 8,679 attempts, 66 defaults, 1,605 refusals, 139 conflicts & Invalid outputs recorded, not reported; forced pass, no retry & Not stated & Fallback after five failures, logged as system event & Retries/fallbacks disabled in expansion; not described for primary\\
+Engine restore of a recorded prefix and branching & Yes: 20 full replays; 20 branch prefixes & Session playback only; no restore in inspected code & Not stated & Not stated & Replay and resume via persisted states; branching not stated\\
+Negotiation protocol & Threads up to 20 exchanges; counters; 920 response events & Single offer, accept/reject & Free-form email, transfers & Propose with accept/reject/counter & None\\
+Debt-time liquidation phase & Mortgage and sales before declaration; declaration permitted & None: cash-negative elimination & n/a & Yes (variant details not inspected) & n/a\\
+Bankrupt estate to player-creditor & Buildings intact & Buildings intact (code); paper silent & n/a & Buildings to bank & n/a\\
+Conduct instruction & Public deception permitted; private note asked to be true & Deceit encouraged; message must match action; secret alliances allowed & None & Not stated & None (no dialogue)\\
+Ground truth for stated claims & Complete event log; engine execution & Engine state; no counterfactual analysis & Simulator logs where available; insufficient-data verdict & Judge-rated & n/a\\
+Games / horizon & 20 uncapped, 75--386 turns & 140 (paper) / 120 (repo), 150-step cap & 20 one-year runs & 108 matches & 480 primary, 1,032 total\\
+Public release of code and logs & Code and all twenty games' artifacts, Apache-2.0 & Code, Apache-2.0; logs not stated & Not redistributed & Not stated & Not stated\\
+\bottomrule
+\end{tabularx}
+\caption{Inspected capabilities of the closest systems, by primary source on 2026-10-29. ``Not stated'' records absence from the inspected text, not absence from the system. Cells for this cohort describe the recorded artifacts, not a validated monitorability or persuasion benchmark.}
+\label{tab:capability-matrix}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 7. validation.tex — replace the final paragraph of "What the environment
+%    currently supports"; limitations.tex — replace the "Validation and release"
+%    paragraph's last two sentences. Choose variant A (named) or B (anonymized).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Variant A:
+The engine, harness, telemetry, interface and all twenty games' artifacts (events, actions, decisions, per-turn state snapshots, per-attempt prompts, tool schemas, responses and usage) are public under the Apache-2.0 license in the project repository at \url{https://github.com/KushagraBharti/MonopolyBench}. The analysis scripts and review ledgers cited in the evidence map are not yet part of that release. No external clean-environment reproduction has been performed; an independent reader should reproduce one primary table from the released events before this draft is cited for its counts.
+% Variant B:
+The engine, harness, telemetry, interface and all twenty games' artifacts (events, actions, decisions, per-turn state snapshots, per-attempt prompts, tool schemas, responses and usage) are available under an open license in the project repository, which is public at the time of submission. The analysis scripts and review ledgers cited in the evidence map are not yet part of that release. No external clean-environment reproduction has been performed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 8. appendix.tex Table 9 (tab:norms) cell replacements.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Row "Public/action contradiction", AgentMonopoly cell:
+Explicitly prohibited: ``your public message must match the reality of your action'' (repository prompt)
+% Row "Withdrawal of an offer", AgentMonopoly cell:
+Not applicable: single-offer protocol with accept or reject; no standing offer exists
+% Optional new row:
+Coalitions & Cooperative and manipulative play permitted; no private channel & Secret alliances explicitly allowed (repository prompt); rent waiver logged as collusion & Externally coded as explicit or tacit collusion\\
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 9. appendix.tex app:cohort paragraph 2 — rename and bound the rounding note.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Known implementation deviation. Both charges use floating-point ceilings. Trade interest equals the exact ten percent for all sixteen board principals. Redemption exceeds the exact ceiling by one dollar for principals of \$50, \$90, \$100, \$110 and \$200, including \$111 for a \$100 principal. The deviation is frozen in the recorded cohort and in all legal tests. A model expecting the exact \$110 is not making a rule-knowledge error. [Owner of the branch proofs to confirm before insertion:] No feasibility verdict in this paper changes if the exact ceiling is substituted; the smallest payable margin is \$8 (G12 d190).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 10. discussion.tex 7.1 — one sentence to open the subsection, replacing
+%     "The observed games contain economically consequential planning."
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The practical lesson of the economic record is that an applied action is a joint product of the agent's attempt and the harness's resolution of it, and that the two must be reported separately before an end-turn or a bankruptcy is read as a decision. The observed games contain economically consequential planning.

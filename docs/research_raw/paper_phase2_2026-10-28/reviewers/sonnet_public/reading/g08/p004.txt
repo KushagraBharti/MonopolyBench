@@ -1,0 +1,102 @@
+# game 8 page 4  decisions #270..#288  seats: p1=Grok, p2=Opus, p3=Sol, p4=Argon
+
+#270 t125 p3/Sol POST  $[p1:204 p2:7 p3:*2668 p4:133]
+  STATE: p1/Grok $204 BV1624  | OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~ ## p2/Opus $7 BV1037  | BR:MED0,BAL~0 LB:VER~0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC~0 ## p3/Sol $2668 BV5668  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL ## p4/Argon $133 BV833  | GR:NCA~0 DB:PKP0,BW~0
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p3 rolls 1+3; p3->COMMUNITY_CHEST; CARD p3 CO:INHERIT_100; $p3 +100 INHERIT_100
+#271 t126 p3/Sol POST  $[p1:204 p2:7 p3:*2768 p4:133]
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "Passing the dice."
+  post: p4 rolls 1+2; p4->VIR
+#272 t127 p4/Argon LIQ  $[p1:204 p2:7 p3:2768 p4:*133]
+  H: p4/Argon $133 BV833  | GR:NCA~0 DB:PKP0,BW~0 ## p3/Sol $2768 BV5768  | PK:STC4,STA4,VIR4 RD:ILL0 GR:PEA0 RR:RDG,PRR,BO,SL
+  ctx: OWES $700 to p3 (RENT) shortfall=$567 mortgageable=PKP sellable=-
+  > declare_bankruptcy
+  "Landing on Virginia right after St. Charles finishes me off. Well played, everyone."
+  post: $p4 -133 BANKRUPTCY_CASH; $p3 +133 BANKRUPTCY_CASH; $p4 +0 BANKRUPTCY; BUY p3 NCA $0; BUY p3 PKP $0; BUY p3 BW $0; p1 rolls 1+1 DBL; p1->KEN; RENT p1>p2 $18 @KEN
+#273 t128 p1/Grok POST  $[p1:*186 p2:25 p3:2901 p4:0]
+  ctx: buildable=STJ,TEN,NYA sellable=STJ,TEN,NYA unmortgageable=ELE,IND,WW mortgageable#0 trade_with=p2,p3
+  > end_turn
+  "Passing the dice."
+  post: p1 rolls 4+3; p1->WW
+#274 t129 p1/Grok POST  $[p1:*186 p2:25 p3:2901 p4:0]
+  ctx: buildable=STJ,TEN,NYA sellable=STJ,TEN,NYA unmortgageable=ELE,IND,WW mortgageable#0 trade_with=p2,p3
+  > end_turn
+  "Passing."
+  post: p2 rolls 5+3; p2->CHANCE; CARD p2 CH:GO_TO_JAIL; p2->JAIL; JAILED p2 (CHANCE_CARD); p3 rolls 5+3; p3->MED (passGO); GO p3+200; RENT p3>p2 $4 @MED
+#275 t131 p3/Sol POST  $[p1:186 p2:29 p3:*3097 p4:0]  JAILED:p2
+  ctx: buildable=STC,STA,VIR sellable=STC,STA,VIR unmortgageable=NCA,BW mortgageable#7 trade_with=p1,p2
+  > unmortgage_property BW
+  "Reopening Boardwalk."
+  post: UNMORT p3 BW -$221
+#276 t131 p3/Sol POST  $[p1:186 p2:29 p3:*2876 p4:0]  JAILED:p2
+  H: p3/Sol $2876 BV6776  | PK:STC4,STA4,VIR4 RD:ILL0 GR:NCA~0,PEA0 DB:PKP0,BW0 RR:RDG,PRR,BO,SL
+  ctx: buildable=STC,STA,VIR,PKP,BW sellable=STC,STA,VIR unmortgageable=NCA mortgageable#8 trade_with=p1,p2
+  > build_houses_or_hotel PKP+3 BW+3  [ATT illogical(std)>valid(std)]
+  "Three houses apiece on the dark blues."
+  post: $p3 -1200 BUILD; HOUSE+1 p3 PKP; HOUSE+1 p3 BW; HOUSE+1 p3 PKP; HOUSE+1 p3 BW; HOUSE+1 p3 PKP; HOUSE+1 p3 BW
+#277 t131 p3/Sol POST  $[p1:186 p2:29 p3:*1676 p4:0]  JAILED:p2
+  ctx: buildable=STC,STA,VIR,PKP,BW sellable=STC,STA,VIR,PKP,BW unmortgageable=NCA mortgageable#6 trade_with=p1,p2
+  > end_turn
+  "Passing the dice."
+  post: p1 rolls 3+2; p1->COMMUNITY_CHEST; CARD p1 CO:HOSPITAL_FEES_PAY_100; $p1 -100 HOSPITAL_FEES_PAY_100
+#278 t132 p1/Grok POST  $[p1:*86 p2:29 p3:1676 p4:0]  JAILED:p2
+  ctx: sellable=STJ,TEN,NYA unmortgageable=ELE,WW mortgageable#0 trade_with=p2,p3
+  > end_turn
+  "Passing."
+#279 t133 p2/Opus JAIL  $[p1:86 p2:*29 p3:1676 p4:0]  JAILED:p2
+  ctx: jail fine=50 pay=False roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "Jail's nice and quiet. Rolling."
+  post: p2 rolls 1+4; p3 rolls 3+4; p3->VER
+#280 t134 p3/Sol POST  $[p1:86 p2:29 p3:*1676 p4:0]  JAILED:p2
+  ctx: buildable=STC,STA,VIR,PKP,BW sellable=STC,STA,VIR,PKP,BW unmortgageable=NCA mortgageable#6 trade_with=p1,p2
+  > end_turn
+  "Passing the dice."
+  post: p1 rolls 1+3; p1->PKP
+#281 t135 p1/Grok LIQ  $[p1:*86 p2:29 p3:1676 p4:0]  JAILED:p2
+  H: p1/Grok $86 BV1506  | OR:STJ2,TEN2,NYA2 RD:IND~0 UT:ELE~,WW~ ## p3/Sol $1676 BV6776  | PK:STC4,STA4,VIR4 RD:ILL0 GR:NCA~0,PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL
+  ctx: OWES $1100 to p3 (RENT) shortfall=$1014 mortgageable=- sellable=STJ,TEN,NYA
+  > declare_bankruptcy
+  "Can't cover Park Place. I'm out."
+  post: $p1 -86 BANKRUPTCY_CASH; $p3 +86 BANKRUPTCY_CASH; $p1 +0 BANKRUPTCY; BUY p3 ELE $0; BUY p3 STJ $0; BUY p3 TEN $0; BUY p3 NYA $0; BUY p3 IND $0; BUY p3 WW $0
+#282 t136 p2/Opus JAIL  $[p1:0 p2:*29 p3:1762 p4:0]  JAILED:p2
+  ctx: jail fine=50 pay=False roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "Jail's still the safest spot on the board. Rolling."
+  post: p2 rolls 4+2; p3 rolls 2+2 DBL; p3->ELE
+#283 t137 p3/Sol POST  $[p1:0 p2:29 p3:*1762 p4:0]  JAILED:p2
+  H: p3/Sol $1762 BV8282  | PK:STC4,STA4,VIR4 OR:STJ2,TEN2,NYA2 RD:IND~0,ILL0 GR:NCA~0,PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE~,WW~
+  ctx: buildable=STC,STA,VIR,STJ,TEN,NYA,PKP,BW sellable=STC,STA,VIR,STJ,TEN,NYA,PKP,BW unmortgageable=ELE,IND,WW,NCA mortgageable#6 trade_with=p2
+  > build_houses_or_hotel STJ+2 TEN+2 NYA+2
+  "Four houses across the oranges."
+  post: $p3 -600 BUILD; HOUSE+1 p3 STJ; HOUSE+1 p3 TEN; HOUSE+1 p3 NYA; HOUSE+1 p3 STJ; HOUSE+1 p3 TEN; HOUSE+1 p3 NYA
+#284 t137 p3/Sol POST  $[p1:0 p2:29 p3:*1162 p4:0]  JAILED:p2
+  ctx: buildable=STC,STA,VIR,STJ,TEN,NYA,PKP,BW sellable=STC,STA,VIR,STJ,TEN,NYA,PKP,BW unmortgageable=ELE,IND,WW,NCA mortgageable#6 trade_with=p2
+  > end_turn
+  "Passing the dice."
+  post: p3 rolls 6+4; p3->CHANCE; CARD p3 CH:GO_TO_NEAREST_RAILROAD_B; p3->BO
+#285 t138 p3/Sol POST  $[p1:0 p2:29 p3:*1162 p4:0]  JAILED:p2
+  ctx: buildable=STC,STA,VIR,STJ,TEN,NYA,PKP,BW sellable=STC,STA,VIR,STJ,TEN,NYA,PKP,BW unmortgageable=ELE,IND,WW,NCA mortgageable#6 trade_with=p2
+  > end_turn
+  "Passing the dice."
+#286 t139 p2/Opus JAIL  $[p1:0 p2:*29 p3:1162 p4:0]  JAILED:p2
+  ctx: jail fine=50 pay=False roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "Last roll in the cell. Let's see where it lands."
+  post: p2 rolls 4+2
+#287 t139 p2/Opus LIQ  $[p1:0 p2:*29 p3:1162 p4:0]  JAILED:p2
+  H: p2/Opus $29 BV1059 JAIL  | BR:MED0,BAL~0 LB:VER~0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC~0
+  ctx: OWES $50 to BANK (JAIL_FINE) shortfall=$21 mortgageable=MED,CON,KEN,VEN sellable=-
+  > mortgage_property MED  [ATT refused(std)>valid(nothought)]
+  "Paying my way out. Mortgaging Mediterranean."
+  post: MORT p2 MED +$30; $p2 -50 JAIL_FINE; p2->STJ
+#288 t139 p2/Opus LIQ  $[p1:0 p2:*9 p3:1162 p4:0]
+  H: p2/Opus $9 BV1009  | BR:MED~0,BAL~0 LB:VER~0,CON0 RD:KEN0 YL:VEN0,MAR~0 GR:PAC~0 ## p3/Sol $1162 BV8282  | PK:STC4,STA4,VIR4 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL0 GR:NCA~0,PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE~,WW~
+  ctx: OWES $750 to p3 (RENT) shortfall=$741 mortgageable=CON,KEN,VEN sellable=-
+  > declare_bankruptcy  [ATT refused(std)>valid(nothought)]
+  "The oranges got me. GG, gpt-6.1-sol, well played."
+  post: $p2 -9 BANKRUPTCY_CASH; $p3 +9 BANKRUPTCY_CASH; $p2 +0 BANKRUPTCY; BUY p3 MED $0; BUY p3 BAL $0; BUY p3 VER $0; BUY p3 CON $0; BUY p3 KEN $0; BUY p3 VEN $0; BUY p3 MAR $0; BUY p3 PAC $0; GAME-ENDED BANKRUPTCY winner=p3

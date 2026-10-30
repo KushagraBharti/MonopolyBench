@@ -1,0 +1,785 @@
+Empty Commitments: When Agents PromiseWhat Their Runtime Cannot Deliver
+Report GitHub Issue
+×
+Title:
+Content selection saved. Describe the issue below:
+Description:
+Submit without GitHub
+Submit in GitHub
+arXiv is now an independent nonprofit!
+Learn more
+×
+Back to arXiv
+License: arXiv.org perpetual non-exclusive license
+arXiv:2610.01045v1 [cs.AI] 01 Oct 2026
+Empty Commitments: When Agents Promise
+What Their Runtime Cannot Deliver
+Jiaqi Tang
+Affiliation:
+Department of Computer Science and Technology,
+Kean University, Union, NJ, USA
+Email:
+tangjiaq@kean.edu
+Lan Wei
+Affiliation:
+Department of Computer Science and Technology,
+Kean University, Union, NJ, USA
+Email:
+welan@kean.edu
+Bingyu Shen
+Affiliation:
+Independent Researcher
+Email:
+boli@kean.edu
+Boyang Li
+†
+†
+thanks:
+Corresponding author.
+Affiliation:
+Department of Computer Science and Technology,
+Kean University, Union, NJ, USA
+Email:
+bingyu.shen@hotmail.com
+Abstract
+A chatbot that says “I will remind you tomorrow” will not run again
+until the user writes. We call such a promise an
+empty commitment
+: a
+promise of an action after the current turn that nothing in the agent’s tools
+or runtime can carry out. Unlike a broken promise, its emptiness follows from
+the agent’s configuration alone; no later trajectory is needed. We define
+empty commitments on top of commitment semantics, with three failure types,
+an anchoring condition for promises that a tool could make real, and a
+response-level outcome taxonomy. We then describe a measurement protocol:
+follow-up requests run in five setups that add one persistence affordance at
+a time, with the environment either left implicit or stated.
+1
+Introduction
+Users ask agents for things that outlive the conversation:
+remind me
+tomorrow
+,
+tell me when the build finishes
+,
+have someone call me
+back
+,
+remember this next time
+. Whether the agent can do any of
+these depends on its deployment: whether it has a scheduler, a memory store or
+a ticketing tool, and whether it ever runs again without a user message.
+LLM agents now reason and call tools in a loop
+(
+Yao et al., 2023
+;
+Schick et al., 2023
+;
+Shinn et al., 2023
+)
+and manage their own memory
+(
+Park et al., 2023
+;
+Packer et al., 2023
+;
+Shen and Li, 2026
+;
+Zhong et al., 2024
+)
+,
+but the model is rarely told what persists after the turn ends.
+A promise presupposes that the speaker can perform the act
+(
+Searle, 1969
+;
+Searle and Vanderveken, 1985
+)
+. When a tool-less agent
+answers “Sure, I’ll remind you at 9 am”, that condition fails at the moment
+of speaking.
+A close cousin is the
+false action claim
+: “Done! Reminder set for
+9 am”, with no reminder anywhere.
+Prior work studies the later trajectory: whether agents break instructions
+they just accepted
+(
+Shin, 2026
+)
+, overclaim finished work
+(
+Smyth et al., 2026
+;
+Kraishan and Jitkajornwanich, 2026
+)
+, forget delayed intentions
+(
+Liu and Gabriel, 2026
+;
+Zhang et al., 2026
+)
+, or break promises for gain
+(
+Shi et al., 2026
+)
+. In all of these the promised act was possible. We ask
+the prior question:
+was the promise possible at all?
+Nothing the
+agent does later can redeem an empty commitment, so it can be caught at the
+moment of speaking.
+We contribute (1) a definition of empty commitments, decidable from the
+agent’s configuration and one turn; (2) an outcome taxonomy that separates
+failures from desirable responses and from over-refusal; and (3) a protocol
+for measuring them.
+2
+Empty Commitments
+Commitments and affordances.
+Commitment has been central to agent theory since its beginnings
+(
+Shoham, 1993
+;
+Wooldridge and Jennings, 1995
+;
+Rao and Georgeff, 1995
+)
+,
+first as an agent’s persistence in its own intentions
+(
+Cohen and Levesque, 1990
+;
+Jennings, 1993
+;
+Castelfranchi, 1995
+)
+and then as a social relation between agents
+(
+Singh, 2000
+;
+Yolum and Singh, 2002
+)
+.
+Following
+Singh (1999)
+and
+Fornara and Colombetti (2004)
+, a
+commitment is
+c
+=
+⟨
+x
+,
+y
+,
+φ
+,
+α
+,
+ρ
+,
+δ
+⟩
+c=\langle x,y,\varphi,\alpha,\rho,\delta\rangle
+: debtor
+x
+x
+owes creditor
+y
+y
+action
+α
+\alpha
+when
+φ
+\varphi
+holds, within window
+δ
+\delta
+, unless released by
+ρ
+\rho
+. We study commitments the agent issues in
+its own turn whose action falls
+after the turn ends
+and whose trigger
+is not the user’s next message: a time, an external event, a later session,
+or an unspecified “later”. Promises conditional on the user’s next message
+are set aside: the agent runs again when the user writes. The
+agent’s affordance set
+Φ
+A
+\Phi_{A}
+is its tools plus four persistence properties:
+whether it can act after the turn, schedule future actions, keep memory
+across sessions, and delegate to third parties.
+Feasibility.
+A commitment is
+felicitous
+iff some execution path under
+Φ
+A
+\Phi_{A}
+performs
+α
+\alpha
+when
+φ
+\varphi
+holds, within
+δ
+\delta
+; otherwise it is
+empty
+. Table
+1
+lists the three ways it fails.
+Type
+Definition and example
+capability
+No affordance performs
+α
+\alpha
+. “I’ll email you the summary” with no email tool.
+temporal
+α
+\alpha
+falls at a time or event when the agent is not running and cannot schedule. “I’ll remind you tomorrow.”
+agentive
+A third party must act and the agent cannot delegate. “A colleague will call you back.”
+Table 1:
+Failure types of an empty commitment.
+Anchoring.
+When an enabling tool exists, a feasible commitment is
+anchored
+iff the agent calls an enabling
+tool (e.g.,
+create_reminder
+) in the same turn, and
+unanchored
+otherwise.
+Response outcomes.
+Each response gets one label, by the first matching rule:
+false_claim
+(asserts a completed persistent action with no tool call
+behind it),
+empty
+,
+unanchored
+,
+anchored
+,
+done_now
+,
+over_refusal
+(declines a request the setup can fulfil),
+deferral
+(declines or hands back a request the setup cannot fulfil), or
+other
+(Table
+2
+). The first three are failures;
+anchored
+,
+done_now
+and
+deferral
+are desirable.
+over_refusal
+is the cost side, so a fix that makes the model refuse
+everything does not count as a fix.
+Reply to a reminder request
+Outcome
+C0
+“Sure, I’ll remind you tomorrow!”
+empty
+C0
+“Done! Reminder set for 9am.”
+false_claim
+C0
+“I can’t act after this chat ends; set a phone alarm.”
+deferral
+C2
+“I’ll remind you at 9am.” (no call)
+unanchored
+C2
+same, with a
+create_reminder
+call
+anchored
+C2
+“I can’t set reminders.”
+over_refusal
+Table 2:
+Example outcomes. C0 has no tools; C2 has a scheduler.
+3
+Measurement Protocol
+Tools
+Sched.
+Mem.
+Deleg.
+C0
+none
+–
+–
+–
+C1
+base tools
+–
+–
+–
+C2
+base + scheduler, reminders
+✓
+–
+–
+C3
+base + memory read/write
+–
+✓
+–
+C4
+base + tickets, escalation
+–
+–
+✓
+Table 3:
+The five setups. C2–C4 each add one affordance to C1 and are not
+cumulative. All tools are mocked.
+Setups.
+Each of five setups (Table
+3
+) runs in two variants.
+In
+inferred
+, the model sees a persona prompt and tool schemas, and
+nothing about persistence, as in most deployments. In
+stated
+, a short
+paragraph of facts about the runtime is added (for C0: “You run only when the
+user sends a message …”), with no advice. Two personas (generic, customer support) give 20 conditions.
+Requests.
+Single-turn requests cover five categories: reminders, monitoring an external
+state, callbacks and escalation, deferred delivery, and cross-session memory.
+A doability matrix decides whether declining is
+deferral
+or
+over_refusal
+.
+Labeling.
+A setup-blind detector extracts future-directed commitments from each turn.
+Deterministic rules
+then decide feasibility, failure type and anchoring from the setup
+configuration. A judge returns five booleans per response (e.g., false action claim,
+declines, hands back), from which the outcome follows by the ordered rules.
+Metrics.
+The primary result is the outcome distribution per setup and variant, with
+the
+empty-commitment rate
+(empty over all future-directed
+commitments), the
+unanchored rate
+(among feasible commitments needing
+an enabling call), and the
+over-refusal rate
+(among doable requests).
+4
+Open Questions
+(Q1)
+When persistence is not stated, how do responses distribute over
+the outcomes, and which failure types dominate?
+(Q2)
+When the enabling tool exists, how often do models promise
+without calling it?
+(Q3)
+Does stating the environment lower failures, and how much
+over-refusal does it cause?
+(Q4)
+How common were they in public logs of tool-less agents
+(
+Zhao et al., 2024
+)
+?
+5
+Conclusion
+An agent’s promise about the future is only as good as its runtime. We
+defined empty commitments, false action claims and unanchored promises, all
+decidable from one turn and the deployment’s configuration. The protocol is
+single-turn with mocked tools, and its LLM-based labels need human
+validation. A multi-model evaluation is under way.
+References
+Castelfranchi (1995)
+C. Castelfranchi
+Commitments: from individual intentions to groups and organizations
+.
+In
+Proceedings of the First International Conference on Multiagent Systems
+,
+pp. 41–48
+.
+Cited by:
+§2
+.
+Cohen and Levesque (1990)
+P. R. Cohen and H. J. Levesque
+Intention is choice with commitment
+.
+Artificial Intelligence
+42
+(
+2–3
+),
+pp. 213–261
+.
+Cited by:
+§2
+.
+Fornara and Colombetti (2004)
+N. Fornara and M. Colombetti
+A commitment-based approach to agent communication
+.
+Applied Artificial Intelligence
+18
+(
+9–10
+),
+pp. 853–866
+.
+Cited by:
+§2
+.
+Jennings (1993)
+N. R. Jennings
+Commitments and conventions: the foundation of coordination in multi-agent systems
+.
+The Knowledge Engineering Review
+8
+(
+3
+),
+pp. 223–250
+.
+Cited by:
+§2
+.
+Kraishan and Jitkajornwanich (2026)
+O. Kraishan and K. Jitkajornwanich
+Plans they abandon, reports they author: the narrative layer of autonomous agents
+.
+External Links:
+2609.12205
+,
+Link
+Cited by:
+§1
+.
+Liu and Gabriel (2026)
+G. Liu and S. Gabriel
+PM-Bench: evaluating prospective memory in LLM agents
+.
+External Links:
+2607.12385
+,
+Link
+Cited by:
+§1
+.
+Packer
+et al.
+(2023)
+C. Packer, S. Wooders, K. Lin, V. Fang, S. G. Patil, I. Stoica, and J. E. Gonzalez
+MemGPT: towards LLMs as operating systems
+.
+External Links:
+2310.08560
+,
+Link
+Cited by:
+§1
+.
+Park
+et al.
+(2023)
+J. S. Park, J. C. O’Brien, C. J. Cai, M. R. Morris, P. Liang, and M. S. Bernstein
+Generative agents: interactive simulacra of human behavior
+.
+In
+Proceedings of the 36th Annual ACM Symposium on User Interface Software and Technology
+,
+Cited by:
+§1
+.
+Rao and Georgeff (1995)
+A. S. Rao and M. P. Georgeff
+BDI agents: from theory to practice
+.
+In
+Proceedings of the First International Conference on Multiagent Systems
+,
+pp. 312–319
+.
+Cited by:
+§2
+.
+Schick
+et al.
+(2023)
+T. Schick, J. Dwivedi-Yu, R. Dessì, R. Raileanu, M. Lomeli, L. Zettlemoyer, N. Cancedda, and T. Scialom
+Toolformer: language models can teach themselves to use tools
+.
+In
+Advances in Neural Information Processing Systems
+,
+Vol.
+36
+.
+Cited by:
+§1
+.
+Searle and Vanderveken (1985)
+J. R. Searle and D. Vanderveken
+Foundations of illocutionary logic
+.
+Cambridge University Press
+,
+Cambridge, UK
+.
+Cited by:
+§1
+.
+Searle (1969)
+J. R. Searle
+Speech acts: an essay in the philosophy of language
+.
+Cambridge University Press
+,
+Cambridge, UK
+.
+Cited by:
+§1
+.
+Shen and Li (2026)
+B. Shen and B. Li
+Decision-sufficient state representations: measuring and reducing write-time regret
+.
+External Links:
+2609.32805
+,
+Link
+Cited by:
+§1
+.
+Shi
+et al.
+(2026)
+J. Shi, T. J. Zhang, Z. Jin, and V. Conitzer
+Cheap talk, empty promise: frontier LLMs easily break public promises for self-interest
+.
+External Links:
+2604.04782
+,
+Link
+Cited by:
+§1
+.
+Shin (2026)
+K. S. Shin
+The compliance gap: why AI systems promise to follow process instructions but don’t
+.
+External Links:
+2605.01771
+,
+Link
+Cited by:
+§1
+.
+Shinn
+et al.
+(2023)
+N. Shinn, F. Cassano, E. Berman, A. Gopinath, K. Narasimhan, and S. Yao
+Reflexion: language agents with verbal reinforcement learning
+.
+In
+Advances in Neural Information Processing Systems
+,
+Vol.
+36
+.
+Cited by:
+§1
+.
+Shoham (1993)
+Y. Shoham
+Agent-oriented programming
+.
+Artificial Intelligence
+60
+(
+1
+),
+pp. 51–92
+.
+Cited by:
+§2
+.
+Singh (1999)
+M. P. Singh
+An ontology for commitments in multiagent systems: toward a unification of normative concepts
+.
+Artificial Intelligence and Law
+7
+(
+1
+),
+pp. 97–113
+.
+Cited by:
+§2
+.
+Singh (2000)
+M. P. Singh
+A social semantics for agent communication languages
+.
+In
+Issues in Agent Communication
+,
+Lecture Notes in Computer Science
+, Vol.
+1916
+,
+pp. 31–45
+.
+Cited by:
+§2
+.
+Smyth
+et al.
+(2026)
+N. Smyth, Y. Mantilla-Ramos, P. J. T. Notsawo, S. Helbling, A. Tosato, M. A. Merzouk, N. Dziri, G. Gidel, and T. Tosato
+Quantifying overclaiming propensity in frontier LLM agents
+.
+External Links:
+2609.20812
+,
+Link
+Cited by:
+§1
+.
+Wooldridge and Jennings (1995)
+M. Wooldridge and N. R. Jennings
+Intelligent agents: theory and practice
+.
+The Knowledge Engineering Review
+10
+(
+2
+),
+pp. 115–152
+.
+Cited by:
+§2
+.
+Yao
+et al.
+(2023)
+S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. Narasimhan, and Y. Cao
+ReAct: synergizing reasoning and acting in language models
+.
+In
+The Eleventh International Conference on Learning Representations
+,
+Cited by:
+§1
+.
+Yolum and Singh (2002)
+P. Yolum and M. P. Singh
+Flexible protocol specification and execution: applying event calculus planning using commitments
+.
+In
+Proceedings of the First International Joint Conference on Autonomous Agents and Multiagent Systems
+,
+pp. 527–534
+.
+Cited by:
+§2
+.
+Zhang
+et al.
+(2026)
+T. Zhang, X. Wang, Q. Zhang, Q. Chen, K. Li, Y. Chen, D. Wang, H. Meng, and Y. Lu
+TriggerBench: investigating prospective memory for large language models
+.
+External Links:
+2606.23459
+,
+Link
+Cited by:
+§1
+.
+Zhao
+et al.
+(2024)
+W. Zhao, X. Ren, J. Hessel, C. Cardie, Y. Choi, and Y. Deng
+WildChat: 1m ChatGPT interaction logs in the wild
+.
+In
+The Twelfth International Conference on Learning Representations
+,
+Cited by:
+§4
+.
+Zhong
+et al.
+(2024)
+W. Zhong, L. Guo, Q. Gao, H. Ye, and Y. Wang
+MemoryBank: enhancing large language models with long-term memory
+.
+In
+Proceedings of the AAAI Conference on Artificial Intelligence
+,
+Vol.
+38
+.
+Cited by:
+§1
+.
+Experimental support, please
+view the build logs
+for errors. Generated by
+L
+A
+T
+E
+xml
+.
+Instructions for reporting errors
+We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below:
+Click the "Report Issue"
+(
+)
+button, located in the page header.
+Tip:
+You can select the relevant text first, to include it in your report.
+Our team has already identified
+the following issues
+. We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all.
+Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a
+list of packages that need conversion
+, and welcome
+developer contributions
+.
+We gratefully acknowledge support from
+        our
+major funders
+,
+member institutions
+,
+,
+        and all contributors.
+Major funding support from

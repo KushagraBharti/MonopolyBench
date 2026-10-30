@@ -1,0 +1,27 @@
+\subsection{Claims, interventions and certificates}
+\label{sec:claim-protocol}
+
+The audit unit is a claim $Q=(h,p,\mathcal{I},E)$: a hashed historical prefix $h$, the acting player $p$, an admissible intervention class $\mathcal{I}$, and an endpoint predicate $E$. This specification prevents ``could pay'' from silently meaning ``could obtain help'', or ``could build'' from borrowing an earlier management phase. A local alternative changes only the permitted actions from the restored prefix. It does not retain a historical future after that change.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}L{0.20\linewidth}Y@{}}
+\toprule
+Audit step & Required evidence and stopping rule \\
+\midrule
+Fix the claim & Record actor, decision, source hashes, allowed actions, endpoint and assumptions before executing the diagnostic. Disclose retrospective case selection.\\
+Restore the prefix & Match the pending decision and actor, and every preceding canonical event. Restore through original actions, including random and card state, rather than edit a displayed snapshot.\\
+Establish feasibility & Execute a permitted sequence through the unchanged engine. Preserve actions and events; stop when the endpoint is met. One witness proves existence, not optimality.\\
+Establish impossibility & Use an admissible bound covering all allowed inflows, or exhaust the permitted state graph. A failed heuristic or timed-out search returns unresolved.\\
+Limit the inference & Separate reachability from submitted encoding, future survival, predicted agreement and model choice. Reconstruct delivery and recipient response separately for social claims.\\
+\bottomrule
+\end{tabularx}
+\caption{Historical-claim audit procedure. The endpoint and intervention class determine the certificate's meaning. Engine execution tests feasibility, not belief, attention or persuasion.}
+\label{tab:claim-protocol}
+\end{table}
+
+We implement this procedure for two complete, retrospectively selected populations: every elimination and every engine-defaulted construction decision. Selection comes from canonical bankruptcy events and resolution records before the new runner executes its diagnostics. For liquidation, $\mathcal{I}$ permits own legal sales and mortgages against the existing debt, without help, trades, construction or future random moves. Equation~\ref{eq:sol-upper} is admissible because each sale consumes finite salvage and each mortgage consumes one clear-deed capacity. Ignoring stock and even-selling restrictions enlarges that budget. Where the bound does not settle the claim, we retain a payment witness or a complete financing graph.
+
+For construction, $\mathcal{I}$ permits splitting count-valued operations into atomic purchases and changing their order, preserving every deed/kind count. It supplies no additional cash, stock or action slot. We test the submitted encoding separately. A reachable target is therefore compatible with an invalid attempted action. Our constructive ordering is not a complete solver for arbitrary targets; failure with adequate resources would remain unresolved. No such residual occurs here: all well-formed unsuccessful targets exceed current cash.
+
+The portable artifact contains the fixed 126-case manifest, original action streams, per-event reference digests, settings, an unchanged engine and board copy, pinned dependencies, witnesses and negative certificates. It reproduces all 50,918 original events and all 126 audited prefixes. Nine adversarial tests reject altered inputs and invalid certificates. One new test preserves a reviewer-found counterexample: the engine accepts a bundled building sale that an atomic search misses. The checker therefore refuses a graph-based impossibility certificate whenever a visited state offers building sales. The sole historical graph certificate has no sale action and is exhaustive over its mortgages. This correction illustrates why engine acceptance of positive witnesses is easier to establish than completeness of negative searches. The artifact does not measure annotation accuracy against a human standard or establish transfer to another environment.

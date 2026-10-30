@@ -1,0 +1,80 @@
+% Sol proposed formatting notes. These are replacements/additions for table
+% notes in the shared package, not an independently authored manuscript.
+% Each paragraph may be copied beside its relevant native table.
+
+% T2: do not mix percentage and ratio units.
+\paragraph{T2 units.}
+Own-turn propensity is proposing turns divided by eligible own turns;
+eligible-decision rate is proposals divided by eligible decisions. If shown
+as percentages, multiply these two columns by 100 and mark their headers
+with \%. Proposals per proposing turn and eligible decisions per turn are
+ratios, not percentages. Counts are exact; any displayed rounding applies
+only to rates and ratios. State a single rounding rule for values computed
+from the integer numerator and denominator. In particular, 18/16 is exactly
+1.125: half-even rounding to two decimals gives 1.12; half-up gives 1.13.
+The CSV/JSON retain their full recorded precision.
+Preserve the exact source \texttt{response\_condition} strings in row-linked
+native notes: Sol and Gemini, ``standard corrective-retry policy''; Opus,
+``refusal recovery to action-only requests; retry budget affected''; Grok,
+``required tool choice; standard corrective-retry policy''.
+
+% T5: game currency, not provider costs; preserve both rent windows.
+\paragraph{T5 units and flags.}
+Each row is one game/player/color group with any own construction expenditure.
+All monetary entries are in game dollars. Outlay and sale proceeds are gross
+flows. Paid developed rent is shown both for the whole game and after first
+own expenditure. The first-own-spend event is an event sequence number.
+Winner and inherited-deed fields are Boolean flags; the creditor field counts
+eliminations on that group. These amounts do not measure net or incremental ROI.
+
+% T6: explain raw ``avoidable'' without implying future survival.
+\paragraph{T6 units and scope.}
+Owed, cash and all three finance bounds are in game dollars. Bank houses is
+a count. Menu-mortgage-only cash includes current cash plus the mortgage
+values of deeds mortgageable on the initial menu, without building sales.
+Accessible cash follows the legal own-action liquidation sequence, including
+building sales and mortgages of newly unlocked deeds. A hotel downgrade
+requires at least four houses in the bank. The generous full-access upper
+bound is current cash plus half the building cost per level and all
+unmortgaged mortgage values, ignoring the bank-house constraint. This is the
+retained analysis's definition of the source \texttt{full} field, rather than
+a new financial estimand. As F6 states, the greedy legal route reaches that
+bound in 59 cases. In the remaining case, maximality follows from exhausting
+both permitted mortgage orders and the empty sale menu. The four
+automatic-elimination rows use the triggering decision state before its
+applied action.
+
+Display the source \texttt{avoidable} flag under a header such as ``Own legal
+sequence pays current debt''. A true value means that an engine-verified
+own-action sequence can pay that debt. It does not predict later survival or
+a changed winner. Preserve all 60 rows' ordered liquidation steps, applied
+actions and elimination event sequence numbers in a companion native table.
+The paired CSV/JSON remain the exact machine-readable source.
+
+% T8: no reconstruction/aggregation hidden by compact display.
+\paragraph{T8 ordering and units.}
+These are the 631 retained event-level cash records for G14, G15 and G19,
+in their source order. Event sequence numbers and game turns are distinct
+indices. Cash is the balance after the event, in game dollars, not a cash
+change, net worth or liquidatable wealth. The figure's initial balances come
+separately from saved turn-zero states and are not rows of this event table.
+
+% T9: source None must not be conflated with zero.
+\paragraph{T9 missing fields and provenance.}
+A dash denotes an absent selected-content name or selected-attempt index;
+0 denotes attempt index zero. Categories classify the received records,
+not intention or a proven lost build. A shortened decision ID is unique only
+with its game key. Preserve the full ID, source path and source line in an
+adjacent native provenance table, together with all attempt outcomes in
+their source order. The paired CSV/JSON remain the exact machine-readable
+source; a pointer alone does not fully represent these omitted fields.
+
+% Opus cost table: the currency differs from game-money tables.
+\paragraph{Provider cost and token units.}
+Cost entries are known OpenRouter-reported USD, not game dollars. Opus's cost
+is a lower bound because refused attempts lack cost records. Missing cost
+counts and token accounting semantics remain visible. Completion and reasoning
+tokens have provider-specific semantics and must not be silently summed into
+a cross-provider total. Label latency in wall-clock seconds per decision;
+it is observational metadata. Display the source's Argon participant as
+``Gemini (Argon)'' to match the other exhibits.

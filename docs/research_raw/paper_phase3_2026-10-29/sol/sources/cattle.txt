@@ -1,0 +1,2569 @@
+Cattle Trade: A Multi-Agent Benchmark for LLM Bluffing, Bidding, and Bargaining
+Report GitHub Issue
+×
+Title:
+Content selection saved. Describe the issue below:
+Description:
+Submit without GitHub
+Submit in GitHub
+arXiv is now an independent nonprofit!
+Learn more
+×
+Back to arXiv
+License: arXiv.org perpetual non-exclusive license
+arXiv:2605.14537v1 [cs.AI] 14 May 2026
+Cattle Trade: A Multi-Agent Benchmark for LLM Bluffing, Bidding, and Bargaining
+Robert Müller
+†
+†
+thanks:
+Equal contribution. Correspondence to:
+robert@aganthos.com
+Clemens Müller
+1
+1
+footnotemark:
+1
+Abstract
+We introduce
+Cattle Trade
+1
+1
+1
+Kuhhandel
+(English:
+You’re Bluffing!
+) is a
+trademark of Ravensburger. This work is not affiliated with Ravensburger.
+, a multi-agent benchmark
+for evaluating large language models (LLMs) as agents in strategic reasoning under imperfect
+information, adversarial interaction, and resource constraints. The benchmark combines auctions,
+hidden-offer trade challenges (TCs), bargaining, bluffing, opponent modeling, and
+resource allocation within a single long-horizon game lasting 50–60 turns. Unlike
+prior agent benchmarks that test these abilities in isolation,
+Cattle Trade
+evaluates whether
+agents integrate them across a competitive, multi-agent economic game with conflicting incentives.
+The benchmark logs every bid, TC offer, counteroffer, and card selection, enabling behavioural
+analysis beyond final scores or win rates. We evaluate seven cost-efficient language models and
+three deterministic code agents across 242 games. Strategic coherence, in particular spending efficiency, resource
+discipline, and phase-adaptive bidding, is associated with rank more strongly than spending volume or any single
+subskill. Two heuristic code agents outperform most tested LLMs, and behavioural traces surface
+recurring LLM failure modes including overbidding, self-bidding, bankrupt TC initiation, and
+weak opponent-state adaptation. Evaluating agentic competence requires benchmarks that test the
+joint deployment of multiple capabilities in multi-agent environments with conflicting incentives,
+uncertainty, and economic dynamics.
+1
+Introduction
+LLM-based agents are increasingly deployed in multi-agent settings, from
+negotiation
+(
+Lewis et al., 2017
+)
+to cooperative tool use
+(
+Hong et al., 2024
+)
+. Standard
+benchmarks such as MMLU
+(
+Hendrycks et al., 2021
+)
+and HumanEval
+(
+Chen et al., 2021
+)
+measure knowledge and code generation but tell us little about strategic reasoning under uncertainty
+and adversarial incentives. Game-based benchmarks for social
+deduction
+(
+Light et al., 2023
+;
+Xu et al., 2023
+)
+, game-theoretic
+scenarios
+(
+Duan et al., 2024
+)
+, and social reasoning
+(
+Pan et al., 2023
+)
+each test
+individual competencies in isolation rather than requiring their combination within a single
+environment.
+Agent
+TS
+μ
+±
+σ
+\mu\!\pm\!\sigma
+Median
+±
+\pm
+std
+G3-F
+±
+1.1
+30.1\!\pm\!1.1
+5
+,
+±
+4,026
+5{,}250\!\pm\!4{,}026
+C:Trk
+±
+1.2
+28.7\!\pm\!1.2
+3
+,
+±
+2,688
+3{,}550\!\pm\!2{,}688
+G3.1-FL
+±
+1.0
+28.0\!\pm\!1.0
+3
+,
+±
+2,652
+3{,}930\!\pm\!2{,}652
+C:Set
+±
+1.1
+27.3\!\pm\!1.1
+2
+,
+±
+1,555
+2{,}760\!\pm\!1{,}555
+Sonnet 4.5
+±
+1.6
+26.4\!\pm\!1.6
+2
+,
+±
+2,376
+2{,}310\!\pm\!2{,}376
+DS-v3.2
+±
+0.9
+23.9\!\pm\!0.9
+1
+,
+±
+1,858
+1{,}640\!\pm\!1{,}858
+GPT5.4-N
+±
+0.9
+22.6\!\pm\!0.9
+1
+,
+±
+2,667
+1{,}490\!\pm\!2{,}667
+C:Econ
+±
+1.2
+22.1\!\pm\!1.2
+1
+,
+±
+1,110
+1{,}000\!\pm\!1{,}110
+Haiku 4.5
+±
+0.9
+21.8\!\pm\!0.9
+1
+,
+±
+1,596
+1{,}000\!\pm\!1{,}596
+G2.5-FL
+±
+1.0
+20.5\!\pm\!1.0
+±
+1,283
+\phantom{0}500\!\pm\!1{,}283
+LLM
+Code
+Figure 1:
+(a) Turn structure and hidden-offer trade challenge.
+Card counts are public; offer values
+are hidden, enabling 0-value card bluffs.
+(b) Ranking
+over 98 canonical games sorted by
+TrueSkill
+μ
+\mu
+; median
+±
+\pm
+std in the right column. TrackerAgent and SetRaceAgent beat
+six and five of seven LLMs, respectively.
+Passing individual tests does not guarantee joint competence. One key challenge in evaluating agents is not whether models possess isolated skills, but whether they can integrate them coherently under uncertainty, competition, and resource allocation constraints. This matters for downstream agentic settings such as negotiation, procurement, portfolio management and other economic interactions, where effective behavior depends on combining tasks like bidding, bargaining, bluffing, and resource management over time. Prior benchmarks often probe subsets of these abilities, but rarely test whether agents can deploy them jointly in a strategically structured adversarial environment.
+We introduce
+Cattle Trade
+, a benchmark that integrates
+(i) competitive auctions with a buy-right mechanism coupling bidding strategy to future liquidity,
+(ii) hidden-offer bilateral trade challenges (TCs) that create bluffing incentives, (iii) discrete money with
+no-change payments that impose resource constraints, and (iv) a multiplicative scoring rule that
+makes portfolio composition consequential. Games last 50–60 turns with four players. We evaluate
+seven cost-efficient LLMs and three deterministic code agents across 242 games in two formats:
+pure-LLM tournaments and mixed games where each LLM faces three code agents.
+TrackerAgent and SetRaceAgent outperform six and five of seven LLMs respectively. Only Gemini 3 Flash clearly
+outperforms all code-agent baselines (72.9% wins,
+μ
+=
+±
+3.3
+\mu=30.1\!\pm\!3.3
+); TrackerAgent
+(
+μ
+=
+±
+3.6
+\mu=28.7\!\pm\!3.6
+) and Gemini 3.1 Flash Lite (
+μ
+=
+±
+2.9
+\mu=28.0\!\pm\!2.9
+) sit close behind,
+with G3.1-FL clearing SetRace and EconomyAgent but essentially tied with TrackerAgent.
+Behavioural analysis surfaces failures absent from the code agents: overbidding, self-bidding
+spirals, and bankrupt TC initiation.
+Our contributions:
+•
+A multi-agent benchmark combining auctions, bargaining, deception, and resource constraints
+with structured decision logging and configurable game parameters.
+•
+A behavioural analysis suite profiling strategic play via spending efficiency, bluff rates,
+phase-dependent bid adaptation, self-bidding rates, and buy-right patterns.
+•
+Empirical results across 242 games showing that spending efficiency and resource discipline
+is associated with success, while overbidding, self-bidding spirals, and undisciplined bluffing characterise
+failure.
+2
+Related Work
+Standard benchmarks such as MMLU
+(
+Hendrycks et al., 2021
+)
+,
+BIG-bench
+(
+Srivastava et al., 2023
+)
+, and HumanEval
+(
+Chen et al., 2021
+)
+measure knowledge
+and reasoning but do not test multi-agent incentives, hidden information, or long-horizon resource
+allocation. AgentBench
+(
+Liu et al., 2024
+)
+extends evaluation to interactive tool-use settings
+but lacks adversarial strategic reasoning.
+Game-based LLM benchmarks each emphasize a subset of strategic skills.
+GTBench
+(
+Duan et al., 2024
+)
+covers game-theoretic scenarios but uses short-horizon interactions.
+AvalonBench
+(
+Light et al., 2023
+)
+and Werewolf
+(
+Xu et al., 2023
+)
+probe deception and
+cooperation but lack economic constraints. MACHIAVELLI
+(
+Pan et al., 2023
+)
+provides
+long-horizon continuous scoring but pits a single agent against scripted dynamics.
+Suspicion-Agent
+(
+Guo et al., 2024
+)
+studies deception in an imperfect-information board game;
+GameBench
+(
+Costarelli et al., 2024
+)
+broadens game coverage but simplifies economic structure;
+lmgame-Bench
+(
+Hu et al., 2026
+)
+proposes a Gym-style interface with scaffolds for perception
+and memory. To our knowledge, no existing benchmark requires agents to combine auctions,
+hidden-offer trade challenges, bluffing, and discrete resource management within a single game.
+Jia et al. (2025)
+analyze strategic reasoning through behavioral game theory,
+GAMEBoT
+(
+Lin et al., 2025
+)
+decomposes game reasoning into interpretable sub-problems, and
+ALYMPICS
+(
+Mao et al., 2025
+)
+provides an empirical game-theory framework whose pilot task
+centres on scarce resource allocation through multi-round auctions.
+Pluribus
+(
+Brown and Sandholm, 2019
+)
+and CICERO
+(
+Bakhtin et al., 2022
+)
+achieve strong play in
+poker and Diplomacy, respectively, but rely on domain-specific search and self-play rather than
+general-purpose language modeling. Work on neural
+negotiation
+(
+Lewis et al., 2017
+;
+Gandhi et al., 2023
+)
+and deception
+(
+Hagendorff, 2024
+)
+addresses dialogue-level strategy.
+These works are closest in
+their concern with strategic interaction, but they do not test the joint deployment of auctions,
+hidden-offer trade challenges, bluffing, discrete no-change payments, and portfolio-sensitive scoring.
+Cattle Trade
+concentrates these pressures into a single environment: a multi-agent
+imperfect-information game with repeated auctions and bargaining, bluffing incentives, discrete
+liquidity constraints, and continuous scoring over 50–60 turns. This enables both head-to-head
+ranking (via TrueSkill) and mechanism-level behavioural diagnosis (overbid frequency, self-bidding
+rate, bluff calibration).
+3
+Cattle Trade
+3.1
+The Cattle Trade Game
+Cattle Trade
+adapts a 3–5 player tabletop card game designed by Rüdiger
+Koltze (Ravensburger, 1985). Players collect quartets (complete sets of 4 cards) of animal types,
+scored by a multiplicative formula that rewards both the value and number of completed sets. The
+game uses 40 animal cards (10 types
+×
+\times
+4 each) and 55 money cards of fixed denominations.
+Appendix
+A
+details the turn structure and TC mechanic;
+Table
+1
+compares
+Cattle Trade
+to existing game-based LLM benchmarks.
+Cattle Trade
+combines auctions, hidden-offer trade challenges (TCs), bluffing, and
+resource management within a single game over
+50–60 turns.
+Benchmark
+Players
+Info
+Bargain
+Bluff
+Econ.
+Hidden
+Discrete$
+Buy-right
+Scoring
+Turns
+GTBench
+2
+Mixed
+✓
+✗
+✗
+✗
+✗
+✗
+Binary
+1–10
+AvalonBench
+5–10
+Imperfect
+✗
+✓
+✗
+✗
+✗
+✗
+Binary
+5–10
+Werewolf
+5–18
+Imperfect
+✗
+✓
+✗
+✗
+✗
+✗
+Binary
+5–15
+MACHIAVELLI
+1
+Partial
+✗
+✗
+✗
+✗
+✗
+✗
+Continuous
+50+
+Suspicion-Agent
+3–6
+Imperfect
+✗
+✓
+✗
+✗
+✗
+✗
+Binary
+10–20
+ALYMPICS
+5
+Imperfect
+✗
+✗
+✓
+✗
+✗
+✗
+Continuous
+5–10
+Cattle Trade
+3–5
+Imperfect
+✓
+✓
+✓
+✓
+✓
+✓
+Continuous
+50–60
+Table 1:
+Comparison of game-based LLM benchmarks. Bargain: explicit bilateral offer/counter mechanic. Bluff: deception as core mechanic. Econ.: resource management required. Hidden: face-down offers create information asymmetry within bargaining (an opponent must accept or counter without seeing the offered amount). Discrete$: payments use fixed-denomination money cards with no change given, so paying 60 with a 100 card costs 100. Buy-right: the auctioneer may pay the highest bid to keep the auctioned card rather than sell. Suite-style benchmarks (GameBench, GAMEBoT, lmgame-Bench) cover broad ranges of games whose properties vary by game; we cite them in §
+2
+but omit from this table because per-property values would not be representative.
+Cattle Trade
+combines these properties through the TC mechanic and auction phase.
+Each animal type has a quartet value: Chicken (10), Goose (40), Cat (90), Dog (160), Sheep (250),
+Goat (350), Donkey (500), Pig (650), Cow (800), and Horse (1000). The final game score is:
+Score
+=
+(
+∑
+q
+∈
+𝒬
+v
+q
+)
+×
+|
+𝒬
+|
+\text{Score}=\left(\sum_{q\in\mathcal{Q}}v_{q}\right)\times|\mathcal{Q}|
+(1)
+where
+𝒬
+\mathcal{Q}
+is the set of completed quartets and
+v
+q
+v_{q}
+is the value of quartet
+q
+q
+. This
+multiplicative structure means three mid-value quartets (e.g., 1,250
+×
+\times
+3 = 3,750)
+outscore two top quartets (1,800
+×
+\times
+2 = 3,600), rewarding breadth over concentration and
+making opponent modeling critical.
+The game uses discrete, non-fungible money cards (denominations 0, 10, 50, 100, 200, 500) with no
+change given: paying 60 with a 100 card costs 100. Each player starts with 90 coins (four 10s, one
+50, two 0s). The 0 cards exist specifically for bluffing in TCs: an opponent who
+receives a face-down offer of three cards cannot distinguish an offer worth 150 coins from one worth zero. This information
+asymmetry is the foundation of the game’s deception mechanics.
+On each turn, the active player draws and auctions a card. The auctioneer either accepts the
+highest bid or exercises a
+buy-right
+(paying that amount to keep the card); with no bids,
+they get it free. This creates a dilemma: high bids enrich the auctioneer, low bids hand them the
+card cheaply. Overbidding one’s holdings reveals wealth to all players and restarts the auction.
+Instead of auctioning, the active player may initiate a TC with any opponent who shares
+an animal type. The initiator makes a face-down offer using any money cards, including 0 bluffs. The
+opponent may accept (taking the money sight-unseen and surrendering their animals) or counter with
+their own face-down offer. Both offers are then revealed and the money is exchanged: each player
+receives the other’s coins, and the higher total wins. If both players hold a pair (2 or more)
+of the animal, the loser transfers two contested cards to the winner; otherwise the loser
+transfers one. Bluffing succeeds only
+if the opponent accepts without seeing the offer; any positive counter defeats a 0 bluff. This
+mechanism is the strategic core of the game, requiring calibrated risk assessment: overpaying wastes
+resources, but underbidding loses cards.
+Donkey cards distribute coins to all players on draw (50, 100, 200, 500 for the first through
+fourth donkey), injecting liquidity and creating phase transitions: early games are
+cash-constrained; late games permit larger bids.
+3.2
+Benchmark Design
+The benchmark consists of a game engine, an LLM agent framework, and an evaluation system. We
+implement the complete
+Cattle Trade
+rules in Python with three auction modes: canonical
+(simultaneous-intent bidding faithful to tabletop play), fast (single sealed bid), and legacy
+(sequential). The engine validates all actions, handles exact money card accounting, and logs
+complete state transitions.
+Agents receive natural language observations (hand, visible cards, money, legal actions) and respond
+with a structured JSON action specifying exact bid amounts for auctions and exact card compositions
+for TC offers (e.g.,
+offer_cards: [50, 10, 0]
+), giving models direct control over
+bluff construction rather than delegating card selection to a heuristic.
+Each agent maintains a personal scratchpad updated each turn via an additional model call,
+and receives the same system prompt (the
+optimal
+character of
+Appendix
+D
+: neutral game rules plus “play optimally to maximize your expected
+score”), with no strategy hints or tactical guidance.
+We use TrueSkill
+(
+Herbrich et al., 2006
+)
+for competitive rating, which provides Bayesian
+skill estimates (
+μ
+\mu
+,
+σ
+\sigma
+).
+The framework handles malformed actions via multi-stage JSON fallback and retries truncated
+responses. In canonical mode, the engine permits overbids by design and applies the tabletop penalty
+(wealth revelation and auction restart) rather than silently correcting, preserving this as an
+observable strategic error. When multiple bidders submit equal highest bids in the same call round,
+ties are broken by a per-auction random priority order, sampled once when the auction starts.
+Auction settlement uses a dynamic-programming subset-sum routine to construct the minimum-overpay
+payment from the winner’s money cards (no change is given); TC offers and counters, by
+contrast, are composed card-by-card by the agent, so bluff construction (including 0-value cards) is
+a deliberate choice rather than an engine heuristic. Full architecture details are in
+Appendix
+C
+, and prompts are in Appendix
+D
+.
+3.3
+Scalability and Code Agents
+The benchmark supports parameterized configurations: set size
+k
+∈
+{
+2
+,
+3
+,
+4
+,
+5
+}
+k\in\{2,3,4,5\}
+(cards per animal
+type), animal types (1–10), player count (2–5), and starting hands (0–
+k
+k
+). These combine into
+presets from micro-duel (2 players,
+k
+=
+2
+k{=}2
+, 3 types,
+∼
+{\sim}
+20 turns,
+∼
+{\sim}
+50 LLM calls) to
+marathon (5 players,
+k
+=
+5
+k{=}5
+, 10 types). Our experiments use the standard configuration (4 players,
+k
+=
+4
+k{=}4
+, 10 types).
+We provide three deterministic code agents as calibration baselines, each implementing a distinct
+strategic heuristic with no learning:
+1.
+TrackerAgent
+maintains perfect information from all observable events (tracking
+revealed cards, opponent holdings, and estimated wealth) and makes greedy decisions conditioned on
+this state. It bids just above an opponent’s estimated budget, exercises buy-right only for
+quartet-completing cards, and adjusts TC offers to the target’s inferred cash position.
+2.
+SetRaceAgent
+greedily pursues quartet completion, bidding aggressively on
+near-complete sets and ignoring animals with no path to a quartet. It evaluates each auction card by
+marginal gain toward a quartet and prioritizes TCs that complete or advance sets,
+regardless of cost.
+3.
+EconomyAgent
+models the game as a resource economy, tracking money flows and donkey
+payouts to exploit cash-poor opponents and avoid enriching cash-rich ones. It caps spending at a
+fraction of its total wealth per turn, avoids buy-right when the auctioneer surplus would benefit a
+leading opponent, and bluffs only against opponents with low counter probability.
+4
+Experiments
+4.1
+Setup
+We evaluate seven cost-efficient LLMs spanning four providers: Claude Haiku 4.5 (
+Haiku
+,
+Anthropic), Claude Sonnet 4.5 (
+Sonnet
+, Anthropic),
+Gemini 2.5 Flash Lite (
+G2.5-FL
+,
+Google), Gemini 3 Flash Preview (
+G3-F
+, Google), Gemini 3.1 Flash Lite Preview
+(
+G3.1-FL
+, Google), GPT-5.4 Nano (
+GPT5.4-N
+, OpenAI), and DeepSeek v3.2
+(
+DS-v3.2
+, DeepSeek). We pit each LLM against three deterministic code agents
+(
+TrackerAgent
+,
+SetRaceAgent
+,
+EconomyAgent
+) to calibrate LLM play against
+algorithmic baselines (Section
+4.3
+).
+We run 228 primary games across two formats: (i) 60 pure-LLM tournaments in 15 balanced four-player
+combinations, covering every pair of the six primary LLMs at least twice, to capture head-to-head
+dynamics; and (ii) 168 mixed-format games where a single LLM competes against three code agents
+across seven opponent-composition schedules (e.g., Tracker+Economy+SetRace, denoted C1, or
+2
+×
+\times
+Tracker+Economy, denoted C2), to calibrate each LLM against fixed algorithmic baselines. An
+additional 14 exploratory games extend coverage to Sonnet 4.5 (10 pure-LLM matchups balancing
+opponents across the field, plus 4 comp1 games against the code agents), yielding 242 games in
+total. Sonnet results are reported with broader uncertainty (
+σ
+≈
+1.6
+\sigma{\approx}1.6
+vs.
+≈
+1.0
+{\approx}1.0
+for the others) due to the smaller sample. All games use canonical auction mode
+(simultaneous-intent bidding), full deck (10 animal types), full memory mode (scratchpad),
+temperature 0.1, reasoning effort set to low, and a 4,096-token response limit. The system
+prompt is the
+optimal
+character: the neutral game-rules block (Appendix
+D
+)
+followed by a single instruction to “play optimally to maximize your expected score.” No
+strategy hints, examples, or tactical guidance are provided, so any strategic behaviour is
+elicited from the model itself.
+4.2
+Main Results
+Figure
+2
+summarises the two-format evaluation. On the combined-comp1 slice
+(70 pure-LLM + 28 mixed-comp1 = 98 canonical games), we rank by TrueSkill
+μ
+\mu
+with
+±
+3
+​
+σ
+\pm 3\sigma
+error bars (the lower edge is
+μ
+c
+\mu_{c}
+). G3-F leads (
+μ
+=
+±
+3.3
+\mu{=}30.1\!\pm\!3.3
+, 72.9% wins, median
+5,250), followed by TrackerAgent (
+±
+3.6
+28.7\!\pm\!3.6
+, 53.6%), G3.1-FL (
+±
+2.9
+28.0\!\pm\!2.9
+, 44.9%),
+and SetRaceAgent (
+±
+3.3
+27.3\!\pm\!3.3
+): TrackerAgent beats six and SetRaceAgent five of seven LLMs.
+G3.1-FL has a slightly higher median (3,930) than TrackerAgent (3,550) despite a lower
+μ
+\mu
+: TrueSkill rewards how often an agent finishes ahead, so TrackerAgent’s higher win
+rate (53.6% vs. 44.9%) wins on
+μ
+\mu
+, while G3.1-FL’s runner-up finishes carry larger
+score tails. Sonnet 4.5 sits mid-field (
+±
+4.9
+26.4\!\pm\!4.9
+,
+n
+=
+14
+n{=}14
+, 35.7% wins; the wider
+band reflects sample size, not weak play). The weak tier: DS-v3.2 (
+±
+2.7
+23.9\!\pm\!2.7
+), GPT5.4-N (
+±
+2.7
+22.6\!\pm\!2.7
+), EconomyAgent
+(
+±
+3.5
+22.1\!\pm\!3.5
+), Haiku (
+±
+2.8
+21.8\!\pm\!2.8
+), G2.5-FL (
+±
+2.9
+20.5\!\pm\!2.9
+). The score gap
+tracks quartet completion: G3-F averages 3.96 quartets per game, Haiku and EconomyAgent below 1.7.
+Figure 2:
+Tournament policy dynamics
+(98 canonical games: 70 pure-LLM + 28 mixed
+comp1). Agents ordered by TrueSkill posterior mean
+μ
+\mu
+; error bars on the top-left panel
+show
+±
+3
+​
+σ
+\pm 3\sigma
+(99.7% interval). Top row: TrueSkill, win rate, and per-agent mean
+wealth across turns. Bottom row: per-agent mean quartets completed and mean score across
+turns (each line is the mean over
+∼
+\sim
+50 games for that agent; shaded band is the
+bootstrap 95% CI on the mean), then bid aggressiveness by donkey phase. Quartets and score
+are monotonically non-decreasing per game (with
+k
+=
+4
+k{=}4
+quartet permanence) and each game
+is snapshotted at every turn with state carried forward between events, so the cross-game
+mean is also strictly non-decreasing. Wealth (which can fluctuate) is reported only over games still running
+at each turn; the surviving pool shrinks at late turns and is therefore biased toward
+longer, more liquid games. Accept rate, bluff ratio, and challenger/target win rates are in
+Appendix
+B
+.
+4.3
+LLM vs. Code-Agent Calibration
+The mixed-format games let us separate LLM skill from LLM-vs-LLM variance. In the 172-game exp2
+slice (Figure
+3
+a; 168 core + 4 Sonnet comp1), G3-F wins 67.9% of its 28 games
+averaged over the seven compositions, and G3.1-FL wins 50.0%. Both clear all three heuristic
+baselines. The remaining LLMs fall below every code agent by mean score: DS-v3.2 (10.7% wins),
+GPT5.4-N (14.3%), Haiku (7.1%), and G2.5-FL (0.0%). Sonnet won 1 of its 4 comp1 games
+(25%); its small sample prevents a per-composition robustness plot, so it is omitted from the
+radar in Figure
+3
+a. The hardest compositions
+for LLMs are those containing two TrackerAgents (C2, C7): the card-counting pressure compounds
+and only G3-F still wins a majority. Conversely, compositions with two EconomyAgents (C3, C6) are
+the softest: every LLM except G2.5-FL wins a larger share there, confirming that EconomyAgent’s
+conservative budgeting is the weakest of the three code heuristics.
+TrackerAgent (
+μ
+=
+30.8
+\mu=30.8
+in the 172-game slice) exploits observed events via card counting, a
+capability no LLM replicates despite receiving the same observable information in its prompt.
+SetRaceAgent (
+μ
+=
+29.7
+\mu=29.7
+) targets quartet completion aggressively, and EconomyAgent
+(
+μ
+=
+26.4
+\mu=26.4
+) relies on conservative resource management. The ordering TrackerAgent
+>
+>
+SetRaceAgent
+>
+>
+EconomyAgent suggests that information exploitation and decisive acquisition matter more than caution.
+The economic profile in Figure
+3
+b complements this on two rates
+(full definitions in Appendix
+B.1
+). The
+x
+x
+-axis is capital efficiency
+η
+=
+score
+/
+gross outflow
+\eta{=}\text{score}/\text{gross outflow}
+(median across games);
+η
+>
+1
+\eta{>}1
+means the agent extracts more than one score point per coin
+spent (possible because free acquisitions, won bluffs, and the multiplicative scoring
+formula amplify returns). Further right
+=
+=
+each coin bought more final score. The
+y
+y
+-axis is
+TC bargaining tightness
+τ
+=
+∑
+i
+(
+o
+loser
+i
++
+10
+)
+/
+∑
+i
+o
+winner
+i
+\tau=\sum_{i}(o^{i}_{\text{loser}}+10)\,/\,\sum_{i}o^{i}_{\text{winner}}
+,
+size-weighted over counter-exchange wins. Money cards step by 10, so
+o
+loser
++
+10
+o_{\text{loser}}+10
+is the minimum bid the winner needed to win;
+τ
+=
+1
+\tau{=}1
+=
+=
+the winner paid only that minimum increment, while
+τ
+→
+0
+\tau{\to}0
+=
+=
+the winner crushed a small counter with a huge
+offer (loose, most coins wasted). Further up
+=
+=
+fewer coins burned per TC won. The
+ideal corner is top-right: efficient
+and
+tight. G3-F sits closest, combining the
+highest
+η
+\eta
+among LLMs with solid
+τ
+≈
+0.34
+\tau\approx 0.34
+. Haiku and GPT5.4-N are the tightest
+bargainers (
+τ
+≈
+0.4
+\tau\approx 0.4
+) but pay for it with low efficiency. Tracker and SetRace land
+opposite: high efficiency but looser counters (
+τ
+≈
+0.2
+\tau\approx 0.2
+–
+0.25
+0.25
+), trading
+bargaining precision for acquisition pressure.
+Figure 3:
+(a) LLM robustness across 7 code-agent compositions
+(exp2_all7, 168 mixed
+games, 4 games per (LLM, composition) cell; Sonnet’s 4 comp1 games omitted due to partial
+coverage). Axes C1–C7 are compositions; values are per-composition win-rate percentiles
+across the LLMs. Outward
+=
+=
+beats more peers on
+that mix; large convex polygon
+=
+=
+robust across mixes, spiky polygon
+=
+=
+composition-sensitive.
+(b) Economic profile
+(98 canonical games).
+x
+x
+: capital efficiency
+η
+\eta
+,
+y
+y
+:
+TC tightness
+τ
+\tau
+(definitions in Appendix
+B.1
+). Median across games, IQR
+as bars; circles
+=
+=
+LLM, squares
+=
+=
+code agent; marker size
+∝
+\propto
+win rate.
+4.4
+Strategic Behavior
+Three mechanisms separate strong from weak play (full metrics in Table
+3
+).
+Spending efficiency.
+Capital efficiency
+η
+\eta
+(median of per-game score
+/
+/
+gross outflow; see
+Appendix
+B.1
+) places G3-F at
+η
+=
+1.77
+\eta{=}1.77
+and G3.1-FL at 1.46; TrackerAgent
+reaches 1.55. Values above 1.0 are possible because free acquisitions (no-bid auctions), won
+bluffs, and the multiplicative scoring formula amplify returns beyond one-to-one.
+G2.5-FL spends aggressively (bid aggressiveness 2.52) but only extracts
+η
+=
+0.23
+\eta{=}0.23
+,
+overpaying for cards it fails to assemble into quartets. High volume without
+targeting yields worse outcomes than moderate volume with better targeting. Cost per quartet
+(Appendix Figure
+8
+) traces the same ordering: top agents pay
+600–750 coins per quartet overall; G2.5-FL pays 1,193.
+Resource discipline and self-bidding.
+The three code agents never overbid. G2.5-FL overbids at 1.20%, the highest rate, and finishes
+last; Haiku (0.87%), DS-v3.2 (0.49%), and GPT5.4-N (0.47%) also overbid at meaningful rates.
+Among LLMs, self-bidding (rounds where the agent raises with no competing bid since its last
+bid) correlates inversely with performance: G3.1-FL self-bids in under 7% of rounds while
+DS-v3.2, GPT5.4-N, and G2.5-FL self-bid in over 74%. We cannot tell from the rate alone
+whether this reflects a failure to detect non-competitive contexts or a deliberate
+escalation when an agent really wants the card; one DS-v3.2 trace incrementing 10
+→
+\to
+850
+over 49 sole-bidder rounds is suggestive of the former.
+Buy-right and phase adaptation.
+G3.1-FL and G3-F exercise buy-right most frequently among LLMs (31.3% and 26.5%); TrackerAgent
+tops all agents at 34.4%. G3-F escalates bid intensity from early-game (0.26) to late game
+(2.49), an
+≈
+\approx
+10
+×
+\times
+ramp timed to quartet-completion pressure. G3.1-FL shows a
+smaller, coherent ramp (0.22
+→
+\to
+0.65). G2.5-FL stays at bid aggressiveness 2.07 early
+and
+2.08 late, with no adaptation, skipping the accumulation phase entirely. DS-v3.2 and
+GPT5.4-N escalate to similar absolute values (1.65 and 2.09) but without the spending discipline
+to convert aggression into quartets. The code agents themselves ramp sharply (Tracker
+0.06
+→
+\to
+1.92, SetRace 0.11
+→
+\to
+1.55), so endgame escalation is a
+rational
+pattern the
+top LLMs have learned and the weakest ones have not.
+4.5
+Trajectory-Level Observations
+Aggregate metrics mask qualitative behaviour visible in individual traces.
+G2.5-FL repeatedly initiates TCs after depleting its
+money through overbidding; in one game it challenges for a goose with zero money cards
+(producing a 0-value offer the opponent beats with a 10-coin counter for free), failing to
+condition action choice on resource state.
+G3-F conditions TC offers on both opponent wealth
+and game context, deploying 0-value bluffs against bankrupt opponents and 500+ coin offers
+against well-funded ones contesting high-value animals; one trace shows it completing a
+fourth quartet by paying far above face value, with the multiplicative-scoring formula
+turning a nominally wasteful overpay into a net gain of
+≈
+1,800
+\approx 1{,}800
+points. Weaker LLMs
+do not exhibit this portfolio-aware price discrimination.
+Sole-bidder runs (a single bidder raising while others
+pass) appear in both LLMs and code agents at high rates because canonical mode requires all
+bidders to pass
+in the same round
+for the auction to terminate. DS-v3.2 incrementing
+from 10 to 850 over 49 call rounds on a sole-bidder run is suggestive of the
+“treats-own-bid-as-competitor” pathology, but a single trace cannot distinguish that from
+a deliberate escalation when the bidder really wants the card or expects an opponent to.
+The 75.4% self-bidding rate (Table
+3
+) is therefore best read as a
+within-auction raising propensity, not a one-sided failure mode.
+4.6
+Computational Cost and Format Compliance
+Token usage varies roughly 20
+×
+\times
+across models: G3-F emits around 1,500 completion tokens
+per LLM call on average (reflecting extended internal reasoning), G3.1-FL about 80. Both rank in the
+top two, so verbose reasoning chains are not required for strong play. Haiku emits the most
+completion tokens but ranks ninth: token volume alone does not predict strategic quality.
+Structured-output failures (invalid JSON, missing fields, truncation) are below 1% for every
+model we evaluated; format errors trigger a single retry with explicit error feedback and do not
+explain the performance gaps we observe (Appendix
+B
+).
+5
+Discussion
+Top LLMs avoid systematic failures (overbidding,
+self-bidding, bankrupt initiation) that plague weaker models and never surface in code agents:
+conditional logic already suffices where LLMs still fail. Strategic coherence in turn (spending efficiency, resource discipline, adaptive phase play) is associated with success.
+TrackerAgent’s second-place ranking (
+μ
+=
+28.7
+\mu=28.7
+, above six of seven LLMs) calibrates the
+benchmark: card-counting heuristics suffice to outperform most LLMs tested. The code-agent ordering
+(TrackerAgent
+>
+>
+SetRaceAgent
+>
+>
+EconomyAgent) shows that information exploitation matters more
+than greedy quartet-chasing, which in turn outperforms conservative budgeting. This mirrors the LLM
+ranking, where the top models combine active acquisition with resource discipline, while weaker
+models either spend recklessly or participate too passively.
+Our ranking by posterior mean (G3-F
+≫
+\gg
+G3.1-FL
+>
+>
+Sonnet 4.5
+>
+>
+DS-v3.2
+>
+>
+GPT5.4-N
+>
+>
+Haiku
+>
+>
+G2.5-FL, with Sonnet still wider in CI at
+n
+=
+14
+n{=}14
+) broadly aligns with Chatbot
+Arena
+(
+LMArena, 2026
+;
+Zheng et al., 2024
+)
+2
+2
+2
+May 2026 snapshot Elo: G3-F 1474, Sonnet
+1453, G3.1-FL 1439, DS-v3.2 1423, Haiku 1408, GPT5.4-N 1406, G2.5-FL 1380.
+on the top and
+bottom of the field, with two within-tier swaps in the middle (G3.1-FL/Sonnet, GPT5.4-N/Haiku).
+It diverges more sharply from reasoning-mode-aggregating evaluations such as the Artificial
+Analysis Intelligence Index v4.0
+(
+Artificial Analysis, 2026
+)
+3
+3
+3
+Index v4.0: GPT5.4-N
+(xhigh) 44, Sonnet 43, DS-v3.2 42, Haiku (reasoning) 37, G3.1-FL 34, G3-F (reasoning) 46.
+,
+where reasoning-aware scoring reorders cells that rank in the opposite direction in our
+setting (most starkly G3.1-FL: second in ours, last in the Index). Multi-turn
+strategic play depends on capabilities (state tracking, adaptive resource allocation,
+structured-output reliability) that static benchmarks do not measure but that conversational
+evaluations partially capture.
+The benchmark’s diagnostic value lies in identifying why a model loses, not just that it loses.
+Overbid frequency, self-bidding rate, bankrupt-initiation patterns, and context-dependent offer
+calibration are failure modes invisible to both static evaluations and aggregate rankings like Elo.
+The structured game logs make these behaviours directly observable and quantifiable.
+Limitations: all seven LLMs are cost-efficient models at low reasoning effort and a
+4,096-token budget; Sonnet 4.5 has only
+n
+=
+14
+n{=}14
+games. We test only full-memory mode and
+do not ablate memory size or temperature, and behavioural metrics are point estimates without
+confidence intervals. Within-agent score std (e.g., G3-F 4,026 on median 5,250) dominates
+the cross-seat win-rate differentials (Appendix
+B
+), suggesting deck order
+matters more than seat position; a controlled ablation is future work. Whether these failure
+modes generalise to other economic settings remains untested.
+Some failures may reflect prompt design rather than model limitations. All models receive identical
+prompts describing game rules and legal actions but we do not explicitly instruct them to track
+wealth before bidding or check whether other players are bidding before raising. The code agents
+receive no natural-language prompts at all and still avoid these errors through conditional logic,
+suggesting the underlying issue is one of reasoning rather than instruction-following. Code agents
+also operate on structured data with exact arithmetic, while LLMs must parse natural-language
+observations and track state across turns; some failures classified as reasoning errors (e.g., overbidding) may partly reflect numerical parsing or working-memory limitations.
+6
+Conclusion
+We introduced
+Cattle Trade
+, a multi-agent benchmark integrating auctions,
+hidden-offer TCs, bluffing, and resource management. Across 242 games, strategic
+coherence (spending efficiency, resource discipline, adaptive phase play) is associated with
+success more strongly than any single capability. Two of the three deterministic heuristics
+outperform most tested LLMs, suggesting cost-efficient models lack not individual skills but
+their reliable integration under competitive pressure. The structured logs pinpoint
+why
+models fail (overbidding, self-bidding spirals, bankrupt initiation), failure
+modes invisible to aggregate evaluations and pointing to concrete gaps in state tracking,
+resource-constraint reasoning, and opponent modelling that static benchmarks do not measure. More broadly, benchmarks of this kind may become increasingly important for evaluating agents beyond static reasoning or single-turn task success. They make it possible to test whether models can sustain strategic coherence over time, manage resource constraints, and adapt interactively in multi-agent environments with conflicting incentives. This matters for prospective deployments in economic and organizational settings, where failures often arise not from the absence of any single capability, but from the inability to coordinate multiple capabilities across extended interactions. In this sense,
+Cattle Trade
+is a step toward evaluating agentic competence under more realistic conditions of strategic interaction.
+Several directions follow. Evaluating frontier models at full reasoning budgets would test
+whether the failures we document reflect fundamental limitations or a cost-efficiency
+tradeoff of smaller models. Enabling inter-agent chat would introduce the meta-communication
+layer present in human play (coalition signalling, persuasion, relationship management) that
+the current structured-action format excludes. Self-play fine-tuning of open-weight models
+could test whether strategic failure modes such as self-bidding are trainable away. Finally,
+benchmarking against human players would calibrate whether LLM failures reflect genuinely
+hard strategic problems or errors that novice humans also avoid.
+References
+Artificial Analysis (2026)
+Artificial Analysis
+Artificial analysis intelligence index v4.0
+.
+Note:
+https://artificialanalysis.ai/
+Cited by:
+§5
+.
+Bakhtin
+et al.
+(2022)
+A. Bakhtin, N. Brown, E. Dinan, G. Farina, C. Flaherty, D. Fried, A. Goff, J. Gray, H. Hu, A. P. Jacob,
+et al.
+Human-level play in the game of Diplomacy by combining language models with strategic reasoning
+.
+Science
+378
+(
+6624
+),
+pp. 1067–1074
+.
+Cited by:
+§2
+.
+Brown and Sandholm (2019)
+N. Brown and T. Sandholm
+Superhuman AI for multiplayer poker
+.
+Science
+365
+(
+6456
+),
+pp. 885–890
+.
+Cited by:
+§2
+.
+Chen
+et al.
+(2021)
+M. Chen, J. Tworek, H. Jun, Q. Yuan, H. P. d. O. Pinto, J. Kaplan, H. Edwards, Y. Burda, N. Joseph, G. Brockman,
+et al.
+Evaluating large language models trained on code
+.
+arXiv preprint arXiv:2107.03374
+.
+Cited by:
+§1
+,
+§2
+.
+Costarelli
+et al.
+(2024)
+A. Costarelli, M. Allen, R. Hauksson, G. Sodunke, S. Hariharan, C. Cheng, W. Li, J. Clymer, and A. Yadav
+GameBench: evaluating strategic reasoning abilities of LLM agents
+.
+arXiv preprint arXiv:2406.06613
+.
+Cited by:
+§2
+.
+Duan
+et al.
+(2024)
+J. Duan, R. Zhang, J. Diffenderfer, B. Kailkhura, L. Sun, E. Stinis, and D. Stamoulis
+GTBench: uncovering the strategic reasoning limitations of LLMs via game-theoretic evaluations
+.
+arXiv preprint arXiv:2402.12348
+.
+Cited by:
+§1
+,
+§2
+.
+Gandhi
+et al.
+(2023)
+K. Gandhi, D. Lee, G. Grand, M. Liu, W. Cheng, A. Raghunathan, and N. D. Goodman
+Strategic reasoning with language models
+.
+arXiv preprint arXiv:2305.19165
+.
+Cited by:
+§2
+.
+Guo
+et al.
+(2024)
+J. Guo, B. Yang, P. Yoo, B. Y. Lin, Y. Iwasawa, and Y. Matsuo
+Suspicion-agent: playing imperfect information games with theory of mind aware GPT-4
+.
+arXiv preprint arXiv:2309.17277
+.
+Cited by:
+§2
+.
+Hagendorff (2024)
+T. Hagendorff
+Deception abilities emerge in large language models
+.
+Proceedings of the National Academy of Sciences
+121
+(
+24
+),
+pp. e2317967121
+.
+Cited by:
+§2
+.
+Hendrycks
+et al.
+(2021)
+D. Hendrycks, C. Burns, S. Basart, A. Zou, M. Mazeika, D. Song, and J. Steinhardt
+Measuring massive multitask language understanding
+.
+In
+International Conference on Learning Representations
+,
+Cited by:
+§1
+,
+§2
+.
+Herbrich
+et al.
+(2006)
+R. Herbrich, T. Minka, and T. Graepel
+TrueSkill: a Bayesian skill rating system
+.
+In
+Advances in Neural Information Processing Systems
+,
+Vol.
+19
+.
+Cited by:
+item TrueSkill 
+                  
+                    
+                      
+                        
+                        
+                        
+                      
+                      
+                        μ
+                        ,
+                        σ
+                      
+                    
+                  
+                .
+,
+§3.2
+.
+Hong
+et al.
+(2024)
+S. Hong, M. Zhuge, J. Chen, X. Zheng, Y. Cheng, C. Zhang, J. Wang, Z. Wang, S. K. S. Yau, Z. Lin,
+et al.
+MetaGPT: meta programming for a multi-agent collaborative framework
+.
+In
+International Conference on Learning Representations
+,
+Cited by:
+§1
+.
+Hu
+et al.
+(2026)
+L. Hu, M. Huo, Y. Zhang, H. Yu, E. P. Xing, I. Stoica, T. Rosing, H. Jin, and H. Zhang
+Lmgame-bench: how good are LLMs at playing games?
+.
+In
+International Conference on Learning Representations
+,
+Cited by:
+§2
+.
+Jia
+et al.
+(2025)
+J. Jia, Z. Yuan, J. Pan, P. E. McNamara, and D. Chen
+LLM strategic reasoning: agentic study through behavioral game theory
+.
+In
+Advances in Neural Information Processing Systems
+,
+Vol.
+38
+.
+Cited by:
+§2
+.
+Lewis
+et al.
+(2017)
+M. Lewis, D. Yarats, Y. N. Dauphin, D. Parikh, and D. Batra
+Deal or no deal? end-to-end learning for negotiation dialogues
+.
+In
+Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing
+,
+pp. 2443–2453
+.
+Cited by:
+§1
+,
+§2
+.
+Light
+et al.
+(2023)
+J. Light, M. Cai, S. Shen, and Z. Hu
+From text to tactic: evaluating LLMs playing the game of Avalon
+.
+arXiv preprint arXiv:2310.05036
+.
+Cited by:
+§1
+,
+§2
+.
+Lin
+et al.
+(2025)
+W. Lin, J. Roberts, Y. Yang, S. Albanie, Z. Lu, and K. Han
+GAMEBoT: transparent assessment of LLM reasoning in games
+.
+In
+Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics
+,
+pp. 7656–7682
+.
+Cited by:
+§2
+.
+Liu
+et al.
+(2024)
+X. Liu, H. Yu, H. Zhang, Y. Xu, X. Lei, H. Lai, Y. Gu, H. Ding, K. Men, K. Yang,
+et al.
+AgentBench: evaluating LLMs as agents
+.
+In
+International Conference on Learning Representations
+,
+Cited by:
+§2
+.
+LMArena (2026)
+LMArena
+LMArena text leaderboard
+.
+Note:
+Snapshot 2026-05-01
+https://lmarena.ai/leaderboard
+Cited by:
+§5
+.
+Mao
+et al.
+(2025)
+S. Mao, Y. Cai, Y. Xia, W. Wu, X. Wang, F. Wang, Q. Guan, T. Ge, and F. Wei
+ALYMPICS: LLM agents meet game theory
+.
+In
+Proceedings of the International Conference on Computational Linguistics (COLING)
+,
+pp. 2845–2866
+.
+Cited by:
+§2
+.
+Pan
+et al.
+(2023)
+A. Pan, J. S. Chan, A. Zou, N. Li, S. Basart, T. Woodside, H. Zhang, S. Emmons, and D. Hendrycks
+Do the rewards justify the means? Measuring trade-offs between rewards and ethical behavior in the MACHIAVELLI benchmark
+.
+In
+International Conference on Machine Learning
+,
+Cited by:
+§1
+,
+§2
+.
+Srivastava
+et al.
+(2023)
+A. Srivastava, A. Rastogi, A. Rao, A. A. M. Shoeb, A. Abid, A. Fisch, A. R. Brown, A. Santoro, A. Gupta, A. Garriga-Alonso,
+et al.
+Beyond the imitation game: quantifying and extrapolating the capabilities of language models
+.
+Transactions on Machine Learning Research
+.
+Cited by:
+§2
+.
+Xu
+et al.
+(2023)
+Y. Xu, S. Wang, P. Li, F. Luo, X. Wang, W. Liu, and Y. Liu
+Exploring large language models for communication games: an empirical study on Werewolf
+.
+arXiv preprint arXiv:2309.04658
+.
+Cited by:
+§1
+,
+§2
+.
+Zheng
+et al.
+(2024)
+L. Zheng, W. Chiang, Y. Sheng, S. Zhuang, Z. Wu, Y. Zhuang, Z. Lin, Z. Li, D. Li, E. P. Xing,
+et al.
+Judging LLM-as-a-judge with MT-Bench and chatbot arena
+.
+In
+Advances in Neural Information Processing Systems
+,
+Vol.
+36
+.
+Cited by:
+§5
+.
+Appendix A
+Game Rules Summary
+Table
+2
+lists all animal types and their quartet values. The game uses 10 animal
+types with 4 cards each (40 cards total).
+Table 2:
+Animal types and quartet values in
+Cattle Trade
+.
+Animal
+Quartet Value (points)
+Chicken
+10
+Goose
+40
+Cat
+90
+Dog
+160
+Sheep
+250
+Goat
+350
+Donkey
+500
+Pig
+650
+Cow
+800
+Horse
+1,000
+Auction flow.
+The active player draws a card and announces an auction. Canonical
+mode runs as iterative
+call rounds
+: in each round, all non-auctioneer (non-eliminated)
+players submit a bid intent (a number or
+pass
+) simultaneously. The highest valid bid in
+the round becomes the current standing bid (ties broken by a per-auction random priority order;
+see Appendix
+C
+). The auction continues into further rounds (bidders may
+raise across rounds) and ends the first time all eligible bidders pass while a standing bid
+exists. If
+no
+bid is placed in round 0, the engine runs one confirmation round; if that
+round is also empty, the auctioneer receives the card for free. This two-round rule prevents a
+single miscoordination on the blind first call from instantly handing the card to the
+auctioneer. Once the auction ends, the auctioneer sees the winning bid and decides: accept
+(card goes to bidder, money to auctioneer) or buy-right (auctioneer pays the bid amount to the
+bidder, keeps the card). If a player bids more than they have, their wealth is revealed to all
+players, the auction is repeated, and the penalized player is limited to bidding their true
+valid amount.
+Trade challenge flow.
+The active player selects an opponent who shares at least one animal
+type. The initiator places money cards face-down as an offer. The opponent chooses: (a)
+accept:
+take the money (without seeing it) and give cards of the contested animal to the
+initiator; or (b)
+counter:
+place their own face-down offer. If countered, both offers are
+revealed and exchanged: each player receives the other’s offer. The player who
+offered
+more money
+wins. If both sides hold a pair (2 or more) of the animal, the loser transfers two
+contested cards to the winner; otherwise the loser transfers one.
+Bluffing (0 offers) only works when the opponent
+accepts
+without seeing; if they counter with any positive amount, they beat the bluff. The
+initiator’s advantage is choosing when to attack and winning after 3 ties. On ties (equal amounts),
+the TC repeats; after 3 ties, the initiator wins by default.
+Donkey payout.
+When a donkey card is drawn for auction, all players immediately receive
+a money card from the bank (50, 100, 200, or 500 depending on which donkey card). This injects
+liquidity into the game economy, changing bidding dynamics.
+Appendix B
+Detailed Results
+B.1
+Metric Definitions
+All per-agent metrics referenced in §4 and used in the figures and tables of this appendix are
+computed from raw game logs as follows. TC abbreviates trade challenge.
+𝒬
+\mathcal{Q}
+denotes
+the set of completed quartets and
+v
+q
+v_{q}
+the quartet value (§3.1).
+Final score
+S
+S
+.
+S
+=
+(
+∑
+q
+∈
+𝒬
+v
+q
+)
+⋅
+|
+𝒬
+|
+S=\big(\sum_{q\in\mathcal{Q}}v_{q}\big)\cdot\lvert\mathcal{Q}\rvert
+(Eq.
+1
+); evaluated at end of game.
+Capital efficiency
+η
+\eta
+(
+≡
+\equiv
+Spend Eff.
+in Table
+3
+).
+η
+=
+S
+/
+out
+\eta=S/\mathrm{out}
+per game, where
+out
+\mathrm{out}
+is gross outflow: the total coins
+leaving the agent’s hand, summed across auction payments (when winning a bid), TC
+offers paid in accepted trades and counter-exchanges, and buy-right payments. Reported as
+median across games.
+TC bargaining tightness
+τ
+\tau
+.
+For each counter-exchange won by the agent in a game, let
+w
+k
+w_{k}
+be the winner’s offer and
+ℓ
+k
+\ell_{k}
+the loser’s. Then
+τ
+=
+∑
+k
+(
+ℓ
+k
++
+10
+)
+/
+∑
+k
+w
+k
+\tau=\sum_{k}(\ell_{k}+10)/\sum_{k}w_{k}
+, size-weighted per
+game (summing over counter-wins
+k
+k
+). Money cards step by
+10
+10
+, so
+ℓ
+k
++
+10
+\ell_{k}+10
+is the
+minimum bid the winner needed to win;
+τ
+\tau
+is bounded by
+1
+1
+because
+w
+k
+≥
+ℓ
+k
++
+10
+w_{k}\geq\ell_{k}+10
+.
+τ
+=
+1
+\tau{=}1
+=
+=
+winner paid only the minimum increment;
+τ
+→
+0
+\tau{\to}0
+=
+=
+winner crushed a small counter with a much larger offer.
+Bid aggressiveness.
+Mean of
+bid
+/
+v
+q
+\text{bid}/v_{q}
+over all auctions in which the agent bid,
+where
+v
+q
+v_{q}
+is the quartet value of the auctioned animal.
+Buy-right %.
+Fraction of auctioneer decisions in which the agent exercised buy-right
+(keeping the card) rather than selling to the highest bidder.
+TC-accept %.
+Fraction of TCs (agent as target) resolved by
+accepting the face-down offer rather than countering.
+Bluff %.
+Fraction of the agent’s TC offers consisting purely of
+0
+0
+-value money
+cards.
+Self-bid %.
+Fraction of the agent’s auction bids placed in rounds with no competing
+bid since this agent’s last bid (i.e., the agent is raising while no other bidder has acted
+in the interim). Equivalently in canonical mode, the agent was the current high bidder when
+it bid again.
+Overbid %.
+Fraction of auctions in which the agent submitted a bid exceeding its total
+money; triggers the canonical-mode wealth-revelation penalty (§3.2).
+Win rate.
+Fraction of games in which the agent achieved the highest final score
+S
+S
+.
+TrueSkill
+μ
+,
+σ
+\mu,\sigma
+.
+Bayesian skill estimate
+(
+Herbrich et al., 2006
+)
+fit
+across all games in the slice. The paper ranks by posterior mean
+μ
+\mu
+;
+μ
+c
+=
+μ
+−
+3
+​
+σ
+\mu_{c}=\mu-3\sigma
+is reported as the lower edge of the 99.7% interval where useful.
+Agent
+Bid Agg.
+Buy-Right
+TC-Accept
+Bluff%
+Self-Bid
+Spend Eff.
+Overbid%
+Gemini 3 Flash
+0.91
+26.5%
+36.3%
+8.8%
+21.7%
+1.77
+0.00%
+TrackerAgent
+1.14
+34.4%
+0.0%
+27.0%
+58.7%
+1.55
+0.00%
+Gemini 3.1 Flash Lite
+0.36
+31.3%
+32.1%
+7.0%
+6.8%
+1.46
+0.35%
+SetRaceAgent
+0.83
+31.2%
+34.8%
+23.0%
+67.0%
+1.46
+0.00%
+DeepSeek v3.2
+1.03
+18.2%
+45.1%
+17.0%
+75.4%
+0.70
+0.49%
+GPT-5.4 Nano
+1.44
+27.6%
+28.6%
+15.2%
+74.6%
+0.74
+0.47%
+Claude Haiku 4.5
+0.31
+20.0%
+26.4%
+15.6%
+9.1%
+0.69
+0.87%
+Claude Sonnet 4.5
+0.89
+22.2%
+44.3%
+15.7%
+4.8%
+0.80
+0.43%
+EconomyAgent
+0.67
+14.5%
+14.8%
+30.6%
+59.6%
+0.78
+0.00%
+Gemini 2.5 Flash Lite
+2.52
+15.9%
+51.1%
+25.7%
+78.5%
+0.23
+1.20%
+Table 3:
+Strategic-behaviour profiles across 98 canonical games (combined-comp1 slice). Bid Agg.:
+bid-to-value ratio. Buy-Right: fraction of auctioneer decisions keeping the card. TC-Accept:
+TCs accepted. Bluff%: pure 0-value offers. Self-Bid: bids in rounds with no
+competing bid since this agent’s last bid. Sole-bidder runs are common in canonical mode for
+both LLMs and code agents because the engine requires all bidders to pass in the same round
+to terminate; we cannot reliably distinguish a model that is mistakenly raising against
+itself from one that is deliberately escalating because it really wants the card or expects
+an opponent to bid. Self-Bid% should therefore be read as a within-auction raising
+propensity, not a one-sided failure-mode rate. Spend Eff.: median per-game points per coin
+spent. Overbid%: overbid frequency. Sonnet is based on
+n
+=
+14
+n{=}14
+exploratory games (vs. 47–50 for the other LLMs); its values carry wider uncertainty.
+Score variance is high: G3-F ranges from 0 to over 10,000 (mean 6,232, std 4,026), reflecting
+the multiplicative scoring formula’s sensitivity to quartet count. G2.5-FL shows the highest
+relative variance (std 1,283 on mean 1,060). Within-agent score std exceeds cross-seat
+win-rate differentials by 1–2 orders of magnitude, indicating that deck-order variance dominates
+seat-position variance as a driver of per-game outcomes.
+Figure
+4
+provides detailed auction and TC metrics across the ten
+agents. The cross-play win-rate heatmap (bottom panel) shows G3-F winning the majority of games
+against every opponent, including all three code agents. G3.1-FL maintains positive records against
+all models except G3-F. TrackerAgent outperforms six of seven LLMs, while DS-v3.2 only beats
+weaker LLMs.
+Figure 4:
+Engine-level metrics (98 canonical games, 7 LLMs + 3 code agents): auction participation,
+win rates, overpay/overbid frequencies, TC counter and challenger/target win rates, bluff
+magnitude, tie frequency, token usage, truncation, and cost per quartet.
+Figure
+5
+shows positional analysis, economic trajectories, and phase-dependent
+behaviour. The positional win-rate heatmap (left) confirms no systematic seat advantage for strong
+models. Money trajectories (centre) show G3-F maintaining higher liquidity throughout games, while
+G2.5-FL’s cash reserves deplete rapidly under overbidding penalties. Code agents show stable money
+trajectories under their deterministic rules. Wealth, unlike score, can fluctuate; we report
+the per-turn mean only over games still running at that turn, so late-turn means are
+biased toward longer-running, more liquid games. The
+accept-rate-by-offer-size panel (right) shows
+acceptance probability rising with the number of cards at stake, suggesting models calibrate
+defensive decisions to trade magnitude.
+Figure 5:
+Governance-level analysis (98 canonical games, 7 LLMs + 3 code agents): seat-position win
+rates, money trajectories, accept rate by offer size, exploitation metrics, bid-to-wealth ratio,
+and TC initiation by donkey phase.
+Figure 6:
+Strategic-profile radar
+across six orthogonal axes (98 canonical games, all 10
+agents). Each axis is percentile-normalised across the ten agents, so outward means
+better
+: competitive strength (TrueSkill
+μ
+\mu
+), spending efficiency (points per coin),
+auction discipline (
+1
+−
+1
+2
+​
+(
+overbid
++
+self-bid
+)
+1-\tfrac{1}{2}(\text{overbid}+\text{self-bid})
+), TC proficiency (TC
+challenger win rate), phase timing (
+log
+\log
+late/early bid-aggressiveness ratio), and quartet
+throughput (mean quartets per game). Solid
+=
+=
+LLM, dashed
+=
+=
+code agent.
+Figure 7:
+Strategic-profile radar per agent (98 canonical games). Same six axes as
+Figure
+6
+; each agent plotted against the cross-agent median (dotted grey).
+The small-multiples view makes per-agent shape asymmetries easier to read than the overlaid
+version.
+Figure 8:
+Gross-outflow cost per quartet
+per animal (98 canonical games). Rows: 7 LLMs
+then 3 code agents; columns: 10 animal types in ascending value order. Cell value: total coins
+spent by that agent on that animal divided by quartets completed;
+n
+n
+: quartets completed
+(cells with
+n
+=
+0
+n{=}0
+are blanked, since the ratio is undefined). This
+is a first-order view; it does not account for TC inflows or the multiplicative scoring
+effect (see the net-ledger analysis in Figure
+3
+b).
+Figure 9:
+Explicit cost decomposition per animal (98 canonical games).
+Top:
+auction-only
+final prices paid by the winner.
+Bottom:
+TC-only winner’s last-round offer value.
+Auction costs dominate for high-value animals; TC costs concentrate on mid-tier animals.
+Figure 10:
+Economic detail
+(98 canonical games).
+(a)
+Per-game capital efficiency
+distribution,
+η
+=
+score
+/
+gross outflow
+\eta=\text{score}/\text{gross outflow}
+.
+(b)
+Pooled per-TC net coin
+Δ
+\Delta
+per agent. Mass
+right of zero
+=
+=
+agent pockets money on average; mass left
+=
+=
+agent pays to win animals in
+TCs. The main-body scatter (Figure
+3
+b) aggregates these two marginals
+into per-agent medians with IQR.
+Token usage per game varies roughly 20
+×
+\times
+: G3-F generates about 275,000 completion tokens
+per game, while G3.1-FL uses about 14,800. Both rank in the top tier, so verbose reasoning
+chains are not required for strong strategic play in this setting.
+Appendix C
+Agent Architecture
+Observation space.
+At each decision point, player
+i
+i
+receives an observation
+o
+t
+i
+o_{t}^{i}
+rendered as natural language. The
+observation comprises four components:
+1.
+Private state
+: exact money card denominations (e.g., 0
+×
+\times
+2, 10
+×
+\times
+4,
+50
+×
+\times
+1) and animal holdings with counts.
+2.
+Public state
+: all opponents’ animal holdings (type and count), opponents’ money card
+counts
+(not values), number of cards remaining in the deck, and turn number.
+3.
+Decision context
+: parameters specific to the pending decision, including the card
+being auctioned and current bids (auction), or the animal type, challenger/target identities, and
+tie count (TC).
+4.
+Memory
+(if enabled): the most recent
+∼
+10
+{\sim}10
+game events (
+∼
+{\sim}
+150 tokens) and
+the agent’s scratchpad contents (see below).
+Information asymmetry is maintained: money card
+values
+of other players are hidden; only card
+counts are visible. A player’s exact wealth is revealed only when they overbid in an auction,
+mirroring the tabletop game’s information structure.
+Action space.
+The action space
+𝒜
+t
+\mathcal{A}_{t}
+is context-dependent. The engine presents a decision prompt and the
+agent responds with a structured JSON object. TC abbreviates trade challenge. Seven action types arise:
+1.
+Turn choice
+:
+{auction, kuhhandel}
+:select whether to draw a card for
+auction or initiate a TC with a valid target.
+2.
+Auction bid
+:
+{bid(
+amount
+), pass}
+:bid on the auctioned card or pass.
+Bids must be multiples of 10.
+3.
+Buy-right decision
+:
+{sell, buy_right}
+:as auctioneer, accept the highest
+bid (sell) or exercise the buy-right by paying the bid amount to the bidder.
+4.
+TC initiation
+:
+{target, animal, offer_cards}
+:select opponent and
+animal type, then select specific money cards from hand as the face-down offer (including 0-value
+cards for bluffing).
+5.
+TC defense
+:
+{accept, counter(cards)}
+:accept the face-down offer
+(take money sight-unseen, surrender animals) or counter with specific money cards from hand.
+6.
+TC tie retry
+:
+{offer_cards}
+:after a tie, submit a new offer using
+specific cards. After three ties, the initiator wins by default.
+7.
+Scratchpad update
+:
+{notes}
+:free-text strategic notes (full memory mode
+only).
+Error handling by action type.
+The framework validates all actions and applies action-specific recovery procedures.
+Table
+4
+summarizes the handling for each error case.
+Action Type
+Error Case
+Handling
+All actions
+Unparseable JSON
+Multi-stage fallback: (1) direct parse, (2) regex extraction of last JSON object from free text, (3) manual key-value extraction with type coercion
+All actions
+Response truncated by token limit
+Lightweight retry call requesting only the JSON action (512 tokens, reasoning disabled)
+All actions
+API failure
+Exponential backoff retry (1s, 2s, 4s) up to configurable max attempts
+Auction bid
+Non-multiple of 10
+Rounded down to nearest multiple of 10
+Auction bid
+Bid below minimum
+Clamped up to minimum bid increment
+Auction bid (canonical)
+Bid exceeds wealth
+Not corrected.
+First overbid triggers wealth revelation and auction restart; a second overbid in the same auction eliminates the player
+Auction bid (fast)
+Bid exceeds wealth
+Clamped to total money
+Buy-right
+Cannot afford payment
+Action rejected; card sold to bidder
+TC initiation
+Invalid target (wrong animal, self-trade)
+Observation includes pre-computed valid targets; if the LLM names an invalid target or animal, the agent falls back to the first valid (target, animal) pair
+TC initiation
+Offer cards not in hand
+One retry with error feedback showing available cards; fallback to greedy card selection
+TC defense
+Counter cards not in hand
+Same retry-then-greedy procedure as initiation
+Payment (all types)
+Exact amount not possible
+DP algorithm finds minimum-overpay card combination. No change given, matching tabletop rules
+Table 4:
+Error handling by action type. The framework distinguishes between errors that are silently corrected (bid rounding), errors that trigger retries (malformed JSON, invalid cards), and errors that are game mechanics (overbidding). The canonical auction mode intentionally permits overbids because the resulting wealth revelation is a strategically meaningful penalty.
+Payment resolution.
+Because no change is given, the engine must select a subset of money cards whose sum meets or
+exceeds the required amount while minimizing overpayment. This is a variant of subset sum solved via
+dynamic programming over the player’s money cards. The algorithm finds the smallest achievable sum
+≥
+\geq
+target and, among ties, the combination using the fewest cards. For example, paying 60 with
+cards {100, 50, 10, 10, 0, 0} selects 50+10 (exact) rather than 100 (overpay by 40).
+Scratchpad mechanism.
+In
+full
+memory mode, each agent maintains a personal scratchpad
+s
+i
+s^{i}
+, a free-form text
+buffer capped at
+∼
+{\sim}
+300 tokens. At the end of a player’s own turn, if new observable events
+occurred, the framework issues an additional LLM call providing the current scratchpad contents
+and the new events, and requests updated notes. The agent uses the
+same model
+as for game
+decisions, preserving reasoning style consistency. The updated scratchpad is included in all
+subsequent observations under a “
+Your Notes
+” heading.
+Appendix D
+Agent Prompts
+All prompts below are reproduced verbatim from the benchmark implementation. Template variables (in
+angle brackets) are filled dynamically from game state. Every action prompt ends with a standardized
+JSON response instruction.
+D.1
+System Prompt (Game Rules)
+Every LLM call uses a system prompt formed by concatenating the neutral game-rules block below
+with the
+optimal
+character prompt in Appendix
+D
+. No strategy hints,
+examples, or tactical advice are appended for our evaluations; the codebase supports
+biased-character variants (e.g.
+multiplier_hunter
+,
+quartet_closer
+) for
+ablation purposes only.
+KUHHANDEL MASTER - RULES
+
+GOAL: Complete quartets (4 cards of same animal).
+Score = (sum of complete quartet values) × (number of quartets).
+Example: 1 donkey quartet (500) + 1 horse quartet (1000)
+         = (500+1000) × 2 quartets = 3000 points.
+Example: 1 horse quartet alone = 1000 × 1 = 1000 points.
+         Incomplete sets score 0.
+
+ANIMALS (Complete Quartet Value):
+Chicken=10, Goose=40, Cat=90, Dog=160, Sheep=250,
+Goat=350, Donkey=500, Pig=650, Cow=800, Horse=1000
+
+YOUR TURN - Choose one:
+
+[A] AUCTION: Draw a card from the deck. Other players bid
+    (each bid must exceed the previous by at least 10 coins).
+    Then you (the auctioneer) choose:
+    - ACCEPT highest bid: they pay you, get animal
+    - BUY-RIGHT: you pay that amount TO highest bidder,
+      YOU keep animal
+    No change given - must pay exact or overpay.
+    OVERBID: If the highest bidder cannot pay, they must
+    reveal all their money cards. The auction restarts and
+    the overbidder may not overbid again.
+
+[B] KUHHANDEL (Cattle Trade): Trade an animal type you
+    BOTH own with an opponent.
+    - You place a hidden offer face-down (using coin cards;
+      zeros allowed for bluffing)
+    - Opponent chooses:
+      - ACCEPT: takes your hidden coin cards (without seeing
+        them first), gives you their animal
+      - COUNTER: places their own face-down offer
+    - If countered: heaps are swapped and counted secretly
+      by each player. Whoever OFFERED more coins wins and
+      takes the animal(s). The exact amounts and card counts
+      stay private; other players learn only who won.
+    - Ties: repeat with new offers up to 3x, then challenger
+      wins automatically.
+    - If both have 2+: ALL cards of that type trade.
+D.2
+Character Prompt
+The
+optimal
+character appended to the rules above is deliberately minimal: two lines
+that name the goal without prescribing how to achieve it. This is the only character used in our
+evaluations; together with the rules block above it constitutes the complete system prompt every
+LLM receives:
+You are an AI playing Kuhhandel Master. Your goal is to win.
+Play optimally to maximize your expected score.
+D.3
+Observation Format
+At each decision point, the agent receives a structured observation:
+=== GAME STATE (You are Player <id>) ===
+Turn: <turn_number>
+Cards remaining in deck: <deck_remaining>
+
+YOUR HAND:
+  Money: <total> coins total
+  Money cards: 100 coins, 50 coins, 10 coins, 10 coins,
+               0 coins, 0 coins
+  Animals: 3x Horse, 2x Cow, 1x Sheep
+
+OTHER PLAYERS:
+  Player 1: 2x Dog, 1x Sheep | 5 coin cards
+  Player 2: 1x Horse, 2x Chicken | 3 coin cards
+  Player 3: 2x Cow, 1x Goat | 7 coin cards
+
+VALID KUHHANDEL TARGETS:
+  Player 2: horse (you have 3, they have 1)
+  Player 3: cow (you have 2, they have 2)
+
+RECENT EVENTS (what you observed):
+  Turn 21: Player 1 won auction for dog (40 coins)
+  Turn 22: Kuhhandel: Player 2 challenged Player 3
+           for cow. Player 3 countered. Player 2 won.
+
+YOUR NOTES:
+  <scratchpad contents, full memory mode only>
+Opponent money card
+counts
+are visible but not values, matching the tabletop game’s
+information structure. A player’s exact wealth is revealed only through overbid events.
+D.4
+Turn Choice
+When it is the active player’s turn, they choose between auction and Kuhhandel:
+<observation>
+
+It’s your turn. You must choose ONE action:
+1. AUCTION - Flip a card from the deck and auction it
+2. KUHHANDEL - Challenge another player to trade an
+   animal you both own
+
+Respond with JSON:
+{"reasoning": "...", "action": "auction" or "kuhhandel"}
+D.5
+Canonical Auction Bidding
+In canonical mode, all non-auctioneer players submit bids simultaneously each round:
+<observation>
+
+CANONICAL AUCTION - Simultaneous Bidding Round
+Round <n>
+- Card: sheep (quartet value: 250)
+- Current price: 30
+- Current winner: Player 3
+- You have: 1 of this animal
+- Your money: 170 coins (100, 50, 10, 10, 0, 0)
+
+All bidders submit simultaneously. To win, bid HIGHER
+than current price. You may bid more than you can pay.
+If you win and cannot pay, your total wealth is revealed
+to all players and the auction restarts from 0. A second
+overbid eliminates you from this auction.
+
+IMPORTANT: Bids must be multiples of 10 coins.
+
+Respond with JSON:
+{"reasoning": "...", "action": "pass" or "bid",
+ "amount": <multiple of 10>}
+The prompt explicitly states overbid consequences. Models that overbid reveal their wealth to all
+opponents and are excluded from the restarted auction.
+D.6
+Auctioneer Buy-Right Decision
+After bidding concludes, the auctioneer decides whether to sell or exercise buy-right:
+<observation>
+
+BUY-RIGHT DECISION (you are auctioneer)
+- Card: sheep (quartet value: 250)
+- Highest bid: 60 by Player 1
+- You have: 1 of this animal
+- Your money: 170 coins (100, 50, 10, 10, 0, 0)
+
+Options:
+- SELL: Take 60 coins, Player 1 gets the card
+- BUY_RIGHT: Pay 60 coins to Player 1, YOU keep the card
+
+Respond with JSON:
+{"reasoning": "...", "decision": "sell" or "buy_right"}
+D.7
+Kuhhandel Initiation
+The active player selects a target and constructs a face-down offer from specific money cards:
+<observation>
+
+KUHHANDEL - Choose target and make offer:
+Valid targets:
+- Player 1: horse (you have 2, they have 1)
+- Player 3: cow (you have 1, they have 2)
+
+Remember:
+- You’re trading animals you BOTH own
+- Your hidden offer is a set of money cards from your hand
+- The opponent sees how many cards you offer, but not
+  their values
+- You can include 0-coin cards to make your offer look
+  bigger (bluff)
+- Opponent will either ACCEPT (take money, give animal)
+  or COUNTER
+
+Your available card values: [100, 50, 10, 10, 0, 0]
+Select exactly which cards to include in your offer.
+
+Respond with JSON:
+{"reasoning": "...", "target_player": <id>,
+ "animal": "<type>",
+ "offer_cards": [10, 10, 0, 0]}
+The model selects concrete card values from its hand. The framework validates that the requested
+cards exist; if not, it retries with an error message showing available cards.
+D.8
+Kuhhandel Defense
+The target of a Kuhhandel chooses to accept the hidden offer or counter:
+<observation>
+
+KUHHANDEL - You are being challenged!
+- Player 1 wants your cow
+- You have 2 of this animal (quartet value: 800)
+- Trade size: 2 card(s)
+- Their offer is face-down (3 card(s), unknown value)
+
+Options:
+1. ACCEPT - Take their hidden money, give them your
+   animal(s)
+2. COUNTER - Select cards from your hand as counter-offer.
+   Offers are revealed and exchanged. Winner = whoever
+   OFFERED more money. Loser gives up animal(s).
+
+Your available card values: [50, 10, 10, 0, 0]
+If countering, select exactly which cards to include.
+
+Respond with JSON:
+{"reasoning": "...", "action": "accept" or "counter",
+ "counter_cards": [50, 10, 10]}
+D.9
+Kuhhandel Tie Retry
+After a tie (equal offer values), both players make new offers:
+<observation>
+
+KUHHANDEL TIE - Make a new offer!
+- Trading: cow with Player 3
+- Previous offers tied (your offer was ~60)
+- Tie count: 1 (after 3 ties, you win automatically)
+
+Your available card values: [100, 50, 10, 10, 0, 0]
+Select exactly which cards to include in your new offer.
+
+Respond with JSON:
+{"reasoning": "...",
+ "offer_cards": [50, 10, 10, 0]}
+D.10
+Scratchpad Update
+In full memory mode, the framework issues an additional call after observable events to update the
+agent’s scratchpad:
+Update your game notes based on these new events.
+Keep under 300 tokens.
+Focus on: opponent wealth signals, behavioral patterns,
+quartet progress, trade outcomes.
+
+Current notes:
+<previous scratchpad or "(none yet)">
+
+New events:
+Turn 23: Player 1 won auction for dog (40 coins)
+Turn 24: You initiated Kuhhandel with Player 2 for horse.
+  You offered 50, they countered 0. You won, got 1 horse.
+Turn 25: Player 3 completed quartet (sheep)
+
+Respond with ONLY the updated notes, nothing else.
+The scratchpad is capped at approximately 300 tokens and uses the same model as game decisions. It
+is included in all subsequent observations under the “YOUR NOTES” heading.
+Experimental support, please
+view the build logs
+for errors. Generated by
+L
+A
+T
+E
+xml
+.
+Instructions for reporting errors
+We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below:
+Click the "Report Issue"
+(
+)
+button, located in the page header.
+Tip:
+You can select the relevant text first, to include it in your report.
+Our team has already identified
+the following issues
+. We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all.
+Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a
+list of packages that need conversion
+, and welcome
+developer contributions
+.
+We gratefully acknowledge support from
+        our
+major funders
+,
+member institutions
+,
+,
+        and all contributors.
+Major funding support from

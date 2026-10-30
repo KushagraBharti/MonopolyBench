@@ -1,0 +1,59 @@
+% Sol, step-15 manuscript contribution. New prose; locked outline unchanged.
+% Requires amsmath and booktabs. Citation keys belong to phase-3 references.bib.
+% Sections may be integrated separately. Numbers are finite-cohort descriptions.
+
+\section{Study design and economic measurement}
+\label{sec:sol-economic-methods}
+
+\input{sections/research_questions}
+
+\subsection{The cohort and the object of evaluation}
+
+We study twenty completed four-player games, comprising eighty player-games, 50,918 events, 6,989 decisions and 8,679 response attempts. Five seeds each have four cyclic seat rotations. Sol, Gemini, Opus and Grok each occupy seats 1--4 five times. The evaluated participant is the configured agent, including its model, inference settings, observations, memory and response-resolution policy. This complete-system interpretation follows existing arguments for agent evaluation and is especially consequential when a retry changes the response condition~\cite{kapoor2026hal,zhang2026dece}. An attempt is one recorded response within a decision. We write G$n$ d$k$ for zero-based decision $k$ in game $n$ (Appendix~\ref{app:cohort}). The engine applies one resolved action for that decision; several decisions can occur during one player's turn.
+
+The finite cohort is our population of description. Seat balance does not make the games independent draws from a common distribution of opportunities. Decisions within a game share an evolving board, and rotations within a seed block share initial random sequences. Purchases, jail choices and eliminations alter how those sequences are consumed. Two saved treatment fingerprints also divide games 1--4 from games 5--20. The inspected source diff changes campaign-concurrency plumbing and other application files without changing engine, prompt, resolver or model-client files. This inspection does not identify an effect, or establish the absence of one. We therefore report observed outcomes and paths without treating thousands of decisions as independent evidence of an intrinsic model ranking.
+
+Our analysis combines whole trajectories with narrower opportunity-conditioned summaries. This follows the general motivation for process-sensitive agent evaluation~\cite{ma2024agentboard}, but requires explicit economic units. A deed acquisition changes ownership of one property. A group completion occurs when a player acquires the last deed needed for a color group. A trade is an atomic settlement between two players, with its transfers and charges evaluated together. We distinguish the original thread initiator, the author of the final offer and its accepting player. These roles need not coincide. We record completion at stable transaction boundaries so that an intermediate transfer inside a swap cannot create a fictitious opportunity.
+
+Few-run evaluation requires attention to uncertainty and the independent sampling unit~\cite{agarwal2021precipice}. We report finite-cohort counts with game and seed-block identifiers, rather than applying decision-level confidence intervals to dependent observations. The separate offline pilot described later has its own seeds, policies, horizon and censoring rule; its games are never pooled with the historical LLM cohort.
+
+\subsection{Opportunities, expenditures and observed receipts}
+
+For each trade-completed group, the first management window begins at the owner's first actual optional-management decision after settlement and includes further management decisions in that same global turn. We distinguish construction legal on entry, construction becoming legal later in that window, and construction actually applied. Jail and other intervening phases can postpone management. Financing choices within the window can create a build opportunity. Thus, conditioning on entry buildability answers a different question from following every acquisition. It does not remove the consequences of earlier play.
+
+We measure negotiation initiation using two denominators. For configured agent $m$, let $\mathcal{T}_m$ contain its own turns with at least one menu permitting a proposal, and let $\mathcal{P}_m\subseteq\mathcal{T}_m$ contain turns with an applied proposal. If $N_m$ is its number of proposals, then
+\begin{equation}
+ q_m=\frac{|\mathcal{P}_m|}{|\mathcal{T}_m|},
+ \qquad
+ i_m=\frac{N_m}{|\mathcal{P}_m|}.
+ \label{eq:sol-proposals}
+\end{equation}
+The first quantity describes proposing-turn propensity; the second describes proposals per proposing turn. Neither is bargaining quality. A denominator of eligible decisions would also count repeated management requests caused by earlier mortgages or purchases, rather than additional turns. We retain that count for auditability without equating it with independent access.
+
+A spending unit $u=(g,p,c)$ joins game $g$, player $p$ and color group $c$ with positive own expenditure on houses or hotels. Including hotels prevents the omission of an owner who inherits four-house deeds and purchases only hotel conversions. Let $\tau_u$ be the first own construction event and $T_g$ the game's terminal event. We report
+\begin{equation}
+ K_u=\sum_{e\in\mathcal{B}_u}\operatorname{cost}(e),
+ \qquad
+ R_u^{\mathrm{post}}=
+ \sum_{\substack{e\in\mathcal{R}_u\\\tau_u\leq\operatorname{seq}(e)\leq T_g}}
+ \operatorname{paid}(e).
+ \label{eq:sol-receipts}
+\end{equation}
+Here $\mathcal{B}_u$ contains that owner's construction events and $\mathcal{R}_u$ contains paid rent on that owner's developed deeds in the group. We also report whole-game developed receipts, without the $\tau_u$ filter. All amounts are game dollars. Acquisition costs, redemption charges, building salvage, mortgage proceeds and estate transfers remain separate flows. An unpaid terminal rent demand is not a paid receipt.
+
+These quantities do not estimate incremental investment returns. The owner can inherit improvements, and subsequent rent depends on opponents' movement and survival. Removing receipts before first own spending fixes a timing mismatch while leaving inherited productive assets in the later window. Observation ends at ownership loss or game end. A late group and an early group consequently have different exposure. We preserve the sequence of acquisitions and expenditures instead of treating $R_u^{\mathrm{post}}/K_u$ as a comparable return on investment. Similar Monopoly investment questions appear in FinBoardBench; our event accounting addresses realized flows and legal financing rather than a universal valuation of the acquired assets~\cite{hu2026finboardbench}.
+
+Ownership, physical development, cash and bank stock are reconstructed from events. The retained audit reconciles these quantities with all 6,989 initial decision payloads and checks construction and salvage against cash-change events. We distinguish a group's completion route from the acquisition routes of its constituent deeds. A group can contain inherited deeds but become complete through a later purchase or trade. No spending unit in this cohort has a second complete-ownership interval at the observed decision or terminal boundaries.
+
+\subsection{Local legal-sequence tests}
+
+To test a financing or construction claim, we restore the actual historical decision prefix, check its event agreement, and execute a specified sequence of the acting player's own legal actions through the engine. We stop at a declared local endpoint, such as completing a proposed construction multiset or paying the current debt. A test cannot borrow another player's management opportunity. Conditional acceptance, altered stock or other diagnostic changes must be stated separately. Legal-action interfaces and replay already occur in related economic benchmarks~\cite{wu2026agentmonopoly,zhang2026dece}; the present use is to adjudicate concrete claims about recorded trajectories.
+
+For a debtor with cash $C$, a generous nominal upper bound is
+\begin{equation}
+ U=C+V_{\mathrm{all\ building\ salvage}}
+       +V_{\mathrm{all\ clear\ deed\ mortgages}}.
+ \label{eq:sol-upper}
+\end{equation}
+The mortgage term counts each unmortgaged deed once, including railroads and utilities and collateral that clearing buildings could unlock; already-mortgaged deeds contribute nothing. If $U$ is below debt $D$, own-asset liquidation cannot pay $D$. If $U\geq D$, a legal sequence must still establish access. A hotel downgrade needs bank houses, and the even-selling rule can prevent reaching nominal salvage. Conversely, a current menu can understate finance because mortgages become available only after sales. A tested payment route establishes current-debt feasibility, not future survival or the value of surrender. Once a branch changes the state, the historical policy suffix does not identify how any player would continue.
+

@@ -1,0 +1,232 @@
+{
+  "reviewer": "fable_novelty",
+  "date": "2026-10-29",
+  "draft": "baseline/monopolybench-first-draft (frozen, 34 pages)",
+  "severity_scale": "critical | high | medium | low",
+  "kind_scale": "demonstrated_error | missing_evidence | presentation_weakness | optional_new_experiment | taste",
+  "provenance_scale": "checked = re-derived by this reviewer from primary source or data; inherited = agreed with from a prior report without re-derivation; checked+inherited = raised before, re-derived here",
+  "findings": [
+    {
+      "id": "FN-01",
+      "severity": "high",
+      "kind": "presentation_weakness",
+      "provenance": "checked",
+      "title": "Figure 2 shows a per-configuration first-window split that the prose never states or explains",
+      "location": "sections/economic_results.tex, subsection 'Development reflects financing, reserve choices and execution', paragraphs 1-2; Figure 2 caption; assets/development.png",
+      "draft_passage": "All sixty-three trade-completed group episodes have an observed first management window. Forty-three receive construction in that window. Forty-two are buildable on entry, and thirty-four of those are developed during the window.",
+      "evidence": "assets/development.png left panel prints 16/17, 17/18, 7/15, 3/13 by configuration. analysis/results.json (from data/t03_trade_groups.json and t09_entry_nonbuild_records.json): never buildable in window Sol 0, Gemini 0, Opus 5, Grok 4; buildable-but-unbuilt Sol 1, Gemini 1, Opus 3, Grok 6; entry-unbuilt Sol 1 (default), Opus 2 (defaults), Grok 5 (3 received conflicts, 2 stated holds).",
+      "why_it_matters": "The paper's organizing claim is that an endpoint must be decomposed into opportunity, reachable sequence, response resolution and consequence. This is the one place in the data where that decomposition changes the reading of a visible gap: most of the Opus/Grok shortfall is groups that were never financeable in the window, and the rest is split between resolution defects and stated holds. A reader sees 3/13 versus 17/18 in the figure and finds no sentence about it.",
+      "proposed_resolution": "Add Table (proposed_revision.tex, tab:first-window-decomposition) and the accompanying paragraph. Keep the no-ranking caveat, but state the decomposition. Alternatively remove the per-configuration facet from Figure 2; the current state is the worst of both."
+    },
+    {
+      "id": "FN-02",
+      "severity": "high",
+      "kind": "missing_evidence",
+      "provenance": "checked",
+      "title": "The claimed contribution is a 'protocol' that is never stated as a procedure a reader could apply",
+      "location": "sections/abstract.tex (last two sentences); sections/introduction.tex contributions paragraph; sections/economic_methods.tex subsection 'Local legal-sequence tests'",
+      "draft_passage": "It contributes an empirical account, an exact-prefix audit procedure applied to agents' claims and research labels, and requirements for future controlled, norm-explicit comparisons.",
+      "evidence": "The methods subsection describes the test in one paragraph by example (restore prefix, check event agreement, execute own legal actions, stop at endpoint). It does not state inputs, admissible endpoints, certificate types (feasible route, exhaustive infeasibility, lock), what counts as a conditional diagnostic, or how results are reported. Comparators: AgentMonopoly code has no restore or replay function (engine.py, server.py, run_experiments.py fetched 2026-10-29); DECE App. D.7 states replay and resume through persisted states but no branching; the Arena paper does not state replayability.",
+      "why_it_matters": "Without a stated procedure the contribution collapses to 'we looked carefully at some cases'. With one, the paper has a reusable method that the strongest rivals verifiably lack (restore a recorded prefix and branch in the engine).",
+      "proposed_resolution": "Insert the boxed procedure in proposed_revision.tex (Section 'Exact-prefix adjudication procedure') into economic_methods.tex and reference it from the abstract and contributions."
+    },
+    {
+      "id": "FN-03",
+      "severity": "high",
+      "kind": "presentation_weakness",
+      "provenance": "checked",
+      "title": "The draft describes the public release as outstanding, but the repository is public and tracks all twenty games with prompts, responses, events, actions, decisions and state",
+      "location": "sections/validation.tex, subsection 'What the environment currently supports', last paragraph; sections/limitations.tex 'Validation and release'; sections/appendix.tex app:validation last paragraph; README.md",
+      "draft_passage": "A publication release should package the permitted raw artifacts, dependencies and regeneration commands with an external clean-setup test. The present draft records what has been reproduced locally without representing the completed release or an external replication as already achieved.",
+      "evidence": "gh api repos/KushagraBharti/MonopolyBench: visibility public, license Apache-2.0. git ls-files saved_games | grep -c railway-research = 118,653 tracked files; game-01 alone tracks run/events.jsonl, actions.jsonl, decisions.jsonl, 703 run/state files, 2,780 run/prompts files (system, user, tools, response, parsed, retry variants), usage files and cloud/calls. The phase-1/2/3 research directories are untracked.",
+      "why_it_matters": "Reproducibility is the paper's strongest practical asset relative to the Arena study (environment not redistributed) and DECE/FinBoardBench (release not stated). The draft hides it. If anonymity is the reason, say 'available in the public repository at submission' instead of implying the artifacts are unreleased.",
+      "proposed_resolution": "Replace the validation and limitations release sentences with the text in proposed_revision.tex ('Release status'). User decision needed on naming the URL versus an anonymized statement. The analysis directories (phase 1-3) should be added to the release or the paper should say they are not yet public."
+    },
+    {
+      "id": "FN-04",
+      "severity": "medium",
+      "kind": "demonstrated_error",
+      "provenance": "checked",
+      "title": "'Replay' attributed to AgentMonopoly is session playback, not engine re-execution; the sentence lets the two be confused",
+      "location": "sections/related_work.tex, paragraph 'Monopoly and board-game economies', sentence 2",
+      "draft_passage": "Its paper and repository describe legal-action lists, a deterministic engine, replay and per-turn records",
+      "evidence": "Paper App. A.1: 'an interactive mode for online replay and analysis of game sessions' (Fig. 7). Repository: README describes uploading a game_session_*.json to the dashboard; server.py has no restore or load endpoint and INIT always creates a new GameState; engine.py has no function that restores state or replays; run_experiments.py writes snapshots every five turns and at the end and has no read-back except analyze(). No LLM prompts or raw outputs are stored as fields.",
+      "why_it_matters": "The draft's own 'replay' means engine re-execution of the recorded action stream (replay.py replay_actions) with restored hidden random state. Using one word for both erases the paper's clearest infrastructure difference.",
+      "proposed_resolution": "Rewrite as in proposed_revision.tex: 'session playback in a dashboard; the inspected code has no function that restores a recorded state or re-executes the engine from it'."
+    },
+    {
+      "id": "FN-05",
+      "severity": "medium",
+      "kind": "missing_evidence",
+      "provenance": "checked",
+      "title": "The negotiation-attribution results rest on multi-exchange trade threads, which AgentMonopoly does not have; related work never says so",
+      "location": "sections/related_work.tex 'Monopoly and board-game economies'; sections/economic_results.tex 'Acquisition and bargaining' paragraph 3 (44 of 113 settlements with final author differing from initiator)",
+      "draft_passage": "In forty-four settlements, the final offer's author differs from the original thread initiator. Bilateral reconstruction is necessary both for interpreting bargaining and for avoiding an attribution error in which the initiating agent receives credit for the other party's counteroffer.",
+      "evidence": "AgentMonopoly engine.py _process_trade_proposal: one offer to one target, target returns accept_trade or reject_trade, no counteroffer; paper measures 'share of received offers accepted' (App. A.4). FinBoardBench: structured proposals with ACCEPT/REJECT/COUNTER and a reason field. MonopolyBench: threads of up to twenty exchanges; 526 proposals and 920 counter/accept/reject events (social_results.tex).",
+      "why_it_matters": "The attribution error the paper warns about cannot arise in a single-offer protocol. Saying so turns a caveat into a positive comparator difference and tells readers which rival results are comparable.",
+      "proposed_resolution": "Add the sentence in proposed_revision.tex related-work paragraph and the 'Negotiation protocol' row of the comparison matrix."
+    },
+    {
+      "id": "FN-06",
+      "severity": "medium",
+      "kind": "missing_evidence",
+      "provenance": "checked",
+      "title": "Attempt-level provenance is a verifiable differentiator from all four comparators, but related work does not claim it",
+      "location": "sections/related_work.tex; sections/introduction.tex contributions paragraph",
+      "draft_passage": "The contribution is this combined protocol and empirical account, not a claim to have introduced replay, multiplayer economics or factual checking of agent communication.",
+      "evidence": "AgentMonopoly agent.py: parse failure or hallucinated target forces action 'pass' with no corrective retry to the model; paper reports no invalid-output counts and says invalid outputs 'are not returned to the agent' (App. A.1). FinBoardBench App. E: up to five execution failures then a system-enforced fallback logged as a system-forced event (per phase-3 literature note; not re-fetched today). DECE: controller retries and fallback actions disabled for expansion results; invalid-action handling not described. Arena paper: tool calls; no attempt accounting stated. MonopolyBench records 8,679 attempts for 6,989 decisions, 66 defaults, 1,605 refusals, 139 content/tool conflicts, and the retry prompt variant per attempt.",
+      "why_it_matters": "The paper's most transferable empirical result (FN-15) is that a measurable share of consequential END and bankruptcy actions were produced by response resolution rather than choice. Only an attempt-level record can show this, and none of the comparators keeps one as a reported object.",
+      "proposed_resolution": "Add the 'Response attempts' row of the comparison matrix and one sentence to the contributions paragraph (proposed_revision.tex)."
+    },
+    {
+      "id": "FN-07",
+      "severity": "medium",
+      "kind": "missing_evidence",
+      "provenance": "checked",
+      "title": "Intact creditor inheritance is contrasted only with FinBoardBench, but AgentMonopoly's code also passes buildings intact to a player-creditor; the rule's share in the 54/60 and 57/60 results is unexamined",
+      "location": "sections/related_work.tex FinBoardBench sentence; sections/economic_results.tex 'Creditor inheritance is a major feature'; sections/setup.tex paragraph 4; sections/limitations.tex 'Implementation scope'",
+      "draft_passage": "Its Monopoly bankruptcy treatment sells buildings, whereas our creditor can inherit them intact. This difference is central to why our observed rent receipts are not presented as a comparable ROI score.",
+      "evidence": "AgentMonopoly engine.py _declare_bankruptcy: when the creditor is a player, all owned properties go to the creditor and 'buildings and the is_mortgaged flag are kept'; when the creditor is the bank, buildings are removed. The AgentMonopoly paper does not state this. FinBoardBench: buildings go to the bank when owed to a player. Official 2008 Hasbro rules sell buildings to the bank at half price (not fetched today; general knowledge, flag as unverified).",
+      "why_it_matters": "External validity: a reader will ask whether the winner-as-creditor concentration and the developed-rent elimination share are artifacts of a non-standard variant. The paper says 'not a causal estimate' but gives no read-only diagnostic. The retained events allow one: for each of the 60 eliminations, whether the transferred estate contained buildings and how much paid developed rent the creditor later collected on inherited development (the $450 G2 case shows the reduction exists for one unit).",
+      "proposed_resolution": "(a) Correct the FinBoardBench wording to 'returns buildings to the bank' and note that AgentMonopoly's inspected code, though not its paper, also transfers buildings intact. (b) Optional read-only analysis from existing events: count eliminations whose estate carried buildings and the creditor's subsequent paid rent on inherited buildings. Report as description, not causal effect."
+    },
+    {
+      "id": "FN-08",
+      "severity": "medium",
+      "kind": "demonstrated_error",
+      "provenance": "checked",
+      "title": "DECE is glossed as 'economic games' and 'controlled economic conditions'; it is ten score-based Eurogames with no inter-player dialogue",
+      "location": "sections/introduction.tex paragraph 2 ('DECE evaluates complete model--harness configurations under controlled economic conditions'); sections/related_work.tex ('DECE evaluates complete model--harness configurations across economic games')",
+      "draft_passage": "DECE evaluates complete model--harness configurations under controlled economic conditions",
+      "evidence": "2610.35773v1 §3.1, Table 2, App. A.1: Splendor, Century: Spice Road, Wingspan, Azul, Harmonies, Carcassonne, 7 Wonders, Castles of Burgundy, Brass: Birmingham, Ark Nova; 'compete entirely through legal game actions, without dialogue or negotiation'. No trading between players.",
+      "why_it_matters": "The gloss makes DECE sound like a rival economic benchmark with controls the draft lacks. It is an evaluation-infrastructure comparison (configurations, matched harness studies, replay/resume) in non-economic games.",
+      "proposed_resolution": "Replace both passages with the wording in proposed_revision.tex ('score-based Eurogames ... without an inter-player dialogue channel')."
+    },
+    {
+      "id": "FN-09",
+      "severity": "medium",
+      "kind": "presentation_weakness",
+      "provenance": "checked+inherited",
+      "title": "Opus is a different harness condition in 1,604 of 1,696 decisions but appears as a peer row in every exhibit",
+      "location": "Table 1 (setup.tex); Table 2 (negotiation_table.tex); Table 3 (recovery_table.tex); Figure 2; Figure 3 facets; Table 4 row G7",
+      "draft_passage": "Table~\\ref{tab:configurations} records decisions and attempts separately because a provider response is not necessarily an applied move.",
+      "evidence": "social_results.tex: 'Every Opus first attempt from game 5 onward was refused'; 1,394 of 1,696 Opus memory windows lack a model-authored note; all 61 Opus construction defaults arise in the action-only chain. The prior Opus final review (M2) asked for this in the abstract; the abstract now carries it. No exhibit marks the row.",
+      "why_it_matters": "A reader scanning tables will read Opus's 61 defaults, 7/15 builds and 24.2% proposal share as model properties. The paper's own position is that they are configured-system properties under a distinct condition.",
+      "proposed_resolution": "Add a dagger to 'Opus' in every table and figure legend with one footnote: 'Opus: 1,604 of 1,696 decisions resolved under the action-only refusal-recovery prompt (Section 2).' Proposed footnote text in proposed_revision.tex."
+    },
+    {
+      "id": "FN-10",
+      "severity": "medium",
+      "kind": "taste",
+      "provenance": "checked",
+      "title": "Thirty-four pages for five seed blocks and one condition per configuration is not justified by the number of distinct results",
+      "location": "Whole manuscript; sections/social_results.tex (4,365 words), sections/economic_results.tex (2,634 words), sections/appendix.tex",
+      "draft_passage": "n/a",
+      "evidence": "Distinct results: (1) 61/61 defaulted plans executable when reordered; (2) 3/60 payable eliminations and one lock; (3) 43/63 and 34/42 development with the 8-way residual; (4) five social chronologies showing settlement is not uptake; (5) G18 standing offer; (6) observation defects (44/113 reversed summaries; 149 timeline omissions; 139 conflicts); (7) infrastructure validation. Each is stated, re-stated with caveats, then restated in discussion, appendix Table 10 and conclusion. The G4, G6, G11, G20-d1 chronologies and the G20 d235 budget branch are illustrative rather than load-bearing.",
+      "why_it_matters": "Length amplifies the 'catalog of findings and caveats' impression and buries the transferable result. Reviewers at any venue will ask why this is not a 12-page paper plus appendix.",
+      "proposed_resolution": "Keep G13, G19 and G18 in the main text; move G4, G6, G11, G20 d1 and the channel inventory to an appendix; collapse 'Discussion 7.1' into the results; delete Table 10 (case index) or move it to supplementary. Target 18-20 pages before references."
+    },
+    {
+      "id": "FN-11",
+      "severity": "low",
+      "kind": "demonstrated_error",
+      "provenance": "checked",
+      "title": "Appendix Table 9 AgentMonopoly cell 'Withdrawal of an offer: Not addressed' should read 'Not applicable: single-offer protocol'; the contradiction cell can quote the prompt",
+      "location": "sections/appendix.tex Table 9 (tab:norms), rows 'Public/action contradiction' and 'Withdrawal of an offer'",
+      "draft_passage": "Withdrawal of an offer & No explicit release or expiry rule & Not addressed in inspected contract & Promise enactment measured",
+      "evidence": "engine.py: trade is one offer answered by accept_trade or reject_trade; no standing offer exists to withdraw. agent.py system prompt: 'CRITICAL: While you can lie about your motives, your public message must match the reality of your action' and 'Example of BAD Dissonance (Forbidden): Action is accept_trade. Public message is: No deal, I refuse!'. The same prompt adds 'SECRET RULE OVERRIDE: You are allowed to form secret alliances' and logs rent waivers as COLLUSION.",
+      "why_it_matters": "Precision of the contract comparison, which the paper uses to argue that an observed contradiction is 'a measured violation in one of those environments and an authorized move in ours'.",
+      "proposed_resolution": "Cell edits in proposed_revision.tex. Optionally add a 'Coalitions' row: ours 'cooperative play permitted, no private channel'; AgentMonopoly 'secret alliances explicitly allowed by prompt (repository), rent waiver logged as collusion'; Arena 'externally coded as collusion'."
+    },
+    {
+      "id": "FN-12",
+      "severity": "low",
+      "kind": "presentation_weakness",
+      "provenance": "checked",
+      "title": "FinBoardBench evaluates one focal model against three fixed opponents; the draft's all-four-players accounting is a real difference it does not state",
+      "location": "sections/related_work.tex FinBoardBench sentences",
+      "draft_passage": "FinBoardBench evaluates financial decisions across three board games, including Monopoly liquidity and investment summaries and judged trade quality",
+      "evidence": "2605.27896v1: 'Four in the evaluation (one tested LLM plus three opponents)'; opponents DeepSeek V4 Flash, Qwen-3.5-397B-A17B, Gemini-3.1-Flash-Lite-Preview; 108 matches; DeepSeek V4 Pro as external judge.",
+      "why_it_matters": "A four-way frontier table in which every player is evaluated is a different object from a focal-agent benchmark; it is why bilateral consequences can be followed for both sides.",
+      "proposed_resolution": "One clause added in proposed_revision.tex."
+    },
+    {
+      "id": "FN-13",
+      "severity": "medium",
+      "kind": "missing_evidence",
+      "provenance": "checked",
+      "title": "The Arena contrast could be strengthened with a verified limitation of Arena's ground truth: deterministic checks apply only to claims the simulator logs resolve",
+      "location": "sections/related_work.tex 'Long-horizon economic agents' last sentence",
+      "draft_passage": "Our cases connect those questions to exact historical action menus, legal financing sequences, per-attempt resolution and an explicit permission for public deception.",
+      "evidence": "2608.14825v3 §4.1: Stage B checks extracted claims against pricing-events, transfers and inventory-checkpoint logs; intraday balance claims excluded from the falsity verdict; an INSUFFICIENT_DATA verdict exists; §6 transfer counts are lower bounds. In MonopolyBench every proposition about ownership, cash, charges and feasibility is decidable from the complete event log, and feasibility claims are decidable by engine execution.",
+      "why_it_matters": "This is the precise sense in which 'state-checked communication' here is stronger than in the closest comparator, and it is verifiable from the Arena paper rather than from a gloss.",
+      "proposed_resolution": "Add the sentence in proposed_revision.tex Arena paragraph."
+    },
+    {
+      "id": "FN-14",
+      "severity": "low",
+      "kind": "presentation_weakness",
+      "provenance": "checked",
+      "title": "AgentMonopoly version ambiguity: the 150-step cap and net-worth winner are in the paper but not in the repository runner code read today",
+      "location": "sections/related_work.tex ('a 150-step cap invokes a net-worth winner'; 'we retain the revision discrepancy')",
+      "draft_passage": "The inspected paper reports 140 games, while the repository experiment table totals 120; we retain the revision discrepancy rather than infer a shared count.",
+      "evidence": "run_experiments.py (main, 2026-10-29): DEFAULT_MAX_TURNS = 600; winner printed as the first non-bankrupt player; snapshot() computes net_worth but nothing uses it to pick a winner. server.py: no cap, no winner. Paper §4 and App. A.1: 150-step limit, highest net worth wins.",
+      "why_it_matters": "The draft already records one paper/repository discrepancy; this is a second of the same type and belongs in the same sentence so that the comparison is pinned to the paper.",
+      "proposed_resolution": "Extend the discrepancy sentence: 'and the repository runner read at the same date applies a 600-turn default without the net-worth rule; we compare to the paper's stated protocol.'"
+    },
+    {
+      "id": "FN-15",
+      "severity": "high",
+      "kind": "presentation_weakness",
+      "provenance": "checked",
+      "title": "The paper's one transferable result is buried: in deployed frontier configurations, a measurable share of consequential END and bankruptcy actions are produced by response resolution rather than by choice, and only an attempt-level record can show it",
+      "location": "sections/abstract.tex sentence 1-3; sections/introduction.tex paragraph 5-6; sections/discussion.tex 7.1",
+      "draft_passage": "Long-horizon agents must acquire resources, finance plans and negotiate while earlier actions reshape later opportunities. We study economic capability and the social conduct of bargaining in MonopolyBench ...",
+      "evidence": "61/61 Opus defaulted purchase multisets execute when interleaved (Table 3); G12 d249 bankruptcy declared by a received tool call whose content requested house sales; 3 of 8 entry-window non-builds are received content/tool conflicts; 139 Grok conflicts including four accepted trades whose text argues rejection and G18 d83 completing the eventual winner's first group; 66 defaults all on buildable menus. No comparator reports attempt chains (FN-06).",
+      "why_it_matters": "Answers the charter's question 'what should change in evaluation practice': report attempts, retries and fallbacks as part of the measured system and audit applied actions against attempted ones before interpreting an END or a bankruptcy. This generalizes beyond Monopoly; the social chronologies do not.",
+      "proposed_resolution": "Open the abstract and the contributions with this result (text in proposed_revision.tex). Keep the capability-alignment framing as motivation only."
+    },
+    {
+      "id": "FN-16",
+      "severity": "low",
+      "kind": "presentation_weakness",
+      "provenance": "checked",
+      "title": "The redemption overcharge is an implementation deviation, not a rule, and should be labelled as such with its scope",
+      "location": "sections/appendix.tex app:cohort paragraph 2; sections/setup.tex paragraph 4",
+      "draft_passage": "Both charges use floating-point ceilings. ... A model expecting the exact mathematical $110 is therefore not necessarily making a rule-knowledge error. This implementation detail is retained in the applied cash records and legal tests.",
+      "evidence": "Recomputed from contracts/data/board.json and engine.py lines 1786 and 2490: trade interest exact for all 16 principals; redemption +1 for principals 50, 90, 100, 110, 200 (analysis/results.json). The appendix sentence is numerically correct.",
+      "why_it_matters": "A benchmark paper should name known deviations from the documented ruleset as deviations, state that they are frozen in the recorded cohort, and say whether any legal-menu or payable-debt verdict in the paper depends on the extra dollar (none of the four Table 4 margins is within one dollar of the debt; the G12 d190 route retains $8, the smallest margin).",
+      "proposed_resolution": "Rename the sentence 'Known implementation deviation' and add: 'No feasibility verdict reported in this paper changes if the exact ceiling is substituted; the smallest payable margin is $8 (G12 d190).' (The margin statement follows from Table 4; the no-change claim should be confirmed by whoever owns the branch proofs before insertion.)"
+    },
+    {
+      "id": "FN-17",
+      "severity": "low",
+      "kind": "taste",
+      "provenance": "checked",
+      "title": "The name 'MonopolyBench' promises a scoring instrument that the paper deliberately does not deliver; the introduction should say so in one sentence",
+      "location": "Title; sections/introduction.tex paragraph 5 ('The results support a detailed capability profile rather than a ranking')",
+      "draft_passage": "The results support a detailed capability profile rather than a ranking.",
+      "evidence": "No leaderboard metric, win-rate confidence interval, or score is proposed anywhere. AgentMonopoly, DECE, FinBoardBench and Cattle Trade all report rankings or win rates.",
+      "why_it_matters": "A reviewer who expects a benchmark result will judge the absence as a gap rather than a position. Stating the position early turns it into a design choice with a reason (five seed blocks; one condition per configuration; dependence).",
+      "proposed_resolution": "Add one sentence to the introduction: 'We do not propose a leaderboard score: with five seed blocks and one condition per configuration, win totals are not an estimate of anything, and the paper's unit of evidence is the audited decision, not the game.'"
+    }
+  ],
+  "scorecard": {
+    "note": "Advisory, 1-10, with reasons. A 10 is not available for a first draft of an exploratory cohort study.",
+    "significance": {"score": 5, "reason": "One transferable result (resolution-produced actions in deployed frontier configurations) and one transferable method (restore-and-branch adjudication). The social findings are careful but local to one contract and five chronologies."},
+    "soundness": {"score": 7, "reason": "Claims are bounded and the comparator facts check out on primary sources with the exceptions in FN-04, FN-08 and FN-11. Downgraded for the unexamined rule-artifact share (FN-07) and for presenting a distinct harness condition as a peer row (FN-09)."},
+    "novelty": {"score": 5, "reason": "Raised from my pre-verification 4. Verified differences from the closest rivals: attempt-level provenance, engine restore-and-branch, multi-exchange negotiation threads with bilateral attribution, a liquidation phase with accessible-finance tests, and an explicit deception-permitting contract. The infrastructure genre is not new, and the draft currently argues from rule differences rather than from these measurement capabilities."},
+    "clarity": {"score": 4, "reason": "Honest but exhausting. The contribution is described, not specified; the key decomposition is in a figure but not in prose; the same caveats recur in five places; 34 pages for seven distinct results."},
+    "reproducibility": {"score": 6, "reason": "Artifacts for all twenty games are public under Apache-2.0 with prompts, responses, events, actions, decisions and state, and the engine supports action-stream replay. The paper does not say so, no external reproduction exists, and the analysis directories are untracked."}
+  },
+  "strongest_rejection_reasons": [
+    "No identifiable scientific claim: five seed blocks, four configurations at one condition each, no ranking, no rate, no effect estimate; the advertised 'protocol' is shown by example and never specified or evaluated against an alternative.",
+    "The closest rival already offers Monopoly with a deterministic engine, legal menus, a bluffing prompt, open Apache-2.0 code, 140 games and a within-family size axis; the draft distinguishes itself by rule variants rather than by measurement capabilities the rival verifiably lacks.",
+    "A confounded cohort: one of four configurations played 1,604 of 1,696 decisions under a different prompt and tool schema, the shift coincides with a source-version boundary, and every exhibit still presents that configuration as a peer."
+  ],
+  "changes_most_likely_to_improve": [
+    "Lead with the resolution-produced-action result and the per-configuration opportunity decomposition (new table), and state the exact-prefix adjudication procedure in a box with its certificate types.",
+    "Rewrite related work around a sourced capability matrix (attempt records, restore-and-branch, negotiation protocol, liquidation phase, conduct contract, release) and correct the AgentMonopoly 'replay' and DECE 'economic games' glosses.",
+    "State the public release, mark the Opus condition in every exhibit, and cut the main text to about twenty pages by moving illustrative chronologies and the case index to an appendix."
+  ]
+}

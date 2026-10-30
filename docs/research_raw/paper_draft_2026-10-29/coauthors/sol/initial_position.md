@@ -1,0 +1,13 @@
+# Sol's initial manuscript position
+
+2026-10-29, recorded before reading any new step-15 peer prose. Scope: methods and economic results, with adjacent framing critique. All writes remain in this directory. The existing outline and its LaTeX body are locked.
+
+The economic argument should concern sustained resource allocation by configured agents. It needs successful financing, deliberate reserve choices, bilateral consequences and trade-free winners alongside execution failures. Counting a completed set or a chosen action alone misses the path that created the opportunity. Conditioning on a legal management menu is useful for describing responsiveness, but survival, acquisition and finance make that condition endogenous.
+
+The estimands are finite-cohort summaries and local legal-existence questions. A spending unit joins a game, player and color group with positive own house or hotel expenditure. Paid rent, spending, salvage and inherited improvements remain separate. Three payable current debts do not identify irrational surrender, a uniform reasoning error or alternate winners. Group-level and elimination-level counts cannot share a denominator.
+
+Capability and conduct must remain joint motivations. A permitted public bluff is not evidence of instruction misalignment. Factual accuracy, honesty, channel consistency and recipient influence require separate evidence. An independently specified norm can support a descriptive adherence judgment without a randomized experiment. Causal comparisons and capability-growth curves require a further design. A caveat-only alignment paragraph would underserve the research question; an alignment score or curve would exceed this cohort.
+
+Original disagreements to carry into co-writing: economic outcomes should not be framed primarily as interface failures; conditional development ratios cannot replace whole trajectories; 139 received-name disagreements cannot become monitor errors; a settlement after an omission cannot become a persuasion effect; prior work already has legal actions, replay and grounded communication analysis. These are objections to possible framings, not claims about peer prose not yet read.
+
+Source checks already identify superseded peer text: winner spending units are 58, of which 34 contain inherited deeds, rather than the earlier 57/33 house-only count. G12 d249 has several survival recommendations but a received declaration, so the three payable eliminations do not all exhibit a simple omitted-mortgage mechanism. Accepted phase-3 corrections include G13 d251 as the earlier buyer account and 30 first estate-completed winner spending units as distinct from 34 with any inherited deed.

@@ -1,0 +1,50 @@
+\usepackage[margin=0.9in,headheight=14pt]{geometry}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Pagella}
+\setsansfont{TeX Gyre Heros}
+\setmonofont[Scale=0.85]{Latin Modern Mono}
+\newfontfamily\transcriptfont{TeX Gyre Heros}[RawFeature=-tlig]
+\usepackage{microtype,graphicx,booktabs,tabularx,longtable,array,amsmath,amssymb}
+\usepackage{enumitem,caption,xcolor,xurl,placeins,pdflscape}
+\usepackage[most]{tcolorbox}
+\usepackage{needspace}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!40!black,citecolor=blue!40!black,urlcolor=blue!40!black]{hyperref}
+\graphicspath{{assets/}}
+\setlength{\parskip}{3pt plus 1pt}
+\setlength{\emergencystretch}{2em}
+\setlist{itemsep=2pt,topsep=4pt,leftmargin=1.6em}
+\captionsetup{font=small,labelfont=bf}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\game}[1]{G#1}
+\newcommand{\decision}[2]{G#1 d#2}
+\newcommand{\End}{\texttt{end\_turn}}
+\newcommand{\artifact}[1]{\path{#1}}
+\newcommand{\tablenote}[1]{\par\smallskip{\footnotesize #1}\par}
+% Native, searchable transcript cards. Quotes and metadata are generated from
+% retained source fields; the surrounding interpretation is authored prose.
+\definecolor{transcriptbg}{HTML}{F4F5F6}
+\definecolor{transcriptborder}{HTML}{D9DDE1}
+\definecolor{transcriptmeta}{HTML}{50575E}
+\newtcolorbox{transcriptmessage}{enhanced,colback=transcriptbg,
+  colframe=transcriptborder,boxrule=0.45pt,arc=2.5mm,
+  left=11pt,right=11pt,top=8pt,bottom=9pt,
+  before skip=7pt,after skip=7pt,
+  fontupper=\transcriptfont\fontsize{10.5}{14}\selectfont\raggedright,
+  before upper={\hyphenpenalty=10000\exhyphenpenalty=10000}}
+\newcommand{\DeclareTranscriptQuote}[3]{%
+  \expandafter\gdef\csname transcript@#1\endcsname{%
+    \begin{transcriptmessage}
+    {\color{transcriptmeta}\fontsize{8.8}{11.5}\selectfont #2\par}
+    \smallskip #3
+    \end{transcriptmessage}}}
+\newcommand{\TranscriptQuote}[1]{\csname transcript@#1\endcsname}
+\newcounter{transcript}
+\newcommand{\TranscriptTitle}[2]{\par\addvspace{1.1em}\Needspace{13\baselineskip}%
+  \refstepcounter{transcript}\label{tr:#1}%
+  \noindent{\large\bfseries Transcript \thetranscript. #2}\par\smallskip}
+\newcommand{\TranscriptFinding}[1]{\par\smallskip\noindent\textbf{What happened.} #1\par}
+\newcommand{\TranscriptReading}[1]{\par\smallskip\noindent\textbf{What this shows.} #1\par}
+\newcommand{\TranscriptSource}[1]{\par\smallskip{\footnotesize\color{transcriptmeta}#1}\par}
+\hypersetup{pdftitle={MonopolyBench: Verifying Behavioral Claims from Agent Trajectories},pdfauthor={MonopolyBench project}}

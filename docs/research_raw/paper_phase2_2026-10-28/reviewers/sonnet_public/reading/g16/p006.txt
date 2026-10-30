@@ -1,0 +1,521 @@
+# game 16 page 6  decisions #453..#554  seats: p1=Grok, p2=Opus, p3=Sol, p4=Argon
+
+#453 t254 p3/Sol POST  $[p1:0 p2:0 p3:*647 p4:3350]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $0 BV0 BANKRUPT  | - ## p3/Sol $647 BV4762  | BR:MEDH,BALH PK:STC~0,STA~0 OR:STJ0,TEN0,NYA~0 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~ ## p4/Argon $3350 BV6190  | LB:ORIH,VERH,CONH PK:VIR0 RD:KEN0 YL:ATL0,VEN0 GR:PEA0 RR:PRR,SL UT:ELE
+  ctx: buildable=PKP,BW sellable=MED,BAL,PKP,BW unmortgageable=RDG,STC,STA,NYA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#2 trade_with=p4
+  > unmortgage_property NYA
+  "Reopening New York Avenue."
+  post: UNMORT p3 NYA -$111
+#454 t254 p3/Sol POST  $[p1:0 p2:0 p3:*536 p4:3350]
+  H: p3/Sol $536 BV4751  | BR:MEDH,BALH PK:STC~0,STA~0 OR:STJ0,TEN0,NYA0 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=STJ,TEN,NYA,PKP,BW sellable=MED,BAL,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#3 trade_with=p4
+  > build_houses_or_hotel STJ+1 TEN+1 NYA+1
+  "Beginning orange development."
+  post: $p3 -300 BUILD; HOUSE+1 p3 STJ; HOUSE+1 p3 TEN; HOUSE+1 p3 NYA
+#455 t254 p3/Sol POST  $[p1:0 p2:0 p3:*236 p4:3350]
+  ctx: buildable=STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding reserves."
+  post: p4 rolls 6+4; p4->GO_TO_JAIL; p4->JAIL; JAILED p4 (GO_TO_JAIL); p3 rolls 5+6; p3->CHANCE (passGO); GO p3+200; CARD p3 CH:GO_TO_NEAREST_RAILROAD_B; p3->PRR; RENT p3>p4 $100 @PRR
+#456 t256 p3/Sol POST  $[p1:0 p2:0 p3:*336 p4:3450]  JAILED:p4
+  H: p3/Sol $336 BV4851  | BR:MEDH,BALH PK:STC~0,STA~0 OR:STJ1,TEN1,NYA1 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel STJ+1 TEN+1 NYA+1
+  "Expanding the orange set."
+  post: $p3 -300 BUILD; HOUSE+1 p3 STJ; HOUSE+1 p3 TEN; HOUSE+1 p3 NYA
+#457 t256 p3/Sol POST  $[p1:0 p2:0 p3:*36 p4:3450]  JAILED:p4
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+#458 t257 p4/Argon JAIL  $[p1:0 p2:0 p3:36 p4:*3450]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling for doubles."
+  post: p4 rolls 3+4; p3 rolls 2+1; p3->TEN
+#459 t258 p3/Sol POST  $[p1:0 p2:0 p3:*36 p4:3450]  JAILED:p4
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+#460 t259 p4/Argon JAIL  $[p1:0 p2:0 p3:36 p4:*3450]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling for doubles."
+  post: p4 rolls 4+2; p3 rolls 3+5; p3->ATL; RENT p3>p4 $22 @ATL
+#461 t260 p3/Sol POST  $[p1:0 p2:0 p3:*14 p4:3472]  JAILED:p4
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+#462 t261 p4/Argon JAIL  $[p1:0 p2:0 p3:14 p4:*3472]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling for doubles."
+  post: p4 rolls 3+1; $p4 -50 JAIL_FINE; p4->VIR
+#463 t261 p4/Argon POST  $[p1:0 p2:0 p3:14 p4:*3422]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+4 DBL; p3->PEA
+#464 t262 p3/Sol LIQ  $[p1:0 p2:0 p3:*14 p4:3422]
+  H: p3/Sol $14 BV4829  | BR:MEDH,BALH PK:STC~0,STA~0 OR:STJ2,TEN2,NYA2 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~ ## p4/Argon $3422 BV6262  | LB:ORIH,VERH,CONH PK:VIR0 RD:KEN0 YL:ATL0,VEN0 GR:PEA0 RR:PRR,SL UT:ELE
+  ctx: OWES $28 to p4 (RENT) shortfall=$14 mortgageable=- sellable=MED,BAL,STJ,TEN,NYA,PKP,BW
+  > sell_houses_or_hotel MED-1(HOTEL)
+  "Making a small reserve adjustment."
+  post: $p3 +25 SELL_BUILDING; HOTEL-SOLD p3 MED; RENT p3>p4 $28 @PEA
+#465 t262 p3/Sol POST  $[p1:0 p2:0 p3:*11 p4:3450]
+  ctx: sellable=BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p3 rolls 4+6; p3->INCOME_TAX (passGO); GO p3+200; $p3 -200 TAX_INCOME
+#466 t263 p3/Sol POST  $[p1:0 p2:0 p3:*11 p4:3450]
+  ctx: sellable=BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 3+5; p4->CHANCE; CARD p4 CH:GO_TO_JAIL; p4->JAIL; JAILED p4 (CHANCE_CARD); p3 rolls 1+2; p3->CHANCE; CARD p3 CH:GET_OUT_OF_JAIL_FREE
+#467 t265 p3/Sol POST  $[p1:0 p2:0 p3:*11 p4:3450]  JAILED:p4
+  ctx: sellable=BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+#468 t266 p4/Argon JAIL  $[p1:0 p2:0 p3:11 p4:*3450]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling for doubles."
+  post: p4 rolls 6+4; p3 rolls 4+3; p3->VIR
+#469 t267 p3/Sol LIQ  $[p1:0 p2:0 p3:*11 p4:3450]  JAILED:p4
+  H: p3/Sol $11 BV4776 GOOJ1  | BR:MED4,BALH PK:STC~0,STA~0 OR:STJ2,TEN2,NYA2 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~ ## p4/Argon $3450 BV6290 JAIL  | LB:ORIH,VERH,CONH PK:VIR0 RD:KEN0 YL:ATL0,VEN0 GR:PEA0 RR:PRR,SL UT:ELE
+  ctx: OWES $12 to p4 (RENT) shortfall=$1 mortgageable=- sellable=BAL,STJ,TEN,NYA,PKP,BW
+  > sell_houses_or_hotel BAL-1(HOTEL)
+  "Small cash adjustment."
+  post: $p3 +25 SELL_BUILDING; HOTEL-SOLD p3 BAL; RENT p3>p4 $12 @VIR
+#470 t267 p3/Sol POST  $[p1:0 p2:0 p3:*24 p4:3462]  JAILED:p4
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+#471 t268 p4/Argon JAIL  $[p1:0 p2:0 p3:24 p4:*3462]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling for doubles."
+  post: p4 rolls 6+4; p3 rolls 2+3; p3->NYA
+#472 t269 p3/Sol POST  $[p1:0 p2:0 p3:*24 p4:3462]  JAILED:p4
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+#473 t270 p4/Argon JAIL  $[p1:0 p2:0 p3:24 p4:*3462]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Rolling for doubles."
+  post: p4 rolls 4+1; $p4 -50 JAIL_FINE; p4->PRR
+#474 t270 p4/Argon POST  $[p1:0 p2:0 p3:24 p4:*3412]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+5; p3->VEN; RENT p3>p4 $22 @VEN
+#475 t271 p3/Sol POST  $[p1:0 p2:0 p3:*2 p4:3434]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 6+6 DBL; p4->VEN
+#476 t272 p4/Argon POST  $[p1:0 p2:0 p3:2 p4:*3434]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p4 rolls 3+4; p4->PEA
+#477 t273 p4/Argon POST  $[p1:0 p2:0 p3:2 p4:*3434]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 6+3; p3->CHANCE; CARD p3 CH:GO_TO_ST_CHARLES_PLACE; p3->STC (passGO); GO p3+200
+#478 t274 p3/Sol POST  $[p1:0 p2:0 p3:*202 p4:3434]
+  H: p3/Sol $202 BV4917 GOOJ1  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ2,TEN2,NYA2 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel TEN+1 NYA+1
+  "Upgrading the oranges."
+  post: $p3 -200 BUILD; HOUSE+1 p3 TEN; HOUSE+1 p3 NYA
+#479 t274 p3/Sol POST  $[p1:0 p2:0 p3:*2 p4:3434]
+  ctx: sellable=MED,BAL,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 6+4; p4->INCOME_TAX (passGO); GO p4+200; $p4 -200 TAX_INCOME
+#480 t275 p4/Argon POST  $[p1:0 p2:0 p3:2 p4:*3434]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+6; p3->FREE_PARKING
+#481 t276 p3/Sol POST  $[p1:0 p2:0 p3:*2 p4:3434]
+  ctx: sellable=MED,BAL,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+3; p4->ELE
+#482 t277 p4/Argon POST  $[p1:0 p2:0 p3:2 p4:*3434]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+5; p3->MAR
+#483 t278 p3/Sol POST  $[p1:0 p2:0 p3:*2 p4:3434]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $0 BV0 BANKRUPT  | - ## p3/Sol $2 BV4917 GOOJ1  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ2,TEN3,NYA3 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~ ## p4/Argon $3434 BV6274  | LB:ORIH,VERH,CONH PK:VIR0 RD:KEN0 YL:ATL0,VEN0 GR:PEA0 RR:PRR,SL UT:ELE
+  ctx: sellable=MED,BAL,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 6+5; p4->IND
+#484 t279 p4/Argon POST  $[p1:0 p2:0 p3:2 p4:*3434]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 1+3; p3->COMMUNITY_CHEST; CARD p3 CO:LIFE_INSURANCE_COLLECT_100; $p3 +100 LIFE_INSURANCE_COLLECT_100
+#485 t280 p3/Sol POST  $[p1:0 p2:0 p3:*102 p4:3434]
+  H: p3/Sol $102 BV5017 GOOJ1  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ2,TEN3,NYA3 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ sellable=MED,BAL,TEN,NYA,PKP,BW unmortgageable=STC,STA,WW mortgageable#0 trade_with=p4
+  > build_houses_or_hotel STJ+1
+  "Completing the three-house orange line."
+  post: $p3 -100 BUILD; HOUSE+1 p3 STJ
+#486 t280 p3/Sol POST  $[p1:0 p2:0 p3:*2 p4:3434]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 3+1; p4->VEN
+#487 t281 p4/Argon POST  $[p1:0 p2:0 p3:2 p4:*3434]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 1+2; p3->CHANCE; CARD p3 CH:GO_TO_NEAREST_UTILITY; p3->ELE (passGO); GO p3+200; p3 rolls 1+3; RENT p3>p4 $40 @ELE
+#488 t282 p3/Sol POST  $[p1:0 p2:0 p3:*162 p4:3474]
+  H: p3/Sol $162 BV5177 GOOJ1  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ3,TEN3,NYA3 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR mortgageable#0 trade_with=p4
+  > build_houses_or_hotel NYA+1
+  "Strengthening New York Avenue."
+  post: $p3 -100 BUILD; HOUSE+1 p3 NYA
+#489 t282 p3/Sol POST  $[p1:0 p2:0 p3:*62 p4:3474]
+  ctx: buildable=MED,BAL sellable=MED,BAL,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 6+5; p4->LUXURY_TAX; $p4 -100 TAX_LUXURY
+#490 t283 p4/Argon POST  $[p1:0 p2:0 p3:62 p4:*3374]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+6; p3->KEN; RENT p3>p4 $18 @KEN
+#491 t284 p3/Sol POST  $[p1:0 p2:0 p3:*44 p4:3392]
+  ctx: sellable=MED,BAL,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 2+1; p4->MED (passGO); GO p4+200; RENT p4>p3 $160 @MED
+#492 t285 p4/Argon POST  $[p1:0 p2:0 p3:204 p4:*3432]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 2+2 DBL; p3->BO
+#493 t286 p3/Sol POST  $[p1:0 p2:0 p3:*204 p4:3432]
+  H: p3/Sol $204 BV5319 GOOJ1  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ3,TEN3,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,PKP,BW sellable=MED,BAL,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel STJ+1 TEN+1
+  "Four houses across the oranges."
+  post: $p3 -200 BUILD; HOUSE+1 p3 STJ; HOUSE+1 p3 TEN
+#494 t286 p3/Sol POST  $[p1:0 p2:0 p3:*4 p4:3432]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p3 rolls 6+5; p3->CHANCE; CARD p3 CH:GO_BACK_3_SPACES; p3->COMMUNITY_CHEST; CARD p3 CO:GET_OUT_OF_JAIL_FREE
+#495 t287 p3/Sol POST  $[p1:0 p2:0 p3:*4 p4:3432]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 2+1; p4->INCOME_TAX; $p4 -200 TAX_INCOME
+#496 t288 p4/Argon POST  $[p1:0 p2:0 p3:4 p4:*3232]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 2+3; p3->LUXURY_TAX
+#497 t289 p3/Sol LIQ  $[p1:0 p2:0 p3:*4 p4:3232]
+  H: p3/Sol $4 BV5319 GOOJ2  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: OWES $100 to BANK (TAX_LUXURY) shortfall=$96 mortgageable=- sellable=MED,BAL,STJ,TEN,NYA,PKP,BW
+  > sell_houses_or_hotel MED-2 BAL-2
+  "Covering the tax from brown buildings."
+  post: $p3 +100 SELL_BUILDING; HOUSE-2 p3 MED; HOUSE-2 p3 BAL; $p3 -100 TAX_LUXURY
+#498 t289 p3/Sol POST  $[p1:0 p2:0 p3:*4 p4:3232]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 6+1; p4->STC
+#499 t290 p4/Argon POST  $[p1:0 p2:0 p3:4 p4:*3232]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 6+3; p3->CHANCE (passGO); GO p3+200; CARD p3 CH:GO_TO_ILLINOIS_AVE; p3->ILL
+#500 t291 p3/Sol POST  $[p1:0 p2:0 p3:*204 p4:3232]
+  H: p3/Sol $204 BV5319 GOOJ2  | BR:MED2,BAL2 PK:STC~0,STA~0 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW3 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel BW+1
+  "Strengthening Boardwalk."
+  post: $p3 -200 BUILD; HOUSE+1 p3 BW
+#501 t291 p3/Sol POST  $[p1:0 p2:0 p3:*4 p4:3232]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,BW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 2+3; p4->STJ; RENT p4>p3 $750 @STJ
+#502 t292 p4/Argon POST  $[p1:0 p2:0 p3:754 p4:*2482]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+4 DBL; p3->NCA
+#503 t293 p3/Sol POST  $[p1:0 p2:0 p3:*754 p4:2482]
+  H: p3/Sol $754 BV6069 GOOJ2  | BR:MED2,BAL2 PK:STC~0,STA~0 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP3,BW4 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP sellable=MED,BAL,STJ,TEN,NYA,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel PKP+1 MED+1 BAL+1
+  "Strengthening Park Place and the browns."
+  post: $p3 -300 BUILD; HOUSE+1 p3 PKP; HOUSE+1 p3 MED; HOUSE+1 p3 BAL
+#504 t293 p3/Sol POST  $[p1:0 p2:0 p3:*454 p4:2482]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p3 rolls 4+1; p3->PKP
+#505 t294 p3/Sol POST  $[p1:0 p2:0 p3:*454 p4:2482]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 1+5; p4->CHANCE; CARD p4 CH:PAY_POOR_TAX_15; $p4 -15 PAY_POOR_TAX_15
+#506 t295 p4/Argon POST  $[p1:0 p2:0 p3:454 p4:*2467]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+6; p3->ORI (passGO); GO p3+200; RENT p3>p4 $550 @ORI
+#507 t296 p3/Sol POST  $[p1:0 p2:0 p3:*104 p4:3017]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=STC,STA,WW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+4; p4->PAC
+#508 t297 p4/Argon POST  $[p1:0 p2:0 p3:104 p4:*3017]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+4; p3->STA
+#509 t298 p3/Sol POST  $[p1:0 p2:0 p3:*104 p4:3017]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=STC,STA,WW mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 6+6 DBL; p4->BAL (passGO); GO p4+200; RENT p4>p3 $180 @BAL
+#510 t299 p4/Argon POST  $[p1:0 p2:0 p3:284 p4:*3037]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p4 rolls 3+5; p4->STC
+#511 t300 p4/Argon POST  $[p1:0 p2:0 p3:284 p4:*3037]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 1+2; p3->STJ
+#512 t301 p3/Sol POST  $[p1:0 p2:0 p3:*284 p4:3037]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+3; p4->NYA; RENT p4>p3 $800 @NYA
+#513 t302 p4/Argon POST  $[p1:0 p2:0 p3:1084 p4:*2237]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $0 BV0 BANKRUPT  | - ## p3/Sol $1084 BV6699 GOOJ2  | BR:MED3,BAL3 PK:STC~0,STA~0 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP4,BW4 RR:RDG~,BO~ UT:WW~ ## p4/Argon $2237 BV5077  | LB:ORIH,VERH,CONH PK:VIR0 RD:KEN0 YL:ATL0,VEN0 GR:PEA0 RR:PRR,SL UT:ELE
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+3 DBL; p3->CHANCE; CARD p3 CH:BUILDING_LOAN_MATURES_RECEIVE_150; $p3 +150 BUILDING_LOAN_MATURES_RECEIVE_150
+#514 t303 p3/Sol POST  $[p1:0 p2:0 p3:*1234 p4:2237]
+  H: p3/Sol $1234 BV6849 GOOJ2  | BR:MED3,BAL3 PK:STC~0,STA~0 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKP4,BW4 RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,NYA,PKP,BW sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel MED+1 BAL+1 PKP+1(HOTEL) BW+1(HOTEL)
+  "Upgrading the browns and dark blues."
+  post: $p3 -500 BUILD; HOUSE+1 p3 MED; HOUSE+1 p3 BAL; HOTEL p3 PKP; HOTEL p3 BW
+#515 t303 p3/Sol POST  $[p1:0 p2:0 p3:*734 p4:2237]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p3 rolls 5+3; p3->GO_TO_JAIL; p3->JAIL; JAILED p3 (GO_TO_JAIL); p4 rolls 6+1; p4->ATL
+#516 t305 p4/Argon POST  $[p1:0 p2:0 p3:734 p4:*2237]  JAILED:p3
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+#517 t306 p3/Sol JAIL  $[p1:0 p2:0 p3:*734 p4:2237]  JAILED:p3
+  ctx: jail fine=50 pay=True roll=True card=True
+  > roll_for_doubles
+  "I'll roll for doubles."
+  post: p3 rolls 4+4 DBL; p3->TEN
+#518 t306 p3/Sol POST  $[p1:0 p2:0 p3:*734 p4:2237]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+4; p4->SL
+#519 t307 p4/Argon POST  $[p1:0 p2:0 p3:734 p4:*2237]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 2+2 DBL; p3->CHANCE; CARD p3 CH:BANK_PAYS_YOU_DIVIDEND_50; $p3 +50 BANK_PAYS_YOU_DIVIDEND_50
+#520 t308 p3/Sol POST  $[p1:0 p2:0 p3:*784 p4:2237]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p3 rolls 1+3; p3->ATL; RENT p3>p4 $22 @ATL
+#521 t309 p3/Sol POST  $[p1:0 p2:0 p3:*762 p4:2259]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 2+5; p4->COMMUNITY_CHEST (passGO); GO p4+200; CARD p4 CO:SCHOOL_FEES_PAY_50; $p4 -50 SCHOOL_FEES_PAY_50
+#522 t310 p4/Argon POST  $[p1:0 p2:0 p3:762 p4:*2409]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 2+3; p3->PAC
+#523 t311 p3/Sol POST  $[p1:0 p2:0 p3:*762 p4:2409]
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 1+4; p4->CHANCE; CARD p4 CH:GO_TO_NEAREST_RAILROAD_A; p4->PRR
+#524 t312 p4/Argon POST  $[p1:0 p2:0 p3:762 p4:*2409]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+5; p3->GO (passGO); GO p3+200
+#525 t313 p3/Sol POST  $[p1:0 p2:0 p3:*962 p4:2409]
+  H: p3/Sol $962 BV7077 GOOJ2  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJ4,TEN4,NYA4 RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKPH,BWH RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL,STJ,TEN,NYA sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel STJ+1(HOTEL) TEN+1(HOTEL) NYA+1(HOTEL)
+  "Upgrading the oranges to hotels."
+  post: $p3 -300 BUILD; HOTEL p3 STJ; HOTEL p3 TEN; HOTEL p3 NYA
+#526 t313 p3/Sol POST  $[p1:0 p2:0 p3:*662 p4:2409]
+  ctx: buildable=MED,BAL sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+2; p4->CHANCE; CARD p4 CH:GENERAL_REPAIRS; $p4 -300 GENERAL_REPAIRS
+#527 t314 p4/Argon POST  $[p1:0 p2:0 p3:662 p4:*2109]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+2; p3->RDG
+#528 t315 p3/Sol POST  $[p1:0 p2:0 p3:*662 p4:2109]
+  ctx: buildable=MED,BAL sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 2+5; p4->MAR
+#529 t316 p4/Argon POST  $[p1:0 p2:0 p3:662 p4:*2109]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+2; p3->JAIL
+#530 t317 p3/Sol POST  $[p1:0 p2:0 p3:*662 p4:2109]
+  ctx: buildable=MED,BAL sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 4+6; p4->BW; RENT p4>p3 $2000 @BW
+#531 t318 p4/Argon POST  $[p1:0 p2:0 p3:2662 p4:*109]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 5+2; p3->COMMUNITY_CHEST; CARD p3 CO:SALE_OF_STOCK_COLLECT_50; $p3 +50 SALE_OF_STOCK_COLLECT_50
+#532 t319 p3/Sol POST  $[p1:0 p2:0 p3:*2712 p4:109]
+  H: p3/Sol $2712 BV9127 GOOJ2  | BR:MED4,BAL4 PK:STC~0,STA~0 OR:STJH,TENH,NYAH RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKPH,BWH RR:RDG~,BO~ UT:WW~
+  ctx: buildable=MED,BAL sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > build_houses_or_hotel MED+1(HOTEL) BAL+1(HOTEL)
+  "Hotels on the browns."
+  post: $p3 -100 BUILD; HOTEL p3 MED; HOTEL p3 BAL
+#533 t319 p3/Sol POST  $[p1:0 p2:0 p3:*2612 p4:109]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 4+5; p4->VER (passGO); GO p4+200
+#534 t320 p4/Argon POST  $[p1:0 p2:0 p3:2612 p4:*309]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+5; p3->ATL; RENT p3>p4 $22 @ATL
+#535 t321 p3/Sol POST  $[p1:0 p2:0 p3:*2590 p4:331]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+2; p4->PRR
+#536 t322 p4/Argon POST  $[p1:0 p2:0 p3:2590 p4:*331]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+1; p3->PAC
+#537 t323 p3/Sol POST  $[p1:0 p2:0 p3:*2590 p4:331]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 3+4; p4->CHANCE; CARD p4 CH:TAKE_TRIP_TO_READING_RR; p4->RDG (passGO); GO p4+200
+#538 t324 p4/Argon POST  $[p1:0 p2:0 p3:2590 p4:*531]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 1+4; p3->CHANCE; CARD p3 CH:ADVANCE_TO_GO; p3->GO (passGO); GO p3+200
+#539 t325 p3/Sol POST  $[p1:0 p2:0 p3:*2790 p4:531]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 1+2; p4->VER
+#540 t326 p4/Argon POST  $[p1:0 p2:0 p3:2790 p4:*531]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 5+1; p3->ORI; RENT p3>p4 $550 @ORI
+#541 t327 p3/Sol POST  $[p1:0 p2:0 p3:*2240 p4:1081]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 4+2; p4->VIR
+#542 t328 p4/Argon POST  $[p1:0 p2:0 p3:2240 p4:*1081]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 3+4; p3->STA
+#543 t329 p3/Sol POST  $[p1:0 p2:0 p3:*2240 p4:1081]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $0 BV0 BANKRUPT  | - ## p3/Sol $2240 BV8755 GOOJ2  | BR:MEDH,BALH PK:STC~0,STA~0 OR:STJH,TENH,NYAH RD:IND~0,ILL~0 YL:MAR~0 GR:PAC~0,NCA~0 DB:PKPH,BWH RR:RDG~,BO~ UT:WW~ ## p4/Argon $1081 BV3921  | LB:ORIH,VERH,CONH PK:VIR0 RD:KEN0 YL:ATL0,VEN0 GR:PEA0 RR:PRR,SL UT:ELE
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 3+3 DBL; p4->FREE_PARKING
+#544 t330 p4/Argon POST  $[p1:0 p2:0 p3:2240 p4:*1081]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p4 rolls 6+1; p4->VEN
+#545 t331 p4/Argon POST  $[p1:0 p2:0 p3:2240 p4:*1081]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 6+4; p3->IND
+#546 t332 p3/Sol POST  $[p1:0 p2:0 p3:*2240 p4:1081]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 5+3; p4->SL
+#547 t333 p4/Argon POST  $[p1:0 p2:0 p3:2240 p4:*1081]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 4+4 DBL; p3->PAC
+#548 t334 p3/Sol POST  $[p1:0 p2:0 p3:*2240 p4:1081]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p3 rolls 3+1; p3->SL; RENT p3>p4 $50 @SL
+#549 t335 p3/Sol POST  $[p1:0 p2:0 p3:*2190 p4:1131]
+  ctx: sellable=MED,BAL,STJ,TEN,NYA,PKP,BW unmortgageable=RDG,STC,STA,IND,ILL,BO,WW,MAR,PAC,NCA mortgageable#0 trade_with=p4
+  > end_turn
+  "Holding position."
+  post: p4 rolls 2+4; p4->MED (passGO); GO p4+200; RENT p4>p3 $250 @MED
+#550 t336 p4/Argon POST  $[p1:0 p2:0 p3:2440 p4:*1081]
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+  post: p3 rolls 2+5; p3->COMMUNITY_CHEST (passGO); GO p3+200; CARD p3 CO:GO_TO_JAIL; p3->JAIL; JAILED p3 (COMMUNITY_CHEST_CARD); p4 rolls 4+6; p4->STC
+#551 t338 p4/Argon POST  $[p1:0 p2:0 p3:2640 p4:*1081]  JAILED:p3
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+#552 t339 p3/Sol JAIL  $[p1:0 p2:0 p3:*2640 p4:1081]  JAILED:p3
+  ctx: jail fine=50 pay=True roll=True card=True
+  > roll_for_doubles
+  "Taking my chances on doubles."
+  post: p3 rolls 2+1; p4 rolls 5+4; p4->FREE_PARKING
+#553 t340 p4/Argon POST  $[p1:0 p2:0 p3:2640 p4:*1081]  JAILED:p3
+  ctx: sellable=ORI,VER,CON mortgageable#8 trade_with=p3
+  > end_turn
+  "Ending turn."
+#554 t341 p3/Sol JAIL  $[p1:0 p2:0 p3:*2640 p4:1081]  JAILED:p3
+  ctx: jail fine=50 pay=True roll=True card=True
+  > roll_for_doubles
+  "Taking my chances on doubles."
+  post: p3 rolls 2+3; p4 rolls 6+6 DBL; p4->NCA

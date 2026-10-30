@@ -1,0 +1,531 @@
+# game 1 page 1  decisions #1..#109  seats: p1=Opus, p2=Sol, p3=Argon, p4=Grok
+
+#1 t0 p1/Opus BUY?  $[p1:*1500 p2:1500 p3:1500 p4:1500]
+  STATE: p1/Opus $1500 BV1500  | - ## p2/Sol $1500 BV1500  | - ## p3/Argon $1500 BV1500  | - ## p4/Grok $1500 BV1500  | -
+  ctx: land CON $120 grp=LIGHT_BLUE own 0/3 rent0=8
+  pre: GAME-START; p1 rolls 4+5; p1->CON
+  > buy_property
+  "Connecticut Avenue, I'll take it. Good start."
+  post: BUY p1 CON $120
+#2 t0 p1/Opus POST  $[p1:*1380 p2:1500 p3:1500 p4:1500]
+  ctx: mortgageable#1 trade_with=p2,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Good luck, everyone. Your roll."
+  post: p2 rolls 6+5; p2->STC
+#3 t1 p2/Sol BUY?  $[p1:1380 p2:*1500 p3:1500 p4:1500]
+  ctx: land STC $140 grp=PINK own 0/3 rent0=10
+  > buy_property
+  "I'll take St. Charles Place."
+  post: BUY p2 STC $140
+#4 t1 p2/Sol POST  $[p1:1380 p2:*1360 p3:1500 p4:1500]
+  ctx: mortgageable#1 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p3 rolls 2+1; p3->BAL
+#5 t2 p3/Argon BUY?  $[p1:1380 p2:1360 p3:*1500 p4:1500]
+  ctx: land BAL $60 grp=BROWN own 0/2 rent0=4
+  > buy_property
+  "I'll pick up Baltic Avenue. Humble beginnings!"
+  post: BUY p3 BAL $60
+#6 t2 p3/Argon POST  $[p1:1380 p2:1360 p3:*1440 p4:1500]
+  ctx: mortgageable#1 trade_with=p1,p2,p4
+  > end_turn
+  "Over to you, p4!"
+  post: p4 rolls 2+4; p4->ORI
+#7 t3 p4/Grok BUY?  $[p1:1380 p2:1360 p3:1440 p4:*1500]
+  ctx: land ORI $100 grp=LIGHT_BLUE own 0/3 rent0=6
+  > buy_property
+  "Oriental Avenue — I'll take it. Light blues are a solid early set."
+  post: BUY p4 ORI $100
+#8 t3 p4/Grok POST  $[p1:1380 p2:1360 p3:1440 p4:*1400]
+  ctx: mortgageable#1 trade_with=p1,p2,p3
+  > end_turn
+  "Solid start. Let's see what the board does."
+  post: p1 rolls 4+5; p1->TEN
+#9 t4 p1/Opus BUY?  $[p1:*1380 p2:1360 p3:1440 p4:1400]
+  ctx: land TEN $180 grp=ORANGE own 0/3 rent0=14
+  > buy_property
+  "Tennessee Avenue, I'll take it. Orange is a nice neighborhood."
+  post: BUY p1 TEN $180
+#10 t4 p1/Opus POST  $[p1:*1200 p2:1360 p3:1440 p4:1400]
+  ctx: mortgageable#2 trade_with=p2,p3,p4
+  > end_turn
+  "Done for now. Your roll, p2."
+  post: p2 rolls 5+2; p2->TEN; RENT p2>p1 $14 @TEN
+#11 t5 p2/Sol POST  $[p1:1214 p2:*1346 p3:1440 p4:1400]
+  ctx: mortgageable#1 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p3 rolls 6+2; p3->STC; RENT p3>p2 $10 @STC
+#12 t6 p3/Argon POST  $[p1:1214 p2:1356 p3:*1430 p4:1400]
+  ctx: mortgageable#1 trade_with=p1,p2,p4
+  > end_turn
+  "Enjoy the $10, p2! Your turn, p4."
+  post: p4 rolls 4+6; p4->STJ
+#13 t7 p4/Grok BUY?  $[p1:1214 p2:1356 p3:1430 p4:*1400]
+  ctx: land STJ $180 grp=ORANGE own 0/3 rent0=14
+  > buy_property
+  "St. James Place — I'll take it. Orange is worth owning early."
+  post: BUY p4 STJ $180
+#14 t7 p4/Grok POST  $[p1:1214 p2:1356 p3:1430 p4:*1220]
+  ctx: mortgageable#2 trade_with=p1,p2,p3
+  > end_turn
+  "Orange and a light blue in the bag. Cash stays liquid. Your roll."
+  post: p1 rolls 6+4; p1->WW
+#15 t8 p1/Opus BUY?  $[p1:*1214 p2:1356 p3:1430 p4:1220]
+  ctx: land WW $150 grp=UTILITY own 0/2 rent0=4
+  > buy_property
+  "Water Works, I'll take it. Everyone needs water."
+  post: BUY p1 WW $150
+#16 t8 p1/Opus POST  $[p1:*1064 p2:1356 p3:1430 p4:1220]
+  H: p1/Opus $1064 BV1514  | LB:CON0 OR:TEN0 UT:WW ## p4/Grok $1220 BV1500  | LB:ORI0 OR:STJ0
+  ctx: mortgageable#3 trade_with=p2,p3,p4
+  > propose_trade to p4: OFFER $240 for REQUEST STJ
+  "p4, $240 cash for St. James Place. That's a quick $60 profit on a lone property, and you keep your cash liquid."
+#17 t8 p4/Grok TRESP  $[p1:1064 p2:1356 p3:1430 p4:*1220]
+  H: p4/Grok $1220 BV1500  | LB:ORI0 OR:STJ0 ## p1/Opus $1064 BV1514  | LB:CON0 OR:TEN0 UT:WW
+  ctx: TRADE from p1 idx0 (max 20): you GIVE STJ / you GET $240
+  > counter_trade: OFFER $240 for REQUEST CON
+  "Not selling St. James for $240 — that just hands you a second orange. Different deal: $240 cash for Connecticut. It's stranded for you (I already have Oriental) and a clean $120 profit. I keep St. James."
+#18 t8 p1/Opus TRESP  $[p1:*1064 p2:1356 p3:1430 p4:1220]
+  H: p1/Opus $1064 BV1514  | LB:CON0 OR:TEN0 UT:WW ## p4/Grok $1220 BV1500  | LB:ORI0 OR:STJ0
+  ctx: TRADE from p4 idx1 (max 20): you GIVE CON / you GET $240 || hist: p1:$240>STJ
+  > counter_trade: OFFER $20+CON for REQUEST STJ
+  "Let's swap instead. You get Connecticut, so you hold 2 light blues. I get St. James, so I hold 2 oranges. I'll add $20 on top. That way we both end up one property short of a full set, and you're the one with the cheap set to build on."
+#19 t8 p4/Grok TRESP  $[p1:1064 p2:1356 p3:1430 p4:*1220]
+  H: p4/Grok $1220 BV1500  | LB:ORI0 OR:STJ0 ## p1/Opus $1064 BV1514  | LB:CON0 OR:TEN0 UT:WW
+  ctx: TRADE from p1 idx2 (max 20): you GIVE STJ / you GET $20+CON || hist: p1:$240>STJ ; p4:$240>CON
+  > reject_trade
+  "No. St. James stays. Connecticut plus $20 doesn't replace an orange, especially with you already holding Tennessee. Cash-only for Connecticut is discussable. This swap is not."
+#20 t8 p1/Opus POST  $[p1:*1064 p2:1356 p3:1430 p4:1220]
+  ctx: mortgageable#3 trade_with=p2,p3,p4
+  > end_turn
+  "Fair enough, p4. Connecticut isn't for sale for cash right now. The offer stays open if you change your mind about St. James. Your roll, p2."
+  post: p2 rolls 2+2 DBL; p2->CHANCE; CARD p2 CH:ADVANCE_TO_BOARDWALK; p2->BW
+#21 t9 p2/Sol BUY?  $[p1:1064 p2:*1356 p3:1430 p4:1220]
+  ctx: land BW $400 grp=DARK_BLUE own 0/2 rent0=50
+  > buy_property
+  "I'll take Boardwalk."
+  post: BUY p2 BW $400
+#22 t9 p2/Sol POST  $[p1:1064 p2:*956 p3:1430 p4:1220]
+  ctx: mortgageable#2 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p2 rolls 5+6; p2->JAIL (passGO); GO p2+200
+#23 t10 p2/Sol POST  $[p1:1064 p2:*1156 p3:1430 p4:1220]
+  ctx: mortgageable#2 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p3 rolls 3+6; p3->FREE_PARKING
+#24 t11 p3/Argon POST  $[p1:1064 p2:1156 p3:*1430 p4:1220]
+  ctx: mortgageable#1 trade_with=p1,p2,p4
+  > end_turn
+  "Resting on Free Parking. Your roll, p4!"
+  post: p4 rolls 6+4; p4->ATL
+#25 t12 p4/Grok BUY?  $[p1:1064 p2:1156 p3:1430 p4:*1220]
+  ctx: land ATL $260 grp=YELLOW own 0/3 rent0=22
+  > buy_property
+  "Atlantic Avenue — I'll take it. Yellow is worth locking up early."
+  post: BUY p4 ATL $260
+#26 t12 p4/Grok POST  $[p1:1064 p2:1156 p3:1430 p4:*960]
+  ctx: mortgageable#3 trade_with=p1,p2,p3
+  > end_turn
+  "Yellow, orange, and light blue. Cash stays liquid. Your roll, p1."
+  post: p1 rolls 2+5; p1->SL
+#27 t13 p1/Opus BUY?  $[p1:*1064 p2:1156 p3:1430 p4:960]
+  ctx: land SL $200 grp=RAILROAD own 0/4 rent0=25
+  > buy_property  [ATT refused(std)>valid(nothought)]
+  "Short Line, I'll take it. Railroads are steady money."
+  post: BUY p1 SL $200
+#28 t13 p1/Opus POST  $[p1:*864 p2:1156 p3:1430 p4:960]
+  ctx: mortgageable#4 trade_with=p2,p3,p4
+  > end_turn
+  "Done for now. Your roll, p2."
+  post: p2 rolls 4+1; p2->PRR
+#29 t14 p2/Sol BUY?  $[p1:864 p2:*1156 p3:1430 p4:960]
+  ctx: land PRR $200 grp=RAILROAD own 0/4 rent0=25
+  > buy_property
+  "I'll buy Pennsylvania Railroad."
+  post: BUY p2 PRR $200
+#30 t14 p2/Sol POST  $[p1:864 p2:*956 p3:1430 p4:960]
+  ctx: mortgageable#3 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p3 rolls 5+2; p3->VEN
+#31 t15 p3/Argon BUY?  $[p1:864 p2:956 p3:*1430 p4:960]
+  STATE: p1/Opus $864 BV1514  | LB:CON0 OR:TEN0 RR:SL UT:WW ## p2/Sol $956 BV1696  | PK:STC0 DB:BW0 RR:PRR ## p3/Argon $1430 BV1490  | BR:BAL0 ## p4/Grok $960 BV1500  | LB:ORI0 OR:STJ0 YL:ATL0
+  ctx: land VEN $260 grp=YELLOW own 0/3 rent0=22
+  > buy_property
+  "Finally landing on some real estate! I'll gladly buy Ventnor Avenue."
+  post: BUY p3 VEN $260
+#32 t15 p3/Argon POST  $[p1:864 p2:956 p3:*1170 p4:960]
+  ctx: mortgageable#2 trade_with=p1,p2,p4
+  > end_turn
+  "Done for now. Your roll, p4!"
+  post: p4 rolls 5+6; p4->PKP
+#33 t16 p4/Grok BUY?  $[p1:864 p2:956 p3:1170 p4:*960]
+  ctx: land PKP $350 grp=DARK_BLUE own 0/2 rent0=35
+  > buy_property
+  "Park Place. Not leaving the other dark blue sitting next to Boardwalk."
+  post: BUY p4 PKP $350
+#34 t16 p4/Grok POST  $[p1:864 p2:956 p3:1170 p4:*610]
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > end_turn
+  "Park Place stays. No trades this round — cash stays liquid. Your roll, p1."
+  post: p1 rolls 1+6; p1->COMMUNITY_CHEST (passGO); GO p1+200; CARD p1 CO:SCHOOL_FEES_PAY_50; $p1 -50 SCHOOL_FEES_PAY_50
+#35 t17 p1/Opus POST  $[p1:*1014 p2:956 p3:1170 p4:610]
+  ctx: mortgageable#4 trade_with=p2,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Collected $200 at GO, holding steady. p4, I'm still open to a St. James deal. Your roll, p2."
+  post: p2 rolls 4+4 DBL; p2->IND
+#36 t18 p2/Sol BUY?  $[p1:1014 p2:*956 p3:1170 p4:610]
+  ctx: land IND $220 grp=RED own 0/3 rent0=18
+  > buy_property
+  "I'll buy Indiana Avenue."
+  post: BUY p2 IND $220
+#37 t18 p2/Sol POST  $[p1:1014 p2:*736 p3:1170 p4:610]
+  ctx: mortgageable#4 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p2 rolls 4+4 DBL; p2->PAC
+#38 t19 p2/Sol BUY?  $[p1:1014 p2:*736 p3:1170 p4:610]
+  ctx: land PAC $300 grp=GREEN own 0/3 rent0=26
+  > buy_property
+  "I'll buy Pacific Avenue."
+  post: BUY p2 PAC $300
+#39 t19 p2/Sol POST  $[p1:1014 p2:*436 p3:1170 p4:610]
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p2 rolls 6+3; p2->GO (passGO); GO p2+200
+#40 t20 p2/Sol POST  $[p1:1014 p2:*636 p3:1170 p4:610]
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p3 rolls 3+5; p3->SL; RENT p3>p1 $25 @SL
+#41 t21 p3/Argon POST  $[p1:1039 p2:636 p3:*1145 p4:610]
+  ctx: mortgageable#2 trade_with=p1,p2,p4
+  > end_turn
+  "Enjoy the $25, p1! Your roll, p4."
+  post: p4 rolls 3+3 DBL; p4->BAL (passGO); GO p4+200; RENT p4>p3 $4 @BAL
+#42 t22 p4/Grok POST  $[p1:1039 p2:636 p3:1149 p4:*806]
+  H: p4/Grok $806 BV1696  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0 ## p3/Argon $1149 BV1469  | BR:BAL0 YL:VEN0
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > propose_trade to p3: OFFER $320 for REQUEST VEN
+  "p3 — Ventnor is stranded while I hold Atlantic, and Marvin is still with the bank. $320 cash for Ventnor, nothing else. You get liquidity; I take the long shot."
+#43 t22 p3/Argon TRESP  $[p1:1039 p2:636 p3:*1149 p4:806]
+  H: p3/Argon $1149 BV1469  | BR:BAL0 YL:VEN0 ## p4/Grok $806 BV1696  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: TRADE from p4 idx0 (max 20): you GIVE VEN / you GET $320
+  > reject_trade
+  "Thanks for the offer, p4, but I have plenty of cash right now and very little real estate. I'm going to hold onto Ventnor Avenue, at least until more of the board is bought up and we can look at property-for-property deals."
+#44 t22 p4/Grok POST  $[p1:1039 p2:636 p3:1149 p4:*806]
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > end_turn
+  "No chase, p3. Ventnor can sit. Cash stays liquid and the rest of the board is still open. Your roll, p1."
+  post: p4 rolls 1+3; p4->CHANCE; CARD p4 CH:ADVANCE_TO_GO; p4->GO (passGO); GO p4+200
+#45 t23 p4/Grok POST  $[p1:1039 p2:636 p3:1149 p4:*1006]
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > end_turn
+  "Cash stays put. No deals this round — your roll, p1."
+  post: p1 rolls 1+3; p1->ORI; RENT p1>p4 $6 @ORI
+#46 t24 p1/Opus POST  $[p1:*1033 p2:636 p3:1149 p4:1012]
+  H: p1/Opus $1033 BV1683  | LB:CON0 OR:TEN0 RR:SL UT:WW ## p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: mortgageable#4 trade_with=p2,p3,p4
+  > propose_trade to p4: OFFER $240 for REQUEST STJ
+  "p4, St. James is sitting alone for you. $240 cash for it, which is $60 over list. That's liquidity you can put into the dark blues."
+#47 t24 p4/Grok TRESP  $[p1:1033 p2:636 p3:1149 p4:*1012]
+  H: p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0 ## p1/Opus $1033 BV1683  | LB:CON0 OR:TEN0 RR:SL UT:WW
+  ctx: TRADE from p1 idx0 (max 20): you GIVE STJ / you GET $240
+  > reject_trade
+  "No. St. James isn't for sale. $240 doesn't change that. Your cash stays yours."
+#48 t24 p1/Opus POST  $[p1:*1033 p2:636 p3:1149 p4:1012]
+  H: p1/Opus $1033 BV1683  | LB:CON0 OR:TEN0 RR:SL UT:WW ## p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: mortgageable#4 trade_with=p2,p3,p4
+  > propose_trade to p4: OFFER $40+CON for REQUEST STJ
+  "p4, a property swap then: Connecticut plus $40 for St. James. That gives you 2 of the 3 light blues, and Vermont is still with the bank. We'd each walk away holding 2/3 of a set."
+#49 t24 p4/Grok TRESP  $[p1:1033 p2:636 p3:1149 p4:*1012]
+  H: p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0 ## p1/Opus $1033 BV1683  | LB:CON0 OR:TEN0 RR:SL UT:WW
+  ctx: TRADE from p1 idx0 (max 20): you GIVE STJ / you GET $40+CON
+  > reject_trade
+  "No. St. James stays. A light-blue pair is not worth handing you the oranges."
+#50 t24 p1/Opus POST  $[p1:*1033 p2:636 p3:1149 p4:1012]
+  ctx: mortgageable#4 trade_with=p2,p3,p4
+  > end_turn
+  "Fair enough, p4. Offer's open whenever you change your mind. Your roll."
+  post: p2 rolls 3+4; p2->CHANCE; CARD p2 CH:GO_TO_NEAREST_RAILROAD_B; p2->PRR
+#51 t25 p2/Sol POST  $[p1:1033 p2:*636 p3:1149 p4:1012]
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > end_turn
+  "Your roll."
+  post: p3 rolls 2+2 DBL; p3->BW; RENT p3>p2 $50 @BW
+#52 t26 p3/Argon POST  $[p1:1033 p2:686 p3:*1099 p4:1012]
+  ctx: mortgageable#2 trade_with=p1,p2,p4
+  > end_turn
+  "Ouch, $50 on Boardwalk! Enjoy the rent, p2. Your roll, p4."
+  post: p3 rolls 6+3; p3->VER (passGO); GO p3+200
+#53 t27 p3/Argon BUY?  $[p1:1033 p2:686 p3:*1299 p4:1012]
+  ctx: land VER $100 grp=LIGHT_BLUE own 0/3 rent0=6
+  > buy_property
+  "I'll pick up Vermont Avenue for $100. Now the light blues are split three ways!"
+  post: BUY p3 VER $100
+#54 t27 p3/Argon POST  $[p1:1033 p2:686 p3:*1199 p4:1012]
+  ctx: mortgageable#3 trade_with=p1,p2,p4
+  > end_turn
+  "Your roll, p4!"
+  post: p4 rolls 3+2; p4->RDG
+#55 t28 p4/Grok BUY?  $[p1:1033 p2:686 p3:1199 p4:*1012]
+  ctx: land RDG $200 grp=RAILROAD own 0/4 rent0=25
+  > start_auction
+  "Reading Railroad is mine. $200."
+  post: AUC-START by p4 on RDG
+#56 t28 p1/Opus AUCT  $[p1:*1033 p2:686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$0 leader=None min=1 active=p1,p2,p3,p4 n=0
+  > bid_auction $110  [ATT refused(std)>valid(nothought)]
+  "$110 on Reading."
+#57 t28 p2/Sol AUCT  $[p1:1033 p2:*686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$110 leader=p1 min=111 active=p1,p2,p3,p4 n=1
+  > bid_auction $200
+  "$200 for Reading."
+#58 t28 p3/Argon AUCT  $[p1:1033 p2:686 p3:*1199 p4:1012]
+  ctx: AUC RDG hi=$200 leader=p2 min=201 active=p1,p2,p3,p4 n=2
+  > bid_auction $205
+  "I'll go $205 for Reading Railroad."
+#59 t28 p4/Grok AUCT  $[p1:1033 p2:686 p3:1199 p4:*1012]
+  ctx: AUC RDG hi=$205 leader=p3 min=206 active=p1,p2,p3,p4 n=3
+  > bid_auction $220
+  "$220 on Reading. List-plus-five isn't a price."
+#60 t28 p1/Opus AUCT  $[p1:*1033 p2:686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$220 leader=p4 min=221 active=p1,p2,p3,p4 n=4
+  > bid_auction $235  [ATT refused(std)>valid(nothought)]
+  "$235. Short Line wants company."
+#61 t28 p2/Sol AUCT  $[p1:1033 p2:*686 p3:1199 p4:1012]
+  STATE: p1/Opus $1033 BV1683  | LB:CON0 OR:TEN0 RR:SL UT:WW ## p2/Sol $686 BV1946  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR ## p3/Argon $1199 BV1619  | BR:BAL0 LB:VER0 YL:VEN0 ## p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: AUC RDG hi=$235 leader=p1 min=236 active=p1,p2,p3,p4 n=5
+  > bid_auction $250
+  "$250."
+#62 t28 p3/Argon AUCT  $[p1:1033 p2:686 p3:*1199 p4:1012]
+  ctx: AUC RDG hi=$250 leader=p2 min=251 active=p1,p2,p3,p4 n=6
+  > drop_out
+  "$250 is too rich for my blood on a first railroad. Have fun fighting over it, everyone—I'm out!"
+#63 t28 p4/Grok AUCT  $[p1:1033 p2:686 p3:1199 p4:*1012]
+  ctx: AUC RDG hi=$250 leader=p2 min=251 active=p1,p2,p4 n=7
+  > bid_auction $255
+  "$255."
+#64 t28 p1/Opus AUCT  $[p1:*1033 p2:686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$255 leader=p4 min=256 active=p1,p2,p4 n=8
+  > bid_auction $265  [ATT refused(std)>valid(nothought)]
+  "$265."
+#65 t28 p2/Sol AUCT  $[p1:1033 p2:*686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$265 leader=p1 min=266 active=p1,p2,p4 n=9
+  > bid_auction $270
+  "$270."
+#66 t28 p4/Grok AUCT  $[p1:1033 p2:686 p3:1199 p4:*1012]
+  ctx: AUC RDG hi=$270 leader=p2 min=271 active=p1,p2,p4 n=10
+  > drop_out
+  "Too rich. You two can overpay each other."
+#67 t28 p1/Opus AUCT  $[p1:*1033 p2:686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$270 leader=p2 min=271 active=p1,p2 n=11
+  > bid_auction $280  [ATT refused(std)>valid(nothought)]
+  "$280."
+#68 t28 p2/Sol AUCT  $[p1:1033 p2:*686 p3:1199 p4:1012]
+  ctx: AUC RDG hi=$280 leader=p1 min=281 active=p1,p2 n=12
+  > drop_out
+  "Yours for $280."
+  post: BUY p1 RDG $280; AUC-END RDG SOLD winner=p1 bid=280
+#69 t28 p4/Grok POST  $[p1:753 p2:686 p3:1199 p4:*1012]
+  H: p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0 ## p3/Argon $1199 BV1619  | BR:BAL0 LB:VER0 YL:VEN0
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > propose_trade to p3: OFFER $250+ORI for REQUEST VEN
+  "p3, Ventnor is stranded without Atlantic and Marvin. Oriental pairs with your Vermont — 2/3 light blue — plus $250. Nobody gets a finished set."
+#70 t28 p3/Argon TRESP  $[p1:753 p2:686 p3:*1199 p4:1012]
+  H: p3/Argon $1199 BV1619  | BR:BAL0 LB:VER0 YL:VEN0 ## p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: TRADE from p4 idx0 (max 20): you GIVE VEN / you GET $250+ORI
+  > reject_trade
+  "No thanks, p4. Marvin Gardens is still unowned, so giving you 2/3 of the Yellows is way too risky right now, whereas Connecticut Avenue is already locked up by p1. I'll hold onto Ventnor."
+#71 t28 p4/Grok POST  $[p1:753 p2:686 p3:1199 p4:*1012]
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > end_turn
+  "Fair enough, p3. I'll hold."
+  post: p1 rolls 3+2; p1->STC; RENT p1>p2 $10 @STC
+#72 t29 p1/Opus POST  $[p1:*743 p2:696 p3:1199 p4:1012]
+  H: p1/Opus $743 BV1593  | LB:CON0 OR:TEN0 RR:RDG,SL UT:WW ## p2/Sol $696 BV1956  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR
+  ctx: mortgageable#5 trade_with=p2,p3,p4
+  > propose_trade to p2: OFFER $260 for REQUEST PRR  [ATT refused(std)>valid(nothought)]
+  "p2, $260 cash for Pennsylvania RR. That's $60 over list, and the cash can go toward your Boardwalk/Pacific plans."
+#73 t29 p2/Sol TRESP  $[p1:743 p2:*696 p3:1199 p4:1012]
+  H: p2/Sol $696 BV1956  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR ## p1/Opus $743 BV1593  | LB:CON0 OR:TEN0 RR:RDG,SL UT:WW
+  ctx: TRADE from p1 idx0 (max 20): you GIVE PRR / you GET $260
+  > counter_trade: OFFER PRR for REQUEST $425
+  "A third railroad doubles rent across your existing pair. I'd sell Pennsylvania for $425."
+#74 t29 p1/Opus TRESP  $[p1:*743 p2:696 p3:1199 p4:1012]
+  H: p1/Opus $743 BV1593  | LB:CON0 OR:TEN0 RR:RDG,SL UT:WW ## p2/Sol $696 BV1956  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR
+  ctx: TRADE from p2 idx1 (max 20): you GIVE $425 / you GET PRR || hist: p1:$260>PRR
+  > counter_trade: OFFER $320 for REQUEST PRR
+  "$425 is more than double list. $320 is $120 over, and that's real cash toward houses on Pacific/Boardwalk once you finish them. One railroad alone earns you $25 a hit."
+#75 t29 p2/Sol TRESP  $[p1:743 p2:*696 p3:1199 p4:1012]
+  H: p2/Sol $696 BV1956  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR ## p1/Opus $743 BV1593  | LB:CON0 OR:TEN0 RR:RDG,SL UT:WW
+  ctx: TRADE from p1 idx2 (max 20): you GIVE PRR / you GET $320 || hist: p1:$260>PRR ; p2:PRR>$425
+  > counter_trade: OFFER PRR for REQUEST $400
+  "$400 and it's yours. You're buying the upgrade on all three railroads, not just this one's rent."
+#76 t29 p1/Opus TRESP  $[p1:*743 p2:696 p3:1199 p4:1012]
+  H: p1/Opus $743 BV1593  | LB:CON0 OR:TEN0 RR:RDG,SL UT:WW ## p2/Sol $696 BV1956  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR
+  ctx: TRADE from p2 idx3 (max 20): you GIVE $400 / you GET PRR || hist: p1:$260>PRR ; p2:PRR>$425 ; p1:$320>PRR
+  > counter_trade: OFFER $300+WW for REQUEST PRR
+  "Let's meet differently: $300 plus Water Works. That's $450 in list value, more than your $400 ask, and Electric Company is still unowned if you want the utility pair."
+#77 t29 p2/Sol TRESP  $[p1:743 p2:*696 p3:1199 p4:1012]
+  H: p2/Sol $696 BV1956  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 RR:PRR ## p1/Opus $743 BV1593  | LB:CON0 OR:TEN0 RR:RDG,SL UT:WW
+  ctx: TRADE from p1 idx4 (max 20): you GIVE PRR / you GET $300+WW || hist: p1:$260>PRR ; p2:PRR>$425 ; p1:$320>PRR ; p2:PRR>$400
+  > accept_trade
+  "Deal—$300 plus Water Works for Pennsylvania Railroad."
+  post: TRADE-ACCEPTED idx4 init=p1; $p1 -300 TRADE_CASH; $p2 +300 TRADE_CASH; XFER WW p1>p2; XFER PRR p2>p1
+#78 t29 p1/Opus POST  $[p1:*443 p2:996 p3:1199 p4:1012]
+  ctx: mortgageable#5 trade_with=p2,p3,p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Good deal, p2. Three railroads now, so watch your step on the tracks."
+  post: p2 rolls 2+3; p2->FREE_PARKING
+#79 t30 p2/Sol POST  $[p1:443 p2:*996 p3:1199 p4:1012]
+  H: p2/Sol $996 BV2206  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 UT:WW ## p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > propose_trade to p4: OFFER $400+WW for REQUEST PKP
+  "Park Place for $400 plus Water Works? You get cash for acquisitions and a replacement income property."
+#80 t30 p4/Grok TRESP  $[p1:443 p2:996 p3:1199 p4:*1012]
+  H: p4/Grok $1012 BV1902  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0 ## p2/Sol $996 BV2206  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 UT:WW
+  ctx: TRADE from p2 idx0 (max 20): you GIVE PKP / you GET $400+WW
+  > reject_trade  [ATT illogical(std)>valid(std)]
+  "No. Park Place pairs with your Boardwalk. Cash and a utility don't buy that."
+#81 t30 p2/Sol POST  $[p1:443 p2:*996 p3:1199 p4:1012]
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > end_turn
+  "I'll hold for now."
+  post: p3 rolls 2+3; p3->STA
+#82 t31 p3/Argon BUY?  $[p1:443 p2:996 p3:*1199 p4:1012]
+  ctx: land STA $140 grp=PINK own 0/3 rent0=10
+  > buy_property
+  "I'll buy States Avenue for $140."
+  post: BUY p3 STA $140
+#83 t31 p3/Argon POST  $[p1:443 p2:996 p3:*1059 p4:1012]
+  ctx: mortgageable#4 trade_with=p1,p2,p4
+  > end_turn
+  "I'll end my turn here."
+  post: p4 rolls 5+3; p4->STA; RENT p4>p3 $10 @STA
+#84 t32 p4/Grok POST  $[p1:443 p2:996 p3:1069 p4:*1002]
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > end_turn
+  "Holding. Nothing worth trading this turn."
+  post: p1 rolls 4+6; p1->KEN
+#85 t33 p1/Opus BUY?  $[p1:*443 p2:996 p3:1069 p4:1002]
+  ctx: land KEN $220 grp=RED own 0/3 rent0=18
+  > buy_property
+  "Kentucky Avenue, I'll take it."
+  post: BUY p1 KEN $220
+#86 t33 p1/Opus POST  $[p1:*223 p2:996 p3:1069 p4:1002]
+  ctx: mortgageable#6 trade_with=p2,p3,p4
+  > end_turn
+  "Done for now. Three railroads and a couple of reds. Tread carefully, everyone."
+  post: p2 rolls 1+5; p2->ATL; RENT p2>p4 $22 @ATL
+#87 t34 p2/Sol POST  $[p1:223 p2:*974 p3:1069 p4:1024]
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > end_turn
+  "Holding for now."
+  post: p3 rolls 6+3; p3->CHANCE; CARD p3 CH:GO_TO_ILLINOIS_AVE; p3->ILL
+#88 t35 p3/Argon BUY?  $[p1:223 p2:974 p3:*1069 p4:1024]
+  ctx: land ILL $240 grp=RED own 0/3 rent0=20
+  > buy_property
+  "I'll buy Illinois Avenue for $240."
+  post: BUY p3 ILL $240
+#89 t35 p3/Argon POST  $[p1:223 p2:974 p3:*829 p4:1024]
+  ctx: mortgageable#5 trade_with=p1,p2,p4
+  > end_turn
+  "I'll end my turn here."
+  post: p4 rolls 3+5; p4->KEN; RENT p4>p1 $18 @KEN
+#90 t36 p4/Grok POST  $[p1:241 p2:974 p3:829 p4:*1006]
+  ctx: mortgageable#4 trade_with=p1,p2,p3
+  > end_turn
+  "Nothing to move. I'll hold."
+  post: p1 rolls 2+6; p1->MAR
+#91 t37 p1/Opus BUY?  $[p1:*241 p2:974 p3:829 p4:1006]
+  STATE: p1/Opus $241 BV1361  | LB:CON0 OR:TEN0 RD:KEN0 RR:RDG,PRR,SL ## p2/Sol $974 BV2184  | PK:STC0 RD:IND0 GR:PAC0 DB:BW0 UT:WW ## p3/Argon $829 BV1629  | BR:BAL0 LB:VER0 PK:STA0 RD:ILL0 YL:VEN0 ## p4/Grok $1006 BV1896  | LB:ORI0 OR:STJ0 YL:ATL0 DB:PKP0
+  ctx: land MAR $280 grp=YELLOW own 0/3 rent0=24  [buy NOT legal: only start_auction]
+  > start_auction
+  "Marvin Gardens goes to auction. Bid smart, everyone."
+  post: AUC-START by p1 on MAR
+#92 t37 p2/Sol AUCT  $[p1:241 p2:*974 p3:829 p4:1006]
+  ctx: AUC MAR hi=$0 leader=None min=1 active=p2,p3,p4,p1 n=0
+  > bid_auction $240
+  "$240 for Marvin Gardens."
+#93 t37 p3/Argon AUCT  $[p1:241 p2:974 p3:*829 p4:1006]
+  ctx: AUC MAR hi=$240 leader=p2 min=241 active=p2,p3,p4,p1 n=1
+  > bid_auction $260
+  "I'll bid $260 for Marvin Gardens."
+#94 t37 p4/Grok AUCT  $[p1:241 p2:974 p3:829 p4:*1006]
+  ctx: AUC MAR hi=$260 leader=p3 min=261 active=p2,p3,p4,p1 n=2
+  > bid_auction $261
+  "261."
+#95 t37 p1/Opus AUCT  $[p1:*241 p2:974 p3:829 p4:1006]
+  ctx: AUC MAR hi=$261 leader=p4 min=262 active=p2,p3,p4,p1 n=3
+  > drop_out  [ATT refused(std)>valid(nothought)]
+  "Too rich for me. p3 and p4, go ahead and fight over the yellows."
+#96 t37 p2/Sol AUCT  $[p1:241 p2:*974 p3:829 p4:1006]
+  ctx: AUC MAR hi=$261 leader=p4 min=262 active=p2,p3,p4 n=4
+  > bid_auction $280
+  "$280."
+#97 t37 p3/Argon AUCT  $[p1:241 p2:974 p3:*829 p4:1006]
+  ctx: AUC MAR hi=$280 leader=p2 min=281 active=p2,p3,p4 n=5
+  > bid_auction $290
+  "$290 for Marvin Gardens."
+#98 t37 p4/Grok AUCT  $[p1:241 p2:974 p3:829 p4:*1006]
+  ctx: AUC MAR hi=$290 leader=p3 min=291 active=p2,p3,p4 n=6
+  > bid_auction $291
+  "291."
+#99 t37 p2/Sol AUCT  $[p1:241 p2:*974 p3:829 p4:1006]
+  ctx: AUC MAR hi=$291 leader=p4 min=292 active=p2,p3,p4 n=7
+  > bid_auction $300
+  "$300."
+#100 t37 p3/Argon AUCT  $[p1:241 p2:974 p3:*829 p4:1006]
+  ctx: AUC MAR hi=$300 leader=p2 min=301 active=p2,p3,p4 n=8
+  > drop_out
+  "I'm out at $300. All yours."
+#101 t37 p4/Grok AUCT  $[p1:241 p2:974 p3:829 p4:*1006]
+  ctx: AUC MAR hi=$300 leader=p2 min=301 active=p2,p4 n=9
+  > bid_auction $301
+  "301."
+#102 t37 p2/Sol AUCT  $[p1:241 p2:*974 p3:829 p4:1006]
+  ctx: AUC MAR hi=$301 leader=p4 min=302 active=p2,p4 n=10
+  > drop_out
+  "It's yours for $301."
+  post: BUY p4 MAR $301; AUC-END MAR SOLD winner=p4 bid=301
+#103 t37 p1/Opus POST  $[p1:*241 p2:974 p3:829 p4:705]
+  ctx: mortgageable#6 trade_with=p2,p3,p4
+  > end_turn
+  "Congrats on the Marvin Gardens buy, p4. Your turn, everyone."
+  post: p2 rolls 4+1; p2->PAC
+#104 t38 p2/Sol POST  $[p1:241 p2:*974 p3:829 p4:705]
+  ctx: mortgageable#5 trade_with=p1,p3,p4
+  > end_turn
+  "Holding for now."
+  post: p3 rolls 6+4; p3->PEA
+#105 t39 p3/Argon BUY?  $[p1:241 p2:974 p3:*829 p4:705]
+  ctx: land PEA $320 grp=GREEN own 0/3 rent0=28
+  > buy_property
+  "I'll buy Pennsylvania Avenue for $320."
+  post: BUY p3 PEA $320
+#106 t39 p3/Argon POST  $[p1:241 p2:974 p3:*509 p4:705]
+  ctx: mortgageable#6 trade_with=p1,p2,p4
+  > end_turn
+  "I'll end my turn here. Open to trade offers if anyone wants to discuss sets."
+  post: p4 rolls 1+4; p4->ATL
+#107 t40 p4/Grok POST  $[p1:241 p2:974 p3:509 p4:*705]
+  H: p4/Grok $705 BV1875  | LB:ORI0 OR:STJ0 YL:ATL0,MAR0 DB:PKP0 ## p3/Argon $509 BV1629  | BR:BAL0 LB:VER0 PK:STA0 RD:ILL0 YL:VEN0 GR:PEA0
+  ctx: mortgageable#5 trade_with=p1,p2,p3
+  > propose_trade to p3: OFFER $200+ORI for REQUEST VEN
+  "p3, Ventnor only pays if it comes to me — you can't finish yellow. $200 plus Oriental: you go to 2/3 light blue and stay liquid. Only buyer, so this is the clean deal."
+#108 t40 p3/Argon TRESP  $[p1:241 p2:974 p3:*509 p4:705]
+  H: p3/Argon $509 BV1629  | BR:BAL0 LB:VER0 PK:STA0 RD:ILL0 YL:VEN0 GR:PEA0 ## p4/Grok $705 BV1875  | LB:ORI0 OR:STJ0 YL:ATL0,MAR0 DB:PKP0
+  ctx: TRADE from p4 idx0 (max 20): you GIVE VEN / you GET $200+ORI
+  > reject_trade
+  "I can't hand over a completed Yellow monopoly without getting a completed monopoly in return, and p1 holds Connecticut Avenue. Going to pass on this for now."
+#109 t40 p4/Grok POST  $[p1:241 p2:974 p3:509 p4:*705]
+  H: p4/Grok $705 BV1875  | LB:ORI0 OR:STJ0 YL:ATL0,MAR0 DB:PKP0 ## p1/Opus $241 BV1361  | LB:CON0 OR:TEN0 RD:KEN0 RR:RDG,PRR,SL
+  ctx: mortgageable#5 trade_with=p1,p2,p3
+  > propose_trade to p1: OFFER $200 for REQUEST CON
+  "p1, Connecticut is stranded for you — Vermont is p3, Oriental is me, so light blue never closes on your side. $200 cash, you keep the rails and get liquid. Clean sale."

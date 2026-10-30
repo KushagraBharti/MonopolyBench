@@ -1,0 +1,114 @@
+{
+  "review": "round3/package_review",
+  "status": "minor manuscript revisions and verifier coverage required",
+  "scope": "Frozen 59-file round3 baseline. Live README and final package updates are outside the formal verdict.",
+  "baseline_pdf_sha256": "ae3f786298ef597a69dddbd6c7c788ce746776ca230e685a44ce5e89ddc8cad1",
+  "findings": [
+    {
+      "id": "R3-PACK-01",
+      "severity": "P2",
+      "title": "Three cross-references render as literal label text",
+      "locations": ["sections/setup.tex:10", "sections/appendix.tex:84", "PDF pages 3 and 30"],
+      "observed": ["refsec:claim-protocol", "refsec:validation", "refapp:certificates"],
+      "cause": "Doubled backslash before ref produces a line break instead of a reference.",
+      "impact": "Readers cannot follow the intended protocol and release-provenance references.",
+      "required_change": "Use single-backslash reference commands and reject doubled-backslash ref strings or their rendered literals during verification.",
+      "evidence": ["rendered/broken_ref_p03.png", "rendered/broken_refs_p30.png", "rendered_text.txt"],
+      "confidence": "high"
+    },
+    {
+      "id": "R3-PACK-02",
+      "severity": "P2",
+      "title": "PDF reproduction commands lose executable spaces",
+      "locations": ["sections/audit_appendix.tex:6", "preamble.tex artifact macro", "PDF page 31"],
+      "observed": ["pythonrun_audit.py --outputreproduced.json", "pythontest_certificates.py"],
+      "cause": "Shell commands are passed through path formatting, which discards spaces.",
+      "impact": "Commands copied or transcribed from the manuscript do not execute as instructed. The nested README has correct commands.",
+      "required_change": "Render commands with a space-preserving code/verbatim treatment and inspect both the page and extracted text.",
+      "evidence": ["rendered/commands_p31.png", "rendered_text.txt"],
+      "confidence": "high"
+    },
+    {
+      "id": "R3-PACK-03",
+      "severity": "P3",
+      "title": "Figure 4 annotations obscure high-rent markers",
+      "locations": ["tools/build_exhibits.py:99", "PDF page 33", "assets/spending.pdf"],
+      "cause": "Both zero-receipt notes occupy axes coordinates containing plotted observations.",
+      "impact": "The note text and several observations overlap, especially in the winner panel.",
+      "required_change": "Move the notes into subtitles, margins or the caption and re-render the figure and PDF.",
+      "evidence": ["rendered/figure4_overlap_p33.png", "rendered/page-33.png"],
+      "confidence": "high"
+    },
+    {
+      "id": "R3-PACK-04",
+      "severity": "P2",
+      "title": "Portable verifier does not validate the new central ledgers",
+      "locations": ["tools/verify_draft.py"],
+      "observed": "The verifier still returns pass after three newly added data values are independently replaced with 999999 in an isolated copied package.",
+      "mutation_fields": ["resolution_conditions.json counts.Sol.applied_end", "certificate_results.json summary.default_targets_reachable", "opportunity_ledger.json rows[0].groups"],
+      "impact": "A portable pass can coexist with stale or corrupted END, certificate and opportunity data. The unchanged frozen values themselves pass this review's independent checks.",
+      "required_change": "Verify record-level END partitioning, certificate summary/result consistency, 80-cell opportunity reaggregation, source digests and native table agreement.",
+      "evidence": ["verifier_mutation_probe.json", "audit_package.py", "independent_checks.json"],
+      "confidence": "high"
+    }
+  ],
+  "packaging_integration_notes": [
+    {
+      "id": "R3-PACK-I01",
+      "priority_if_unfixed_in_final_package": "P1",
+      "title": "Frozen packager omits the promised nested certificate artifact",
+      "observed": "The 60-entry ZIP produced by the frozen package_draft.py lacks artifacts/historical-claim-audit.zip. Missing named required files are silently filtered.",
+      "scope": "Coordinator is updating live packaging; this is not an assertion about the later final ZIP.",
+      "required_final_check": "Include and hash the nested ZIP, fail on missing required inputs, and run verification from the exact final extraction.",
+      "evidence": ["frozen_packager.log", "frozen_packager_inventory.json"]
+    },
+    {
+      "id": "R3-PACK-I02",
+      "title": "Frozen review snapshot omitted protected_sources.json",
+      "status": "resolved only in isolated review copy by coordinator-authorized restoration",
+      "observed": "The original portable verification fails with FileNotFoundError. Restoring the unchanged protected manifest produces a pass.",
+      "restored_sha256": "c829d57ab500fd753b926cc73769abc7d2c1bf3d9cb65c38dd7cc3b78e356148",
+      "evidence": ["portable_verifier_initial.log", "portable_verifier_restored.log", "restored_file_provenance.json"]
+    },
+    {
+      "id": "R3-PACK-I03",
+      "title": "Document manuscript dependencies and preserve release distinctions",
+      "required_final_check": "State LuaLaTeX/latexmk/BibTeX/fonts and Python plotting/PDF-check dependencies; distinguish public raw commit 1133b6b839162ec4929dd80b1a6a2397e2422616 from new local revision outputs.",
+      "scope": "Current manuscript prose distinguishes releases correctly. Frozen snapshot is not the completed live README/package."
+    }
+  ],
+  "verification": {
+    "baseline_hashes_checked": 59,
+    "baseline_hash_mismatches": 0,
+    "rendered_pages_visually_inspected": 36,
+    "recompiled_page_text_equal": true,
+    "recompiled_page_pixels_equal": true,
+    "numeric_native_tables_checked": [1, 3, 4, 5, 6, 8, 12],
+    "qualitative_native_tables_checked_for_render_and_source_consistency": [2, 7, 9, 10, 11, 13],
+    "original_source_hashes_checked": 80,
+    "decisions": 6989,
+    "attempts": 8679,
+    "END_records": 663,
+    "opportunity_cells": 80,
+    "zero_group_cells": 26,
+    "zero_entry_cells": 40,
+    "certificate_games_replayed": 20,
+    "canonical_events_replayed": 50918,
+    "certificate_prefixes": 126,
+    "certificate_results_exact_match": true,
+    "certificate_tests_passed": 9,
+    "certificate_artifact_hashes_checked": 80,
+    "certificate_input_hashes_checked": 72,
+    "unchanged_engine_board_copies_checked": 8,
+    "bibliography_entries": 18,
+    "internal_links": 65,
+    "invalid_internal_links": 0,
+    "external_link_annotations": 27
+  },
+  "limitations": [
+    "No new scientific replication by an external team is claimed.",
+    "No fresh semantic adjudication of every social case or external literature statement was performed.",
+    "No remote re-fetch of the public raw release was performed; release-status distinctions and retained provenance were inspected.",
+    "No exact-final-live-package verdict is implied by this frozen snapshot review."
+  ]
+}

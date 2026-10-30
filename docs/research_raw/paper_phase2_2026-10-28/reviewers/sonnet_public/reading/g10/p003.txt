@@ -1,0 +1,108 @@
+# game 10 page 3  decisions #179..#199  seats: p1=Sol, p2=Argon, p3=Grok, p4=Opus
+
+#179 t67 p3/Grok AUCT  $[p1:232 p2:533 p3:*209 p4:138]
+  STATE: p1/Sol $232 BV1372 GOOJ1  | LB:ORI4,VER4,CON4 RD:KEN~0,IND~0 ## p2/Argon $533 BV3903  | PK:STC0,STA0 RD:ILL0 DB:PKP3,BW3 RR:RDG,PRR,BO UT:ELE,WW ## p3/Grok $209 BV399  | OR:TEN~0,NYA~0 ## p4/Opus $138 BV1558  | BR:MED0 OR:STJ0 YL:ATL0 GR:PAC0,NCA0,PEA0
+  ctx: AUC SL hi=$140 leader=p2 min=141 active=p4,p1,p2,p3 n=3
+  > drop_out
+  "Not my set, and I won't spend the last buffer to hand Gemini a fourth railroad or to go broke doing it. I'm out."
+#180 t67 p4/Opus AUCT  $[p1:232 p2:533 p3:209 p4:*138]
+  ctx: AUC SL hi=$140 leader=p2 min=141 active=p4,p1,p2 n=4
+  > drop_out  [ATT refused(std)>valid(nothought)]
+  "I'm out. Gemini, you're putting a lot into railroads while everyone else keeps their cash."
+#181 t67 p1/Sol AUCT  $[p1:*232 p2:533 p3:209 p4:138]
+  ctx: AUC SL hi=$140 leader=p2 min=141 active=p1,p2 n=5
+  > bid_auction $141
+  "$141."
+#182 t67 p2/Argon AUCT  $[p1:232 p2:*533 p3:209 p4:138]
+  ctx: AUC SL hi=$141 leader=p1 min=142 active=p1,p2 n=6
+  > bid_auction $185
+  "$185. You're sitting on Pacific Avenue right in front of Park Place and Boardwalk, Sol—sure you want to burn your cash buffer on a railroad?"
+#183 t67 p1/Sol AUCT  $[p1:*232 p2:533 p3:209 p4:138]
+  ctx: AUC SL hi=$185 leader=p2 min=186 active=p1,p2 n=7
+  > bid_auction $186
+  "$186. Blocking the fourth railroad has value too."
+#184 t67 p2/Argon AUCT  $[p1:232 p2:*533 p3:209 p4:138]
+  ctx: AUC SL hi=$186 leader=p1 min=187 active=p1,p2 n=8
+  > bid_auction $233
+  "$233. That's $1 more than your cash, Sol. All four railroads are mine."
+#185 t67 p1/Sol AUCT  $[p1:*232 p2:533 p3:209 p4:138]
+  ctx: AUC SL hi=$233 leader=p2 min=234 active=p1,p2 n=9
+  > drop_out
+  "All yours for $233."
+  post: BUY p2 SL $233; AUC-END SL SOLD winner=p2 bid=233
+#186 t67 p3/Grok POST  $[p1:232 p2:300 p3:*209 p4:138]
+  ctx: unmortgageable=TEN,NYA mortgageable#0 trade_with=p1,p2,p4
+  > end_turn
+  "Holding. Nothing worth spending the buffer on."
+  post: p4 rolls 3+6; p4->SL
+#187 t68 p4/Opus LIQ  $[p1:232 p2:300 p3:209 p4:*138]
+  H: p4/Opus $138 BV1558  | BR:MED0 OR:STJ0 YL:ATL0 GR:PAC0,NCA0,PEA0 ## p2/Argon $300 BV3870  | PK:STC0,STA0 RD:ILL0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $200 to p2 (RENT) shortfall=$62 mortgageable=MED,STJ,ATL,PAC,NCA,PEA sellable=-
+  > mortgage_property STJ  [ATT refused(std)>valid(nothought)]
+  "Paying up. Railroads add up, Gemini. Enjoy it while it lasts."
+  post: MORT p4 STJ +$90; RENT p4>p2 $200 @SL
+#188 t68 p4/Opus POST  $[p1:232 p2:500 p3:209 p4:*28]
+  ctx: mortgageable#5 trade_with=p1,p2,p3
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Greens are all mine now. Fourth side of the board cuts both ways, Gemini."
+  post: p1 rolls 2+3; p1->CHANCE; CARD p1 CH:ADVANCE_TO_BOARDWALK; p1->BW
+#189 t69 p1/Sol LIQ  $[p1:*232 p2:500 p3:209 p4:28]
+  H: p1/Sol $232 BV1372 GOOJ1  | LB:ORI4,VER4,CON4 RD:KEN~0,IND~0 ## p2/Argon $500 BV4070  | PK:STC0,STA0 RD:ILL0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $1400 to p2 (RENT) shortfall=$1168 mortgageable=- sellable=ORI,VER,CON
+  > declare_bankruptcy
+  "Boardwalk ends my run. I'm bankrupt."
+  post: $p1 -232 BANKRUPTCY_CASH; $p2 +232 BANKRUPTCY_CASH; $p1 +0 BANKRUPTCY; BUY p2 ORI $0; BUY p2 VER $0; BUY p2 CON $0; BUY p2 KEN $0; BUY p2 IND $0; p2 rolls 6+1; p2->IND
+#190 t70 p2/Argon POST  $[p1:0 p2:*732 p3:209 p4:28]
+  ctx: buildable=ORI,VER,CON,PKP,BW sellable=ORI,VER,CON,PKP,BW unmortgageable=KEN,IND mortgageable#9 trade_with=p3,p4
+  > unmortgage_property KEN
+  "Unmortgaging Kentucky Avenue to bring the Red monopoly online."
+  post: UNMORT p2 KEN -$122
+#191 t70 p2/Argon POST  $[p1:0 p2:*610 p3:209 p4:28]
+  ctx: buildable=ORI,VER,CON,PKP,BW sellable=ORI,VER,CON,PKP,BW unmortgageable=IND mortgageable#10 trade_with=p3,p4
+  > unmortgage_property IND
+  "Unmortgaging Indiana Avenue as well. The Red monopoly is now fully active."
+  post: UNMORT p2 IND -$122
+#192 t70 p2/Argon POST  $[p1:0 p2:*488 p3:209 p4:28]
+  ctx: buildable=ORI,VER,CON,KEN,IND,ILL,PKP,BW sellable=ORI,VER,CON,PKP,BW mortgageable#11 trade_with=p3,p4
+  > end_turn
+  "Your turn, Grok. Watch your step around Park Place, Boardwalk, and the Light Blues."
+  post: p3 rolls 2+5; p3->COMMUNITY_CHEST (passGO); GO p3+200; CARD p3 CO:SALE_OF_STOCK_COLLECT_50; $p3 +50 SALE_OF_STOCK_COLLECT_50
+#193 t71 p3/Grok POST  $[p1:0 p2:488 p3:*459 p4:28]
+  ctx: unmortgageable=TEN,NYA mortgageable#0 trade_with=p2,p4
+  > end_turn
+  "Passing."
+  post: p4 rolls 2+2 DBL; p4->BW
+#194 t72 p4/Opus LIQ  $[p1:0 p2:488 p3:459 p4:*28]
+  H: p4/Opus $28 BV1358  | BR:MED0 OR:STJ~0 YL:ATL0 GR:PAC0,NCA0,PEA0 ## p2/Argon $488 BV5418 GOOJ1  | LB:ORI4,VER4,CON4 PK:STC0,STA0 RD:KEN0,IND0,ILL0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $1400 to p2 (RENT) shortfall=$1372 mortgageable=MED,ATL,PAC,NCA,PEA sellable=-
+  > declare_bankruptcy  [ATT refused(std)>valid(nothought)]
+  "Boardwalk with three houses gets me. Well played, Gemini. Grok, you're the last one standing against them now, so good luck."
+  post: $p4 -28 BANKRUPTCY_CASH; $p2 +28 BANKRUPTCY_CASH; $p4 +0 BANKRUPTCY; BUY p2 MED $0; BUY p2 STJ $0; BUY p2 ATL $0; BUY p2 PAC $0; BUY p2 NCA $0; BUY p2 PEA $0; p2 rolls 4+4 DBL; p2->PAC
+#195 t73 p2/Argon POST  $[p1:0 p2:*516 p3:459 p4:0]
+  H: p2/Argon $516 BV6776 GOOJ1  | BR:MED0 LB:ORI4,VER4,CON4 PK:STC0,STA0 OR:STJ~0 RD:KEN0,IND0,ILL0 YL:ATL0 GR:PAC0,NCA0,PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: buildable=ORI,VER,CON,KEN,IND,ILL,PAC,NCA,PEA,PKP,BW sellable=ORI,VER,CON,PKP,BW unmortgageable=STJ mortgageable#16 trade_with=p3
+  > build_houses_or_hotel ORI+1(HOTEL) VER+1(HOTEL) CON+1(HOTEL)
+  "Upgrading Oriental, Vermont, and Connecticut Avenue to hotels."
+  post: $p2 -150 BUILD; HOTEL p2 ORI; HOTEL p2 VER; HOTEL p2 CON
+#196 t73 p2/Argon POST  $[p1:0 p2:*366 p3:459 p4:0]
+  ctx: buildable=KEN,IND,ILL,PAC,NCA,PEA,PKP,BW sellable=ORI,VER,CON,PKP,BW unmortgageable=STJ mortgageable#16 trade_with=p3
+  > end_turn
+  "Three new hotels on the Light Blues. Good luck, Grok—your turn!"
+  post: p2 rolls 4+1; p2->CHANCE; CARD p2 CH:ELECTED_CHAIRMAN_PAY_EACH_PLAYER_50; $p2 -50 ELECTED_CHAIRMAN_PAY_EACH_PLAYER_50; $p3 +50 ELECTED_CHAIRMAN_PAY_EACH_PLAYER_50
+#197 t74 p2/Argon POST  $[p1:0 p2:*316 p3:509 p4:0]
+  H: p2/Argon $316 BV6726 GOOJ1  | BR:MED0 LB:ORIH,VERH,CONH PK:STC0,STA0 OR:STJ~0 RD:KEN0,IND0,ILL0 YL:ATL0 GR:PAC0,NCA0,PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: buildable=KEN,IND,ILL,PAC,NCA,PEA,PKP,BW sellable=ORI,VER,CON,PKP,BW unmortgageable=STJ mortgageable#16 trade_with=p3
+  > build_houses_or_hotel IND+1 ILL+1
+  "Building a house on Indiana Avenue and Illinois Avenue."
+  post: $p2 -300 BUILD; HOUSE+1 p2 IND; HOUSE+1 p2 ILL
+#198 t74 p2/Argon POST  $[p1:0 p2:*16 p3:509 p4:0]
+  ctx: sellable=ORI,VER,CON,IND,ILL,PKP,BW mortgageable#13 trade_with=p3
+  > end_turn
+  "Your turn, Grok! Watch out for Indiana and Illinois Avenue."
+  post: p3 rolls 3+4; p3->CON
+#199 t75 p3/Grok LIQ  $[p1:0 p2:16 p3:*509 p4:0]
+  H: p3/Grok $509 BV699  | OR:TEN~0,NYA~0 ## p2/Argon $16 BV6726 GOOJ1  | BR:MED0 LB:ORIH,VERH,CONH PK:STC0,STA0 OR:STJ~0 RD:KEN0,IND1,ILL1 YL:ATL0 GR:PAC0,NCA0,PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $600 to p2 (RENT) shortfall=$91 mortgageable=- sellable=-
+  > declare_bankruptcy
+  "Can't cover the $600. That's the game."
+  post: $p3 -509 BANKRUPTCY_CASH; $p2 +509 BANKRUPTCY_CASH; $p3 +0 BANKRUPTCY; BUY p2 TEN $0; BUY p2 NYA $0; GAME-ENDED BANKRUPTCY winner=p2

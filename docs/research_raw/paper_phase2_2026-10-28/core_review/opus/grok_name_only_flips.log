@@ -1,0 +1,34 @@
+# Grok "name-only" tool flips (Opus, 2026-10-29; read-only)
+# Source: docs/research_raw/paper_phase1_2026-10-28/opus/opus_response_mismatches.jsonl (139 Grok content/tool mismatches),
+# filtered to args_equal_exact == true: every argument incl. public_message and private_thought is byte-identical
+# between the assistant JSON content and the applied tool call; only the function name differs.
+# Denominators from canonical decisions.jsonl (scripts/common.py), Grok seats, applied final_action.
+#
+# 15/139 mismatches are name-only flips:
+#   buy_property -> start_auction   7  (G1 d054, G4 d000, G11 d003, G16 d064, G17 d069, G18 d041, G20 d006)
+#   reject_trade -> accept_trade    4  (G1 d112, G2 d061, G3 d130, G16 d247)
+#   roll_for_doubles -> pay_jail_fine 3 (G1 d448, G5 d159, G17 d369)
+#   pay_jail_fine -> roll_for_doubles 1 (G16 d090)
+# All standard condition, all applied as the tool name.
+#
+# Denominators:
+#   Grok applied accept_trade: 28  -> 4/28 (14.3%) accepted trades carry REJECT text in both public and private fields.
+#   Grok buy-legal BUY_OR_AUCTION decisions: 131; applied start_auction there: 32 -> 7/32 (21.9%) auction starts carry
+#     BUY text in both fields (7/131 = 5.3% of buy-legal decisions).
+#   Grok JAIL_DECISION: 61 -> 4/61 (6.6%).
+# Additional self-contradicting applied calls whose own tool args argue against the applied action but are not
+#   byte-identical to content (lower bound not counted above): e.g. G16 d159 start_auction with tool private
+#   "Auction is suicide ... Buy at list is the only way", G12 d249 bankruptcy "must not declare", G10 d39 "Don't send it".
+# Interpretation boundary: these are function-name emission errors relative to the model's own arguments; they are not
+#   evidence of a strategy, deception or intent. Applied events remain authoritative for game outcomes.
+#
+# Wording revision (Sol R15, accepted): call these "received tool-name mismatches" (the received response's function-name
+#   channel conflicts with its content while arguments match), not "model function-name emission errors". Local code
+#   (decision_resolver.py 945-1030; openrouter_client.py 142-159, 490-527 per Sol) maps names only by exact/normalised
+#   legal match; no positional mapping. Upstream provider/OpenRouter normalisation cannot be excluded locally.
+# Response mode (RETRACTED after Sol R16): I first argued the applied raw_response object 'chat.completion' (provider xAI,
+#   15/15) excluded streaming. It does not: openrouter_client.py to_response_json() (~L518-548) also emits object
+#   'chat.completion' after assembling stream deltas, and payload["stream"]=True is set whenever a stream callback is
+#   present (L81-82). The saved decision/attempt artifacts carry no request stream flag (prompt_payload_raw is the
+#   user payload, not the HTTP request). Streaming status of these 15 calls is UNDETERMINED from saved artifacts.
+#   No claim that stream misassociation occurred; the narrower "received tool-name mismatch" claim stands.

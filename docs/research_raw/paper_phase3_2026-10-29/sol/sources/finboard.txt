@@ -1,0 +1,2398 @@
+FinBoardBench: Benchmarking Dynamic Wealth Management and Strategic Financial Reasoning of LLMs via Board Game Simulations
+Report GitHub Issue
+×
+Title:
+Content selection saved. Describe the issue below:
+Description:
+Submit without GitHub
+Submit in GitHub
+arXiv is now an independent nonprofit!
+Learn more
+×
+Back to arXiv
+License: CC BY-NC-SA 4.0
+arXiv:2605.27896v1 [cs.CL] 27 May 2026
+FinBoardBench: Benchmarking Dynamic Wealth Management and Strategic Financial Reasoning of LLMs via Board Game Simulations
+Xuesi Hu  
+Peng Wang  
+Jinpeng Miao  
+Xilin Tao  
+Caiwei Li
+†
+†
+thanks:
+˜˜Equal Contribution.
+Affiliation:
+School of Computer Science and Engineering, Macau University of Science and Technology, Macau, China
+Affiliation:
+School of Economics, Anhui University, Anhui, China
+Affiliation:
+SKLPlanets, Macau University of Science and Technology, Macau, China
+Affiliation:
+Department of Computer and Information Science, University of Macau, Macau, China
+Yue Ma  
+Jie He  
+Qiancheng Zhang  
+Yuntao Zou  
+Dagang Li
+†
+†
+thanks:
+˜˜Corresponding Author.
+Email:
+xuesihu13@gmail.com
+,
+wpengxss@gmail.com
+,
+dgli@must.edu.mo
+Affiliation:
+School of Computer Science and Engineering, Macau University of Science and Technology, Macau, China
+Affiliation:
+School of Economics, Anhui University, Anhui, China
+Affiliation:
+SKLPlanets, Macau University of Science and Technology, Macau, China
+Affiliation:
+School of Energy and Power Engineering, Huazhong University of Science and Technology, Hubei, China
+Abstract
+Recently, large language models (LLMs) have achieved superior performance in static financial reasoning and simple dynamic trading tasks. However, existing static financial benchmarks are insufficient to assess the dynamic wealth management and financial decision-making capabilities of LLMs in real-world environments. To bridge this gap, we present FinBoardBench, an evaluation suite based on three classic financial board games: Cashflow, Acquire, and Monopoly. FinBoardBench assesses a comprehensive set of financial skills, including personal cash flow management with debt balancing, corporate investment and acquisition forecasting, and competitive trade negotiations with asset auctions. Our experiments with 9 advanced LLMs reveal that while exhibiting basic long-term planning and investment logic, they fail to effectively leverage complex interactions for profit, and their strong static reasoning performance does not transform into successful dynamic decision-making. Notably, they tend to prioritize immediate asset acquisition over maintaining sufficient liquidity, making them vulnerable to financial crises triggered by random events. We hope that FinBoardBench can provide a valuable reference for more intelligent LLM-based decision-making systems in the future.
+1
+Introduction
+Large language models (LLMs) have demonstrated advanced performance across natural language processing tasks
+(
+Chang et al., 2024
+;
+Wang et al., 2025a
+;
+Khan et al., 2025
+)
+, prompting exploration of their potential in financial applications
+(
+Ragavi and Ashok, 2025
+;
+Fu, 2025
+)
+. Prior studies have proposed a variety of financial benchmarks to evaluate LLMs’ abilities to process structured data and perform specific financial tasks
+(
+Li et al., 2023
+;
+Dong et al., 2025
+)
+. Notable examples include PIXIU
+(
+Xie et al., 2023
+)
+, FinBen
+(
+Xie et al., 2024
+)
+, and FinMaster
+(
+Jiang et al., 2025
+)
+. These benchmarks effectively assess static reasoning, such as predicting stock trends, evaluating accounting principles, or answering knowledge-based questions.
+However, financial decision-making in the real world is inherently dynamic and multidimensional. Models not only reason over available information but also adapt to stochastic events, manage liquidity under uncertainty, maintain long-term solvency, and strategically interact with competing agents
+(
+FAIR et al., 2022
+;
+Valmeekam et al., 2023
+;
+Fu et al., 2023
+)
+. Existing static benchmarks primarily evaluate the financial knowledge and reasoning ability of LLMs, but hardly capture decision-making performance in complex environments where dynamic and multiple mechanisms coexist. Specifically, (1) how an agent balances short-term liquidity with long-term investments; (2) how it effectively utilizes various rules and actions across hundreds of decisions to place the game; (3) how it simultaneously competes with other agents and copes with stochastic financial events. While some research has explored the performance of LLMs in actual
+(
+Liu et al., 2024
+;
+Chen et al., 2025b
+)
+and simulated financial markets
+(
+Lopez-Lira, 2025
+;
+Li et al., 2025
+)
+, the dynamic and massive nature of real-world data makes it difficult to abstract into a unified benchmark for evaluating real financial decision-making capabilities. Consequently, the ability of LLMs to navigate complex, dynamic financial environments remains underexplored.
+Financial Benchmark
+Competitive
+Multi-
+Rounds
+Comprehensive
+Strategy
+Uncertain
+PIXIU
+(
+Xie et al., 2023
+)
+✗
+✗
+✗
+✗
+FinBen
+(
+Xie et al., 2024
+)
+✗
+✗
+✗
+✗
+FinMME
+(
+Luo et al., 2025
+)
+✗
+✗
+✗
+✗
+BizFinBench
+(
+Lu et al., 2025
+)
+✗
+✗
+✗
+✗
+FinMaster
+(
+Jiang et al., 2025
+)
+✗
+✗
+✗
+✗
+SECQUE
+(
+BenYoash et al., 2025
+)
+✗
+✗
+✗
+✗
+StockBench
+(
+Chen et al., 2025b
+)
+✗
+✓
+✗
+✓
+Investorbench
+(
+Li et al., 2025
+)
+✗
+✓
+✗
+✓
+FinBoardBench
+(Ours)
+✓
+✓
+✓
+✓
+Table 1:
+Comparison of FinBoardBench with previous financial benchmarks. FinBoardBench provides multi-round competitive interactions under uncertainty through comprehensive financial games.
+Recent work has introduced game-based environments to fully evaluate the capabilities of LLMs in dynamic environments
+(
+Duan et al., 2024
+;
+Wang et al., 2025b
+;
+de Wynter, 2025
+)
+, and has achieved significant success. Inspired by these approaches, we propose FinBoardBench, a novel dynamic evaluation suite based on three classic financial board games: Cashflow, Acquire, and Monopoly. Financial games not only provide rigorous, controlled environments with clear victory criteria and transparent states, but also evaluate a broad spectrum of financial skills essential for real-world decision-making
+(
+Cannistrà et al., 2024
+)
+. These three games target complementary financial competencies: (
+i
+i
+)
+Cashflow
+evaluates cash flow management by requiring players to balance debt and passive income; (
+i
+​
+i
+ii
+)
+Acquire
+assesses corporate investment forecasting, including strategic asset acquisitions and mergers; (
+i
+​
+i
+​
+i
+iii
+)
+Monopoly
+focuses on competitive resource allocation, open trade negotiations, and asset auctions. Compared to existing benchmarks (see Table
+1
+), FinBoardBench emphasizes dynamic, multi-step decision-making. Rather than simply answering financial questions, LLMs must manage multi-asset portfolios and survive stochastic risks in these interactive environments.
+We conduct comprehensive experiments in FinBoardBench, including 9 advanced LLMs: GPT-5.4, Gemini-3.1-Pro Preview, GLM-5.1, HY3 Preview, DeepSeek V4 Pro, Doubao-2.0-Pro, Kimi K2.6, Qwen-3.6-Plus, and Mimo V2.5 Pro. Across the three games, our evaluation covers 108 game matches, comprising 4,282 rounds and 15,602 active player turns. Our results show that: (
+i
+i
+) LLMs exhibit basic long-term planning and management logic, enabling them to play financial games, but lack the awareness and ability to use complex interactions to generate profits. (
+i
+​
+i
+ii
+) LLMs prioritize immediate acquisition of assets rather than maintaining sufficient liquidity, making them vulnerable to financial crises caused by random events. (
+i
+​
+i
+​
+i
+iii
+) The advanced LLMs perform well on static financial benchmarks, but the capability does not transform into effective financial decision-making ability, which leads to failure in dynamic financial games.
+In summary, our contributions are as follows:
+•
+To the best of our knowledge, we are the first to consider evaluating the wealth management and financial decision-making capabilities of LLMs in game-based dynamic environments.
+•
+We introduce FinBoardBench, a dynamic financial benchmark including multiple financial games, which provides a controlled environment for exploring the financial decision-making of LLMs.
+•
+We conduct extensive experiments demonstrating that LLMs can handle dynamic financial events but lack the ability to execute complex actions and poorly manage cash flow.
+Figure 1:
+The overall framework of FinBoardBench. (a) LLM-game interaction: System Architecture represents LLMs getting their current state and past actions to make decisions after moving, and then immediately updating with new information; Decision Dashboard represents LLMs weighing all available actions and choosing one to execute. (b) Game mechanics: In Cashflow, players achieve financial freedom that leaves the rat race for the fast track to reach their dream. In Acquire, players place tiles to found and merge hotels, then buy stocks to accumulate the greatest wealth. In Monopoly, players move around the board, buy property, and try to monopolize the real estate to win.
+2
+FinBoardBench
+We use three financial board games to assess LLMs’ financial decision-making capabilities in a dynamic financial environment. This section details the construction of FinBoardBench, including the game background(§
+2.1
+) and the overall framework(§
+2.2
+).
+2.1
+Game Background
+Cashflow
+1
+1
+1
+https://en.wikipedia.org/wiki/Cashflow_101
+is an educational game that simulates financial and economic aspects of daily life to improve people’s financial literacy. It involves investing in real estate, businesses, and financial products to achieve financial freedom. Acquire
+2
+2
+2
+https://en.wikipedia.org/wiki/Acquire
+is a financial strategy game in which players place building tiles and merge hotel chains. Each time a hotel is merged, the major shareholders receive a profit, and the player who ultimately earns the most profit wins. Monopoly
+3
+3
+3
+https://en.wikipedia.org/wiki/Monopoly_(game)
+is an incorporated financial elements game, including market monopolies, wealth distribution, and resource control. Players buy properties, build monopolies, and manage limited cash to deal with random events like paying rent. These three games are classic financial board games that effectively evaluate LLMs’ real-time decision-making and long-term planning abilities in a dynamic financial environment with multi-agent interaction.
+2.2
+Overall Framework
+This section outlines the complete process for gameplay. The specific framework is illustrated in Figure
+1
+.
+Environment Construction.
+According to Wikipedia and other sources, we use the classic game board with rules closely aligned to actual offline game mechanics. Detailed game information is provided in Appendix
+A
+,
+B
+, and
+C
+. Additionally, following the mainstream game benchmark setting
+(
+Duan et al., 2024
+;
+Fan et al., 2024
+;
+Lin et al., 2025
+)
+, we input the global game information to LLMs, such as the current board situation and the states of all players. To better evaluate the financial decision-making capabilities of LLMs in dynamic environments, we provide each player with abundant context round by round, including passive events and active decisions from the previous rounds and the current round. Specifically, the structure for each player is as follows:
+Step 1
+: Assume that the player moves on the board by rolling two dice, generating a random variable
+d
+t
+=
+d
+t
+,
+1
++
+d
+t
+,
+2
+d_{t}=d_{t,1}+d_{t,2}
+, where
+d
+t
+,
+i
+∼
+Unif
+⁡
+{
+1
+,
+…
+,
+6
+}
+d_{t,i}\sim\mathrm{Unif}\{1,\dots,6\}
+. The position of player
+p
+​
+o
+​
+s
+t
+pos_{t}
+is updated as:
+p
+​
+o
+​
+s
+t
+=
+(
+p
+​
+o
+​
+s
+t
+−
+1
++
+d
+t
+)
+mod
+N
+.
+pos_{t}=(pos_{t-1}+d_{t})\bmod N.
+(1)
+Step 2
+: After reaching position
+p
+​
+o
+​
+s
+t
+pos_{t}
+, the player handles landing events, such as paying taxes. The update of game status can be defined as follows:
+O
+t
+(
+1
+)
+=
+𝒯
+game
+​
+(
+O
+t
+(
+0
+)
+,
+p
+​
+o
+​
+s
+t
+)
+,
+O_{t}^{(1)}=\mathcal{T}_{\mathrm{game}}(O_{t}^{(0)},pos_{t}),
+(2)
+where
+O
+t
+(
+0
+)
+O_{t}^{(0)}
+represents the initial state observation before reaching the new position;
+𝒯
+game
+\mathcal{T}_{\mathrm{game}}
+represents a game-driven function that updates the game state without player intervention.
+Step 3
+: Next, following rational-player theory
+(
+Zagare, 1984
+;
+Osborne and Rubinstein, 1994
+)
+, we decompose each decision into belief, desire, and action. The LLM loops through multiple autonomous sub-decisions
+k
+=
+1
+,
+2
+,
+…
+,
+K
+t
+k=1,2,\dots,K_{t}
+until reaching the maximum decision limit
+K
+max
+K_{\max}
+or ending the turn. During each sub-step
+k
+k
+, the execution process of LLMs is as follows:
+(1) Beliefs: The LLM obtains the current observation
+O
+t
+(
+k
+)
+O_{t}^{(k)}
+and historical memory
+M
+t
+M_{t}
+. The belief state
+ℬ
+t
+,
+k
+\mathcal{B}_{t,k}
+is defined as follows:
+ℬ
+t
+,
+k
+=
+f
+belief
+​
+(
+O
+t
+(
+k
+)
+,
+M
+t
+)
+,
+\mathcal{B}_{t,k}=f_{\mathrm{belief}}(O_{t}^{(k)},M_{t}),
+(3)
+where
+f
+belief
+f_{\mathrm{belief}}
+represents the mapping function.
+(2) Desire: Based on the current belief state
+ℬ
+t
+,
+k
+\mathcal{B}_{t,k}
+, the LLM assigns a priority to each available action:
+D
+t
+,
+k
+​
+(
+a
+)
+=
+f
+desire
+​
+(
+a
+,
+ℬ
+t
+,
+k
+)
+,
+a
+∈
+𝒜
+t
+,
+k
+.
+D_{t,k}(a)=f_{\mathrm{desire}}(a,\mathcal{B}_{t,k}),\quad a\in\mathcal{A}_{t,k}.
+(4)
+(3) Action: The LLM selects a specific action from the currently available action list
+𝒜
+t
+,
+k
+\mathcal{A}_{t,k}
+:
+a
+t
+,
+k
+=
+arg
+⁡
+max
+a
+∈
+𝒜
+t
+,
+k
+​
+D
+t
+,
+k
+​
+(
+a
+)
+,
+a_{t,k}=\arg\max_{a\in\mathcal{A}_{t,k}}D_{t,k}(a),
+(5)
+where
+a
+t
+,
+k
+a_{t,k}
+represents the chosen action and
+D
+t
+,
+k
+​
+(
+⋅
+)
+D_{t,k}(\cdot)
+represents the desire function that assigns a priority value to available actions.
+The
+a
+t
+,
+k
+a_{t,k}
+updates the state through the player-driven transition function
+𝒯
+player
+\mathcal{T}_{\mathrm{player}}
+:
+O
+t
+(
+k
++
+1
+)
+=
+𝒯
+player
+​
+(
+O
+t
+(
+k
+)
+,
+a
+t
+,
+k
+)
+,
+O_{t}^{(k+1)}=\mathcal{T}_{\mathrm{player}}(O_{t}^{(k)},a_{t,k}),
+(6)
+Step 4
+: When
+a
+t
+,
+k
+=
+"End Turn"
+a_{t,k}=\text{"End Turn"}
+or
+k
+k
+reaches the maximum decision limit
+K
+max
+K_{\max}
+, the turn ends. The system records the player’s final state and the events that occurred during the turn, marking each event as either passive or active
+E
+t
+=
+{
+e
+t
+,
+1
+,
+…
+,
+e
+t
+,
+m
+}
+E_{t}=\{e_{t,1},\dots,e_{t,m}\}
+,
+A
+t
+=
+{
+a
+t
+,
+1
+,
+…
+,
+a
+t
+,
+K
+t
+}
+A_{t}=\{a_{t,1},\dots,a_{t,K_{t}}\}
+. The Memory Buffer is updated via the feedback loop:
+M
+t
++
+1
+=
+M
+t
+∪
+{
+(
+O
+t
+final
+,
+E
+t
+,
+A
+t
+)
+}
+.
+M_{t+1}=M_{t}\cup\{(O_{t}^{\mathrm{final}},E_{t},A_{t})\}.
+(7)
+Cashflow.
+The Cashflow represents a dynamic optimization game. The player must balance the long-term goal of achieving financial freedom with the short-term events to cope with random liquidity shocks. The dynamic cash flow equation is:
+C
+t
++
+1
+=
+C
+t
++
+Π
+t
+−
+ϵ
+t
+​
+(
+ω
+)
+,
+C_{t+1}=C_{t}+\Pi_{t}-\epsilon_{t}(\omega),
+(8)
+where
+C
+t
+C_{t}
+and
+𝒫
+t
+\mathcal{P}_{t}
+represent the player’s cash and portfolio at time
+t
+t
+, respectively;
+X
+t
+X_{t}
+represents the player’s financial decision;
+I
+base
+I_{\mathrm{base}}
+is the base salary;
+Y
+t
+:=
+∑
+p
+∈
+𝒫
+t
+y
+⁡
+(
+p
+)
+Y_{t}:=\sum_{p\in\mathcal{P}_{t}}y(p)
+represents passive income;
+R
+t
+R_{t}
+represents total expenses;
+Δ
+​
+C
+​
+(
+X
+t
+)
+\Delta C(X_{t})
+represents the net cash change induced by decision
+X
+t
+X_{t}
+;
+Π
+t
+:=
+I
+base
++
+Y
+t
+−
+R
+t
++
+Δ
+​
+C
+​
+(
+X
+t
+)
+\Pi_{t}:=I_{\mathrm{base}}+Y_{t}-R_{t}+\Delta C(X_{t})
+denotes the net cash flow; and
+ϵ
+t
+​
+(
+ω
+)
+\epsilon_{t}(\omega)
+represents random shocks drawn from a probability distribution.
+The objective of the player is to minimize the expected time to financial freedom
+τ
+\tau
+, formulated as
+min
+{
+X
+t
+}
+t
+≥
+0
+⁡
+𝔼
+⁡
+[
+τ
+]
+\min_{\{X_{t}\}_{t\geq 0}}\mathbb{E}[\tau]
+subject to:
+Y
+τ
+≥
+R
+τ
+Y_{\tau}\geq R_{\tau}
+, and the liquidity constraint:
+ℙ
+⁡
+(
+C
+t
+<
+0
+)
+≤
+δ
+,
+∀
+t
+<
+τ
+\mathbb{P}(C_{t}<0)\leq\delta,\quad\forall t<\tau
+.
+Acquire.
+The Acquire game simulates corporate mergers and acquisitions, which assesses the ability of multiple players to predict asset growth and hedge risks. Unlike static reasoning tasks, stock values in Acquire are uncertain and depend on the placement of tiles on the board. The expected future portfolio value
+EV
+i
+​
+(
+t
+)
+\mathrm{EV}_{i}(t)
+for player
+i
+i
+is:
+EV
+i
+​
+(
+t
+)
+=
+C
+i
+,
+t
++
+∑
+k
+∈
+𝒦
+t
+N
+i
+,
+k
+⋅
+Ψ
+k
+​
+(
+t
+)
++
+Ω
+i
+​
+(
+t
+)
+,
+\mathrm{EV}_{i}(t)=C_{i,t}+\sum_{k\in\mathcal{K}_{t}}N_{i,k}\cdot\Psi_{k}(t)+\Omega_{i}(t),
+(9)
+where
+C
+i
+,
+t
+C_{i,t}
+is limited capital;
+B
+t
+B_{t}
+denotes the board state;
+𝒦
+t
+\mathcal{K}_{t}
+and
+𝒮
+t
+\mathcal{S}_{t}
+denote active and potential acquiring corporations, respectively;
+N
+i
+,
+k
+N_{i,k}
+represents shares in corporation
+k
+k
+;
+Ψ
+k
+​
+(
+t
+)
+=
+𝔼
+⁡
+[
+V
+k
+​
+(
+B
+t
++
+n
+)
+∣
+B
+t
+]
+\Psi_{k}(t)=\mathbb{E}[V_{k}(B_{t+n})\mid B_{t}]
+is the expected future stock value; and
+Ω
+i
+​
+(
+t
+)
+=
+∑
+k
+∈
+𝒦
+t
+∑
+S
+∈
+𝒮
+t
+ℙ
+⁡
+(
+M
+k
+→
+S
+∣
+B
+t
+)
+​
+Γ
+i
+​
+(
+k
+,
+S
+,
+t
+)
+\Omega_{i}(t)=\sum_{k\in\mathcal{K}_{t}}\sum_{S\in\mathcal{S}_{t}}\mathbb{P}(M_{k\to S}\mid B_{t})\Gamma_{i}(k,S,t)
+is expected merger premium, where
+Γ
+i
+​
+(
+k
+,
+S
+,
+t
+)
+\Gamma_{i}(k,S,t)
+denotes the merger bonus from
+k
+k
+merging into
+S
+S
+.
+Figure 2:
+Statistical analysis of LLMs’ performance across three games.
+Monopoly.
+The Monopoly game constructs a multi-agent competitive environment with complex social interactions such as transactions and auctions. It transcends simple asset pricing and tests whether players can accurately infer the value of assets. The player’s utility function is as follows:
+U
+i
+=
+V
+⁡
+(
+A
+​
+s
+​
+s
+​
+e
+​
+t
+​
+s
+i
+)
+−
+λ
+⋅
+max
+⁡
+(
+0
+,
+𝔼
+⁡
+[
+L
+i
+]
+−
+C
+i
+)
+2
+,
+U_{i}=V(Assets_{i})-\lambda\cdot\max\left(0,\mathbb{E}[L_{i}]-C_{i}\right)^{2},
+(10)
+where
+π
+⁡
+(
+s
+)
+\pi(s)
+represents the probability of landing on space
+s
+s
+;
+𝔼
+⁡
+[
+L
+i
+]
+\mathbb{E}[L_{i}]
+represents player
+i
+i
+’s expected rental expenditure in the next
+k
+k
+rounds, calculated as
+k
+​
+∑
+s
+∈
+O
+​
+p
+​
+p
+​
+o
+​
+n
+​
+e
+​
+n
+​
+t
+π
+⁡
+(
+s
+)
+⋅
+Rent
+⁡
+(
+s
+)
+k\sum_{s\in Opponent}\pi(s)\cdot\mathrm{Rent}(s)
+;
+C
+i
+C_{i}
+denotes player
+i
+i
+’s current cash;
+λ
+\lambda
+represents the risk aversion to bankruptcy;
+V
+⁡
+(
+A
+​
+s
+​
+s
+​
+e
+​
+t
+​
+s
+i
+)
+V(Assets_{i})
+is the expected present value of the asset of player.
+The goal of transaction
+τ
+\tau
+between player
+i
+i
+and player
+j
+j
+is to optimize resource allocation through negotiation:
+U
+i
+​
+(
+S
+t
++
+1
+τ
+)
+>
+U
+i
+​
+(
+S
+t
+)
+∧
+U
+j
+​
+(
+S
+t
++
+1
+τ
+)
+>
+U
+j
+​
+(
+S
+t
+)
+,
+U_{i}(S_{t+1}^{\tau})>U_{i}(S_{t})\land U_{j}(S_{t+1}^{\tau})>U_{j}(S_{t}),
+(11)
+where
+S
+t
+S_{t}
+represents the pre-trade state;
+S
+t
++
+1
+τ
+S_{t+1}^{\tau}
+represents the post-trade state.
+The key dynamic constraint is bankruptcy. It occurs when a player’s stochastic liability
+L
+t
+L_{t}
+exceeds their maximum liquidatable net worth.
+3
+Experiments
+3.1
+Experimental Setting.
+We evaluate 9 advanced LLMs in FinBoardBench: GPT-5.4, Gemini-3.1-Pro Preview, GLM-5.1, HY3 Preview, DeepSeek V4 Pro, Doubao-2.0-Pro, Kimi K2.6, Qwen-3.6-Plus, and Mimo V2.5 Pro. All LLMs use non-thinking mode and default settings in the API provider. To improve the interpretability of the ability comparison, reduce the effect of luck
+(
+Jerdee and Newman, 2024
+)
+, and focus more on the key actions of advanced LLMs. For each game match, we place one advanced LLM as a player and match it against three strong LLMs: DeepSeek V4 Flash, Qwen-3.5-397B-A17B, and Gemini-3.1-Flash-Lite-Preview. The starting positions of the advanced LLM are rotated across positions 1 through 4, while the others fill the remaining positions randomly. Across the three games, our evaluation covers 108 game matches, comprising 4,282 rounds and 15,602 active player turns.
+3.2
+Results
+Our findings are as follows:
+(1) LLMs exhibit passive decision-making in the dynamic financial environment.
+In Cashflow, as shown in Figure
+2
+(a), over 50% originated from borrowing triggered by failed purchases among the loans obtained by the most advanced LLMs. This indicates that their financing behavior is often induced by failed purchase than proactive management. In Acquire, as shown in Figure
+2
+(d), merger disposition is dominated by sell-only actions (>65% on average) and almost no keep-only choices, indicating preference for immediate cash over future earnings. In Monopoly, as shown in Figure
+2
+(g), among 86 completed deals initiated by advanced LLMs, 82 finish within one round; across both initiator and receiver, only 33.3% negotiation decisions choose counter, showing a preference to accept or reject rather than bargain. Overall, advanced LLMs often react to visible state changes but fail to fully use strategic interaction mechanisms.
+(2) LLMs focus on asset acquisition but often overlook liquidity.
+In Cashflow, As shown in Figure
+2
+(b), Advanced LLMs still buy in 50.8% of opportunities with cash below $1k, and the aggregate buy rate remains relatively stable at 50.0%-63.2% across cash buckets below $12k, indicating weak liquidity-sensitive purchasing. In acquire, as shown in Figure
+2
+(e), the purchase frequency of Advanced LLMs consistently exceeds 80% and still buys with 89.0% probability holding cash below $1k, showing weak capacity for budget control. In Monopoly, as shown in Figure
+2
+(h), even if LLMs lack liquidity, they still choose to buy real estate. Specifically, the cash below $500 after 47 purchases and 23 times below $200. Overall, advanced LLMs keep buying even under low-cash conditions, overvaluing asset accumulation while underestimating liquidity preservation.
+(3) LLMs are unable to transform their financial knowledge into effective decision-making capabilities, leading to struggles in dynamic environments.
+In Cashflow, only 11.11% of advanced LLMs run escape, while 44.44% end in bankruptcy, and 44.44% are terminated after an opponent wins first. As shown in Figure
+2
+(c), failed advanced LLMs remain far below the financial freedom threshold, with average passive-income coverage of only 0.19. In Acquire, advanced LLMs win at a rate of only 27.77%. As shown in Figure
+2
+(f), despite comparable control opportunities, their losses earn only $7.4k in merger bonuses versus $18.6k for winners, revealing dynamic monetization failures. In Monopoly, as shown in Figure
+2
+(i), advanced LLMs win at a rate of only 13.88% and mostly remain in the low monopoly control, low upgrade region. This indicates that they fail to effectively acquire assets to establish property group monopolies to pressure their opponents. These poor performances demonstrate that advanced LLMs struggle to perform effectively in dynamic financial environments.
+4
+Analysis
+Game
+Model
+Non-thinking
+Thinking (Enabled / Max)
+Cashflow
+DeepSeek V4 Pro
+0
+/
+4
+0/4
+(0.0%)
+2
+/
+4
+2/4
+(50.0%)
+Mimo V2.5 Pro
+0
+/
+4
+0/4
+(0.0%)
+1
+/
+4
+1/4
+(25.0%)
+Qwen 3.6 Plus
+0
+/
+4
+0/4
+(0.0%)
+0
+/
+4
+0/4
+(0.0%)
+Acquire
+DeepSeek V4 Pro
+2
+/
+4
+2/4
+(50.0%)
+2
+/
+4
+2/4
+(50.0%)
+Mimo V2.5 Pro
+1
+/
+4
+1/4
+(25.0%)
+1
+/
+4
+1/4
+(25.0%)
+Qwen 3.6 Plus
+1
+/
+4
+1/4
+(25.0%)
+2
+/
+4
+2/4
+(50.0%)
+Monopoly
+DeepSeek V4 Pro
+0
+/
+4
+0/4
+(0.0%)
+1
+/
+4
+1/4
+(25.0%)
+Mimo V2.5 Pro
+0
+/
+4
+0/4
+(0.0%)
+1
+/
+4
+1/4
+(25.0%)
+Qwen 3.6 Plus
+0
+/
+4
+0/4
+(0.0%)
+0
+/
+4
+0/4
+(0.0%)
+Table 2:
+Win-rate comparison between non-thinking and maximum-thinking modes.
+4.1
+A deeper level of thinking model in LLMs will not lead to significant improvement
+Since current LLMs possess hybrid thinking capabilities, and longer thinking depths typically lead to stronger performance, we evaluated the financial decision-making capabilities of current models in their highest thinking mode. Using the same experimental setup as the main experiment and the highest thinking mode, we evaluated the performance of DeepSeek V4 Pro, Mimo V2.5 Pro, and Qwen 3.6 Plus on FinBoardBench. As shown in Table
+2
+, increasing the depth of thinking has a limited effect on improving the win rate in LLMs. This indicates that current LLMs, even with deeper thinking, cannot significantly improve the model’s ability in dynamic financial environments.
+Figure 3:
+Cashflow threshold-race results for Advanced LLMs. The x-axis shows terminal passive-income coverage of expenses, and the y-axis shows projected additional rounds to escape the Rat Race. Shapes denote outcomes, color denotes debt-service drag, and large outlined circles denote advanced LLM averages.
+Figure 4:
+Analysis of the behaviors of Advanced LLMs in Acquire. This heatmap depicts the complete acquisition arbitrage chain for Advanced LLMs: from ownership-aligned expansion to final victory. Each cell displays the raw value, while color encodes its value relative to the advanced LLM’s average.
+Figure 5:
+Analysis of the trade and auction behaviors of Advanced LLMs in Monopoly.
+Figure 6:
+Analysis of the financial statement profiles of LLMs in Cashflow. The x-axis represents the debt burden index (monthly loan payment / total expenses), and the y-axis represents the passive income coverage (passive income / total expenses).
+4.2
+Why do advanced LLMs fail?
+LLMs fail to prioritize actions that accelerate financial freedom.
+As shown in Figure
+3
+, advanced LLMs perform poorly in Cashflow, not only lack action, but also fail to convert actions into timely financial-freedom progress. The average performance of most LLMs is below the escape threshold. Furthermore, several non-bankrupt LLMs still require more than 100 projected rounds to escape. This suggests that they improve their financial situation too slowly in a the competitive and dynamic environment. In contrast, the darker points in the figure reveal that the debt servicing costs arising from borrowing disrupt the LLMs’ path toward financial freedom, pushing it toward bankruptcy or a state of non-toward. In summary, success requires fast and stable conversion from asset expansion and financing decisions into sustainable cash flow progress.
+LLMs perform well in certain stages yet show poor overall performance.
+Success in Acquire depends on a sequential arbitrage chain: expanding chains where the LLMs hold control positions, triggering mergers, converting defunct-chain control into bonuses, and accumulating merger income toward victory. As shown in Figure
+4
+, advanced LLMs exhibit fragmented strengths across these stages. Gemini 3.1 Pro and Qwen 3.6 Plus perform well in controlled-chain expansion, with alignment rates of 74% and 67%, respectively. GLM 5.1 is strong at creating merger events, triggering 2.50 mergers per game and receiving $4,200 in self-triggered defunct-chain bonuses. Mimo V2.5 Pro also captures high bonus income, with $4,100 in self-triggered bonuses and $12,900 in total merger bonuses. However, these advantages rarely transform into robust overall success. This indicates that advanced LLMs can perform isolated financial operations, but often fail to complete the full dynamic arbitrage chain required for consistent victory.
+LLMs cannot reliably convert trade and auction mechanisms into control.
+Trades are crucial for establishing property-group monopolies, while auctions reprice abandoned assets. We use DeepSeek V4 Pro as an external judge to evaluate each trade and auction from the full game state. Specifically, a trade is marked harmful if it reduces the focal LLMs’ strategic or financial position, and an auction is marked conservative when the LLMs miss a valuable bidding opportunity, or the bidding increments are small. As shown in Figure
+5
+(a), advanced LLMs often fail to convert successful trades into value: 45 of 86 proposer trades and 11 of 18 receiver trades are judged harmful. Figure
+5
+(b) shows stronger auction behavior, with 42 of 60 cases judged effective or justified, but 15 still flagged as conservative failures. Overall, advanced LLMs can use trade and auction mechanisms, but lack the consistency needed to turn them into property control and a winning advantage.
+4.3
+Decision Characteristics Analysis of Different LLMs
+The error bars in this section use quartiles to represent the volatility of the LLMs’ performance. Specifically, they span the 25th-75th percentile range of the corresponding metric across multiple tests of the same LLM.
+Cashflow profiles reveal differences in financial management among advanced LLMs.
+As shown in Figure
+6
+, Mimo V2.5 Pro, Doubao-2.0-Pro, and Qwen 3.6 Plus fall into the Debt Trap region, with low passive-income coverage coupled with high debt burden; Mimo V2.5 Pro is the most extreme case, with nearly zero coverage, a debt burden of 0.74, and a 100% bankruptcy rate. In contrast, Gemini 3.1 Pro and GPT-5.4 maintain low debt burdens but still remain below the escape threshold, reflecting slow cash-flow conversion rather than over-leveraging. Other LLMs lie between these two distinct profiles. Overall, some LLMs over-expand through debt, while others avoid debt but fail to generate passive income quickly enough.
+Figure 7:
+Analysis of the decision profiles of LLMs in Acquire. The x-axis represents the control monetization ROI (merger bonus / stock purchase cost), and the y-axis represents the global merger-bonus redeployment rate (redeployed merger bonus / total merger bonus).
+Figure 8:
+Analysis of the investment profiles of LLMs in Monopoly. The x-axis represents the investment cost ratio (income / cost), and the y-axis represents the Investment ROI (total investment / initial cash).
+Acquire profiles reveal differences in decision-making among advanced LLMs.
+As shown in Figure
+7
+, advanced LLMs shows two different decision patterns. Mimo V2.5 Pro, Kimi K2.6, DeepSeek V4 Pro, and GLM 5.1 achieve higher Return on Investment (ROI) for control monetization. It indicates that their stock purchases more readily convert into merger bonuses, but their lower reinvestment rates limit subsequent deployment. In contrast, Qwen 3.6 Plus, Doubao 2.0 Pro, GPT 5.4, and HY3 reinvest more merger bonuses, yet demonstrate relatively lower efficiency in capturing control monetization returns. Gemini 3.1 Pro comes closest to the ideal state of simultaneously possessing strong monetization capabilities and reinvestment potential. Overall, Advanced LLMs usually master only one side of the Acquire arbitrage chain.
+Investment profiles reveal divergent decision strategies in Monopoly.
+As shown in Figure
+8
+, Gemini 3.1 Pro and GLM 5.1 fall into the Highly Efficient Scalable regime, both achieved above-average ROI while employing an aggressive investment strategy. Gemini 3.1 Pro is a particularly standout performer in this regard, with a win rate of up to 75%. Doubao-2.0-Pro is situated in Overinvesting, investing heavily but yielding a low ROI. Qwen-3.6-Plus shows Selective Efficiency, while achieving high ROI with limited investment, it failed to transform this advantage into wins. Other models cluster in Weak Deployment, reflecting both low investment intensity and weak return conversion.
+5
+Related work
+Many studies have proposed benchmarks for evaluating the capabilities of LLMs in the financial domain. FAMMA
+(
+Xue et al., 2025
+)
+provides a multilingual, multimodal financial question answering benchmark for evaluating financial reasoning capabilities of LLMs. FINCHAIN
+(
+Xie et al., 2026
+)
+is a verifiable Chain-of-Thought Financial reasoning benchmark spanning 12 Domains and 58 Topics. FinRule-Bench
+(
+Malarkkan et al., 2026
+)
+evaluates LLMs on structured financial auditing and multi-rule reasoning tasks.
+Furthermore, some researchers are focused on dynamic simulations. StockAgent
+(
+Zhang et al., 2024
+)
+simulates multi-agent trading to assess investor behavior under external influences. QuantAgent
+(
+Xiong et al., 2025
+)
+combines multi-agent LLMs with structured trading signals to achieve higher prediction accuracy across high-frequency trading markets. MM-DREX
+(
+Chen et al., 2025a
+)
+uses multimodal-driven and dynamic expert routing, which outperforms baselines on multimodal datasets across stocks, futures, and cryptocurrencies. TwinMarket
+(
+YANG et al., 2025
+)
+reveals collective dynamics and emergent social behaviors by simulating socio-economic systems in which multiple LLMs interact.
+Compared to these work, we are first to explore the financial decision-making capabilities of LLMs in dynamic games, and reveal the shortcomings of LLMs in this environment.
+6
+Conclusion
+In this paper, to fully evaluate the dynamic financial decision-making capabilities of large language models, inspired by game-based benchmarks, we construct FinBoardBench. It is based on three classic financial board games and evaluates mainstream advanced LLMs. Experimental results demonstrate that while current LLMs perform well on static financial benchmarks, this capability does not transform into genuine financial decision-making ability, which leads to failures in LLMs. We hope FinBoardBench can serve as a valuable reference for future dynamic financial benchmarks.
+Limitations
+First, FinBoardBench relies on board-game simulations, which may not fully capture the complexity of real-world finance, including exogenous shocks, interest-rate fluctuations, and similar factors. Second, using fixed game scenarios may limit evaluation under diverse or evolving financial conditions. For instance, FinBoardBench does not incorporate portfolios comprising agents with different strategic styles to evaluate LLMs under more dynamic multi-agent interactions. Finally, although we follow the official rules as closely as possible, the selected games are classic titles with extensive histories and multiple rule variants. Furthermore, to ensure compatibility for LLMs, we cannot reproduce every specific detail with absolute fidelity. Consequently, we focused on faithfully reproducing the core gameplay mechanics to the greatest extent possible.
+References
+BenYoash
+et al.
+(2025)
+N. BenYoash, M. Brief, O. Ovadia, G. Shenderovitz, M. Mishaeli, R. Lemberg, and E. Sheetrit
+SECQUE: a benchmark for evaluating real-world financial analysis capabilities
+.
+In
+Proceedings of the Fourth Workshop on Generation, Evaluation and Metrics (GEM²)
+,
+O. Arviv, M. Clinciu, K. Dhole, R. Dror, S. Gehrmann, E. Habba, I. Itzhak, S. Mille, Y. Perlitz, E. Santus, J. Sedoc, M. Shmueli Scheuer, G. Stanovsky, and O. Tafjord (Eds.)
+,
+Vienna, Austria and virtual meeting
+,
+pp. 212–230
+.
+External Links:
+Link
+,
+ISBN 979-8-89176-261-9
+Cited by:
+Table 1
+.
+Cannistrà
+et al.
+(2024)
+M. Cannistrà, K. De Beckker, T. Agasisti, A. Amagir, K. Põder, L. Vartiak, and K. De Witte
+The impact of an online game-based financial education course: multi-country experimental evidence
+.
+Journal of Comparative Economics
+52
+(
+4
+),
+pp. 825–847
+.
+External Links:
+ISSN 0147-5967
+,
+Document
+,
+Link
+Cited by:
+§1
+.
+Chang
+et al.
+(2024)
+Y. Chang, X. Wang, J. Wang, Y. Wu, L. Yang, K. Zhu, H. Chen, X. Yi, C. Wang, Y. Wang, W. Ye, Y. Zhang, Y. Chang, P. S. Yu, Q. Yang, and X. Xie
+A survey on evaluation of large language models
+.
+ACM Trans. Intell. Syst. Technol.
+15
+(
+3
+).
+External Links:
+ISSN 2157-6904
+,
+Link
+,
+Document
+Cited by:
+§1
+.
+Chen
+et al.
+(2025a)
+Y. Chen, Y. Jiang, Z. Ma, Y. Cao, J. Keung, K. Kuang, L. Gan, Y. Wu, and F. Wu
+MM-drex: multimodal-driven dynamic routing of llm experts for financial trading
+.
+arXiv preprint arXiv:2509.05080
+.
+Cited by:
+§5
+.
+Chen
+et al.
+(2025b)
+Y. Chen, Z. Yao, Y. Liu, A. Xin, J. Ye, J. Yu, L. Hou, and J. Li
+Stockbench: can llm agents trade stocks profitably in real-world markets?
+.
+arXiv preprint arXiv:2510.02209
+.
+Cited by:
+Table 1
+,
+§1
+.
+de Wynter (2025)
+A. de Wynter
+Will gpt-4 run doom?
+.
+IEEE Transactions on Games
+17
+(
+2
+),
+pp. 451–459
+.
+External Links:
+Document
+Cited by:
+§1
+.
+Dong
+et al.
+(2025)
+Y. Dong, F. Wu, K. Zhang, Y. Dai, S. Zhang, W. Ye, S. Chen, and Z. Cheng
+Large language model agents in finance: a survey bridging research, practice, and real-world deployment
+.
+Findings of the Association for Computational Linguistics: EMNLP
+2025
+,
+pp. 17889–17907
+.
+Cited by:
+§1
+.
+Duan
+et al.
+(2024)
+J. Duan, R. Zhang, J. Diffenderfer, B. Kailkhura, L. Sun, E. Stengel-Eskin, M. Bansal, T. Chen, and K. Xu
+GTBench: uncovering the strategic reasoning capabilities of llms via game-theoretic evaluations
+.
+In
+Advances in Neural Information Processing Systems
+,
+A. Globerson, L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang (Eds.)
+,
+Vol.
+37
+,
+pp. 28219–28253
+.
+External Links:
+Document
+,
+Link
+Cited by:
+§1
+,
+§2.2
+.
+FAIR
+et al.
+(2022)
+FAIR, A. Bakhtin, N. Brown, E. Dinan, G. Farina, C. Flaherty, D. Fried, A. Goff, J. Gray, H. Hu, A. P. Jacob, M. Komeili, K. Konath, M. Kwon, A. Lerer, M. Lewis, A. H. Miller, S. Mitts, A. Renduchintala, S. Roller, D. Rowe, W. Shi, J. Spisak, A. Wei, D. Wu, H. Zhang, and M. Zijlstra
+Human-level play in the game of diplomacy by combining language models with strategic reasoning
+.
+Science
+378
+(
+6624
+),
+pp. 1067–1074
+.
+External Links:
+Document
+,
+Link
+,
+https://www.science.org/doi/pdf/10.1126/science.ade9097
+Cited by:
+§1
+.
+Fan
+et al.
+(2024)
+C. Fan, J. Chen, Y. Jin, and H. He
+Can large language models serve as rational players in game theory? a systematic analysis
+.
+Proceedings of the AAAI Conference on Artificial Intelligence
+38
+(
+16
+),
+pp. 17960–17967
+.
+External Links:
+Link
+,
+Document
+Cited by:
+§2.2
+.
+Fu (2025)
+W. Fu
+The new quant: a survey of large language models in financial prediction and trading
+.
+arXiv preprint arXiv:2510.05533
+.
+Cited by:
+§1
+.
+Fu
+et al.
+(2023)
+Y. Fu, H. Peng, T. Khot, and M. Lapata
+Improving language model negotiation with self-play and in-context learning from ai feedback
+.
+arXiv preprint arXiv:2305.10142
+.
+Cited by:
+§1
+.
+Jerdee and Newman (2024)
+M. Jerdee and M. E. J. Newman
+Luck, skill, and depth of competition in games and social hierarchies
+.
+Science Advances
+10
+(
+45
+),
+pp. eadn2654
+.
+External Links:
+Document
+,
+Link
+,
+https://www.science.org/doi/pdf/10.1126/sciadv.adn2654
+Cited by:
+§3.1
+.
+Jiang
+et al.
+(2025)
+J. Jiang, C. Yang, A. Cui, S. Jin, R. Wang, B. Li, X. Huang, D. Sun, and X. Wang
+FinMaster: a holistic benchmark for mastering full-pipeline financial workflows with llms
+.
+arXiv preprint arXiv:2505.13533
+.
+Cited by:
+Table 1
+,
+§1
+.
+Khan
+et al.
+(2025)
+A. T. Khan, S. Li, and X. Cao
+Bridging finance and ai: a comprehensive survey of large language models in financial system
+.
+Digital Finance
+7
+(
+4
+),
+pp. 679–701
+.
+Cited by:
+§1
+.
+Li
+et al.
+(2025)
+H. Li, Y. Cao, Y. Yu, S. R. Javaji, Z. Deng, Y. He, Y. Jiang, Z. Zhu, K.p. Subbalakshmi, J. Huang, L. Qian, X. Peng, J. W. Suchow, and Q. Xie
+INVESTORBENCH: a benchmark for financial decision-making tasks with LLM-based agent
+.
+In
+Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)
+,
+W. Che, J. Nabende, E. Shutova, and M. T. Pilehvar (Eds.)
+,
+Vienna, Austria
+,
+pp. 2509–2525
+.
+External Links:
+Link
+,
+Document
+,
+ISBN 979-8-89176-251-0
+Cited by:
+Table 1
+,
+§1
+.
+Li
+et al.
+(2023)
+Y. Li, S. Wang, H. Ding, and H. Chen
+Large language models in finance: a survey
+.
+In
+Proceedings of the Fourth ACM International Conference on AI in Finance
+,
+ICAIF ’23
+,
+New York, NY, USA
+,
+pp. 374–382
+.
+External Links:
+ISBN 9798400702402
+,
+Link
+,
+Document
+Cited by:
+§1
+.
+Lin
+et al.
+(2025)
+W. Lin, J. Roberts, Y. Yang, S. Albanie, Z. Lu, and K. Han
+GAMEBoT: transparent assessment of LLM reasoning in games
+.
+In
+Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)
+,
+W. Che, J. Nabende, E. Shutova, and M. T. Pilehvar (Eds.)
+,
+Vienna, Austria
+,
+pp. 7656–7682
+.
+External Links:
+Link
+,
+Document
+,
+ISBN 979-8-89176-251-0
+Cited by:
+§2.2
+.
+Liu
+et al.
+(2024)
+C. Liu, A. Arulappan, R. Naha, A. Mahanti, J. Kamruzzaman, and I. Ra
+Large language models and sentiment analysis in financial markets: a review, datasets, and case study
+.
+IEEE Access
+12
+(
+),
+pp. 134041–134061
+.
+External Links:
+Document
+Cited by:
+§1
+.
+Lopez-Lira (2025)
+A. Lopez-Lira
+Can large language models trade? testing financial theories with llm agents in market simulations
+.
+arXiv preprint arXiv:2504.10789
+.
+Cited by:
+§1
+.
+Lu
+et al.
+(2025)
+G. Lu, X. Guo, R. Zhang, W. Zhu, and J. Liu
+BizFinBench: a business-driven real-world financial benchmark for evaluating llms
+.
+arXiv preprint arXiv:2505.19457
+.
+Cited by:
+Table 1
+.
+Luo
+et al.
+(2025)
+J. Luo, Z. Kou, L. Yang, X. Luo, J. Huang, Z. Xiao, J. Peng, C. Liu, J. Ji, X. Liu, S. Han, M. Zhang, and Y. Guo
+FinMME: benchmark dataset for financial multi-modal reasoning evaluation
+.
+In
+Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)
+,
+W. Che, J. Nabende, E. Shutova, and M. T. Pilehvar (Eds.)
+,
+Vienna, Austria
+,
+pp. 29465–29489
+.
+External Links:
+Link
+,
+Document
+,
+ISBN 979-8-89176-251-0
+Cited by:
+Table 1
+.
+Malarkkan
+et al.
+(2026)
+A. V. Malarkkan, M. R. Choudhury, G. Zhang, V. Gupta, Q. Wang, Y. Fu, and D. Zhang
+FinRule-bench: a benchmark for joint reasoning over financial tables and principles
+.
+arXiv preprint arXiv:2603.11339
+.
+Cited by:
+§5
+.
+Osborne and Rubinstein (1994)
+M. J. Osborne and A. Rubinstein
+A course in game theory
+.
+MIT press
+.
+Cited by:
+§2.2
+.
+Ragavi and Ashok (2025)
+O. E. Ragavi and P. Ashok
+LLMs are not weird: comparing ai and human financial decision-making
+.
+Journal of Behavioral and Experimental Economics
+,
+pp. 102505
+.
+Cited by:
+§1
+.
+Valmeekam
+et al.
+(2023)
+K. Valmeekam, M. Marquez, A. Olmo, S. Sreedharan, and S. Kambhampati
+Planbench: an extensible benchmark for evaluating large language models on planning and reasoning about change
+.
+Advances in Neural Information Processing Systems
+36
+,
+pp. 38975–38987
+.
+Cited by:
+§1
+.
+Wang
+et al.
+(2025a)
+P. Wang, W. Lu, C. Lu, R. Zhou, M. Li, and L. Qin
+Large language model for medical images: a survey of taxonomy, systematic review, and future trends
+.
+Big Data Mining and Analytics
+8
+(
+2
+),
+pp. 496–517
+.
+Cited by:
+§1
+.
+Wang
+et al.
+(2025b)
+W. Wang, F. Bie, J. Chen, D. Zhang, S. Huang, E. Kharlamov, and J. Tang
+Can large language models master complex card games?
+.
+In
+The Thirty-ninth Annual Conference on Neural Information Processing Systems
+,
+External Links:
+Link
+Cited by:
+§1
+.
+Xie
+et al.
+(2024)
+Q. Xie, W. Han, Z. Chen, R. Xiang, X. Zhang, Y. He, M. Xiao, D. Li, Y. Dai, D. Feng, Y. Xu, H. Kang, Z. Kuang, C. Yuan, K. Yang, Z. Luo, T. Zhang, Z. Liu, G. Xiong, Z. Deng, Y. Jiang, Z. Yao, H. Li, Y. Yu, G. Hu, J. Huang, X. Liu, A. Lopez-Lira, B. Wang, Y. Lai, H. Wang, M. Peng, S. Ananiadou, and J. Huang
+FinBen: a holistic financial benchmark for large language models
+.
+In
+Advances in Neural Information Processing Systems
+,
+A. Globerson, L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang (Eds.)
+,
+Vol.
+37
+,
+pp. 95716–95743
+.
+External Links:
+Document
+,
+Link
+Cited by:
+Table 1
+,
+§1
+.
+Xie
+et al.
+(2023)
+Q. Xie, W. Han, X. Zhang, Y. Lai, M. Peng, A. Lopez-Lira, and J. Huang
+PIXIU: a large language model, instruction data and evaluation benchmark for finance
+.
+In
+Proceedings of the 37th International Conference on Neural Information Processing Systems
+,
+pp. 33469–33484
+.
+Cited by:
+Table 1
+,
+§1
+.
+Xie
+et al.
+(2026)
+Z. Xie, D. Orel, R. Thareja, D. Sahnan, H. Madmoun, F. Zhang, D. Banerjee, G. Georgiev, X. Peng, L. Qian, J. Huang, J. Su, A. Singh, R. Xing, R. Elbadry, C. Xu, H. Li, F. Koto, I. Koychev, T. Chakraborty, Y. Wang, S. Lahlou, V. Stoyanov, S. Ananiadou, and P. Nakov
+FinChain: a symbolic benchmark for verifiable chain-of-thought financial reasoning
+.
+External Links:
+2506.02515
+,
+Link
+Cited by:
+§5
+.
+Xiong
+et al.
+(2025)
+F. Xiong, X. Zhang, A. Feng, S. Sun, and C. You
+Quantagent: price-driven multi-agent llms for high-frequency trading
+.
+arXiv preprint arXiv:2509.09995
+.
+Cited by:
+§5
+.
+Xue
+et al.
+(2025)
+S. Xue, X. Li, F. Zhou, Q. Dai, Z. Chu, and H. Mei
+FAMMA: a benchmark for financial domain multilingual multimodal question answering
+.
+External Links:
+2410.04526
+,
+Link
+Cited by:
+§5
+.
+YANG
+et al.
+(2025)
+Y. YANG, Y. Zhang, M. Wu, K. Zhang, Y. Zhang, H. Yu, Y. Hu, and B. Wang
+TwinMarket: a scalable behavioral and social simulation for financial markets
+.
+In
+Advances in Neural Information Processing Systems
+,
+D. Belgrave, C. Zhang, H. Lin, R. Pascanu, P. Koniusz, M. Ghassemi, and N. Chen (Eds.)
+,
+Vol.
+38
+,
+pp. 63469–63519
+.
+External Links:
+Link
+Cited by:
+§5
+.
+Zagare (1984)
+F. C. Zagare
+Game theory: concepts and applications
+.
+SAGE
+.
+Cited by:
+§2.2
+.
+Zhang
+et al.
+(2024)
+C. Zhang, X. Liu, Z. Zhang, M. Jin, L. Li, Z. Wang, W. Hua, D. Shu, S. Zhu, X. Jin, S. Li, M. Du, and Y. Zhang
+When ai meets finance (stockagent): large language model-based stock trading in simulated real-world environments
+.
+External Links:
+2407.18957
+,
+Link
+Cited by:
+§5
+.
+Appendix
+Appendix A
+Cashflow Game Rule
+A.1
+Cashflow Game Background
+Cashflow is a board game designed to cultivate financial literacy. The board is divided into an inner and outer circle. Each player initially chooses a career and a dream. They start in the inner circle, rolling dice to move and handling the events on the spaces they land on. The goal here is to achieve passive income greater than total monthly expenses. Once the goal of the inner circle is achieved, players advance to the outer circle, where the goal becomes to further increase monthly cash flow to accumulate wealth or realize their dream.
+A.2
+Game Map
+The game board contains two tracks: the Rat Race and the Fast Track. The Rat Race consists of an inner loop comprising 24 spaces. These spaces include Opportunity, Liability, Charity, Paycheck, Offer, Child, and Downsize. Opportunity spaces appear most frequently and serve as the main investment decision point. The Fast Track consists of an outer loop comprising 40 spaces. It contains Cashflow Day spaces, a Dream space, Charity, risk-event spaces, and business-investment spaces with explicit costs and monthly cash flow returns.
+A.3
+Game Preparation
+Each player initially selects a career and a dream. The career determines the player’s initial financial status, including salary, savings, and other variables. The dream defines the player’s objective on the Fast Track. All players start in the Rat Race with their own income statement, balance sheet, and other relevant financial records. The performance of each player is evaluated through them. The key variables include cash, salary, passive income, total income, total expenses, monthly cash flow, assets, liabilities, and net worth. Passive income is derived from assets such as real estate, businesses, preferred stocks, certificates of deposit, limited partnerships, companies, coins, and contract receivables.
+A.4
+Detailed Game Rules
+Turn Structure in the Rat Race.
+Each Rat Race turn consists of three major stages. First, the player may perform financial operations, including borrowing money or repaying liabilities. Specifically,
+•
+Bank loans must be at least $1,000 and in multiples of $1,000, with the monthly payment equal to 10% of the borrowed amount.
+•
+Loans may be repaid partially in $1,000 units, while most other liabilities require full repayment.
+Second, the player rolls the dice and moves clockwise around the Rat Race. The events triggered by the landing spaces are as follows:
+•
+Opportunity cards represent investment decisions. Landing on an Opportunity space, the player chooses between the Small Deal and Big Deal card pools. Small Deal cards include stocks, mutual funds, certificates of deposit, preferred stocks, coins, small real-estate deals, and passive market events such as stock splits or property damage. Big Deal cards focus primarily on larger real-estate and business investments. Stock-like assets require the player to choose a purchase quantity and are paid in full. Real-estate and business assets are purchased through a down payment and, when specified, an associated mortgage or business liability. A successful purchase adds the asset to the player’s balance sheet and updates passive income.
+•
+Liability spaces draw Doodad cards and require the player to pay expenses or take on additional debt when applicable.
+•
+Charity allows the player to donate 10% of monthly total income to roll two dice for the next three turns.
+•
+Paycheck spaces pay the player’s monthly cash flow when passed or landed on. Bankruptcy is triggered when Paycheck processing leaves the player with negative cash and negative monthly cash flow. The engine then resolves bankruptcy through asset liquidation, debt repayment, debt relief, or elimination.
+•
+Offer spaces trigger market offers for selling eligible assets. Depending on the card, the offer may be priced per unit, fixed per asset, or tied to a specific asset type. Selling an asset removes it from the player’s balance sheet, repays related financing obligations, and credits the net settlement to cash. Some offers are global market events and may be resolved by all eligible players, not only by the player who landed on the Offer space.
+•
+Child spaces increase monthly expenses, subject to a maximum of three children.
+•
+Downsize forces the player to pay one month of expenses, cancels Charity effects, and skips two turns.
+Third, after resolving the space event and completing available actions, the player may enter a second financial-operation phase before ending the turn.
+A.5
+Transition to the Fast Track
+A player immediately enters the Fast Track once passive income exceeds total expenses. Upon entry, the player receives a Buyout equal to 100 times their passive income. This amount becomes the player’s Beginning CASHFLOW Day Income. The player’s Fast Track winning target is then defined as Beginning CASHFLOW Day Income plus $50,000. The fast track mechanics are as follows:
+•
+Fast Track players normally roll two dice. If Fast Track Charity has been unlocked, they may choose to roll one, two, or three dice each turn.
+•
+Passing or landing on a Cashflow Day space grants the player’s current Cash Flow Day Income.
+•
+Fast Track investment spaces can be purchased with cash only; borrowing is not allowed. Purchasing Fast Track businesses increases Cash Flow Day Income and are removed from availability for other players. Some Fast Track opportunities are roll-based and only become claimed if the success roll is achieved.
+•
+Fast Track risk spaces impose large cash or asset shocks, such as losing all cash, paying half of current cash, losing the lowest-cash-flow asset, or paying repair costs.
+•
+The Dream space allows the player to buy their dream if they have sufficient cash.
+A.6
+Winning Conditions
+A player wins Cashflow by satisfying one of two Fast Track victory conditions: purchasing their Dream, or increasing Fast Track cash flow by at least $50,000 above the Beginning CASHFLOW Day Income.
+Appendix B
+Acquire Rule
+B.1
+Acquire Game Background
+The Acquire game is a game through which you maximize your wealth by creating, merging, and acquiring hotel chains and buying their stock. Specifically, multiple players place tiles on the board. Two tiles form a chain, and players can then buy stock in the chain. When two chains connect, the smaller chain is merged into the larger chain. Players holding stock in the smaller chain can choose to sell, trade, or keep their stock. The larger the chain size, the higher the stock value. At the end of the game, all stock is converted into cash.
+B.2
+Game Map
+The game map is a 12x9 game board. There are a total of 108 building tiles, 7 hotel chains, each hotel chain has 25 stocks, a total of 175 tickets.
+B.3
+Detailed Game Rules
+Players must buy and sell shares by observing the size and location of each chain, and considering potential merger opportunities to maximize bonuses and overall wealth. The relevant concepts in the game are as follows:
+Objective.
+Players strive to accumulate the most cash by the end of the game. The primary sources of cash include stockholder bonuses during mergers and from selling stocks when the game ends. The player with the highest total cash is declared the winner.
+Key Concepts.
+A hotel chain consists of two or more connected building tiles. Chains with 11 or more tiles are considered safe and cannot be acquired. The player who establishes a hotel chain is the founder and receives a founder’s bonus stock. When a player places a building tile connecting two or more chains, a merger occurs: the smaller chain merges into the larger one, and stockholder bonuses are distributed. These bonuses are awarded exclusively to the top two controlling stockholders of the merged chain.
+Turn Sequence.
+On each turn, a player performs three actions:
+•
+Place a building tile on its designated space, potentially founding a hotel chain, enlarging an existing chain, or triggering a merger.
+•
+Optionally buy up to three stocks from any active hotel chains.
+•
+Draw a new building tile from the pile. Mergers and corresponding stockholder bonuses are resolved immediately after tile placement.
+Stock Pricing and Bonuses.
+Stock prices are determined by the specific hotel chain and its size. During mergers, players holding stock in acquired chains may sell, trade, or retain their holdings. Bonuses are distributed based on the ranking of stockholding dominance. In case of ties among stockholders, specific rules determine how bonuses are split.
+Endgame Conditions.
+The game concludes when either all active hotel chains are safe or a hotel chain reaches 41 or more tiles. At this point, stock is converted to cash, all remaining bonuses are fully distributed, and the player with the highest cash total wins.
+Appendix C
+Monopoly Game Rule
+C.1
+Monopoly Game Background
+Monopoly is a multiplayer board game where players move around the board by rolling two dice. When you land on an unowned property, you can buy it and also trade properties with others. All properties of the same color must be collected to construct houses or hotels on them. When other players land on your property, they need to pay rent. The more buildings you have, the higher the rent will be. Every time you pass or land on the "GO" space, you collect $200. The game also includes Chance and Community Chest cards. Drawing these cards can result in a gain or loss of money, or move you to another space. Some spaces require you to pay taxes. Players can also be sent to Jail and must meet specific conditions to get out. The goal is to drive all other players into bankruptcy.
+C.2
+Game Preparation
+The board has 40 spaces, comprising 28 assets: 22 streets of 8 colors, 4 railroads, and 2 utility companies. There are also 3 chance spaces, 3 community spaces, 1 luxury tax space, and 1 income tax space. The four corners represent the starting point "GO", the Jail/Just Visiting, the Free Parking, and Go to Jail. All properties, houses, and hotels are held by the bank before the player purchases them. Each asset comes with a property deed specifying its price, mortgage value, construction costs for houses and hotels, and rent for different property grades. Specifically:
+•
+Cards: There are 32 cards, divided into 16 chance cards and 16 community chest cards.
+•
+Railways: Rent increases with the number of railroads owned: 1 railroad: $25, 2 railroads: $50, 3 railroads: $100, 4 railroads: $200. Houses cannot be built on them.
+•
+Streets: All properties of the same color must be collected before a house can be built. Buildings must be evenly distributed within the properties. Houses must be built on the properties with the fewest houses. When selling buildings, hotels must first be downgraded to 4 buildings, while houses are sold in grades. Banks repurchase properties at half price.
+•
+Utilities (Water Works and Electric Company): Rent is a multiple of the dice roll. Owning a utility costs four times the dice’s value; owning two utilities costs ten times the dice’s value. Houses cannot be built on them.
+•
+The four corner spaces: Starting at "GO" grants $200; "Jail/Just Visiting" space has no effect when passed; "Free Parking" space does not trigger any events; "Go to Jail" space will directly send the player to prison.
+C.3
+Detailed Game Rules
+Game Initialization.
+Each player starts with $1500 and rolls the dice once, determining the starting order based on the number rolled. Players move clockwise, rolling two dice each turn and moving the corresponding number of spaces along the board. If doubles are rolled in the same turn, the player gains an extra turn.
+Jail Rules.
+The following situations cause the player to enter the jail in the "Jail/Just Visiting" space and directly end the turn. Specifically: (1) Landing on the "Go to jail" space; (2) Rolling three consecutive doubles in a round; (3) Drawing the "Go Directly to Jail" card. Rules after entering jail are as follows:
+•
+Upon entering jail, the player cannot collect the $200 at the starting point.
+•
+The player cannot move while in jail. To leave jail, the player take follow actions: (1) Paying the $50 fine; (2) Using the "Get Out of Jail Free" card; (3) Rolling a double. If the player fails to roll a double for three consecutive rounds, they must either pay the fine or use the "Get Out of Jail Free" card to leave.
+•
+The player in jail can not purchase properties. They can conduct trade, upgrade buildings, collect rent, etc.
+•
+If a player starts their turn in jail, they can choose to pay the fine or use the "Get Out of Jail Free" card to exit immediately, and then roll the dice normally to move. Rolling doubles grants an extra turn. If they choose not to pay or use a card, rolling doubles allows the player to exit and move, but without an extra turn. If they do not roll doubles, the movement phase is skipped.
+Property Management Rules.
+The player can purchase it from the bank at the listed price when landing on any unowned property. If the player declines the purchase, the bank should auction the property publicly, and all players can bid. Nothing happens when they reach their own property. If the players land on an unmortgaged property owned by others, they must pay the rent. If lacking sufficient cash, they must mortgage their own properties or sell houses to raise funds. Otherwise, the players go bankrupt. If a player owns all properties of the same color group, the rent for vacant properties in that group is doubled. They may then build houses and later hotels to increase the rent. Houses must be built evenly within a group; no property can have more than one house extra compared to any other property in that same group. The specific rules for houses and hotels are as follows:
+•
+Players can purchase houses from the bank at their round. After building four homes on the same property, the player can pay the cash to replace them with a hotel.
+•
+On a property, each house represents a level of land, with a hotel representing level 5. Homes and hotels can be sold back to the bank at half the purchase price.
+•
+Unbuilt properties can be freely traded between players at agreed negotiations.
+Mortgage Rules.
+A player can mortgage property that has no buildings on it. The bank should pay them half of the property’s purchase price. To unmortgage the mortgage, the player must repay this amount plus 10% interest. While mortgaged, a property cannot collect rent. Mortgaged properties can be traded, but the player acquiring the property must pay the mortgage plus 10% interest to make the property normal. Only properties without buildings can be mortgaged. If there are buildings on the property being mortgaged, all buildings must be sold before mortgaging the property.
+Bankruptcy Rules.
+When a player owes debts to other players or the bank, that player must be able to raise enough cash to pay off the entire debt. Players unable to repay their debts are considered bankrupt and eliminated; if a bankrupt player owes the bank, they must return all their property to the bank, which then demolishes all buildings and auctions them off; if the debt is owed to another player, all property is given to that opponent, except for buildings that must be sold to the bank.
+•
+If the new owner chooses to retain the property, they must repay any mortgages held by the bank on the received property plus 10% interest.
+•
+When a player is bankrupt and has no specific creditors, the bank repossesses all their assets.
+Winning Conditions.
+The winner is determined by the total assets of the players remaining after other players have gone bankrupt, including cash, the value of owned properties and buildings calculated at the purchase price, mortgaged properties calculated at half the purchase price, and hotels calculated at the purchase price plus the value of returned houses.
+Appendix D
+Prompt Template
+We use a structured prompt for all FinBoardBench games. Each prompt consists of a stable system role, a current-state snapshot, phase-specific legal actions, and a strict JSON output standard. After each action is executed, the result is fed back into subsequent prompts, allowing the agent to update its belief state regarding assets, cash, liabilities, board positions, market events, auctions, and negotiations.
+FinBoardBench General Prompt
+System role.
+You are playing a financial board game. You must follow the rules of the current game and use only the legal actions available in the current phase.
+Prompt construction.
+Each decision prompt contains:
+•
+Static instruction:
+game objective, core financial mechanics, and related constraints.
+•
+Dynamic state:
+current player status, public board state, other players’ public information, and recent history.
+•
+Phase context:
+the active decision phase and the event that triggered it.
+•
+Action rules:
+legal actions and parameter constraints for the current phase.
+•
+Output schema:
+one strict JSON object.
+Common output rule.
+Return valid JSON only. Do not invent actions. Copy identifiers such as property IDs, chain names, asset IDs, liability IDs, and card names exactly from the prompt.
+Monopoly Prompt Template-P1
+System role.
+You are playing Monopoly. Based on the current game state, decide your next action.
+State snapshot.
+The prompt provides color-group analysis, complete map overview, players overview, previous-round actions, property ID reference, player cash, owned assets, position, jail status, jail-card holdings, current space information, auction status, fund-raising status, and available houses/hotels.
+Normal-turn actions.
+•
+BUY
+: buy the unowned property currently occupied.
+•
+UPGRADE[space_id]
+: upgrade one eligible owned property.
+•
+MORTGAGE[space_id1,...]
+: mortgage eligible undeveloped properties.
+•
+UNMORTGAGE[space_id1,...]
+: repay mortgage plus interest.
+•
+SELL_BUILDING[space_id]
+: sell one building while preserving even-building constraints.
+•
+TRADE
+: propose a trade of cash, properties, and jail cards.
+•
+USE_JAIL_CARD[card_type]
+,
+PAY_JAIL_FINE
+, or
+END_TURN
+.
+Output format.
+For non-trade actions:
+{"action": "ACTION_TYPE[parameters]", "reason": "..."}
+.
+For trade actions, output a JSON object containing the target player, offered/requested assets, offered/requested cash, offered/requested cards, and reason.
+Monopoly Managers Prompt Template-P2
+Jail manager.
+The prompt provides jail turns, cash, jail cards, map context, player overview, and previous actions. Legal actions are
+USE_JAIL_CARD[chance]
+,
+USE_JAIL_CARD[community_chest]
+,
+PAY_JAIL_FINE
+, and
+END_TURN
+.
+Fund-raising manager.
+When cash is insufficient, the prompt provides the amount needed, shortage reason, the current cash, assets, mortgage options, sell-building options, failed attempts, and global context. Legal actions focus on liquidity recovery, such as
+MORTGAGE[...]
+,
+SELL_BUILDING[...]
+, or bankruptcy when recovery is impossible.
+Auction manager.
+The prompt provides auction property, price, mortgage status, color group, rent, current bid, minimum bid, current bidder, auction round, eligible bidders, player cash, assets, and bid history. Legal actions are
+BID[amount]
+and
+PASS
+.
+Trade managers.
+The request manager decides whether to enter negotiation:
+ACCEPT
+or
+REJECT
+. The negotiation manager supports
+ACCEPT
+,
+REJECT
+, and
+COUNTER
+; counteroffers must use only owned tradable assets and cannot include properties with buildings.
+Acquire Prompt Template
+System role.
+You are playing the Acquire game. You must follow the game rules strictly and decide your next action based on the current game state. Your core goal is to maximize your total wealth by strategically building hotel chains and investing in their stocks.
+State snapshot.
+The prompt provides money, stock holdings, hand tiles, legal tile placements, board state, active chains, other players’ public information, remaining tiles, pending action, merger state, and end-game declaration eligibility.
+Phase decisions.
+•
+PLAY_TILE
+: output
+{"chosen_tile": "XX", "reason": "..."}
+.
+•
+FOUND_CHAIN
+: output
+{"chosen_chain": "CHAIN", "reason": "..."}
+.
+•
+CHOOSE_MERGER_SURVIVOR
+: output
+{"surviving_chain": "CHAIN", "reason": "..."}
+.
+•
+STOCK_DISPOSITION
+: output
+{"sell": n, "trade": n, "keep": n, "reason": "..."}
+.
+•
+BUY_STOCKS
+: output purchase list or
+end_turn
+.
+•
+DECLARE_END_GAME
+: output
+{"declare_end_game": true/false, "reason": "..."}
+.
+Key constraints.
+Safe chains cannot be merged; defunct-share trade counts must be even; stock purchases are limited by cash, availability, and turn quota.
+Cashflow Prompt Template-P1: Rat Race
+System role.
+You are playing Cashflow. In the Rat Race, your goal is to build Passive Income greater than Total Expenses so you can leave the Rat Race and enter the Fast Track.
+Financial mechanics.
+Cash is immediate liquidity. Total Income equals Salary plus Passive Income. Monthly Cash Flow equals Total Income minus Total Expenses. Bank loans increase cash but add monthly payments equal to 10% of the borrowed principal. Bankruptcy is checked at Pay Check when cash and the Monthly Cash Flow remain negative.
+State fields.
+The prompt provides player name, career, dream, cash, position, salary, expenses, passive income, assets, liabilities, charity turns, current card or offer, recent events, failed attempts, and situation analysis.
+Rat Race phases.
+•
+Career/Dream setup:
+CHOOSE_CAREER
+,
+CHOOSE_DREAM
+.
+•
+FINANCIAL_OP
+:
+REPAY_LIABILITY
+,
+BORROW_MONEY
+,
+END_FINANCIAL_OPERATION
+.
+•
+OPPORTUNITY_CHOICE
+:
+CHOOSE_SMALL_DEAL
+or
+CHOOSE_BIG_DEAL
+.
+•
+REGULAR
+:
+BUY_OPPORTUNITY
+,
+SELL_ASSET
+,
+ACCEPT_OFFER
+,
+DONATE_CHARITY
+,
+END_TURN
+.
+•
+PURCHASE_LOAN_OFFER
+,
+GLOBAL_OFFER
+, and
+BANKRUPTCY_RESOLUTION
+.
+Output format.
+Return
+{"action": "EXACT_ACTION", "parameters": {...}, "reason": "..."}
+.
+Cashflow Prompt Template-P2: Fast Track
+Fast Track transition.
+In the Fast Track, the goal changes to winning by buying your Dream or reaching the required Fast Track cash-flow goal.
+Objective.
+The player wins by buying the Dream or increasing Current Cash Flow Day Income by at least $50,000 above Beginning Cash Flow Day Income.
+State fields.
+The prompt provides current cash, Beginning Cash Flow Day Income, Current Cash Flow Day Income, additional cash flow gained, remaining win gap, Fast Track position, current square, Fast Track assets, complete Fast Track map, player overview, and charity status.
+Fast Track phases.
+•
+Dice choice:
+CHOOSE_FT_DICE_COUNT
+with dice count 1, 2, or 3 when charity is unlocked.
+•
+Action phase:
+BUY_FT_OPPORTUNITY
+,
+DONATE_FT_CHARITY
+,
+BUY_FT_DREAM
+, or
+END_FT_TURN
+.
+Output format.
+Return
+{"action": "EXACT_FAST_TRACK_ACTION", "parameters": {...}, "reason": "..."}
+. Borrowing and Rat Race debt actions are not allowed on the Fast Track.
+Appendix E
+Fault Tolerance Mechanisms
+To ensure the stable operation of the game, we have set decision validation, error feedback, and system takeover mechanisms. Every decision generated by the LLMs undergoes format parsing, action validity checks, and execution result verification. When a format, parameter, or execution error occurs, the environment feeds back the specific error type and the concrete reason to the model, thereby enabling it to make a revised decision within the same situational context. Furthermore, fault tolerance mechanisms exist with retry limits. Such as in Monopoly, the main decision-making phase permits a maximum of 5 action execution failures. Once the retry limit is reached, the environment initiates a conservative, system-enforced fallback, such as ending the turn, advancing to the next stage, and selecting a default valid option. These interventions are explicitly recorded as system-forced events to distinguish them from decisions made autonomously by the model.
+Experimental support, please
+view the build logs
+for errors. Generated by
+L
+A
+T
+E
+xml
+.
+Instructions for reporting errors
+We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below:
+Click the "Report Issue"
+(
+)
+button, located in the page header.
+Tip:
+You can select the relevant text first, to include it in your report.
+Our team has already identified
+the following issues
+. We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all.
+Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a
+list of packages that need conversion
+, and welcome
+developer contributions
+.
+We gratefully acknowledge support from
+        our
+major funders
+,
+member institutions
+,
+,
+        and all contributors.
+Major funding support from

@@ -1,0 +1,273 @@
+"""A network-disabled, research-only audit of unchanged reference policies.
+
+This runner deliberately has no provider adapter and no flag that enables one.
+All full games stop at the prespecified decision limit without an imputed winner.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import gzip
+import hashlib
+import io
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+HERE = Path(__file__).resolve().parent
+ROOT = next(p for p in HERE.parents if (p / "contracts/data/board.json").is_file())
+for package in ("engine", "arena", "telemetry"):
+    sys.path.insert(0, str(ROOT / f"python/packages/{package}/src"))
+
+NETWORK_ATTEMPTS: list[str] = []
+
+
+def deny_network(event: str, args: tuple[Any, ...]) -> None:
+    if event in {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname"}:
+        NETWORK_ATTEMPTS.append(event)
+        raise RuntimeError("Offline audit forbids network access")
+
+
+sys.addaudithook(deny_network)
+
+from monopoly_arena.baselines import BASELINE_IDS, choose_baseline_action  # noqa: E402
+from monopoly_arena.fixture_validation import validate_fixture_action  # noqa: E402
+from monopoly_engine import Engine  # noqa: E402
+
+
+def canonical(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+
+
+def digest(value: Any) -> str:
+    return hashlib.sha256(canonical(value)).hexdigest()
+
+
+def file_digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def save_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def source_manifest() -> dict[str, str]:
+    paths = []
+    for folder in ("python/packages/engine/src", "python/packages/arena/src", "contracts/data", "contracts/micro/scenarios"):
+        paths.extend(p for p in (ROOT / folder).rglob("*") if p.is_file() and p.suffix in {".py", ".json"})
+    return {str(p.relative_to(ROOT)): file_digest(p) for p in sorted(paths)}
+
+
+def load_protocol(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text())
+    pilot = data["offline_pilot"]
+    if pilot["network_allowed"] or pilot["provider_calls_allowed"] or pilot["spending_cap_usd"] != 0:
+        raise ValueError("This runner supports only zero-spend, no-provider execution")
+    if data["paid_run_gate"]["enabled"]:
+        raise ValueError("No paid-run implementation exists in this runner")
+    if pilot["engine_max_turns"] is not None:
+        raise ValueError("Pilot censoring is external; engine max_turns must be null")
+    if not isinstance(pilot["decision_limit"], int) or not 1 <= pilot["decision_limit"] <= 10000:
+        raise ValueError("A positive bounded decision limit is required")
+    if set(pilot["policy_ids"]) != BASELINE_IDS:
+        raise ValueError("Policy set differs from the prespecified six")
+    if any(p not in BASELINE_IDS for p in pilot["mixed_roster"]):
+        raise ValueError("Unknown mixed-roster policy")
+    if len(pilot["mixed_roster"]) != 4:
+        raise ValueError("Pilot requires four players")
+    if not all(isinstance(s, int) for s in pilot["seeds"]):
+        raise ValueError("Seeds must be integers")
+    return data
+
+
+def gzip_writer(path: Path) -> io.TextIOWrapper:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = path.open("wb")
+    return io.TextIOWrapper(gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0), encoding="utf-8")
+
+
+def run_game(run_id: str, seed: int, roster: list[str], cap: int, directory: Path) -> dict[str, Any]:
+    if len(roster) != 4 or any(p not in BASELINE_IDS for p in roster):
+        raise ValueError("Four known policies are required")
+    directory.mkdir(parents=True, exist_ok=True)
+    players = [{"player_id": f"p{i + 1}", "name": p} for i, p in enumerate(roster)]
+    engine = Engine(seed=seed, players=players, run_id=run_id, max_turns=None, ts_step_ms=1)
+    policies = {p["player_id"]: roster[i] for i, p in enumerate(players)}
+    save_json(directory / "run_config.json", {"run_id": run_id, "seed": seed, "players": players, "policies": policies, "engine_max_turns": None, "decision_limit": cap, "source": "new offline reference-policy pilot"})
+    save_json(directory / "initial_snapshot.json", engine.get_snapshot())
+    event_hash = hashlib.sha256()
+    action_hash = hashlib.sha256()
+    events_count = applied = 0
+    errors: list[dict[str, Any]] = []
+    counts: Counter[str] = Counter()
+    types: Counter[str] = Counter()
+    per_policy: dict[str, Counter[str]] = {p: Counter() for p in set(roster)}
+    ended = None
+    status = "decision_censored"
+    iterations = 0
+    with gzip_writer(directory / "events.jsonl.gz") as ew, gzip_writer(directory / "actions.jsonl.gz") as aw, gzip_writer(directory / "decisions.jsonl.gz") as dw:
+        def record_events(events: list[dict[str, Any]]) -> None:
+            nonlocal events_count, ended
+            for event in events:
+                line = canonical(event) + b"\n"
+                event_hash.update(line)
+                ew.write(line.decode())
+                events_count += 1
+                if event["type"] == "GAME_ENDED":
+                    ended = event["payload"]
+
+        while applied < cap:
+            iterations += 1
+            if iterations > cap * 10:
+                status = "progress_guard"
+                break
+            _, events, decision, _ = engine.advance_until_decision(max_steps=1)
+            record_events(events)
+            if engine.is_game_over():
+                status = "terminated"
+                break
+            if decision is None:
+                if not events:
+                    status = "no_progress"
+                    break
+                continue
+            policy = policies[decision["player_id"]]
+            action = choose_baseline_action(decision, policy)
+            validation = engine.validate_action_for_decision(action, decision)
+            dw.write(canonical({"decision": decision, "policy": policy, "generated_action": action, "validation_errors": validation}).decode() + "\n")
+            if validation:
+                errors.append({"decision_id": decision["decision_id"], "player_id": decision["player_id"], "policy": policy, "action": action, "errors": validation})
+                status = "invalid_action"
+                break
+            _, new_events, _, _ = engine.apply_action(action)
+            record_events(new_events)
+            line = canonical(action) + b"\n"
+            aw.write(line.decode())
+            action_hash.update(line)
+            applied += 1
+            counts[action["action"]] += 1
+            types[decision["decision_type"]] += 1
+            per_policy[policy][action["action"]] += 1
+            if engine.is_game_over():
+                status = "terminated"
+                break
+        # A final terminal check is allowed without initiating another decision.
+        if status == "decision_censored" and engine._pending_decision is None and engine._active_player_count() <= 1:
+            _, events, _, _ = engine.advance_until_decision(max_steps=1)
+            record_events(events)
+            if engine.is_game_over():
+                status = "terminated"
+    snap = engine.get_snapshot()
+    save_json(directory / "final_snapshot.json", snap)
+    winner = ended.get("winner_player_id") if ended is not None and status == "terminated" else None
+    summary = {"run_id": run_id, "seed": seed, "roster": roster, "status": status, "decisions_applied": applied, "events": events_count, "last_turn_index": snap["turn_index"], "alive": sum(not p["bankrupt"] for p in snap["players"]), "winner_player_id": winner, "winner_policy": policies.get(winner), "termination": ended, "action_counts": dict(counts), "decision_types": dict(types), "action_counts_by_policy": {p: dict(c) for p, c in per_policy.items()}, "errors": errors, "event_stream_sha256": event_hash.hexdigest(), "action_stream_sha256": action_hash.hexdigest(), "final_snapshot_sha256": digest(snap), "fallbacks": 0, "provider_calls": 0}
+    save_json(directory / "summary.json", summary)
+    return summary
+
+
+def audit_scenarios(out: Path) -> dict[str, Any]:
+    rows = []
+    ref_rows = []
+    scenario_rows = []
+    criterion_types: Counter[str] = Counter()
+    categories: Counter[str] = Counter()
+    difficulties: Counter[str] = Counter()
+    refs_invalid = []
+    for path in sorted((ROOT / "contracts/micro/scenarios").glob("*.json")):
+        scenario = json.loads(path.read_text())
+        decision = scenario["decision_point"]
+        sid = scenario["scenario_id"]
+        categories[scenario["category"]] += 1
+        difficulties[scenario["difficulty"]] += 1
+        rubric = scenario["evaluation"]["rubric"]
+        total = sum(float(x["max_points"]) for x in rubric)
+        keyword = sum(float(x["max_points"]) for x in rubric if x["type"] == "private_thought_mentions")
+        criterion_types.update(x["type"] for x in rubric)
+        refs = [("reference", scenario["reference_policy"]["action"])]
+        refs += [(f"preferred_{i}", x) for i, x in enumerate(scenario["evaluation"].get("preferred_actions", []))]
+        for role, action in refs:
+            errors = validate_fixture_action(decision, action)
+            record = {"scenario_id": sid, "role": role, "action": action, "errors": errors}
+            ref_rows.append(record)
+            if errors:
+                refs_invalid.append(record)
+        outputs = []
+        for policy in sorted(BASELINE_IDS):
+            action = choose_baseline_action(decision, policy)
+            errors = validate_fixture_action(decision, action)
+            repeat_equal = action == choose_baseline_action(decision, policy)
+            record = {"scenario_id": sid, "category": scenario["category"], "policy": policy, "action": action, "economic_legality_errors": errors, "repeat_equal": repeat_equal, "source_sha256": file_digest(path)}
+            rows.append(record)
+            outputs.append({"action": action["action"], "args": action["args"]})
+        scenario_rows.append({"scenario_id": sid, "category": scenario["category"], "difficulty": scenario["difficulty"], "decision_type": decision["decision_type"], "source_path": str(path.relative_to(ROOT)), "source_sha256": file_digest(path), "rubric_total": total, "private_keyword_points": keyword, "private_keyword_fraction": keyword / total, "all_policy_actions_equal": len({digest(x) for x in outputs}) == 1, "research_review_status": scenario.get("research_metadata", {}).get("review_status"), "counterfactual_pair_id": scenario.get("research_metadata", {}).get("counterfactual_pair_id")})
+    by_policy = {}
+    for p in sorted(BASELINE_IDS):
+        subset = [x for x in rows if x["policy"] == p]
+        by_policy[p] = {"cases": len(subset), "legal": sum(not x["economic_legality_errors"] for x in subset), "invalid": sum(bool(x["economic_legality_errors"]) for x in subset), "repeat_equal": sum(x["repeat_equal"] for x in subset), "action_counts": dict(Counter(x["action"]["action"] for x in subset))}
+    summary = {"scenarios": len(scenario_rows), "policy_scenario_choices": len(rows), "reference_preferred_choices": len(ref_rows), "invalid_reference_preferred": len(refs_invalid), "categories": dict(categories), "difficulties": dict(difficulties), "rubric_criterion_types": dict(criterion_types), "scenarios_with_private_keyword_reward": sum(x["private_keyword_points"] > 0 for x in scenario_rows), "keyword_fraction_range": [min(x["private_keyword_fraction"] for x in scenario_rows), max(x["private_keyword_fraction"] for x in scenario_rows)], "all_six_actions_equal_scenarios": sum(x["all_policy_actions_equal"] for x in scenario_rows), "by_policy": by_policy, "interpretation": "Economic legality and policy coverage only; hand-authored preferred actions and keyword rewards are not independently validated strategic utility"}
+    save_json(out / "scenario_rows.json", scenario_rows)
+    save_json(out / "baseline_fixture_actions.json", rows)
+    save_json(out / "reference_fixture_actions.json", ref_rows)
+    save_json(out / "scenario_summary.json", summary)
+    return summary
+
+
+def costs(out: Path) -> dict[str, Any]:
+    path = ROOT / "docs/research_raw/paper_phase3_2026-10-29/opus/exhibits/cost_usage.csv"
+    rows = list(csv.DictReader(path.open()))
+    result = {"source": str(path.relative_to(ROOT)), "source_sha256": file_digest(path), "known_total_usd_rounded_source": round(sum(float(x["known_cost_usd"]) for x in rows), 2), "attempts_missing_cost": sum(int(x["attempts_missing_cost"]) for x in rows), "rows": [{"model": x["openrouter_model_id"], "decisions": int(x["decisions"]), "own_model_attempts": int(x["own_model_attempts"]), "attempts_missing_cost": int(x["attempts_missing_cost"]), "known_cost_usd": float(x["known_cost_usd"]), "known_cost_per_decision_lower_bound_usd": float(x["known_cost_usd"]) / int(x["decisions"])} for x in rows], "is_current_price_quote": False, "is_safe_budget_bound": False, "estimation_method": "Before any provider campaign, retrieve current model-specific input/output prices and maximum billable token limits; reserve a worst-case amount for every attempt including retries; atomically subtract reservations from the approved total; refuse a call if its bound or price is unknown. Reconcile provider costs and retain missing-cost lower bounds. Historical means describe old workloads, not a spending guarantee."}
+    save_json(out / "cost_design.json", result)
+    return result
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--protocol", type=Path, default=HERE / "protocol.json")
+    parser.add_argument("--output", type=Path, default=HERE / "results")
+    parser.add_argument("--fixtures-only", action="store_true")
+    args = parser.parse_args()
+    protocol = load_protocol(args.protocol)
+    pilot = protocol["offline_pilot"]
+    out = args.output.resolve()
+    if out.exists() and any(out.iterdir()):
+        raise FileExistsError("Refusing to overwrite an existing result directory")
+    out.mkdir(parents=True, exist_ok=True)
+    sources = source_manifest()
+    save_json(out / "sources_before.json", sources)
+    save_json(out / "protocol_frozen.json", protocol)
+    save_json(out / "registration.json", {"protocol_sha256": file_digest(args.protocol), "runner_sha256": file_digest(Path(__file__)), "recorded_before_execution": True, "externally_preregistered": False})
+    scenarios = audit_scenarios(out)
+    games = []
+    repeats = []
+    if not args.fixtures_only:
+        for policy in pilot["policy_ids"]:
+            for seed in pilot["seeds"]:
+                run_id = f"homogeneous-{policy}-{seed}"
+                games.append(run_game(run_id, seed, [policy] * 4, pilot["decision_limit"], out / "games" / run_id))
+        for rotation in pilot["mixed_rotations"]:
+            roster = pilot["mixed_roster"][rotation:] + pilot["mixed_roster"][:rotation]
+            for seed in pilot["seeds"]:
+                run_id = f"mixed-r{rotation}-{seed}"
+                games.append(run_game(run_id, seed, roster, pilot["decision_limit"], out / "games" / run_id))
+        assert len(games) == pilot["primary_games"]
+        lookup = {x["run_id"]: x for x in games}
+        for run_id in pilot["repeat_runs"]:
+            first = lookup[run_id]
+            second = run_game(run_id, first["seed"], first["roster"], pilot["decision_limit"], out / "repeats" / run_id)
+            repeats.append({"run_id": run_id, "whole_summary_equal": first == second, "events_equal": first["event_stream_sha256"] == second["event_stream_sha256"], "actions_equal": first["action_stream_sha256"] == second["action_stream_sha256"], "final_snapshot_equal": first["final_snapshot_sha256"] == second["final_snapshot_sha256"]})
+            assert all(v for k, v in repeats[-1].items() if k != "run_id")
+    save_json(out / "game_summaries.json", games)
+    save_json(out / "repeat_checks.json", repeats)
+    cost = costs(out)
+    assert source_manifest() == sources
+    assert not NETWORK_ATTEMPTS
+    summary = {"status": "completed", "scope": "new offline reference-policy quality pilot, not LLM capability evaluation", "primary_games": len(games), "repeat_runs": len(repeats), "statuses": dict(Counter(x["status"] for x in games)), "total_applied_primary_decisions": sum(x["decisions_applied"] for x in games), "total_primary_events": sum(x["events"] for x in games), "invalid_games": [x["run_id"] for x in games if x["errors"]], "provider_calls": 0, "network_attempts": len(NETWORK_ATTEMPTS), "scenario_summary": scenarios, "historical_cost_known_usd": cost["known_total_usd_rounded_source"], "protected_source_files": len(sources), "source_hashes_unchanged": True, "protocol_sha256": file_digest(args.protocol), "runner_sha256": file_digest(Path(__file__))}
+    save_json(out / "summary.json", summary)
+    print(json.dumps(summary, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

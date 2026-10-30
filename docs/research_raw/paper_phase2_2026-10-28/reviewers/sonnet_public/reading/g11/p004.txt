@@ -1,0 +1,304 @@
+# game 11 page 4  decisions #269..#326  seats: p1=Argon, p2=Grok, p3=Opus, p4=Sol
+
+#269 t104 p4/Sol TRESP  $[p1:0 p2:535 p3:0 p4:*363]
+  STATE: p1/Argon $0 BV0 BANKRUPT  | - ## p2/Grok $535 BV5665  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN1,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~ ## p3/Opus $0 BV0 BANKRUPT  | - ## p4/Sol $363 BV2893 GOOJ1  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR0 YL:MAR0 GR:PAC0,NCA0 RR:RDG,PRR UT:ELE,WW
+  ctx: TRADE from p2 idx0 (max 20): you GIVE GOOJx1 / you GET nothing
+  > reject_trade
+  "I'll keep the card. Jail is looking comfortable with those blue hotels."
+#270 t104 p2/Grok POST  $[p1:0 p2:*535 p3:0 p4:363]
+  STATE: p1/Argon $0 BV0 BANKRUPT  | - ## p2/Grok $535 BV5665  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN1,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~ ## p3/Opus $0 BV0 BANKRUPT  | - ## p4/Sol $363 BV2893 GOOJ1  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR0 YL:MAR0 GR:PAC0,NCA0 RR:RDG,PRR UT:ELE,WW
+  ctx: buildable=KEN sellable=IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 1+2; p4->GO_TO_JAIL; p4->JAIL; JAILED p4 (GO_TO_JAIL); p2 rolls 5+1; p2->NYA
+#271 t106 p2/Grok POST  $[p1:0 p2:*535 p3:0 p4:363]  JAILED:p4
+  ctx: buildable=KEN sellable=IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Jail only delays the board. Your roll."
+#272 t107 p4/Sol JAIL  $[p1:0 p2:535 p3:0 p4:*363]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=True
+  > roll_for_doubles
+  "I'll try doubles. The hotels can wait."
+  post: p4 rolls 5+4; p2 rolls 5+4; p2->WW; RENT p2>p4 $90 @WW
+#273 t108 p2/Grok POST  $[p1:0 p2:*445 p3:0 p4:453]  JAILED:p4
+  H: p2/Grok $445 BV5575  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN1,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: buildable=KEN sellable=IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > sell_houses_or_hotel IND-1
+  "Housekeeping."
+  post: $p2 +75 SELL_BUILDING; HOUSE-1 p2 IND
+#274 t108 p2/Grok POST  $[p1:0 p2:*520 p3:0 p4:453]  JAILED:p4
+  ctx: buildable=KEN,IND sellable=ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Still standing. Your roll."
+#275 t109 p4/Sol JAIL  $[p1:0 p2:520 p3:0 p4:*453]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=True
+  > roll_for_doubles
+  "I'll try doubles. Still collecting rent from here."
+  post: p4 rolls 2+4; p2 rolls 3+2; p2->COMMUNITY_CHEST; CARD p2 CO:BANK_ERROR_COLLECT_200; $p2 +200 BANK_ERROR_COLLECT_200
+#276 t110 p2/Grok POST  $[p1:0 p2:*720 p3:0 p4:453]  JAILED:p4
+  ctx: buildable=KEN,IND sellable=ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Still standing. Your roll."
+#277 t111 p4/Sol JAIL  $[p1:0 p2:720 p3:0 p4:*453]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=True
+  > use_get_out_of_jail_card
+  "Time to use my card."
+  post: p4 rolls 3+6; p4->NYA
+#278 t111 p4/Sol POST  $[p1:0 p2:720 p3:0 p4:*453]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 4+6; p2->BAL (passGO); GO p2+200; RENT p2>p4 $450 @BAL
+#279 t112 p2/Grok POST  $[p1:0 p2:*470 p3:0 p4:903]
+  ctx: buildable=KEN,IND sellable=ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 6+6 DBL; p4->PAC
+#280 t113 p4/Sol POST  $[p1:0 p2:470 p3:0 p4:*903]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p4 rolls 6+1; p4->LUXURY_TAX; $p4 -100 TAX_LUXURY
+#281 t114 p4/Sol POST  $[p1:0 p2:470 p3:0 p4:*803]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 1+3; p2->CHANCE; CARD p2 CH:BANK_PAYS_YOU_DIVIDEND_50; $p2 +50 BANK_PAYS_YOU_DIVIDEND_50
+#282 t115 p2/Grok POST  $[p1:0 p2:*520 p3:0 p4:803]
+  ctx: buildable=KEN,IND sellable=ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 4+6; p4->VER (passGO); GO p4+200
+#283 t116 p4/Sol POST  $[p1:0 p2:520 p3:0 p4:*1003]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 4+6; p2->COMMUNITY_CHEST; CARD p2 CO:CONSULTANCY_FEE_COLLECT_25; $p2 +25 CONSULTANCY_FEE_COLLECT_25
+#284 t117 p2/Grok POST  $[p1:0 p2:*545 p3:0 p4:1003]
+  H: p2/Grok $545 BV5525  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN1,IND1,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: buildable=KEN,IND sellable=ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > build_houses_or_hotel KEN+1 IND+1
+  "A little work on the reds."
+  post: $p2 -300 BUILD; HOUSE+1 p2 KEN; HOUSE+1 p2 IND
+#285 t117 p2/Grok POST  $[p1:0 p2:*245 p3:0 p4:1003]
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 1+1 DBL; p4->JAIL
+#286 t118 p4/Sol POST  $[p1:0 p2:245 p3:0 p4:*1003]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p4 rolls 3+6; p4->NYA
+#287 t119 p4/Sol POST  $[p1:0 p2:245 p3:0 p4:*1003]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 1+6; p2->ILL
+#288 t120 p2/Grok POST  $[p1:0 p2:*245 p3:0 p4:1003]
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn  [ATT illogical(std)>valid(std)]
+  "Your roll."
+  post: p4 rolls 6+3; p4->WW
+#289 t121 p4/Sol POST  $[p1:0 p2:245 p3:0 p4:*1003]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 6+4; p2->PEA
+#290 t122 p2/Grok POST  $[p1:0 p2:*245 p3:0 p4:1003]
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 1+6; p4->SL
+#291 t123 p4/Sol POST  $[p1:0 p2:245 p3:0 p4:*1003]
+  ctx: sellable=MED,BAL unmortgageable=STC mortgageable#9 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 5+2; p2->MED (passGO); GO p2+200; RENT p2>p4 $250 @MED
+#292 t124 p2/Grok POST  $[p1:0 p2:*195 p3:0 p4:1253]
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 2+2 DBL; p4->BW
+#293 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1253]
+  H: p4/Sol $1253 BV3783  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR0 YL:MAR0 GR:PAC0,NCA0 RR:RDG,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$747 mortgageable=RDG,ORI,ELE,VIR,PRR,WW,MAR,PAC,NCA sellable=MED,BAL
+  > mortgage_property PAC
+  "Raising the cash."
+  post: MORT p4 PAC +$150
+#294 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1403]
+  H: p4/Sol $1403 BV3783  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR0 YL:MAR0 GR:PAC~0,NCA0 RR:RDG,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$597 mortgageable=RDG,ORI,ELE,VIR,PRR,WW,MAR,NCA sellable=MED,BAL
+  > mortgage_property NCA
+  "Raising the balance."
+  post: MORT p4 NCA +$150
+#295 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1553]
+  H: p4/Sol $1553 BV3783  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR0 YL:MAR0 GR:PAC~0,NCA~0 RR:RDG,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$447 mortgageable=RDG,ORI,ELE,VIR,PRR,WW,MAR sellable=MED,BAL
+  > mortgage_property MAR
+  "Mortgaging Marvin Gardens."
+  post: MORT p4 MAR +$140
+#296 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1693]
+  H: p4/Sol $1693 BV3783  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$307 mortgageable=RDG,ORI,ELE,VIR,PRR,WW sellable=MED,BAL
+  > mortgage_property VIR
+  "Mortgaging Virginia."
+  post: MORT p4 VIR +$80
+#297 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1773]
+  H: p4/Sol $1773 BV3783  | BR:MEDH,BALH LB:ORI0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$227 mortgageable=RDG,ORI,ELE,PRR,WW sellable=MED,BAL
+  > mortgage_property ORI
+  "Mortgaging Oriental."
+  post: MORT p4 ORI +$50
+#298 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1823]
+  H: p4/Sol $1823 BV3783  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$177 mortgageable=RDG,ELE,PRR,WW sellable=MED,BAL
+  > mortgage_property RDG
+  "Mortgaging Reading."
+  post: MORT p4 RDG +$100
+#299 t125 p4/Sol LIQ  $[p1:0 p2:195 p3:0 p4:*1923]
+  H: p4/Sol $1923 BV3783  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG~,PRR UT:ELE,WW ## p2/Grok $195 BV5475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $2000 to p2 (RENT) shortfall=$77 mortgageable=ELE,PRR,WW sellable=MED,BAL
+  > mortgage_property PRR
+  "Covering the balance."
+  post: MORT p4 PRR +$100; RENT p4>p2 $2000 @BW
+#300 t125 p4/Sol POST  $[p1:0 p2:2195 p3:0 p4:*23]
+  STATE: p1/Argon $0 BV0 BANKRUPT  | - ## p2/Grok $2195 BV7475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~ ## p3/Opus $0 BV0 BANKRUPT  | - ## p4/Sol $23 BV1783  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG~,PRR~ UT:ELE,WW
+  ctx: sellable=MED,BAL mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p4 rolls 2+5; p4->ORI (passGO); GO p4+200
+#301 t126 p4/Sol POST  $[p1:0 p2:2195 p3:0 p4:*223]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 2+6; p2->CON
+#302 t127 p2/Grok POST  $[p1:0 p2:*2195 p3:0 p4:223]
+  H: p2/Grok $2195 BV7475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN2,IND2,ILL2 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > build_houses_or_hotel KEN+1 IND+1 ILL+1
+  "Improving the reds."
+  post: $p2 -450 BUILD; HOUSE+1 p2 KEN; HOUSE+1 p2 IND; HOUSE+1 p2 ILL
+#303 t127 p2/Grok POST  $[p1:0 p2:*1745 p3:0 p4:223]
+  H: p2/Grok $1745 BV7475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN3,IND3,ILL3 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > build_houses_or_hotel KEN+1 IND+1 ILL+1
+  "Four houses on the reds."
+  post: $p2 -450 BUILD; HOUSE+1 p2 KEN; HOUSE+1 p2 IND; HOUSE+1 p2 ILL
+#304 t127 p2/Grok POST  $[p1:0 p2:*1295 p3:0 p4:223]
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 3+2; p4->STC
+#305 t128 p4/Sol POST  $[p1:0 p2:1295 p3:0 p4:*223]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 3+3 DBL; p2->PRR
+#306 t129 p2/Grok POST  $[p1:0 p2:*1295 p3:0 p4:223]
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p2 rolls 3+5; p2->IND
+#307 t130 p2/Grok POST  $[p1:0 p2:*1295 p3:0 p4:223]
+  H: p2/Grok $1295 BV7475  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KEN4,IND4,ILL4 YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: buildable=KEN,IND,ILL sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > build_houses_or_hotel KEN+1(HOTEL) IND+1(HOTEL) ILL+1(HOTEL)
+  "Upgrading the reds."
+  post: $p2 -450 BUILD; HOTEL p2 KEN; HOTEL p2 IND; HOTEL p2 ILL
+#308 t130 p2/Grok POST  $[p1:0 p2:*845 p3:0 p4:223]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 1+3; p4->PRR
+#309 t131 p4/Sol POST  $[p1:0 p2:845 p3:0 p4:*223]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 5+3; p2->PAC
+#310 t132 p2/Grok POST  $[p1:0 p2:*845 p3:0 p4:223]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 6+1; p4->CHANCE; CARD p4 CH:GO_TO_NEAREST_RAILROAD_B; p4->BO
+#311 t133 p4/Sol POST  $[p1:0 p2:845 p3:0 p4:*223]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 1+1 DBL; p2->COMMUNITY_CHEST; CARD p2 CO:ADVANCE_TO_GO; p2->GO (passGO); GO p2+200
+#312 t134 p2/Grok POST  $[p1:0 p2:*1045 p3:0 p4:223]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p2 rolls 1+4; p2->RDG
+#313 t135 p2/Grok POST  $[p1:0 p2:*1045 p3:0 p4:223]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 4+3; p4->NCA
+#314 t136 p4/Sol POST  $[p1:0 p2:1045 p3:0 p4:*223]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 4+3; p2->ELE; RENT p2>p4 $70 @ELE
+#315 t137 p2/Grok POST  $[p1:0 p2:*975 p3:0 p4:293]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 3+6; p4->MED (passGO); GO p4+200
+#316 t138 p4/Sol POST  $[p1:0 p2:975 p3:0 p4:*493]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 1+4; p2->COMMUNITY_CHEST; CARD p2 CO:INHERIT_100; $p2 +100 INHERIT_100
+#317 t139 p2/Grok POST  $[p1:0 p2:*1075 p3:0 p4:493]
+  H: p2/Grok $1075 BV7705  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KENH,INDH,ILLH YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~ ## p4/Sol $493 BV2253  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG~,PRR~ UT:ELE,WW
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > propose_trade to p4: OFFER PEA for REQUEST $400
+  "Pennsylvania Avenue is mortgaged and useless to me — greens are yours. $400 cash and it's yours."
+#318 t139 p4/Sol TRESP  $[p1:0 p2:1075 p3:0 p4:*493]
+  H: p4/Sol $493 BV2253  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG~,PRR~ UT:ELE,WW ## p2/Grok $1075 BV7705  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KENH,INDH,ILLH YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: TRADE from p2 idx0 (max 20): you GIVE $400 / you GET PEA
+  > counter_trade: OFFER PAC+NCA for REQUEST $900
+  "I need liquidity, not another mortgaged deed. $900 buys my two greens and completes your set."
+#319 t139 p2/Grok TRESP  $[p1:0 p2:*1075 p3:0 p4:493]
+  H: p2/Grok $1075 BV7705  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KENH,INDH,ILLH YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~ ## p4/Sol $493 BV2253  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG~,PRR~ UT:ELE,WW
+  ctx: TRADE from p4 idx1 (max 20): you GIVE $900 / you GET PAC+NCA || hist: p2:PEA>$400
+  > reject_trade
+  "No. $900 for two mortgaged greens leaves me unable to develop them and hands you the cash to survive my hotels. Deal's dead."
+#320 t139 p2/Grok POST  $[p1:0 p2:*1075 p3:0 p4:493]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 4+2; p4->CHANCE; CARD p4 CH:GO_BACK_3_SPACES; p4->INCOME_TAX; $p4 -200 TAX_INCOME
+#321 t140 p4/Sol POST  $[p1:0 p2:1075 p3:0 p4:*293]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 2+4; p2->IND
+#322 t141 p2/Grok POST  $[p1:0 p2:*1075 p3:0 p4:293]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 3+3 DBL; p4->JAIL
+#323 t142 p4/Sol POST  $[p1:0 p2:1075 p3:0 p4:*293]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p4 rolls 3+6; p4->NYA
+#324 t143 p4/Sol POST  $[p1:0 p2:1075 p3:0 p4:*293]
+  ctx: sellable=MED,BAL unmortgageable=RDG,ORI,STC,VIR,PRR,MAR,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Your roll."
+  post: p2 rolls 3+1; p2->VEN
+#325 t144 p2/Grok POST  $[p1:0 p2:*1075 p3:0 p4:293]
+  ctx: sellable=KEN,IND,ILL,PKP,BW unmortgageable=VER,CON,STA,STJ,TEN,NYA,BO,VEN,PEA,SL mortgageable#0 trade_with=p4
+  > end_turn
+  "Your roll."
+  post: p4 rolls 2+3; p4->ILL
+#326 t145 p4/Sol LIQ  $[p1:0 p2:1075 p3:0 p4:*293]
+  H: p4/Sol $293 BV2053  | BR:MEDH,BALH LB:ORI~0 PK:STC~0,VIR~0 YL:MAR~0 GR:PAC~0,NCA~0 RR:RDG~,PRR~ UT:ELE,WW ## p2/Grok $1075 BV7705  | LB:VER~0,CON~0 PK:STA~0 OR:STJ~0,TEN~0,NYA~0 RD:KENH,INDH,ILLH YL:VEN~0 GR:PEA~0 DB:PKPH,BWH RR:BO~,SL~
+  ctx: OWES $1100 to p2 (RENT) shortfall=$807 mortgageable=ELE,WW sellable=MED,BAL
+  > declare_bankruptcy
+  "I can't cover the rent even by liquidating everything. Good game."
+  post: $p4 -293 BANKRUPTCY_CASH; $p2 +293 BANKRUPTCY_CASH; $p4 +0 BANKRUPTCY; BUY p2 MED $0; BUY p2 BAL $0; BUY p2 RDG $0; BUY p2 ORI $0; BUY p2 STC $0; BUY p2 ELE $0; BUY p2 VIR $0; BUY p2 PRR $0; BUY p2 WW $0; BUY p2 MAR $0; BUY p2 PAC $0; BUY p2 NCA $0; GAME-ENDED BANKRUPTCY winner=p2

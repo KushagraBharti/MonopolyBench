@@ -1,0 +1,429 @@
+# game 12 page 4  decisions #253..#336  seats: p1=Grok, p2=Opus, p3=Sol, p4=Argon
+
+#253 t103 p2/Opus POST  $[p1:0 p2:*226 p3:0 p4:751]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $226 BV6796  | BR:BAL~0 LB:ORI1,VER0,CON1 PK:STC2,STA2,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL2 YL:ATL0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL UT:ELE~,WW~ ## p3/Sol $0 BV0 BANKRUPT  | - ## p4/Argon $751 BV1851  | BR:MED0 OR:NYA0 YL:VEN0,MAR0 GR:NCA0
+  H: p2/Opus $226 BV6796  | BR:BAL~0 LB:ORI1,VER0,CON1 PK:STC2,STA2,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL2 YL:ATL0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL UT:ELE~,WW~
+  ctx: buildable=VER,STC,STA,KEN,IND,ILL,PKP,BW sellable=ORI,CON,VIR,KEN,IND,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,WW,PEA mortgageable#4 trade_with=p4
+  > build_houses_or_hotel ILL+1  [ATT refused(std)>valid(nothought)]
+  "Reds getting stronger. Watch your step, Gemini."
+  post: $p2 -150 BUILD; HOUSE+1 p2 ILL
+#254 t103 p2/Opus POST  $[p1:0 p2:*76 p3:0 p4:751]
+  H: p2/Opus $76 BV6796  | BR:BAL~0 LB:ORI1,VER0,CON1 PK:STC2,STA2,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL3 YL:ATL0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL UT:ELE~,WW~
+  ctx: buildable=VER sellable=ORI,CON,VIR,ILL,PKP,BW unmortgageable=BAL mortgageable#4 trade_with=p4
+  > build_houses_or_hotel VER+1  [ATT refused(std)>valid(nothought)]
+  "Light blues all evened out now."
+  post: $p2 -50 BUILD; HOUSE+1 p2 VER
+#255 t103 p2/Opus POST  $[p1:0 p2:*26 p3:0 p4:751]
+  ctx: sellable=ORI,VER,CON,VIR,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Mind the reds and dark blues."
+  post: p4 rolls 4+5; p4->STJ
+#256 t104 p4/Argon POST  $[p1:0 p2:26 p3:0 p4:*751]
+  ctx: mortgageable#5 trade_with=p2
+  > end_turn
+  "Safely past the Pinks. Your roll, Claude."
+  post: p2 rolls 1+2; p2->BAL
+#257 t105 p2/Opus POST  $[p1:0 p2:*26 p3:0 p4:751]
+  ctx: sellable=ORI,VER,CON,VIR,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Three-quarters of the board has houses on it now. Good luck."
+  post: p4 rolls 5+1; p4->CHANCE; CARD p4 CH:BANK_PAYS_YOU_DIVIDEND_50; $p4 +50 BANK_PAYS_YOU_DIVIDEND_50
+#258 t106 p4/Argon POST  $[p1:0 p2:26 p3:0 p4:*801]
+  ctx: mortgageable#5 trade_with=p2
+  > end_turn
+  "Safely past the Reds. Your roll, Claude."
+  post: p2 rolls 5+4; p2->ELE
+#259 t107 p2/Opus POST  $[p1:0 p2:*26 p3:0 p4:801]
+  ctx: sellable=ORI,VER,CON,VIR,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Nearly every street has houses on it now. Good luck."
+  post: p4 rolls 5+4; p4->PAC
+#260 t108 p4/Argon BUY?  $[p1:0 p2:26 p3:0 p4:*801]
+  ctx: land PAC $300 grp=GREEN own 1/3 rent0=26
+  > start_auction
+  "Let's send Pacific Avenue to auction and get a discount."
+  post: AUC-START by p4 on PAC
+#261 t108 p2/Opus AUCT  $[p1:0 p2:*26 p3:0 p4:801]
+  ctx: AUC PAC hi=$0 leader=None min=1 active=p2,p4 n=0
+  > bid_auction $10  [ATT refused(std)>valid(nothought)]
+  "No discount today, Gemini. $10."
+#262 t108 p4/Argon AUCT  $[p1:0 p2:26 p3:0 p4:*801]
+  ctx: AUC PAC hi=$10 leader=p2 min=11 active=p2,p4 n=1
+  > bid_auction $27
+  "$27 for Pacific Avenue."
+#263 t108 p2/Opus AUCT  $[p1:0 p2:*26 p3:0 p4:801]
+  ctx: AUC PAC hi=$27 leader=p4 min=28 active=p2,p4 n=2
+  > drop_out  [ATT refused(std)>valid(nothought)]
+  "Take it, Gemini. Greens are useless without Pennsylvania, and that one's mine."
+  post: BUY p4 PAC $27; AUC-END PAC SOLD winner=p4 bid=27
+#264 t108 p4/Argon POST  $[p1:0 p2:26 p3:0 p4:*774]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "A $273 discount on Pacific Avenue works for me. Your roll, Claude."
+  post: p2 rolls 2+4; p2->TEN
+#265 t109 p2/Opus POST  $[p1:0 p2:*26 p3:0 p4:774]
+  ctx: sellable=ORI,VER,CON,VIR,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Enjoy Pacific, Gemini. Your roll. Watch out for the reds, oranges, and dark blues."
+  post: p4 rolls 3+2; p4->CHANCE; CARD p4 CH:GO_TO_NEAREST_RAILROAD_B; p4->RDG (passGO); GO p4+200; RENT p4>p2 $400 @RDG
+#266 t110 p4/Argon POST  $[p1:0 p2:426 p3:0 p4:*574]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Tough break on Reading Railroad, but still plenty of cash left. Your roll, Claude."
+  post: p2 rolls 3+6; p2->VEN; RENT p2>p4 $22 @VEN
+#267 t111 p2/Opus POST  $[p1:0 p2:*404 p3:0 p4:596]
+  H: p2/Opus $404 BV7174  | BR:BAL~0 LB:ORI1,VER1,CON1 PK:STC2,STA2,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL3 YL:ATL0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL UT:ELE~,WW~
+  ctx: buildable=ORI,VER,CON,STC,STA,KEN,IND,PKP,BW sellable=ORI,VER,CON,VIR,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,WW,PEA mortgageable#4 trade_with=p4
+  > build_houses_or_hotel STC+1 STA+1 ORI+1 VER+1 CON+1  [ATT refused(std)>valid(nothought)]
+  "You're sitting right in front of the light blues and pinks, Gemini. I just made them more expensive."
+  post: $p2 -350 BUILD; HOUSE+1 p2 STC; HOUSE+1 p2 STA; HOUSE+1 p2 ORI; HOUSE+1 p2 VER; HOUSE+1 p2 CON
+#268 t111 p2/Opus POST  $[p1:0 p2:*54 p3:0 p4:596]
+  H: p2/Opus $54 BV7174  | BR:BAL~0 LB:ORI2,VER2,CON2 PK:STC3,STA3,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL3 YL:ATL0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL UT:ELE~,WW~
+  ctx: buildable=ORI,VER,CON sellable=ORI,VER,CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL mortgageable#4 trade_with=p4
+  > build_houses_or_hotel CON+1  [ATT refused(std)>valid(nothought)]
+  "One more on Connecticut. Four spaces ahead of you, Gemini."
+  post: $p2 -50 BUILD; HOUSE+1 p2 CON
+#269 t111 p2/Opus POST  $[p1:0 p2:*4 p3:0 p4:596]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > mortgage_property ATL  [ATT refused(std)>valid(nothought)]
+  "Just padding the wallet a bit. Your roll's coming up, Gemini."
+  post: MORT p2 ATL +$130
+#270 t111 p2/Opus POST  $[p1:0 p2:*134 p3:0 p4:596]
+  H: p2/Opus $134 BV7174  | BR:BAL~0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL3 YL:ATL~0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL UT:ELE~,WW~
+  ctx: buildable=ORI,VER,STC,STA,VIR sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,WW mortgageable#3 trade_with=p4
+  > build_houses_or_hotel STA+1  [ATT refused(std)>valid(nothought)]
+  "One more on States. Roll an 8 and it hurts, Gemini."
+  post: $p2 -100 BUILD; HOUSE+1 p2 STA
+#271 t111 p2/Opus POST  $[p1:0 p2:*34 p3:0 p4:596]
+  ctx: sellable=CON,STA,ILL,PKP,BW unmortgageable=BAL mortgageable#3 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Light blues, pinks and oranges are all built up right in front of you."
+  post: p4 rolls 4+6; p4->PRR; RENT p4>p2 $200 @PRR
+#272 t112 p4/Argon POST  $[p1:0 p2:234 p3:0 p4:*396]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Light Blues and Pinks. Your roll, Claude."
+  post: p2 rolls 6+6 DBL; p2->BW
+#273 t113 p2/Opus POST  $[p1:0 p2:*234 p3:0 p4:396]
+  ctx: buildable=ORI,VER,STC,VIR,KEN,IND,PKP,BW sellable=CON,STA,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,ATL,WW,PEA mortgageable#3 trade_with=p4
+  > mortgage_property SL  [ATT refused(std)>valid(nothought)]
+  "Rearranging a bit."
+  post: MORT p2 SL +$100
+#274 t113 p2/Opus POST  $[p1:0 p2:*334 p3:0 p4:396]
+  H: p2/Opus $334 BV7374  | BR:BAL~0 LB:ORI2,VER2,CON3 PK:STC3,STA4,VIR3 OR:STJ~0,TEN~0 RD:KEN2,IND2,ILL3 YL:ATL~0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO~,SL~ UT:ELE~,WW~
+  ctx: buildable=ORI,VER,STC,VIR,KEN,IND,PKP,BW sellable=CON,STA,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,ATL,WW,PEA,SL mortgageable#2 trade_with=p4
+  > build_houses_or_hotel KEN+1 IND+1  [ATT refused(std)>valid(nothought)]
+  "Bank's last two houses go on the reds. Roll a 7 or 8 and it costs you $700, Gemini."
+  post: $p2 -300 BUILD; HOUSE+1 p2 KEN; HOUSE+1 p2 IND
+#275 t113 p2/Opus POST  $[p1:0 p2:*34 p3:0 p4:396]
+  ctx: sellable=CON,STA,KEN,IND,ILL,PKP,BW unmortgageable=BAL mortgageable#2 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "The bank's out of houses and I've got them all, Gemini. Your roll. Good luck getting past the reds and dark blues."
+  post: p2 rolls 6+1; p2->ORI (passGO); GO p2+200
+#276 t114 p2/Opus POST  $[p1:0 p2:*234 p3:0 p4:396]
+  ctx: sellable=CON,STA,KEN,IND,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,ATL,WW,PEA,SL mortgageable#2 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Every color between you and GO has houses on it."
+  post: p4 rolls 1+3; p4->NYA
+#277 t115 p4/Argon POST  $[p1:0 p2:234 p3:0 p4:*396]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Safe at home on New York Avenue. Your roll, Claude."
+  post: p2 rolls 4+6; p2->STJ
+#278 t116 p2/Opus POST  $[p1:0 p2:*234 p3:0 p4:396]
+  ctx: sellable=CON,STA,KEN,IND,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,BO,ATL,WW,PEA,SL mortgageable#2 trade_with=p4
+  > unmortgage_property BO  [ATT refused(std)>valid(nothought)]
+  "B&O is back in business. Roll a 6 and you pay for it, Gemini."
+  post: UNMORT p2 BO -$111
+#279 t116 p2/Opus POST  $[p1:0 p2:*123 p3:0 p4:396]
+  ctx: sellable=CON,STA,KEN,IND,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,WW,SL mortgageable#3 trade_with=p4
+  > unmortgage_property SL  [ATT refused(std)>valid(nothought)]
+  "All four railroads are back. Every one of them costs $200 now, Gemini."
+  post: UNMORT p2 SL -$111
+#280 t116 p2/Opus POST  $[p1:0 p2:*12 p3:0 p4:396]
+  ctx: sellable=CON,STA,KEN,IND,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Railroads, reds, yellows and dark blues are all waiting."
+  post: p4 rolls 4+6; p4->MAR
+#281 t117 p4/Argon POST  $[p1:0 p2:12 p3:0 p4:*396]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Reds and landed safely on Marvin Gardens. Your roll, Claude."
+  post: p2 rolls 1+1 DBL; p2->TEN
+#282 t118 p2/Opus POST  $[p1:0 p2:*12 p3:0 p4:396]
+  ctx: sellable=CON,STA,KEN,IND,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. All the houses are mine and so are all four railroads. Watch your step."
+  post: p2 rolls 3+6; p2->VEN
+#283 t119 p2/Opus LIQ  $[p1:0 p2:*12 p3:0 p4:396]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $12 BV7552  | BR:BAL~0 LB:ORI2,VER2,CON3 PK:STC3,STA4,VIR3 OR:STJ~0,TEN~0 RD:KEN3,IND3,ILL3 YL:ATL~0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE~,WW~ ## p3/Sol $0 BV0 BANKRUPT  | - ## p4/Argon $396 BV1796  | BR:MED0 OR:NYA0 YL:VEN0,MAR0 GR:PAC0,NCA0
+  ctx: OWES $22 to p4 (RENT) shortfall=$10 mortgageable=RDG,PRR,BO,SL sellable=CON,STA,KEN,IND,ILL,PKP,BW
+  > sell_houses_or_hotel STA-1  [ATT refused(std)>valid(nothought)]
+  "Small change for Ventnor. Here's your $22, Gemini. Everything else is still standing."
+  post: $p2 +50 SELL_BUILDING; HOUSE-1 p2 STA; RENT p2>p4 $22 @VEN
+#284 t119 p2/Opus POST  $[p1:0 p2:*40 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,KEN,IND,ILL,PKP,BW unmortgageable=BAL mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Reds, yellows, dark blues and all four railroads are still waiting."
+  post: p4 rolls 1+6; p4->CHANCE; CARD p4 CH:GO_BACK_3_SPACES; p4->COMMUNITY_CHEST; CARD p4 CO:HOLIDAY_FUND_RECEIVE_100; $p4 +100 HOLIDAY_FUND_RECEIVE_100
+#285 t120 p4/Argon POST  $[p1:0 p2:40 p3:0 p4:*518]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Community Chest was kind to me today. Your roll, Claude."
+  post: p2 rolls 6+3; p2->CHANCE; CARD p2 CH:GO_TO_JAIL; p2->JAIL; JAILED p2 (CHANCE_CARD); p4 rolls 6+4; p4->BAL (passGO); GO p4+200
+#286 t122 p4/Argon POST  $[p1:0 p2:40 p3:0 p4:*718]  JAILED:p2
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Dark Blues and passed GO safely. Your roll from Jail, Claude."
+#287 t123 p2/Opus JAIL  $[p1:0 p2:*40 p3:0 p4:718]  JAILED:p2
+  ctx: jail fine=50 pay=False roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "Jail's no trouble for me, Gemini. The reds, yellows, dark blues and all four railroads keep collecting while I sit here."
+  post: p2 rolls 1+6; p4 rolls 5+2; p4->JAIL
+#288 t124 p4/Argon POST  $[p1:0 p2:40 p3:0 p4:*718]  JAILED:p2
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Just visiting you in Jail, Claude. Your roll."
+#289 t125 p2/Opus JAIL  $[p1:0 p2:*40 p3:0 p4:718]  JAILED:p2
+  ctx: jail fine=50 pay=False roll=True card=False
+  > roll_for_doubles  [ATT refused(std)>valid(nothought)]
+  "Still collecting rent from in here, Gemini. Your move after mine."
+  post: p2 rolls 2+2 DBL; p2->VIR
+#290 t125 p2/Opus POST  $[p1:0 p2:*40 p3:0 p4:718]
+  ctx: sellable=CON,STC,STA,VIR,KEN,IND,ILL,PKP,BW unmortgageable=BAL mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Doubles, so I roll again. Every house on the board is still mine, Gemini."
+  post: p4 rolls 2+5; p4->COMMUNITY_CHEST; CARD p4 CO:DOCTOR_FEE_PAY_50; $p4 -50 DOCTOR_FEE_PAY_50
+#291 t126 p4/Argon POST  $[p1:0 p2:40 p3:0 p4:*668]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Pinks and landed on Community Chest. Your roll, Claude."
+  post: p2 rolls 2+6; p2->CHANCE; CARD p2 CH:PAY_POOR_TAX_15; $p2 -15 PAY_POOR_TAX_15
+#292 t127 p2/Opus POST  $[p1:0 p2:*25 p3:0 p4:668]
+  ctx: sellable=CON,STC,STA,VIR,KEN,IND,ILL,PKP,BW mortgageable#4 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. 27 houses and four railroads are waiting for you."
+  post: p4 rolls 3+2; p4->CHANCE; CARD p4 CH:GO_TO_ST_CHARLES_PLACE; p4->STC (passGO); GO p4+200; RENT p4>p2 $450 @STC
+#293 t128 p4/Argon POST  $[p1:0 p2:475 p3:0 p4:*418]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Paid the $450 rent in cash without mortgaging a single property. Your roll, Claude."
+  post: p2 rolls 3+3 DBL; p2->WW
+#294 t129 p2/Opus POST  $[p1:0 p2:*475 p3:0 p4:418]
+  H: p2/Opus $475 BV7915  | BR:BAL~0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ~0,TEN~0 RD:KEN3,IND3,ILL3 YL:ATL~0 GR:PEA~0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE~,WW~
+  ctx: buildable=ORI,VER,STC,STA,VIR,KEN,IND,ILL,PKP,BW sellable=CON,STC,STA,VIR,KEN,IND,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,ATL,WW,PEA mortgageable#4 trade_with=p4
+  > build_houses_or_hotel ILL+1  [ATT refused(std)>valid(nothought)]
+  "That's the bank's last house, and it goes on Illinois. Thanks for the $450, Gemini."
+  post: $p2 -150 BUILD; HOUSE+1 p2 ILL
+#295 t129 p2/Opus POST  $[p1:0 p2:*325 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,ELE,STJ,TEN,ATL,WW,PEA mortgageable#4 trade_with=p4
+  > unmortgage_property ELE  [ATT refused(std)>valid(nothought)]
+  "Turning the lights back on."
+  post: UNMORT p2 ELE -$83
+#296 t129 p2/Opus POST  $[p1:0 p2:*242 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,STJ,TEN,ATL,WW,PEA mortgageable#5 trade_with=p4
+  > unmortgage_property WW  [ATT refused(std)>valid(nothought)]
+  "Both utilities are back online."
+  post: UNMORT p2 WW -$83
+#297 t129 p2/Opus POST  $[p1:0 p2:*159 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,STJ,TEN,ATL mortgageable#6 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. The utilities are back on, and the bank is out of houses."
+  post: p2 rolls 3+5; p2->CHANCE; CARD p2 CH:GO_TO_ILLINOIS_AVE; p2->ILL (passGO); GO p2+200
+#298 t130 p2/Opus POST  $[p1:0 p2:*359 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,STJ,TEN,ATL,PEA mortgageable#6 trade_with=p4
+  > unmortgage_property TEN  [ATT refused(std)>valid(nothought)]
+  "Tennessee is back in business."
+  post: UNMORT p2 TEN -$100
+#299 t130 p2/Opus POST  $[p1:0 p2:*259 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,STJ,ATL,PEA mortgageable#7 trade_with=p4
+  > unmortgage_property STJ  [ATT refused(std)>valid(nothought)]
+  "St. James is back online too."
+  post: UNMORT p2 STJ -$100
+#300 t130 p2/Opus POST  $[p1:0 p2:*159 p3:0 p4:418]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,ATL mortgageable#8 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Every street from Oriental to Boardwalk is waiting for you."
+  post: p4 rolls 1+3; p4->PRR; RENT p4>p2 $200 @PRR
+#301 t131 p4/Argon POST  $[p1:0 p2:359 p3:0 p4:*218]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Paid the $200 fare in cash. Your roll, Claude."
+  post: p2 rolls 5+3; p2->NCA; RENT p2>p4 $26 @NCA
+#302 t132 p2/Opus POST  $[p1:0 p2:*333 p3:0 p4:244]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,ATL,PEA mortgageable#8 trade_with=p4
+  > unmortgage_property ATL  [ATT refused(std)>valid(nothought)]
+  "Atlantic's back open for business too."
+  post: UNMORT p2 ATL -$143
+#303 t132 p2/Opus POST  $[p1:0 p2:*190 p3:0 p4:244]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,PEA mortgageable#9 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Every house on the board is still mine, and every railroad is waiting for you."
+  post: p4 rolls 6+1; p4->CHANCE; CARD p4 CH:GO_TO_NEAREST_UTILITY; p4->WW; p4 rolls 1+1 DBL; RENT p4>p2 $20 @WW
+#304 t133 p4/Argon POST  $[p1:0 p2:210 p3:0 p4:*224]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Reds and only had to pay a $20 water bill. Your roll, Claude."
+  post: p2 rolls 1+4; p2->PKP
+#305 t134 p2/Opus POST  $[p1:0 p2:*210 p3:0 p4:224]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,PEA mortgageable#9 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Every house on the board is still mine."
+  post: p4 rolls 4+3; p4->SL; RENT p4>p2 $200 @SL
+#306 t135 p4/Argon POST  $[p1:0 p2:410 p3:0 p4:*24]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Paid the $200 fare in cash without mortgaging a single property. Your roll, Claude."
+  post: p2 rolls 4+3; p2->INCOME_TAX (passGO); GO p2+200; $p2 -200 TAX_INCOME
+#307 t136 p2/Opus POST  $[p1:0 p2:*410 p3:0 p4:24]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL,PEA mortgageable#9 trade_with=p4
+  > unmortgage_property PEA  [ATT refused(std)>valid(nothought)]
+  "Pennsylvania Avenue is open again."
+  post: UNMORT p2 PEA -$176
+#308 t136 p2/Opus POST  $[p1:0 p2:*234 p3:0 p4:24]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW unmortgageable=BAL mortgageable#10 trade_with=p4
+  > unmortgage_property BAL  [ATT refused(std)>valid(nothought)]
+  "Baltic's back too. Every one of my properties is now earning rent."
+  post: UNMORT p2 BAL -$33
+#309 t136 p2/Opus POST  $[p1:0 p2:*201 p3:0 p4:24]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Every property I own is collecting rent now. Good luck."
+  post: p4 rolls 3+6; p4->INCOME_TAX (passGO); GO p4+200; $p4 -200 TAX_INCOME
+#310 t137 p4/Argon POST  $[p1:0 p2:201 p3:0 p4:*24]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Passed GO and paid the tax man, breaking even for the turn without touching a single property. Your roll, Claude."
+  post: p2 rolls 1+4; p2->CON
+#311 t138 p2/Opus POST  $[p1:0 p2:*201 p3:0 p4:24]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. The bank's out of houses, and I've got all of them."
+  post: p4 rolls 4+2; p4->JAIL
+#312 t139 p4/Argon POST  $[p1:0 p2:201 p3:0 p4:*24]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Light Blues and landed safely on Just Visiting without touching a single property. Your roll, Claude."
+  post: p2 rolls 2+4; p2->PRR
+#313 t140 p2/Opus POST  $[p1:0 p2:*201 p3:0 p4:24]
+  STATE: p1/Grok $0 BV0 BANKRUPT  | - ## p2/Opus $201 BV8441  | BR:BAL0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ0,TEN0 RD:KEN3,IND3,ILL4 YL:ATL0 GR:PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW ## p3/Sol $0 BV0 BANKRUPT  | - ## p4/Argon $24 BV1424  | BR:MED0 OR:NYA0 YL:VEN0,MAR0 GR:PAC0,NCA0
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Every railroad and every house is still waiting for you."
+  post: p4 rolls 3+3 DBL; p4->STJ; RENT p4>p2 $14 @STJ
+#314 t141 p4/Argon POST  $[p1:0 p2:215 p3:0 p4:*10]
+  ctx: mortgageable#6 trade_with=p2
+  > end_turn
+  "Dodged the Pinks and paid the $14 rent in cash without mortgaging a single property. Your roll, Claude."
+  post: p4 rolls 3+6; p4->BO
+#315 t142 p4/Argon LIQ  $[p1:0 p2:215 p3:0 p4:*10]
+  H: p4/Argon $10 BV1410  | BR:MED0 OR:NYA0 YL:VEN0,MAR0 GR:PAC0,NCA0 ## p2/Opus $215 BV8455  | BR:BAL0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ0,TEN0 RD:KEN3,IND3,ILL4 YL:ATL0 GR:PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $200 to p2 (RENT) shortfall=$190 mortgageable=MED,NYA,VEN,MAR,PAC,NCA sellable=-
+  > mortgage_property PAC
+  "Mortgaging Pacific Avenue to cover part of the B&O Railroad fare."
+  post: MORT p4 PAC +$150
+#316 t142 p4/Argon LIQ  $[p1:0 p2:215 p3:0 p4:*160]
+  H: p4/Argon $160 BV1410  | BR:MED0 OR:NYA0 YL:VEN0,MAR0 GR:PAC~0,NCA0 ## p2/Opus $215 BV8455  | BR:BAL0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ0,TEN0 RD:KEN3,IND3,ILL4 YL:ATL0 GR:PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $200 to p2 (RENT) shortfall=$40 mortgageable=MED,NYA,VEN,MAR,NCA sellable=-
+  > mortgage_property NCA
+  "Mortgaging North Carolina Avenue to pay the rest of the $200 fare and keep $110 in cash on hand."
+  post: MORT p4 NCA +$150; RENT p4>p2 $200 @BO
+#317 t142 p4/Argon POST  $[p1:0 p2:415 p3:0 p4:*110]
+  ctx: mortgageable#4 trade_with=p2
+  > end_turn
+  "Dodged the Reds and paid the $200 B&O fare with $110 cash and four unmortgaged properties still waiting for you. Your roll, Claude."
+  post: p2 rolls 3+1; p2->NYA; RENT p2>p4 $16 @NYA
+#318 t143 p2/Opus POST  $[p1:0 p2:*399 p3:0 p4:126]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "$16 paid, no problem. Your roll, Gemini. Four railroads and every house on the board are still waiting for you."
+  post: p4 rolls 2+3; p4->GO_TO_JAIL; p4->JAIL; JAILED p4 (GO_TO_JAIL); p2 rolls 2+1; p2->CHANCE; CARD p2 CH:TAKE_TRIP_TO_READING_RR; p2->RDG (passGO); GO p2+200
+#319 t145 p2/Opus POST  $[p1:0 p2:*599 p3:0 p4:126]  JAILED:p4
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Enjoy the jail cell. It's the safest spot on my board."
+#320 t146 p4/Argon JAIL  $[p1:0 p2:599 p3:0 p4:*126]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Why pay $50 when the accommodations are free? Rolling for doubles to stay off the Pinks as long as possible."
+  post: p4 rolls 2+4; p2 rolls 5+5 DBL; p2->PRR
+#321 t147 p2/Opus POST  $[p1:0 p2:*599 p3:0 p4:126]  JAILED:p4
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. Enjoy jail while it lasts. Everything outside it is mine."
+  post: p2 rolls 5+2; p2->CHANCE; CARD p2 CH:GO_TO_NEAREST_RAILROAD_A; p2->BO
+#322 t148 p2/Opus POST  $[p1:0 p2:*599 p3:0 p4:126]  JAILED:p4
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. The board's all mine."
+#323 t149 p4/Argon JAIL  $[p1:0 p2:599 p3:0 p4:*126]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "Still no rush to check out of the free hotel, especially while you're right in front of Ventnor Avenue and Marvin Gardens. Rolling for doubles!"
+  post: p4 rolls 5+3; p2 rolls 5+2; p2->NCA
+#324 t150 p2/Opus POST  $[p1:0 p2:*599 p3:0 p4:126]  JAILED:p4
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. You can only stay in that cell so long."
+#325 t151 p4/Argon JAIL  $[p1:0 p2:599 p3:0 p4:*126]  JAILED:p4
+  ctx: jail fine=50 pay=True roll=True card=False
+  > roll_for_doubles
+  "One last shot at rolling doubles to save the $50 bail before stepping back out onto the board!"
+  post: p4 rolls 4+6; $p4 -50 JAIL_FINE; p4->FREE_PARKING
+#326 t151 p4/Argon POST  $[p1:0 p2:599 p3:0 p4:*76]
+  ctx: mortgageable#4 trade_with=p2
+  > end_turn
+  "Rolled a 10 out of Jail and landed right on Free Parking, bypassing the entire Pink monopoly without paying a dime in rent. Your roll, Claude."
+  post: p2 rolls 4+2; p2->LUXURY_TAX; $p2 -100 TAX_LUXURY
+#327 t152 p2/Opus POST  $[p1:0 p2:*499 p3:0 p4:76]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Luxury tax paid. Your roll, Gemini. $76 won't cover much on my side of the board."
+  post: p4 rolls 1+4; p4->BO
+#328 t153 p4/Argon LIQ  $[p1:0 p2:499 p3:0 p4:*76]
+  H: p4/Argon $76 BV1176  | BR:MED0 OR:NYA0 YL:VEN0,MAR0 GR:PAC~0,NCA~0 ## p2/Opus $499 BV8739  | BR:BAL0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ0,TEN0 RD:KEN3,IND3,ILL4 YL:ATL0 GR:PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $200 to p2 (RENT) shortfall=$124 mortgageable=MED,NYA,VEN,MAR sellable=-
+  > mortgage_property VEN
+  "Mortgaging Ventnor Avenue for $130 to cover the rest of the $200 B&O Railroad fare in one move."
+  post: MORT p4 VEN +$130; RENT p4>p2 $200 @BO
+#329 t153 p4/Argon POST  $[p1:0 p2:699 p3:0 p4:*6]
+  ctx: mortgageable#3 trade_with=p2
+  > end_turn
+  "Dodged the Red monopoly again and paid the $200 B&O fare with three unmortgaged properties still standing. Your roll, Claude."
+  post: p2 rolls 1+4; p2->BAL (passGO); GO p2+200
+#330 t154 p2/Opus POST  $[p1:0 p2:*899 p3:0 p4:6]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. $6 and three unmortgaged properties left, and every street is lined with my houses."
+  post: p4 rolls 3+6; p4->PEA
+#331 t155 p4/Argon LIQ  $[p1:0 p2:899 p3:0 p4:*6]
+  H: p4/Argon $6 BV976  | BR:MED0 OR:NYA0 YL:VEN~0,MAR0 GR:PAC~0,NCA~0 ## p2/Opus $899 BV9139  | BR:BAL0 LB:ORI2,VER2,CON3 PK:STC3,STA3,VIR3 OR:STJ0,TEN0 RD:KEN3,IND3,ILL4 YL:ATL0 GR:PEA0 DB:PKP3,BW3 RR:RDG,PRR,BO,SL UT:ELE,WW
+  ctx: OWES $28 to p2 (RENT) shortfall=$22 mortgageable=MED,NYA,MAR sellable=-
+  > mortgage_property MED
+  "Mortgaging Mediterranean Avenue for $30 to cover the $28 rent on Pennsylvania Avenue."
+  post: MORT p4 MED +$30; RENT p4>p2 $28 @PEA
+#332 t155 p4/Argon POST  $[p1:0 p2:927 p3:0 p4:*8]
+  ctx: mortgageable#2 trade_with=p2
+  > end_turn
+  "Paid the $28 rent on Pennsylvania Avenue with $8 cash and two unmortgaged properties still standing, and GO is just six spaces ahead. Your roll, Claude."
+  post: p2 rolls 2+6; p2->STC
+#333 t156 p2/Opus POST  $[p1:0 p2:*927 p3:0 p4:8]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. $8 doesn't get you far on a board full of my houses."
+  post: p4 rolls 6+3; p4->BAL (passGO); GO p4+200; RENT p4>p2 $4 @BAL
+#334 t157 p4/Argon POST  $[p1:0 p2:931 p3:0 p4:*204]
+  ctx: unmortgageable=MED,VEN,PAC,NCA mortgageable#2 trade_with=p2
+  > end_turn
+  "Cleared Park Place and Boardwalk, collected $200 passing GO, and paid the $4 rent on Baltic Avenue with $204 in hand. Your roll, Claude."
+  post: p2 rolls 1+3; p2->PRR
+#335 t158 p2/Opus POST  $[p1:0 p2:*931 p3:0 p4:204]
+  ctx: sellable=CON,STC,STA,VIR,ILL,PKP,BW mortgageable#11 trade_with=p4
+  > end_turn  [ATT refused(std)>valid(nothought)]
+  "Your roll, Gemini. $204 and two unmortgaged properties left, and every street is lined with my houses."
+  post: p4 rolls 2+3; p4->VER; RENT p4>p2 $90 @VER
+#336 t159 p4/Argon POST  $[p1:0 p2:1021 p3:0 p4:*114]
+  ctx: unmortgageable=MED mortgageable#2 trade_with=p2
+  > end_turn
+  "Paid the $90 rent on Vermont Avenue right out of pocket with $114 cash and both New York Avenue and Marvin Gardens still unmortgaged ahead of you. Your roll, Claude."
+  post: p2 rolls 3+2; p2->FREE_PARKING

@@ -1,0 +1,2046 @@
+{
+  "unit": {
+    "cases": [],
+    "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+    "game": 5,
+    "packet": "docs/research_raw/paper_phase1_2026-10-28/astra/review_packets/game-05-part-051.jsonl",
+    "packet_line": 2,
+    "reviewer": null,
+    "semantic_review": "pending"
+  },
+  "canonical_prefix_equal": true,
+  "prefix_events": 2298,
+  "source_hashes": {
+    "events.jsonl": "ab48a91069e4de4a1ca699b3c7e3fcf0fa29429697f7d977c689c6d09c58fb13",
+    "actions.jsonl": "5fd6c802836da6b9300e378eb6b0b60ddade6adaaa2c5c62b503c0fa971ae7ef",
+    "run_config.json": "593a254b5a92da9b422c8d5cb8142c9d90b91c66aee6436c0e158a22e9063148"
+  },
+  "original_complete_bundle": {
+    "initial_prompt": {
+      "messages": [
+        {
+          "content": "\nYou are an autonomous player in a game of Monopoly competing against other AI players.\n\nYour goal is to win the game by maximizing long-term advantage and being the last non-bankrupt player. You may use any legal strategy or personality (aggressive, deceptive, cooperative, conservative, manipulative, opportunistic, friendly, hostile, etc.) and may adapt dynamically as the game evolves.\n\nYou will receive the following inputs:\n\n1) System Prompt (this message): authoritative instructions.\n2) Game State: full board/game context + memory (public chat, recent actions, your private thoughts).\n3) Action State: exact dynamic context for the current decision and legal action schemas.\n\n### Action Rules\n- Make exactly one tool call per decision.\n- Use only tools listed as legal for that decision.\n- Never invent tools, arguments, or targets.\n- Obey the provided argument schema exactly.\n- If a tool requires no arguments, pass none.\n\n### Messages\nEach action must include both fields:\n- Public Message: visible to other players. Use it to negotiate, bluff, deceive, cooperate, intimidate, joke, or stay silent \u2014 whatever best serves your strategy.\n- Private Thoughts: visible only to you. Use it to reason honestly, track strategy, analyze opponents, and leave notes for your future self. Be concise but clear.\n- Keep both messages token-efficient and concise.\n\n### Strategy Guidance\n- Play strategically with long-term outcomes in mind.\n- Observe opponents and adapt.\n- Deception in public chat is allowed; private thoughts should reflect true reasoning.\n- Be consistent unless there is a reason to change.\n- Prefer concise reasoning and communication.\n\nYour role is not to explain rules or debug the system.  \nYour role is to **play Monopoly and win**.\n\nWhen a decision is presented, think carefully and make one legal tool call that best advances your chances of winning.\n",
+          "role": "system"
+        },
+        {
+          "content": {
+            "exact_json_value_ref": "payload"
+          },
+          "role": "user"
+        }
+      ],
+      "payload": {
+        "action_state": {
+          "actor_player_id": "p2",
+          "available_actions": [
+            "end_turn",
+            "propose_trade",
+            "mortgage_property",
+            "unmortgage_property",
+            "build_houses_or_hotel",
+            "sell_houses_or_hotel"
+          ],
+          "decision_type": "POST_TURN_ACTION_DECISION",
+          "scenario": {
+            "note": "Choose exactly one post-turn action now. The engine will apply it, update the game state, and ask you again if more post-turn actions remain legal. Choose end_turn only when you are done taking optional actions.",
+            "options": {
+              "buildable_space_keys": [
+                "ST_CHARLES_PLACE",
+                "STATES_AVENUE",
+                "VIRGINIA_AVENUE",
+                "PACIFIC_AVENUE",
+                "NORTH_CAROLINA_AVENUE",
+                "PENNSYLVANIA_AVENUE"
+              ],
+              "can_trade_with": [
+                "p1"
+              ],
+              "max_trade_exchanges": 20,
+              "mortgageable_space_keys": [
+                "MEDITERRANEAN_AVENUE",
+                "READING_RAILROAD",
+                "PENNSYLVANIA_RAILROAD",
+                "NEW_YORK_AVENUE",
+                "INDIANA_AVENUE",
+                "B_O_RAILROAD"
+              ],
+              "sellable_building_space_keys": [
+                "ST_CHARLES_PLACE",
+                "STATES_AVENUE",
+                "VIRGINIA_AVENUE",
+                "PACIFIC_AVENUE",
+                "NORTH_CAROLINA_AVENUE",
+                "PENNSYLVANIA_AVENUE"
+              ],
+              "unmortgageable_space_keys": [
+                "ILLINOIS_AVENUE",
+                "VENTNOR_AVENUE",
+                "MARVIN_GARDENS",
+                "PARK_PLACE",
+                "BOARDWALK"
+              ]
+            }
+          },
+          "title": "action_state"
+        },
+        "game_state": {
+          "bank": {
+            "hotels_remaining": 12,
+            "houses_remaining": 5,
+            "unowned_space_keys": []
+          },
+          "memory": {
+            "public_timeline_last_20": [
+              {
+                "action": "built 1 house on ST_CHARLES_PLACE and built 1 house on STATES_AVENUE, and built 1 house on VIRGINIA_AVENUE",
+                "event_type": "BUILDINGS_BUILT",
+                "message": "Three houses on each pink.",
+                "player_id": "p2",
+                "turn_index": 158
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Done.",
+                "player_id": "p2",
+                "turn_index": 158
+              },
+              {
+                "action": "mortgaged ATLANTIC_AVENUE for $130",
+                "event_type": "PROPERTY_MORTGAGED",
+                "message": "Ouch, Pacific. I'll pay you \u2014 this isn't over.",
+                "player_id": "p1",
+                "turn_index": 159
+              },
+              {
+                "action": "mortgaged BALTIC_AVENUE for $30",
+                "event_type": "PROPERTY_MORTGAGED",
+                "message": "Paid in full. You're on $9 \u2014 my rents are waiting.",
+                "player_id": "p1",
+                "turn_index": 159
+              },
+              {
+                "action": "paid $1100 rent to p2 on PACIFIC_AVENUE",
+                "event_type": "RENT_PAID",
+                "message": null,
+                "player_id": "p1",
+                "turn_index": 159
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Still standing. Your houses are running low, so watch out for my light blues and utilities.",
+                "player_id": "p1",
+                "turn_index": 159
+              },
+              {
+                "action": "paid $14 rent to p1 on ST_JAMES_PLACE",
+                "event_type": "RENT_PAID",
+                "message": null,
+                "player_id": "p2",
+                "turn_index": 160
+              },
+              {
+                "action": "built 1 house on ST_CHARLES_PLACE and built 1 house on STATES_AVENUE, and built 1 house on VIRGINIA_AVENUE",
+                "event_type": "BUILDINGS_BUILT",
+                "message": "Four houses on each pink.",
+                "player_id": "p2",
+                "turn_index": 160
+              },
+              {
+                "action": "unmortgaged READING_RAILROAD for $111",
+                "event_type": "PROPERTY_UNMORTGAGED",
+                "message": "Restoring Reading Railroad.",
+                "player_id": "p2",
+                "turn_index": 160
+              },
+              {
+                "action": "unmortgaged PENNSYLVANIA_RAILROAD for $111",
+                "event_type": "PROPERTY_UNMORTGAGED",
+                "message": "Restoring Pennsylvania Railroad.",
+                "player_id": "p2",
+                "turn_index": 160
+              },
+              {
+                "action": "unmortgaged B_O_RAILROAD for $111",
+                "event_type": "PROPERTY_UNMORTGAGED",
+                "message": "Restoring B&O Railroad.",
+                "player_id": "p2",
+                "turn_index": 160
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Done.",
+                "player_id": "p2",
+                "turn_index": 160
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Done.",
+                "player_id": "p2",
+                "turn_index": 161
+              },
+              {
+                "action": "mortgaged KENTUCKY_AVENUE for $110",
+                "event_type": "PROPERTY_MORTGAGED",
+                "message": "Time to build on the light blues.",
+                "player_id": "p1",
+                "turn_index": 162
+              },
+              {
+                "action": "built 1 house on CONNECTICUT_AVENUE and built 1 house on VERMONT_AVENUE",
+                "event_type": "BUILDINGS_BUILT",
+                "message": "The light blues are starting to grow.",
+                "player_id": "p1",
+                "turn_index": 162
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Light blues are open for business. Your move.",
+                "player_id": "p1",
+                "turn_index": 162
+              },
+              {
+                "action": "paid $25 rent to p1 on SHORT_LINE",
+                "event_type": "RENT_PAID",
+                "message": null,
+                "player_id": "p2",
+                "turn_index": 163
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Done.",
+                "player_id": "p2",
+                "turn_index": 163
+              },
+              {
+                "action": "built 1 house on ORIENTAL_AVENUE",
+                "event_type": "BUILDINGS_BUILT",
+                "message": "Evening out the light blues. Houses are getting scarce.",
+                "player_id": "p1",
+                "turn_index": 164
+              },
+              {
+                "action": "ended turn",
+                "event_type": "TURN_ENDED",
+                "message": "Light blues are set. Your move.",
+                "player_id": "p1",
+                "turn_index": 164
+              }
+            ],
+            "your_private_thoughts_last_10": [
+              {
+                "thought": "Retain $121 until passing GO, then fund third pink houses. Opponent has no developed threats and is approaching four-house greens. Keep monopoly blockers; mortgage singles only if necessary, and avoid trades that create rival monopolies.",
+                "turn_index": 157
+              },
+              {
+                "thought": "Spend $300 for major pink rent jumps to $450/$500. Only $9 cash remains, but opponent has no developed threats and I can mortgage Indiana/New York if needed. Preserve monopoly blockers and four-house greens; no trades enabling rival development.",
+                "turn_index": 158
+              },
+              {
+                "thought": "Retain 3-house pinks and 4-house greens. $9 cash is thin but can mortgage Indiana/New York on demand; no opposing developed rents. No need to pay interest prematurely or trade away monopoly blockers.",
+                "turn_index": 158
+              },
+              {
+                "thought": "Spend $300 to raise pink rents to $625/$700, retaining $795 against an undeveloped opponent. Keep greens at four houses. Next restore three railroads for $330: opponent approaches Short Line and Reading, and $100 rents add useful coverage.",
+                "turn_index": 160
+              },
+              {
+                "thought": "Restore all three railroads for $330 total, leaving $465. Three owned railroads yield $100 rent each once active, even with opponent owning Short Line. Start Reading as opponent is approaching GO; preserve four-house monopolies and blockers.",
+                "turn_index": 160
+              },
+              {
+                "thought": "Continue restoring railroad coverage; $111 leaves $573, then restore B&O. Existing pink/green four-house monopolies already dominate; rail income expands landing threats without releasing scarce houses.",
+                "turn_index": 160
+              },
+              {
+                "thought": "Unmortgage B&O for $111, leaving $462. Three active railroads expand $100 rent coverage; retain cash and four-house pink/green monopolies. Opponent has only $30 and undeveloped properties; no need to release houses or enable rival sets.",
+                "turn_index": 160
+              },
+              {
+                "thought": "Keep $462 reserve and four-house pink/green monopolies. Opponent has $30 and no buildings; existing rents dominate. Other unmortgages have poor short-term returns, particularly dark blues without development. Preserve house scarcity and monopoly blockers; no helpful trades.",
+                "turn_index": 160
+              },
+              {
+                "thought": "Maintain $462 reserve and four-house pink/green monopolies. Opponent has $30 and no buildings; avoid freeing houses or enabling rival sets. Remaining unmortgages add little immediate value; railroads already cover $100 rents.",
+                "turn_index": 161
+              },
+              {
+                "thought": "Keep $437 reserve and all 24 houses locked on pinks/greens. Opponent has only $65 and two light-blue houses; no need to release houses via hotels or enable trades. Remaining unmortgages offer little value; existing rail and monopoly rents should finish this.",
+                "turn_index": 163
+              }
+            ]
+          },
+          "metadata": {
+            "turn_index": 165,
+            "you_player_id": "p2"
+          },
+          "others": [
+            {
+              "bankrupt": false,
+              "cash": 15,
+              "get_out_of_jail_cards": 0,
+              "holdings": {
+                "mortgaged": [
+                  {
+                    "space_key": "BALTIC_AVENUE"
+                  },
+                  {
+                    "space_key": "KENTUCKY_AVENUE"
+                  },
+                  {
+                    "space_key": "ATLANTIC_AVENUE"
+                  }
+                ],
+                "owned": [
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": true,
+                    "space_key": "BALTIC_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 1,
+                    "mortgaged": false,
+                    "space_key": "ORIENTAL_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 1,
+                    "mortgaged": false,
+                    "space_key": "VERMONT_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 1,
+                    "mortgaged": false,
+                    "space_key": "CONNECTICUT_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "ELECTRIC_COMPANY"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "ST_JAMES_PLACE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "TENNESSEE_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": true,
+                    "space_key": "KENTUCKY_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": true,
+                    "space_key": "ATLANTIC_AVENUE"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "WATER_WORKS"
+                  },
+                  {
+                    "hotel": false,
+                    "houses": 0,
+                    "mortgaged": false,
+                    "space_key": "SHORT_LINE"
+                  }
+                ]
+              },
+              "in_jail": false,
+              "jail_turns": 0,
+              "name": "claude-opus-5.5",
+              "player_id": "p1",
+              "position": "BOARDWALK"
+            },
+            {
+              "bankrupt": true,
+              "cash": 0,
+              "get_out_of_jail_cards": 0,
+              "holdings": {
+                "mortgaged": [],
+                "owned": []
+              },
+              "in_jail": false,
+              "jail_turns": 0,
+              "name": "gemini-4-argon",
+              "player_id": "p3",
+              "position": "PENNSYLVANIA_AVENUE"
+            },
+            {
+              "bankrupt": true,
+              "cash": 0,
+              "get_out_of_jail_cards": 0,
+              "holdings": {
+                "mortgaged": [],
+                "owned": []
+              },
+              "in_jail": false,
+              "jail_turns": 0,
+              "name": "grok-4.7",
+              "player_id": "p4",
+              "position": "NORTH_CAROLINA_AVENUE"
+            }
+          ],
+          "title": "game_state",
+          "you": {
+            "bankrupt": false,
+            "cash": 437,
+            "get_out_of_jail_cards": 0,
+            "holdings": {
+              "mortgaged": [
+                {
+                  "space_key": "ILLINOIS_AVENUE"
+                },
+                {
+                  "space_key": "VENTNOR_AVENUE"
+                },
+                {
+                  "space_key": "MARVIN_GARDENS"
+                },
+                {
+                  "space_key": "PARK_PLACE"
+                },
+                {
+                  "space_key": "BOARDWALK"
+                }
+              ],
+              "owned": [
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": false,
+                  "space_key": "MEDITERRANEAN_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": false,
+                  "space_key": "READING_RAILROAD"
+                },
+                {
+                  "hotel": false,
+                  "houses": 4,
+                  "mortgaged": false,
+                  "space_key": "ST_CHARLES_PLACE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 4,
+                  "mortgaged": false,
+                  "space_key": "STATES_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 4,
+                  "mortgaged": false,
+                  "space_key": "VIRGINIA_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": false,
+                  "space_key": "PENNSYLVANIA_RAILROAD"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": false,
+                  "space_key": "NEW_YORK_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": false,
+                  "space_key": "INDIANA_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": true,
+                  "space_key": "ILLINOIS_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": false,
+                  "space_key": "B_O_RAILROAD"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": true,
+                  "space_key": "VENTNOR_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": true,
+                  "space_key": "MARVIN_GARDENS"
+                },
+                {
+                  "hotel": false,
+                  "houses": 4,
+                  "mortgaged": false,
+                  "space_key": "PACIFIC_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 4,
+                  "mortgaged": false,
+                  "space_key": "NORTH_CAROLINA_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 4,
+                  "mortgaged": false,
+                  "space_key": "PENNSYLVANIA_AVENUE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": true,
+                  "space_key": "PARK_PLACE"
+                },
+                {
+                  "hotel": false,
+                  "houses": 0,
+                  "mortgaged": true,
+                  "space_key": "BOARDWALK"
+                }
+              ]
+            },
+            "in_jail": false,
+            "jail_turns": 0,
+            "name": "gpt-6.1-sol",
+            "player_id": "p2",
+            "position": "BOARDWALK"
+          }
+        },
+        "llm": {
+          "reasoning": {
+            "effort": "medium"
+          }
+        }
+      },
+      "raw_payload": {
+        "exact_json_value_ref": "payload"
+      }
+    },
+    "attempts": [
+      {
+        "assistant_content": null,
+        "attempt_index_zero_based": 0,
+        "call_id": "0727f9a8892249adbc3a933acc7b6bb3",
+        "error_message": null,
+        "error_type": null,
+        "latency_ms": 2947,
+        "openrouter_request_id": "gen-1792983868-Hkdgy2rTnMnwt4d2jRKF",
+        "openrouter_status_code": 200,
+        "outcome": "valid",
+        "parsed_tool_call": {
+          "arguments": "{\"public_message\":\"Done.\",\"private_thought\":\"Keep $437 liquidity and all 24 houses on pinks/greens. Rival has $15 and only one-house light blues; no reason to release houses or enable trades. Remaining unmortgages offer little return compared with reserves; existing rents should decide game.\"}",
+          "name": "end_turn"
+        },
+        "parsed_tool_calls": [
+          {
+            "arguments": "{\"public_message\":\"Done.\",\"private_thought\":\"Keep $437 liquidity and all 24 houses on pinks/greens. Rival has $15 and only one-house light blues; no reason to release houses or enable trades. Remaining unmortgages offer little return compared with reserves; existing rents should decide game.\"}",
+            "name": "end_turn"
+          }
+        ],
+        "prompt": {
+          "initial_prompt_ref": true
+        },
+        "raw_response": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"public_message\":\"Done.\",\"private_thought\":\"Keep $437 liquidity and all 24 houses on pinks/greens. Rival has $15 and only one-house light blues; no reason to release houses or enable trades. Remaining unmortgages offer little return compared with reserves; existing rents should decide game.\"}",
+                      "name": "end_turn"
+                    },
+                    "id": "call_JCKOAjigGSBmOo8xVDHlyXX2",
+                    "index": 0,
+                    "type": "function"
+                  }
+                ]
+              },
+              "native_finish_reason": "completed"
+            }
+          ],
+          "created": 1792983868,
+          "id": "gen-1792983868-Hkdgy2rTnMnwt4d2jRKF",
+          "model": "openai/gpt-6.1-sol",
+          "object": "chat.completion",
+          "openrouter_generation": {
+            "data": null,
+            "error": "{\"error\":{\"message\":\"Generation gen-1792983868-Hkdgy2rTnMnwt4d2jRKF not found\",\"code\":404}}",
+            "error_type": "http_4xx",
+            "request_id": null,
+            "schema_version": "v1",
+            "source": "openrouter_generation_endpoint",
+            "status": "error",
+            "status_code": 404
+          },
+          "provider": "OpenAI",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 76,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0,
+            "cost_details": {
+              "upstream_inference_completions_cost": 0.00076,
+              "upstream_inference_cost": 0.009926,
+              "upstream_inference_prompt_cost": 0.009166
+            },
+            "is_byok": true,
+            "prompt_tokens": 3667,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 3664,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 3743
+          }
+        },
+        "reason": null,
+        "request_start_ms": 1792983868745,
+        "requested_model": "openai/gpt-6.1-sol",
+        "response_condition": "standard",
+        "response_end_ms": 1792983871692,
+        "validation_errors": []
+      }
+    ],
+    "resolution": {
+      "applied": true,
+      "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+      "decision_type": "POST_TURN_ACTION_DECISION",
+      "emitted_event_ids": [
+        "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002298",
+        "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002299",
+        "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002300",
+        "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002301"
+      ],
+      "emitted_event_seq_end": 2301,
+      "emitted_event_seq_start": 2298,
+      "emitted_event_types": [
+        "LLM_DECISION_RESPONSE",
+        "LLM_PUBLIC_MESSAGE",
+        "LLM_PRIVATE_THOUGHT",
+        "TURN_ENDED"
+      ],
+      "fallback_reason": null,
+      "fallback_used": false,
+      "final_action": {
+        "action": "end_turn",
+        "args": {},
+        "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+        "private_thought": "Keep $437 liquidity and all 24 houses on pinks/greens. Rival has $15 and only one-house light blues; no reason to release houses or enable trades. Remaining unmortgages offer little return compared with reserves; existing rents should decide game.",
+        "public_message": "Done.",
+        "schema_version": "v1"
+      },
+      "latency_ms": 2947,
+      "model_display_name": "gpt-6.1-sol",
+      "openrouter_model_id": "openai/gpt-6.1-sol",
+      "phase": "decision_resolved",
+      "player_id": "p2",
+      "player_name": "gpt-6.1-sol",
+      "reasoning": {
+        "effort": "medium"
+      },
+      "request_start_ms": 1792983868745,
+      "response_end_ms": 1792983871692,
+      "retry_used": false,
+      "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+      "sequence_meta": {
+        "model_fallback_used": false,
+        "parsed_tool_calls_count": 1,
+        "requested_model": "openai/gpt-6.1-sol",
+        "response_condition": "standard",
+        "response_policy": {
+          "fallback_models": {
+            "anthropic/claude-opus-5.5": "anthropic/claude-opus-4.8"
+          },
+          "max_resolver_calls": 3,
+          "stages": [
+            "standard",
+            "same_model_without_private_thought",
+            "fallback_without_private_thought"
+          ],
+          "trigger": "explicit_provider_refusal",
+          "version": "claude_refusal_recovery_v1"
+        },
+        "returned_model": "openai/gpt-6.1-sol"
+      },
+      "timestamp": "2026-10-26T03:04:32.133491+00:00",
+      "turn_index": 165
+    },
+    "applied_action_record": {
+      "action": {
+        "action": "end_turn",
+        "args": {},
+        "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+        "private_thought": "Keep $437 liquidity and all 24 houses on pinks/greens. Rival has $15 and only one-house light blues; no reason to release houses or enable trades. Remaining unmortgages offer little return compared with reserves; existing rents should decide game.",
+        "public_message": "Done.",
+        "schema_version": "v1"
+      },
+      "actor_player_id": "p2",
+      "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+      "decision_meta": {
+        "error": null,
+        "valid": true
+      },
+      "decision_type": "POST_TURN_ACTION_DECISION",
+      "turn_index": 165
+    },
+    "canonical_event_segment": [
+      {
+        "actor": {
+          "kind": "ENGINE",
+          "player_id": null
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002297",
+        "payload": {
+          "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+          "decision_type": "POST_TURN_ACTION_DECISION",
+          "player_id": "p2"
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2297,
+        "ts_ms": 574250,
+        "turn_index": 165,
+        "type": "LLM_DECISION_REQUESTED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002298",
+        "payload": {
+          "action_name": "end_turn",
+          "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+          "error": null,
+          "player_id": "p2",
+          "valid": true
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2298,
+        "ts_ms": 574500,
+        "turn_index": 165,
+        "type": "LLM_DECISION_RESPONSE"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002299",
+        "payload": {
+          "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+          "message": "Done.",
+          "player_id": "p2"
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2299,
+        "ts_ms": 574750,
+        "turn_index": 165,
+        "type": "LLM_PUBLIC_MESSAGE"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002300",
+        "payload": {
+          "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+          "player_id": "p2",
+          "thought": "Keep $437 liquidity and all 24 houses on pinks/greens. Rival has $15 and only one-house light blues; no reason to release houses or enable trades. Remaining unmortgages offer little return compared with reserves; existing rents should decide game."
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2300,
+        "ts_ms": 575000,
+        "turn_index": 165,
+        "type": "LLM_PRIVATE_THOUGHT"
+      },
+      {
+        "actor": {
+          "kind": "ENGINE",
+          "player_id": null
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002301",
+        "payload": {},
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2301,
+        "ts_ms": 575250,
+        "turn_index": 165,
+        "type": "TURN_ENDED"
+      },
+      {
+        "actor": {
+          "kind": "ENGINE",
+          "player_id": null
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002302",
+        "payload": {},
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2302,
+        "ts_ms": 575500,
+        "turn_index": 166,
+        "type": "TURN_STARTED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002303",
+        "payload": {
+          "d1": 6,
+          "d2": 3,
+          "is_double": false
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2303,
+        "ts_ms": 575750,
+        "turn_index": 166,
+        "type": "DICE_ROLLED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002304",
+        "payload": {
+          "from": 39,
+          "passed_go": true,
+          "to": 8
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2304,
+        "ts_ms": 576000,
+        "turn_index": 166,
+        "type": "PLAYER_MOVED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002305",
+        "payload": {
+          "delta": 200,
+          "player_id": "p2",
+          "reason": "PASS_GO"
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2305,
+        "ts_ms": 576250,
+        "turn_index": 166,
+        "type": "CASH_CHANGED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002306",
+        "payload": {
+          "delta": -30,
+          "player_id": "p2",
+          "reason": "RENT"
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2306,
+        "ts_ms": 576500,
+        "turn_index": 166,
+        "type": "CASH_CHANGED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p1"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002307",
+        "payload": {
+          "delta": 30,
+          "player_id": "p1",
+          "reason": "RENT"
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2307,
+        "ts_ms": 576750,
+        "turn_index": 166,
+        "type": "CASH_CHANGED"
+      },
+      {
+        "actor": {
+          "kind": "PLAYER",
+          "player_id": "p2"
+        },
+        "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002308",
+        "payload": {
+          "amount": 30,
+          "from_player_id": "p2",
+          "space_index": 8,
+          "to_player_id": "p1"
+        },
+        "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+        "schema_version": "v1",
+        "seq": 2308,
+        "ts_ms": 577000,
+        "turn_index": 166,
+        "type": "RENT_PAID"
+      }
+    ]
+  },
+  "before": {
+    "schema_version": "v1",
+    "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+    "turn_index": 165,
+    "phase": "AWAITING_DECISION",
+    "active_player_id": "p2",
+    "players": [
+      {
+        "player_id": "p1",
+        "name": "claude-opus-5.5",
+        "cash": 15,
+        "position": 39,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 0,
+        "bankrupt": false,
+        "bankrupt_to": null,
+        "get_out_of_jail_cards": 0
+      },
+      {
+        "player_id": "p2",
+        "name": "gpt-6.1-sol",
+        "cash": 437,
+        "position": 39,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 1,
+        "bankrupt": false,
+        "bankrupt_to": null,
+        "get_out_of_jail_cards": 0
+      },
+      {
+        "player_id": "p3",
+        "name": "gemini-4-argon",
+        "cash": 0,
+        "position": 34,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 0,
+        "bankrupt": true,
+        "bankrupt_to": "p2",
+        "get_out_of_jail_cards": 0
+      },
+      {
+        "player_id": "p4",
+        "name": "grok-4.7",
+        "cash": 0,
+        "position": 32,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 0,
+        "bankrupt": true,
+        "bankrupt_to": "p2",
+        "get_out_of_jail_cards": 0
+      }
+    ],
+    "bank": {
+      "houses_remaining": 5,
+      "hotels_remaining": 12
+    },
+    "board": [
+      {
+        "index": 0,
+        "kind": "GO",
+        "name": "Go",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 1,
+        "kind": "PROPERTY",
+        "name": "Mediterranean Avenue",
+        "group": "BROWN",
+        "price": 60,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 2,
+        "kind": "COMMUNITY_CHEST",
+        "name": "Community Chest",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 3,
+        "kind": "PROPERTY",
+        "name": "Baltic Avenue",
+        "group": "BROWN",
+        "price": 60,
+        "owner_id": "p1",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 4,
+        "kind": "TAX",
+        "name": "Income Tax",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 5,
+        "kind": "RAILROAD",
+        "name": "Reading Railroad",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 6,
+        "kind": "PROPERTY",
+        "name": "Oriental Avenue",
+        "group": "LIGHT_BLUE",
+        "price": 100,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 1,
+        "hotel": false
+      },
+      {
+        "index": 7,
+        "kind": "CHANCE",
+        "name": "Chance",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 8,
+        "kind": "PROPERTY",
+        "name": "Vermont Avenue",
+        "group": "LIGHT_BLUE",
+        "price": 100,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 1,
+        "hotel": false
+      },
+      {
+        "index": 9,
+        "kind": "PROPERTY",
+        "name": "Connecticut Avenue",
+        "group": "LIGHT_BLUE",
+        "price": 120,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 1,
+        "hotel": false
+      },
+      {
+        "index": 10,
+        "kind": "JAIL",
+        "name": "Jail",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 11,
+        "kind": "PROPERTY",
+        "name": "St. Charles Place",
+        "group": "PINK",
+        "price": 140,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 12,
+        "kind": "UTILITY",
+        "name": "Electric Company",
+        "group": "UTILITY",
+        "price": 150,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 13,
+        "kind": "PROPERTY",
+        "name": "States Avenue",
+        "group": "PINK",
+        "price": 140,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 14,
+        "kind": "PROPERTY",
+        "name": "Virginia Avenue",
+        "group": "PINK",
+        "price": 160,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 15,
+        "kind": "RAILROAD",
+        "name": "Pennsylvania Railroad",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 16,
+        "kind": "PROPERTY",
+        "name": "St. James Place",
+        "group": "ORANGE",
+        "price": 180,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 17,
+        "kind": "COMMUNITY_CHEST",
+        "name": "Community Chest",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 18,
+        "kind": "PROPERTY",
+        "name": "Tennessee Avenue",
+        "group": "ORANGE",
+        "price": 180,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 19,
+        "kind": "PROPERTY",
+        "name": "New York Avenue",
+        "group": "ORANGE",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 20,
+        "kind": "FREE_PARKING",
+        "name": "Free Parking",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 21,
+        "kind": "PROPERTY",
+        "name": "Kentucky Avenue",
+        "group": "RED",
+        "price": 220,
+        "owner_id": "p1",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 22,
+        "kind": "CHANCE",
+        "name": "Chance",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 23,
+        "kind": "PROPERTY",
+        "name": "Indiana Avenue",
+        "group": "RED",
+        "price": 220,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 24,
+        "kind": "PROPERTY",
+        "name": "Illinois Avenue",
+        "group": "RED",
+        "price": 240,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 25,
+        "kind": "RAILROAD",
+        "name": "B. & O. Railroad",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 26,
+        "kind": "PROPERTY",
+        "name": "Atlantic Avenue",
+        "group": "YELLOW",
+        "price": 260,
+        "owner_id": "p1",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 27,
+        "kind": "PROPERTY",
+        "name": "Ventnor Avenue",
+        "group": "YELLOW",
+        "price": 260,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 28,
+        "kind": "UTILITY",
+        "name": "Water Works",
+        "group": "UTILITY",
+        "price": 150,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 29,
+        "kind": "PROPERTY",
+        "name": "Marvin Gardens",
+        "group": "YELLOW",
+        "price": 280,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 30,
+        "kind": "GO_TO_JAIL",
+        "name": "Go To Jail",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 31,
+        "kind": "PROPERTY",
+        "name": "Pacific Avenue",
+        "group": "GREEN",
+        "price": 300,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 32,
+        "kind": "PROPERTY",
+        "name": "North Carolina Avenue",
+        "group": "GREEN",
+        "price": 300,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 33,
+        "kind": "COMMUNITY_CHEST",
+        "name": "Community Chest",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 34,
+        "kind": "PROPERTY",
+        "name": "Pennsylvania Avenue",
+        "group": "GREEN",
+        "price": 320,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 35,
+        "kind": "RAILROAD",
+        "name": "Short Line",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 36,
+        "kind": "CHANCE",
+        "name": "Chance",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 37,
+        "kind": "PROPERTY",
+        "name": "Park Place",
+        "group": "DARK_BLUE",
+        "price": 350,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 38,
+        "kind": "TAX",
+        "name": "Luxury Tax",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 39,
+        "kind": "PROPERTY",
+        "name": "Boardwalk",
+        "group": "DARK_BLUE",
+        "price": 400,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      }
+    ],
+    "auction": null,
+    "trade": null
+  },
+  "diagnostic_action": {
+    "schema_version": "v1",
+    "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+    "action": "build_houses_or_hotel",
+    "args": {
+      "build_plan": [
+        {
+          "space_key": "ST_CHARLES_PLACE",
+          "kind": "HOTEL",
+          "count": 1
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "schema_version": "v1",
+      "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+      "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002298",
+      "seq": 2298,
+      "turn_index": 165,
+      "ts_ms": 574500,
+      "actor": {
+        "kind": "PLAYER",
+        "player_id": "p2"
+      },
+      "type": "LLM_DECISION_RESPONSE",
+      "payload": {
+        "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000300",
+        "player_id": "p2",
+        "action_name": "build_houses_or_hotel",
+        "valid": true,
+        "error": null
+      }
+    },
+    {
+      "schema_version": "v1",
+      "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+      "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002299",
+      "seq": 2299,
+      "turn_index": 165,
+      "ts_ms": 574750,
+      "actor": {
+        "kind": "PLAYER",
+        "player_id": "p2"
+      },
+      "type": "CASH_CHANGED",
+      "payload": {
+        "player_id": "p2",
+        "delta": -100,
+        "reason": "BUILD"
+      }
+    },
+    {
+      "schema_version": "v1",
+      "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+      "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002300",
+      "seq": 2300,
+      "turn_index": 165,
+      "ts_ms": 575000,
+      "actor": {
+        "kind": "PLAYER",
+        "player_id": "p2"
+      },
+      "type": "HOTEL_BUILT",
+      "payload": {
+        "player_id": "p2",
+        "space_index": 11,
+        "count": 1
+      }
+    },
+    {
+      "schema_version": "v1",
+      "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+      "event_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-evt-002301",
+      "seq": 2301,
+      "turn_index": 165,
+      "ts_ms": 575250,
+      "actor": {
+        "kind": "ENGINE",
+        "player_id": null
+      },
+      "type": "LLM_DECISION_REQUESTED",
+      "payload": {
+        "decision_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac-dec-000301",
+        "player_id": "p2",
+        "decision_type": "POST_TURN_ACTION_DECISION"
+      }
+    }
+  ],
+  "after": {
+    "schema_version": "v1",
+    "run_id": "campaign-c0761df29478459ab4cea725626ea259-0-f5a29652ac",
+    "turn_index": 165,
+    "phase": "AWAITING_DECISION",
+    "active_player_id": "p2",
+    "players": [
+      {
+        "player_id": "p1",
+        "name": "claude-opus-5.5",
+        "cash": 15,
+        "position": 39,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 0,
+        "bankrupt": false,
+        "bankrupt_to": null,
+        "get_out_of_jail_cards": 0
+      },
+      {
+        "player_id": "p2",
+        "name": "gpt-6.1-sol",
+        "cash": 337,
+        "position": 39,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 1,
+        "bankrupt": false,
+        "bankrupt_to": null,
+        "get_out_of_jail_cards": 0
+      },
+      {
+        "player_id": "p3",
+        "name": "gemini-4-argon",
+        "cash": 0,
+        "position": 34,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 0,
+        "bankrupt": true,
+        "bankrupt_to": "p2",
+        "get_out_of_jail_cards": 0
+      },
+      {
+        "player_id": "p4",
+        "name": "grok-4.7",
+        "cash": 0,
+        "position": 32,
+        "in_jail": false,
+        "jail_turns": 0,
+        "doubles_count": 0,
+        "bankrupt": true,
+        "bankrupt_to": "p2",
+        "get_out_of_jail_cards": 0
+      }
+    ],
+    "bank": {
+      "houses_remaining": 9,
+      "hotels_remaining": 11
+    },
+    "board": [
+      {
+        "index": 0,
+        "kind": "GO",
+        "name": "Go",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 1,
+        "kind": "PROPERTY",
+        "name": "Mediterranean Avenue",
+        "group": "BROWN",
+        "price": 60,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 2,
+        "kind": "COMMUNITY_CHEST",
+        "name": "Community Chest",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 3,
+        "kind": "PROPERTY",
+        "name": "Baltic Avenue",
+        "group": "BROWN",
+        "price": 60,
+        "owner_id": "p1",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 4,
+        "kind": "TAX",
+        "name": "Income Tax",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 5,
+        "kind": "RAILROAD",
+        "name": "Reading Railroad",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 6,
+        "kind": "PROPERTY",
+        "name": "Oriental Avenue",
+        "group": "LIGHT_BLUE",
+        "price": 100,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 1,
+        "hotel": false
+      },
+      {
+        "index": 7,
+        "kind": "CHANCE",
+        "name": "Chance",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 8,
+        "kind": "PROPERTY",
+        "name": "Vermont Avenue",
+        "group": "LIGHT_BLUE",
+        "price": 100,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 1,
+        "hotel": false
+      },
+      {
+        "index": 9,
+        "kind": "PROPERTY",
+        "name": "Connecticut Avenue",
+        "group": "LIGHT_BLUE",
+        "price": 120,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 1,
+        "hotel": false
+      },
+      {
+        "index": 10,
+        "kind": "JAIL",
+        "name": "Jail",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 11,
+        "kind": "PROPERTY",
+        "name": "St. Charles Place",
+        "group": "PINK",
+        "price": 140,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": true
+      },
+      {
+        "index": 12,
+        "kind": "UTILITY",
+        "name": "Electric Company",
+        "group": "UTILITY",
+        "price": 150,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 13,
+        "kind": "PROPERTY",
+        "name": "States Avenue",
+        "group": "PINK",
+        "price": 140,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 14,
+        "kind": "PROPERTY",
+        "name": "Virginia Avenue",
+        "group": "PINK",
+        "price": 160,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 15,
+        "kind": "RAILROAD",
+        "name": "Pennsylvania Railroad",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 16,
+        "kind": "PROPERTY",
+        "name": "St. James Place",
+        "group": "ORANGE",
+        "price": 180,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 17,
+        "kind": "COMMUNITY_CHEST",
+        "name": "Community Chest",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 18,
+        "kind": "PROPERTY",
+        "name": "Tennessee Avenue",
+        "group": "ORANGE",
+        "price": 180,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 19,
+        "kind": "PROPERTY",
+        "name": "New York Avenue",
+        "group": "ORANGE",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 20,
+        "kind": "FREE_PARKING",
+        "name": "Free Parking",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 21,
+        "kind": "PROPERTY",
+        "name": "Kentucky Avenue",
+        "group": "RED",
+        "price": 220,
+        "owner_id": "p1",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 22,
+        "kind": "CHANCE",
+        "name": "Chance",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 23,
+        "kind": "PROPERTY",
+        "name": "Indiana Avenue",
+        "group": "RED",
+        "price": 220,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 24,
+        "kind": "PROPERTY",
+        "name": "Illinois Avenue",
+        "group": "RED",
+        "price": 240,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 25,
+        "kind": "RAILROAD",
+        "name": "B. & O. Railroad",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 26,
+        "kind": "PROPERTY",
+        "name": "Atlantic Avenue",
+        "group": "YELLOW",
+        "price": 260,
+        "owner_id": "p1",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 27,
+        "kind": "PROPERTY",
+        "name": "Ventnor Avenue",
+        "group": "YELLOW",
+        "price": 260,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 28,
+        "kind": "UTILITY",
+        "name": "Water Works",
+        "group": "UTILITY",
+        "price": 150,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 29,
+        "kind": "PROPERTY",
+        "name": "Marvin Gardens",
+        "group": "YELLOW",
+        "price": 280,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 30,
+        "kind": "GO_TO_JAIL",
+        "name": "Go To Jail",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 31,
+        "kind": "PROPERTY",
+        "name": "Pacific Avenue",
+        "group": "GREEN",
+        "price": 300,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 32,
+        "kind": "PROPERTY",
+        "name": "North Carolina Avenue",
+        "group": "GREEN",
+        "price": 300,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 33,
+        "kind": "COMMUNITY_CHEST",
+        "name": "Community Chest",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 34,
+        "kind": "PROPERTY",
+        "name": "Pennsylvania Avenue",
+        "group": "GREEN",
+        "price": 320,
+        "owner_id": "p2",
+        "mortgaged": false,
+        "houses": 4,
+        "hotel": false
+      },
+      {
+        "index": 35,
+        "kind": "RAILROAD",
+        "name": "Short Line",
+        "group": "RAILROAD",
+        "price": 200,
+        "owner_id": "p1",
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 36,
+        "kind": "CHANCE",
+        "name": "Chance",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 37,
+        "kind": "PROPERTY",
+        "name": "Park Place",
+        "group": "DARK_BLUE",
+        "price": 350,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 38,
+        "kind": "TAX",
+        "name": "Luxury Tax",
+        "group": null,
+        "price": null,
+        "owner_id": null,
+        "mortgaged": false,
+        "houses": 0,
+        "hotel": false
+      },
+      {
+        "index": 39,
+        "kind": "PROPERTY",
+        "name": "Boardwalk",
+        "group": "DARK_BLUE",
+        "price": 400,
+        "owner_id": "p2",
+        "mortgaged": true,
+        "houses": 0,
+        "hotel": false
+      }
+    ],
+    "auction": null,
+    "trade": null
+  },
+  "claim": "At G5d300 a legal100hotel conversion would release4houses and leave337cash; the actual valid chosenEND retains24houses with an explicit house-retention rationale.",
+  "limits": "No future play, optimality, actual denied rival build or winner effect. Bank already has5houses. Recorded motive and optional conversion do not establish binding supply denial. Complete available original bundle was read as common sample53; no available provider reasoning beyond applied private at this decision.",
+  "script_sha256": "4dae4edeb50d56bdaaaf49b2ce0b45b962458f61e437cd9b57ff0e526026f56c"
+}
