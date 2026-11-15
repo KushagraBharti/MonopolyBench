@@ -1,6 +1,6 @@
 # Final whole-paper review adjudication
 
-The reviewed candidate is PDF `e5c44bebfb1d6b0b7c434d875261be63b11e4c6457396ee97596457a0c840dae`, under review manifest `a362c4c6d020adb115a50b919d85d3db6777d223189493d7c4edd1517885e269`. The candidate remains unchanged until the remaining two core reviews finish.
+The reviewed candidate was PDF `e5c44bebfb1d6b0b7c434d875261be63b11e4c6457396ee97596457a0c840dae`, under review manifest `a362c4c6d020adb115a50b919d85d3db6777d223189493d7c4edd1517885e269`. It remained unchanged until all three core reviews finished and is preserved in checkpoint `15c1e519b`. The decisions below have now been applied to the integration; the individual drafts remain frozen.
 
 ## Sol: completed and read
 
@@ -51,4 +51,4 @@ The full review, findings, replacements and verification were read. Root re-read
 
 ## Integration status
 
-All three independent core reviews and the root integrator review are complete. The scientific candidate can now be revised in one final pass. The four individual drafts stay frozen. No further delegate review or new evaluation is needed for these local, source-checked changes.
+All three independent core reviews and the root integrator review are complete. The accepted changes above were applied in one final integration pass. The final PDF is `56c434d2b89099398aff6ab77daa33e68edca1610c78b908a90f8ab923851289`, with seven main pages and 30 pages total. Document/source checks and inspection pass; the portable rebuild reproduces all page text, geometry and pixels. The 244 frozen draft files outside local environments and all 84 historical-manuscript files retain their hashes. No further delegate review or new evaluation was performed for these local, source-checked changes.

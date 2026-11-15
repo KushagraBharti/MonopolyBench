@@ -1,6 +1,6 @@
 # Integration decisions
 
-This is a live record for the new integrated package. Independent drafts remain frozen. Decisions below are provisional until every complete core draft and the fresh adversarial review are read.
+This records the whole-paper integration in chronological order. All four complete drafts, the fresh adversarial review and the three final peer reviews have now been read and adjudicated. Earlier provisional choices below are superseded where stated in `final_review/ADJUDICATION.md`; the independent drafts remain frozen.
 
 ## Astra and Sol, complete comparison
 
@@ -75,6 +75,8 @@ Read the complete authored main and appendix text, handoff, dissent, evidence ma
 - **Preserve the longer economic continuations in the eight-case appendix.** Fable's shorter incidents sharpen their focus, but dropping later transactions and outcomes would lose already checked evidence requested by the user.
 - **Keep the named preprint format and existing author disclosure.** Do not invent a human annotation, affiliation, or retrospective attestation that the human has personally checked every field.
 
-## Pending
+## Completed integration
 
-- Final integrated whole-paper review, build, rendering and release manifest.
+All accepted final changes are applied. The main text ends on page 7; the complete PDF has 30 pages. Five compact main incidents and all eight supplement histories remain. The final pass adds the precisely defined 37-entry collateral subset, reports 27/29 preservation when sale was available, strengthens the G7 budget exchange and corrects channel attribution and G13 chronology. It introduces no new evaluation.
+
+The 95-file portable package omits eleven superseded section fragments. Its outside-repository rebuild reproduces all 30 pages in text, geometry and rendered pixels. All six saved-record scripts rerun without changing any of 79 generated data/section files. See `integrated/VERIFICATION.md` and `RELEASE_COMPLETION.json` for final checks; publication is recorded separately from local verification.

@@ -65,7 +65,7 @@ assert partition=={'initial':62,'sale_no_release':53,'release_required':16}
 proof=[]
 for r in payable:
     owned={h['space_key']:h for h in r['holdings']}
-    developed={spaces[k]['group'] for k,h in owned.items() if h['houses'] or h['hotel']}
+    developed=sorted({spaces[k]['group'] for k,h in owned.items() if h['houses'] or h['hotel']})
     assert all(groups[g]<=owned.keys() for g in developed)
     assert all(max(5 if owned[k]['hotel'] else owned[k]['houses'] for k in groups[g])-min(5 if owned[k]['hotel'] else owned[k]['houses'] for k in groups[g])<=1 for g in developed)
     hotels_by_group={g:sum(owned[k]['hotel'] for k in groups[g]) for g in developed}

@@ -8,6 +8,7 @@ the repository at the paths and hashes recorded in the data manifests.
 import argparse
 import hashlib
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -20,15 +21,32 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def active_sources():
+    pending = ["manuscript.tex"]
+    active = set()
+    while pending:
+        rel = pending.pop()
+        if rel in active:
+            continue
+        active.add(rel)
+        text = (HERE / rel).read_text()
+        for item in re.findall(r"\\(?:input|include)\{([^}]+)\}", text):
+            pending.append(item if item.endswith(".tex") else item + ".tex")
+    return active
+
+
 def payload_paths():
     roots = {"sections", "data", "tools", "assets"}
     suffixes = {".tex", ".bib", ".pdf", ".md", ".sh"}
     selected = []
+    active = active_sources()
     for path in HERE.rglob("*"):
         if not path.is_file():
             continue
         rel = path.relative_to(HERE)
         if any(part in {"__pycache__", ".DS_Store"} for part in rel.parts):
+            continue
+        if rel.parts[0] == "sections" and rel.as_posix() not in active:
             continue
         if rel.parts[0] in roots or (
             len(rel.parts) == 1
@@ -52,6 +70,15 @@ def verify():
 def package():
     if not (HERE / "manuscript.pdf").is_file():
         raise SystemExit("Build manuscript.pdf before packaging.")
+    active = active_sources()
+    excluded = sorted(p.relative_to(HERE).as_posix() for p in (HERE / "sections").glob("*.tex")
+                      if p.relative_to(HERE).as_posix() not in active)
+    (HERE / "ACTIVE_SOURCES.md").write_text(
+        "# Active manuscript sources\n\n"
+        "The portable archive contains only the active section graph below. Superseded fragments remain in the repository's historical work record and are omitted from this archive.\n\n"
+        + "\n".join("- `" + p + "`" for p in sorted(active))
+        + "\n\n## Superseded sections omitted from the archive\n\n"
+        + "\n".join("- `" + p + "`" for p in excluded) + "\n")
     paths = payload_paths()
     files = {p.relative_to(HERE).as_posix(): digest(p) for p in paths}
     manifest = {

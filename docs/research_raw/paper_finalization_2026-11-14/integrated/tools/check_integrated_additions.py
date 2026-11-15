@@ -1,4 +1,4 @@
-"""Check integrated finance selections and three quotations against saved records."""
+"""Check integrated finance selections and quotations against saved records."""
 import hashlib
 import json
 from pathlib import Path
@@ -27,6 +27,9 @@ for entry in entries:
     episode = episodes[entry["game"], entry["decision"]]
     path, records = decisions(entry["game"])
     resolved = {r["decision_id"]: r for r in records if r["phase"] == "decision_resolved"}
+    start = next(r for r in records if r["phase"] == "decision_started"
+                 and r["decision_id"].endswith(f'-{entry["decision"]:06d}'))
+    menu = start["prompt_payload"]["action_state"]["available_actions"]
     actions = [resolved[d]["final_action"]["action"] for d in episode["decisions"]]
     assert actions == episode["actions"] == entry["actions"]
     assert entry["outcome"] == "paid"
@@ -35,13 +38,20 @@ for entry in entries:
                      initially_available_mortgages=entry["M0"],
                      building_salvage=entry["S"], actions=actions,
                      sold_buildings="sell_houses_or_hotel" in actions,
+                     sale_offered="sell_houses_or_hotel" in menu,
+                     initial_menu=menu,
                      source=str(path.relative_to(ROOT)), source_sha256=sha(path)))
 assert len(rows) == 30 and sum(not r["sold_buildings"] for r in rows) == 28
+assert sum(r["sale_offered"] for r in rows) == 29
+assert sum(r["sale_offered"] and not r["sold_buildings"] for r in rows) == 27
+assert all(r["initial_menu"].index("mortgage_property") < r["initial_menu"].index("sell_houses_or_hotel")
+           for r in rows if r["sale_offered"])
 assert {(r["game"], r["decision"]) for r in rows if r["sold_buildings"]} == {(12, 282), (18, 372)}
 (HERE / "data/development_preservation.json").write_text(json.dumps({
     "population": "All financing entries with buildings and cash plus initially listed mortgages at least the debt.",
     "rows": rows, "no_sale": 28, "total": 30,
-    "scope": "Observed action choices, not a cost-optimality claim or policy evaluation."
+    "sale_offered": 29, "no_sale_when_offered": 27,
+    "scope": "Observed asset-preservation pattern, not a stable preference, cost-optimality claim or policy evaluation."
 }, indent=2) + "\n")
 
 registry = json.loads((HERE / "data/finalization_quote_registry.json").read_text())
@@ -68,4 +78,4 @@ for q in registry:
     latex.append(r"\DeclareTranscriptQuote{%s}{%s}{%s}" % (q["id"], q["label"], escaped))
 (HERE / "data/finalization_quote_manifest.json").write_text(json.dumps({"quotes": quotes}, indent=2) + "\n")
 (HERE / "sections/finalization_quotes.tex").write_text("\n".join(latex) + "\n")
-print("Source-checked 30 financing selections (28 without sales) and 3 G7 quotations.")
+print(f"Source-checked 30 financing selections (28 without sales; 27/29 when offered) and {len(quotes)} G7 quotations.")
