@@ -1,0 +1,113 @@
+{
+  "schema_version": "integrated-whole-paper-review-v1",
+  "reviewer": "Sol xhigh",
+  "date": "2026-11-11",
+  "pdf_sha256": "8268234265df2bb9e0cf9a3303a51f79992e96e69a42b1d074c867697313feb5",
+  "verdict": "Central observational account supported; two bounded reporting clarifications recommended before closing integration. No central factual or interpretation blocker identified.",
+  "blocking_findings": [],
+  "severity_scale": {
+    "high": "Changes a central factual result or licenses an unsupported interpretation; blocking until resolved.",
+    "medium": "Reporting ambiguity or missing method specification requiring a bounded correction; does not overturn the central account.",
+    "low": "Optional editorial or metadata improvement."
+  },
+  "findings": [
+    {
+      "id": "SOL-FR-001",
+      "severity": "medium",
+      "type": "denominator_ambiguity",
+      "blocking": false,
+      "priority": "correct before closing integration",
+      "file": "integrated/sections/bargaining.tex",
+      "line": 56,
+      "exact_passage": "Eighty-eight still leave only that party completing. Eighty-five improve the counterer's net cash, with a median increase of \\$125.",
+      "issue": "The intended conditioning set is 88, but the paragraph opens with 111 and never explicitly binds the 85 or the median to the 88. Reading these as statistics of all 111 would be factually wrong. The current wording permits that reading even though its nearest antecedent is the correct subset.",
+      "evidence": [
+        "Independent join of all 394 counter transitions in data/agenda_offers.json, matching current recipient to next author and sorting within thread.",
+        "final_review/sol/checks.json: counter_cash_denominator.all111 = n111, 89 cash improvements, median change100.",
+        "final_review/sol/checks.json: counter_cash_denominator.retains_only_original_author88 = n88, 85 cash improvements, median change125."
+      ],
+      "proposed_resolution": "Write: 'Of those eighty-eight, eighty-five improve the counterer's net cash; the median cash change across the eighty-eight is an increase of $125.' Keep Table 4 unchanged. Full paragraph supplied in replacement_prose.tex.",
+      "performed": "Independent retained-ledger arithmetic in this fresh review; check_records.py records both conditioning sets.",
+      "inherited": "The offer ledger's original reconstruction and completion classifications. No engine or canonical settlement recomputation was executed."
+    },
+    {
+      "id": "SOL-FR-002",
+      "severity": "medium",
+      "type": "missing_sample_definition",
+      "blocking": false,
+      "priority": "correct before closing integration",
+      "file": "integrated/sections/temporal_discussion.tex",
+      "line": 4,
+      "additional_locations": [
+        {"file": "integrated/sections/methods.tex", "line": 31}
+      ],
+      "exact_passage": "The fixed 240-decision sample contains fifty-nine forward-looking own-action passages, thirty-six prospective opponent-capacity or outcome passages and twenty-five references to correction or feedback, with overlap.",
+      "issue": "Neither this sentence nor methods states the selection unit or restricted source pool. The retained design is three SHA-ranked decisions per player-game from an earlier public-unflagged pool. A reader cannot infer that design from 'fixed', and the counts should not read as a representative rate of planning across all decisions.",
+      "evidence": [
+        "data/agenda_temporal.json, population: '240 fixed public-unflagged decisions; three SHA-ranked selections per player-game, not 200/40 sampling strata'.",
+        "Independent read of data/agenda_temporal_rows.jsonl finds 80 player-games with exactly three rows each; retained semantic tags reproduce P59/O36/R25 and 53 missing private fields.",
+        "final_review/sol/context_checks.json, temporal."
+      ],
+      "proposed_resolution": "Define the sample in the first temporal paragraph as three SHA-ranked selections per player-game from the earlier public-unflagged pool; identify complete applied public/private fields and exclusion of provider explanations. State that the counts describe this selected sample. Replacement supplied without adding any coding or evaluation.",
+      "performed": "Read the retained design and all 240 row structures; re-tabulated selection counts and retained tags. No fresh semantic annotation.",
+      "inherited": "Original sample ranking, public-unflagged classification, semantic coding and endpoint adjudication."
+    },
+    {
+      "id": "SOL-FR-003",
+      "severity": "low",
+      "type": "optional_prose_compression",
+      "blocking": false,
+      "priority": "optional",
+      "file": "integrated/sections/temporal_discussion.tex",
+      "line": 31,
+      "additional_locations": [
+        {"file": "integrated/sections/temporal_discussion.tex", "line": 27},
+        {"file": "integrated/sections/temporal_discussion.tex", "line": 29},
+        {"file": "integrated/sections/methods.tex", "line": 23},
+        {"file": "integrated/sections/related_limits.tex", "line": 19}
+      ],
+      "exact_passage": "None settles whether prior spending was wise, whether payment was optimal, or which player would win under another action. This local precision supports the behavioral account without making an unvalidated claim for a general auditor.",
+      "issue": "This is correct, but discussion section 8.2 repeats the execution, confounding and feasibility qualifications already established in methods and results and repeated in the question map and limitations. The repetition weakens the positive economic account and adds length without changing its scope.",
+      "evidence": [
+        "Complete source and rendered-paper review, especially methods section3.2, results sections5/6, discussion section8.2, Table6 and limitations section10."
+      ],
+      "proposed_resolution": "Optionally replace the three section8.2 paragraphs with the two shorter paragraphs supplied in replacement_prose.tex. Preserve all result-specific corrections and Table6's supported/unestablished distinctions.",
+      "performed": "Fresh whole-paper prose and visual review.",
+      "inherited": "No new empirical claim; the replacement retains the existing reported checks and scope."
+    },
+    {
+      "id": "SOL-FR-004",
+      "severity": "low",
+      "type": "bibliographic_metadata",
+      "blocking": false,
+      "priority": "optional copy correction",
+      "file": "integrated/references.bib",
+      "line": 41,
+      "exact_passage": "title = {{A Unified Arena for LLM Agents across Diverse Eurogame}},",
+      "issue": "The cited primary source's title ends in plural 'Eurogames'. The current bibliography drops the final s. The URL and substantive description are correct.",
+      "evidence": [
+        "https://arxiv.org/html/2610.35773v1, title and abstract, freshly opened in this review.",
+        "Pinned manuscript.pdf, reference15 on page24."
+      ],
+      "proposed_resolution": "Change only the integrated derivative entry's title to 'A Unified Arena for LLM Agents across Diverse Eurogames'. Do not edit the frozen bibliography or prior drafts.",
+      "performed": "Primary-source title/metadata and rendered reference check.",
+      "inherited": "The source's reported experiments were not replicated."
+    }
+  ],
+  "explicit_dissent": [
+    {
+      "id": "SOL-FR-D01",
+      "position": "Retain G7 as the eighth main incident. Its settled public-final/private-contingency contrast complements G2's refused bluff. Seven versus eight is an editorial choice, not an unresolved factual defect."
+    },
+    {
+      "id": "SOL-FR-D02",
+      "position": "Do not interpret close counter proportions as equivalence or identical repricing across all deed types, and do not interpret repeated seat-purchase paths as causal dice shares. The pinned integration correctly avoids both claims."
+    }
+  ],
+  "unverified_scopes": [
+    "All inherited engine-executed witnesses, construction target executions, restricted searches and full replays.",
+    "Full original prompt/state/memory reconstruction, provider transport causation and complete raw conflict classification.",
+    "Independent semantic validation of the 61 agreed rival-consequence labels and all temporal categories.",
+    "Any optimal strategy, persuasion effect, durable learning, memory effect, corrected-interface outcome, external transfer or general-capability relationship."
+  ]
+}

@@ -1,0 +1,254 @@
+{
+ "reviewer": "Opus xhigh (claude-opus-5.5)",
+ "pinned_pdf_sha256": "8268234265df2bb9e0cf9a3303a51f79992e96e69a42b1d074c867697313feb5",
+ "severity_scale": {
+  "blocking": "factual or attribution error that must be corrected before circulation",
+  "major": "material interpretation, condition or presentation issue that should be fixed",
+  "minor": "local precision or sourcing",
+  "optional": "style or scope preference"
+ },
+ "findings": [
+  {
+   "id": "OPF-01",
+   "severity": "blocking",
+   "category": "factual-attribution",
+   "file": "integrated/sections/appendix.tex",
+   "line": 112,
+   "passage": "Their arithmetic is not uniformly correct: G1 notes quote \\$198 for orange redemption rather than the implemented \\$200, G1 quotes \\$220 for Boardwalk rather than \\$221, and G16 quotes \\$110 for New York rather than \\$111.",
+   "evidence": "Grok's three figures are the exact ten-percent redemption charges (2x99, 220, 110). The implemented charges come from engine.py _unmortgage_cost = int(math.ceil(value*1.1)), which overcharges by $1 for principals 50/90/100/110/200 (recomputed here and identical to Appendix C l.133). The delivered prompts never show a redemption charge. A census of all 6,989 initial prompts finds no price, cost, mortgage-value or redemption field in any POST_TURN_ACTION_DECISION (4,081). The G1 d298 tool description is only 'Unmortgage a property you own.' Grok therefore used the only charge it could know, and the discrepancy is the paper's own documented implementation overcharge, not model arithmetic. The sentence entered during integration from OPR-24/FX-C05. OPR-24 called $220 'the standard-rule figure', not an error.",
+   "proposed_resolution": "Replace with: 'Their redemption figures (\\$198 for the two orange deeds, \\$220 for Boardwalk, \\$110 for New York) are the exact ten-percent charges; prompts do not display redemption costs, and the engine's floating-point ceiling charges \\$200, \\$221 and \\$111 (Appendix~\\ref{app:rules}). The table uses the implemented charges.' Also amend integration_decisions.md (OPR-24 and FX-C05 rows), which currently describe these as note rounding/arithmetic errors.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-02",
+   "severity": "major",
+   "category": "information-condition",
+   "file": "integrated/sections/setup.tex",
+   "line": 44,
+   "passage": "Prompts show cash, ownership, buildings, bank stock, twenty public timeline entries and ten own private notes.",
+   "evidence": "Census of all 6,989 decision_started payloads (game_state without memory, plus action_state). BUY_OR_AUCTION_DECISION (547) carries price, house_cost, rent, group and group_progress for the landed deed. AUCTION_BID_DECISION (854) carries group. POST_TURN_ACTION_DECISION (4,081), TRADE_RESPONSE_DECISION (920), JAIL_DECISION (249) and LIQUIDATION_DECISION (338) carry none of these fields. Management, trade and liquidation menus list space keys only, with no sale, mortgage or redemption values. Every arithmetic claim the paper evaluates (G2 nine houses, G13 5/36 and Short Line distance, G15 $600 layer, G19 'States is the third orange', Grok redemption figures, G12/G17 omitted collateral) therefore rests on recalled standard-board parameters. The system prompt promises 'full board/game context'.",
+   "proposed_resolution": "Add after the first sentence of §2.4: 'Only purchase and auction prompts state the landed deed's price, house cost, rent schedule or color group. Management, trade-response and liquidation prompts list space keys and legal key menus without prices, rents, mortgage values, sale proceeds or redemption charges, so agents' valuations and arithmetic rely on recalled standard-board parameters.' Optionally add one row to the evidence map citing this census.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-03",
+   "severity": "major",
+   "category": "interpretation-clarity",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 16,
+   "passage": "The hotel cannot be downgraded, and even-selling blocks a lower sibling's house. The mortgage-only continuation reaches \\$440 and automatic bankruptcy, despite \\$1,310 in nominal resources.",
+   "evidence": "The original G7 d339 request lists sellable_building_space_keys: [] and available_actions [mortgage_property, declare_bankruptcy]. In engine.py, _sellable_building_space_indices offers only a group's highest-built deeds and offers a hotel only when bank houses >= 4, so the menu is empty. _build_liquidation_decision then omits sell_houses_or_hotel. By contrast, _validate_sell_plan checks bank stock (houses_remaining + net delta >= 0) and evenness only after the whole plan. A plan clearing the group (St. Charles 4 houses, States 4 houses, Virginia hotel, Virginia 4 houses) would have net bank +8 houses and final 0/0/0, and would raise $650 (390+650 = 1,040 >= 750). Appendix C states the bundled-sale property and calls G7 a 'mortgage-only state' but never connects them. A reader of App C can conclude that a bundled sale pays the debt, so the main-text exception looks contradicted. This is a source-reading inference about acceptance; no plan was executed.",
+   "proposed_resolution": "State in §6.1 and App C that the lock is a property of the implemented liquidation menu: no sale action is offered, so no bundled plan can be submitted, although the plan validator alone would accept a group-clearing bundle. Optionally phrase the abstract as 'one is blocked by the implementation's hotel-sale menu despite sufficient nominal assets'. See replacement_prose.tex.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution); bundle acceptance is inferred from source, not executed"
+  },
+  {
+   "id": "OPF-04",
+   "severity": "major",
+   "category": "headline-presentation",
+   "file": "integrated/manuscript.tex",
+   "line": 13,
+   "passage": "The systems complete 17, 18, 15 and 13 color groups through trade, but build on 16, 17, 7 and 3 in their first management windows. Construction gaps mix deferred financing, engine defaults and received actions conflicting with accompanying text. One participant receives action-only refusal recovery on 1,604 of 1,696 decisions.",
+   "evidence": "The abstract's lead result has unlabeled number vectors and an unnamed 'one participant'. first_management_windows.json summary gives the per-configuration residuals. Grok's ten are 4 no-option with stated deferral, 4 received-call conflicts and 2 stated holds. Opus's eight are 5 no-option windows (action-only, no private notes) and 3 defaults after refusal. Sol's one is a default. Gemini's one is a valid end. Only 4 of the 20 residuals carry a stated financing deferral, so 'deferred financing' over-describes the no-option category: 2 of 9 fall short even of the static mortgage budget, and 5 have no stated reason. The main text gives Opus's split (development.tex:34) but never Grok's, even though Grok has the lowest conversion.",
+   "proposed_resolution": "Name the systems in the abstract and replace the gap sentence (see replacement_prose.tex). Add one sentence to development.tex:6 giving the Grok and Opus residual splits.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-05",
+   "severity": "major",
+   "category": "unsupported-quantifier/orphan-statistic",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 55,
+   "passage": "The creditor often already owns the developed property causing the debt, so they do not isolate inheritance's contribution to winning.",
+   "evidence": "Same unquantified 'often' at temporal_discussion.tex:23 ('often after collecting rent on an already-developed group'). appendix.tex:92 has an orphan sentence: 'Fifty-seven developed-color rent elimination triggers concern events.' Recount from the original event streams, using the debtor's last move before each BANKRUPTCY marker: 57 of 60 eliminations follow landing on a developed color deed owned by the creditor, and 38 of the 40 nonterminal ones do. The exceptions are G1 Sol on a railroad, G13 Grok on Short Line (nonterminal) and G13 Sol's luxury tax (terminal, bank creditor).",
+   "proposed_resolution": "Main text: 'In fifty-seven of sixty eliminations, including thirty-eight of the forty nonterminal ones, the debt is rent on the creditor's developed color deed, so these figures do not isolate inheritance's contribution to winning.' Discussion: replace 'often after collecting rent…' with 'usually as the owner of the developed deed that produced the debt'. Appendix: rewrite the orphan as 'Fifty-seven eliminations are triggered by rent on a developed color deed; this is an event count, not a unit count.'",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution); trigger attribution uses the debtor's last move, matches the retained 57"
+  },
+  {
+   "id": "OPF-06",
+   "severity": "minor",
+   "category": "channel-attribution",
+   "file": "integrated/sections/development.tex",
+   "line": 30,
+   "passage": "At G3 d176, Opus selects an action-only end with \\$204 and states a preference for reserves over an available \\$150 house.",
+   "evidence": "G3 d176: selected attempt 1 (action-only) has public message 'Holding steady. Done.' and no private note. The reserve statement is in assistant content: 'A house on Atlantic would cost $150 and leave me only $54 … so I'm keeping the cash.' The paper elsewhere separates channels carefully.",
+   "proposed_resolution": "'…and its action-only assistant content states a preference for reserves…'",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-07",
+   "severity": "minor",
+   "category": "unsourced-claim",
+   "file": "integrated/sections/development.tex",
+   "line": 47,
+   "passage": "Sol had already stated its own reason not to fund Grok, and Opus subsequently offers cash.",
+   "evidence": "The source is Sol's private note at G20 d95, recorded before Gemini's d96 appeal: 'P1's red monopoly is cash-starved; buying New York now would fund dangerous development without completing my oranges.' Opus's later offers (d129 $140 for New York: 'That's money you can put into more red houses right now'; d156/d158 $100 then $140 for Vermont) explicitly pitch cash as house funding. Grok rejects the first and counters the second at $300, then $250. Opus then declines.",
+   "proposed_resolution": "'Sol's private note at d95 had already declined to fund Grok's development. Opus later pitches cash as house funding (d129, d156), but Grok rejects or counters both offers.' This strengthens the paper's own 'no jointly adopted cartel' reading.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-08",
+   "severity": "minor",
+   "category": "clarity",
+   "file": "integrated/sections/setup.tex",
+   "line": 38,
+   "passage": "In 1,394 Opus decisions, the later private-memory window contains either no note or only synthetic fallback notes.",
+   "evidence": "Recount from delivered Opus prompts: the your_private_thoughts_last_10 field is empty in 1,108 and contains only synthetic 'fallback' entries in 286, for a total of 1,394 of 1,696. 'Later private-memory window' is undefined.",
+   "proposed_resolution": "'In 1,394 of Opus's 1,696 delivered prompts, the ten-note private-memory field is empty (1,108) or holds only synthetic ``fallback'' entries (286).'",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-09",
+   "severity": "minor",
+   "category": "internal-consistency",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 56,
+   "passage": "Of 111 counters to author-only completion offers, ninety-two preserve the same original author's newly complete group.",
+   "evidence": "Table 4's header is 'All requested deeds retained', and its caption says 'The same deed-retention predicate is used in both rows'. appendix.tex:39 says 'retained-completion'. Re-join of all 394 counters: the two predicates select the identical 92 author-only counters, with no record in either difference set. So the number is right, but two predicate names are used. 'Eighty-five improve…' is within the 88 (verified), but the denominator is implicit.",
+   "proposed_resolution": "'…ninety-two retain every requested deed, and with it the original author's completion. Eighty-eight still leave only that party completing; eighty-five of these improve the counterer's net cash…' In appendix.tex:39 add 'which coincides with requested-deed retention'.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-10",
+   "severity": "minor",
+   "category": "clarity/factual-precision",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 76,
+   "passage": "The longer provider text contradicts itself. Its opening 5/36 probability is wrong: the roll is 4/36.",
+   "evidence": "The 5/36 appears in the d250 public appeal and in the d250 note, which counts Short Line as an 8 ('8 Short Line $200 to p2 (5/36…)'). Grok is on Atlantic (26), and Short Line (35) is nine squares away. The self-contradiction is in the d252 returned provider text, which says accepting $130 'is now the clear survival choice' and then counters at $200. 'Its' reads as the provider text.",
+   "proposed_resolution": "'The opening appeal's 5/36 treats Short Line as an eight; it is nine squares away, a 4/36 roll. The d252 provider text contradicts itself, calling acceptance of \\$130 the clear survival choice before countering at \\$200.'",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-11",
+   "severity": "minor",
+   "category": "evidence-scope",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 29,
+   "passage": "The note also contains arithmetic errors.",
+   "evidence": "The quoted excerpt's figures are correct ($350 = 7 houses x $50; $207 = $250 - $43). The full G12 d249 note opens 'Full even liquidation cannot cover the $250', later recomputes correctly, and says it would 'survive with $43 and 5 houses' when two would remain. The claim is supported, but only by unquoted text.",
+   "proposed_resolution": "'The unquoted part of the note first concludes that liquidation cannot pay, then recomputes correctly but misstates the houses remaining.'",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-12",
+   "severity": "minor",
+   "category": "citation-pinpoint",
+   "file": "integrated/sections/related_limits.tex",
+   "line": 9,
+   "passage": "Its Monopoly return summaries use a bankruptcy treatment that sells buildings to the bank",
+   "evidence": "qa/literature/sources.json records Appendix C.3 for this rule. The neighbouring claims carry §3.2 and App. E pinpoints.",
+   "proposed_resolution": "Add \\cite[App.~C.3]{hu2026finboardbench}.",
+   "check_status": "inherited (root primary-source record); not re-fetched by Opus"
+  },
+  {
+   "id": "OPF-13",
+   "severity": "minor",
+   "category": "missing-identification",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 78,
+   "passage": "The remaining opening acceptance, G3 d194, names acceptance in both assistant content and the tool call.",
+   "evidence": "All three opening author-only acceptances are Grok's standard responses (ledger: G3 d194, G16 d247, G18 d083). bargaining.tex:76 'thirty-four records come from two games': these are G1 (22) and G15 (12).",
+   "proposed_resolution": "'All three opening acceptances are Grok's; two (G16 d247, G18 d083) are text/call conflicts, while G3 d194 names acceptance in content and call.' Name G1 and G15 at l.76.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-14",
+   "severity": "optional",
+   "category": "incident-evidence (G7 dissent resolution)",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 87,
+   "passage": "Opus eventually calls \\$450 final while its private note retains a \\$475 ceiling. Sol refuses.",
+   "evidence": "G7's justification is the contrast with 'G2's refused final offer'. That half of the contrast is only paraphrased, while the exact cards g2-d127-final, g2-d127-ceiling and g2-d128-keep already exist in opus_quotes.tex (root-checked) but are unused.",
+   "proposed_resolution": "Use those three cards in the G2 transcript, and shorten the G7 reading to two sentences. I withdraw my earlier request to demote G7 and do not treat eight incidents as a defect.",
+   "check_status": "document read; quote spans inherited from root's check"
+  },
+  {
+   "id": "OPF-15",
+   "severity": "optional",
+   "category": "redundant-hedging",
+   "file": "integrated/sections (multiple)",
+   "line": 0,
+   "passage": "e.g. bargaining.tex:52 (whole paragraph); temporal_discussion.tex:31 'This local precision supports the behavioral account without making an unvalidated claim for a general auditor.'; introduction.tex:17 'They are not proposed as a generally validated auditing method.'; related_limits.tex:11 'not a generally validated semantic metric, monitoring system or audit method'",
+   "evidence": "The general-auditor disclaimer appears three times, and the not-a-ranking disclaimer at least five times (abstract, §2.2, Table 7 caption, App B, Table 6). bargaining.tex:52 is a paragraph of negatives that limitations already covers. Several transcript readings repeat 'not proof of optimal…'.",
+   "proposed_resolution": "Keep one general-auditor disclaimer (related work) and one ranking disclaimer (limitations, plus the abstract's closing sentence). Fold bargaining.tex:52 into one sentence: 'Without a utility function or fair-price reference, low acceptance does not rule out concessions on poor terms.'",
+   "check_status": "document read"
+  },
+  {
+   "id": "OPF-16",
+   "severity": "optional",
+   "category": "selective-reporting",
+   "file": "integrated/sections/setup.tex",
+   "line": 32,
+   "passage": "Recorded completion tokens average 128 per decision for Sol and 4,041 for Grok; provider token semantics differ.",
+   "evidence": "Two of four configurations reported.",
+   "proposed_resolution": "Report all four from usage_decisions.jsonl or say 'range from 128 (Sol) to 4,041 (Grok)'.",
+   "check_status": "document read; Gemini/Opus averages not recomputed by Opus"
+  },
+  {
+   "id": "OPF-17",
+   "severity": "optional",
+   "category": "figure-caption",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 10,
+   "passage": "Squares mark four automatic eliminations.",
+   "evidence": "Figure 2, rendered at 160 dpi, shows five square glyphs: G7 has a filled square at $440 and a hollow one at $1,310. The G7 segment also passes through the debt-750 points at bounds 476 and 595.",
+   "proposed_resolution": "'Squares mark the four automatic eliminations; G7's filled and hollow squares mark reachable cash and nominal bound.'",
+   "check_status": "render inspected (page 14)"
+  },
+  {
+   "id": "OPF-18",
+   "severity": "minor",
+   "category": "introduction-coverage",
+   "file": "integrated/sections/introduction.tex",
+   "line": 15,
+   "passage": "They include a refusal based on rival development, a public bargaining limit contradicted by a private contingency, an omitted financing route, an appeal to withhold a rival's building cash, and withdrawal of a repeated offer after the seller's deterioration.",
+   "evidence": "The introduction lists seven of the eight incidents. G2 (pricing a rival's completion, then role reversal) is the first transcript and is absent.",
+   "proposed_resolution": "Prefix the list with 'a negotiation that prices a rival's completion and later reverses roles,'.",
+   "check_status": "document read"
+  },
+  {
+   "id": "OPF-19",
+   "severity": "minor",
+   "category": "missing-identification",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 18,
+   "passage": "At G20 d327--336, \\$49 cash, \\$700 building salvage and \\$665 mortgages pay a \\$1,400 debt and leave \\$14. In G16, extensive liquidation instead reaches \\$1,393 against \\$2,000. The latter model's account already states the correct total",
+   "evidence": "G20 d327 debtor is p3 (Sol). G16 d602 is Gemini (Table 12). 'The latter model' is unnamed.",
+   "proposed_resolution": "Name Sol and Gemini.",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-20",
+   "severity": "minor",
+   "category": "precision",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 59,
+   "passage": "Greens arrive only through the terminal estate.",
+   "evidence": "Grok's green blocker reaches Gemini at the first elimination (bargaining.tex:104). The group completes only at the terminal estate (turn 114 in the episode ledger).",
+   "proposed_resolution": "'The green group completes only through the terminal estate.'",
+   "check_status": "performed (original-record/source read or retained-ledger re-tabulation; no engine, game or model execution)"
+  },
+  {
+   "id": "OPF-21",
+   "severity": "minor",
+   "category": "provenance-understatement",
+   "file": "integrated/sections/appendix.tex",
+   "line": 193,
+   "passage": "Original checks verify supplementary G2/G11/G15/G16 quote fields and focal recipient delivery.",
+   "evidence": "qa/document_checks.json records 35 used quote cards, 37 spans and 12 original files checked, plus the eight corrected full-field labels.",
+   "proposed_resolution": "'Original checks reload every used quote field (35 cards, 37 spans, 12 source files) and verify focal recipient delivery.'",
+   "check_status": "inherited (root document check summary read)"
+  },
+  {
+   "id": "OPF-22",
+   "severity": "optional",
+   "category": "unsupported-positive",
+   "file": "integrated/sections/temporal_discussion.tex",
+   "line": 21,
+   "passage": "G2 illustrates all three distinctions within one trajectory.",
+   "evidence": "G2 shows a completion that did not lead to a win and a rival-sensitive reason with false arithmetic. It does not isolate 'cash direction alone is not a price premium'.",
+   "proposed_resolution": "'G2 illustrates the second and third within one trajectory.'",
+   "check_status": "document read"
+  }
+ ]
+}

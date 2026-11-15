@@ -1,0 +1,37 @@
+\section{Measurement}
+\label{sec:measurement}
+
+\subsection{Ledgers}
+
+All counts come from five ledgers built from the canonical event, action and decision logs.
+
+The \emph{offer ledger} has one row for each of the 920 times a player had to answer a trade offer. A row records the offer's writer and recipient, the bundles each would give, and the consequences of accepting for both sides: cash after mandatory charges and any color group newly completed or lost. The writer is the author of the current offer, who need not be the player that opened the thread. In 44 of 113 settlements the accepted terms were written by the other party. Acceptance is on the legal menu in 918 rows. The two exceptions would leave a party with negative cash, and they are excluded wherever a rate requires that acceptance was possible. We classify each offer by who would newly complete a color group if it were accepted: the writer only, the recipient only, both or neither. Completion here means ownership of every deed in a color group. It does not mean the group can be built on.
+
+The \emph{completion ledger} has one row for each of the 209 episodes in which a player came to own a complete color group, with the route of the completing acquisition (trade, direct purchase, auction or estate) and the rent paid on the group until the owner lost it or the game ended. For each of the 63 groups completed by trade, the \emph{first-window ledger} follows the owner's first management turn and records whether building was legal, what was applied, and whether any decision in the window ended in an engine default or a text and tool-call disagreement.
+
+The \emph{elimination ledger} covers all 60 bankruptcies with the debt, the debtor's cash and assets, and a classification described below. The \emph{flow ledger} holds every paid rent, every trade transfer and every estate transfer as typed rows. Cash and deeds are never summed.
+
+The earlier audit established that the ledgers agree with the engine. Reconstructed cash, ownership, buildings and bank stock match all 6,989 decision prompts, all 113 predicted post-trade states match the next recorded state, and the applied action streams replay to the same 50,918 events in every game.
+
+\subsection{Legal-sequence checks}
+
+Two questions need more than counting. Could an eliminated player have paid? Could a rejected construction plan have been carried out? Both are answered by restoring the exact historical prefix and running the player's own legal actions through the unchanged engine to a stated endpoint.
+
+For a debtor with cash $C$ we use the bound
+\begin{equation}
+U = C + \text{salvage of every building} + \text{mortgage value of every unmortgaged deed}.
+\label{eq:bound}
+\end{equation}
+It ignores bank stock and even-selling rules, so it can only overstate what is reachable. If $U$ is below the debt, no sequence of the debtor's own sales and mortgages pays it. If $U$ is at or above the debt, the bound decides nothing, and the case needs either an executed payment sequence or an exhaustive search. For rejected build plans, the check splits each count-valued entry into single purchases, orders them so the group stays even, and executes them with the same cash and bank stock.
+
+A payment sequence shows that the current debt was payable from the player's own assets. It does not show that paying was the better decision or that the player would have survived. The checks were executed during the 29 October audit and packaged as a 126-case suite. This draft re-tabulates their retained results and did not run the engine again.
+
+\subsection{Reading text}
+
+Four text channels accompany actions: the public message, the applied private note, any reasoning text the provider returns, and Grok's assistant text. None of them is a measurement of internal computation, and they can disagree~\cite{turpin2023unfaithful,lanham2023faithfulness}. We label the channel of every excerpt and check claims about the board against the state.
+
+Semantic coding was done by language models, not people. Research-assistant instances of GPT-6 Astra coded the stated reasons in 74 rejections (Section~\ref{sec:reasons}) and the forward-looking statements in a 240-decision sample (Section~\ref{sec:temporal}). Earlier review passes used GPT-6.1 Sol, Claude Opus 5.5 and Claude Fable 5.1, and this draft was written by Claude Fable 5.2. Several of these share a model or developer with a participant, and no pass was blinded to that. We keep coded counts separate from mechanical counts and base no conclusion on a coded rate alone.
+
+The incidents were chosen to show the mechanism each section measures. They are not a sample, and their number says nothing about frequency. Every excerpt is a verbatim span of a named field. For this draft all spans were re-checked against the canonical files, and the spans newly added here were extracted from those files by script (Appendix~\ref{app:quotes}).
+
+\paragraph{Checked and inherited numbers.} Appendix~\ref{app:provenance} marks each quantity as recounted from the canonical logs for this draft, re-tabulated from a retained ledger for this draft, or inherited from the earlier audit. Decision, refusal and default counts were recounted. All offer, completion, first-window, elimination and estate tabulations were recomputed from the retained ledgers. Results of engine executions, the prompt-defect counts and the semantic codes are inherited.

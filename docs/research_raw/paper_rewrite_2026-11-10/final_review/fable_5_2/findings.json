@@ -1,0 +1,447 @@
+{
+ "reviewer": "Fable 5.2 xhigh",
+ "review": "fresh whole-paper review of the integrated manuscript",
+ "pinned_pdf_sha256": "8268234265df2bb9e0cf9a3303a51f79992e96e69a42b1d074c867697313feb5",
+ "scope": "Existing-file re-tabulation, original source reads, primary literature reads and document-only builds. No game, engine execution, replay, branch, synthetic test, reference policy or model evaluation query.",
+ "severity_scale": {
+  "blocking": "A statement that is false or contradicts another statement as worded. Each has a wording fix and changes no count.",
+  "should_fix": "Accurate but incomplete or ambiguous in a way that changes what a reader concludes.",
+  "optional": "Strengthening, style or process preference."
+ },
+ "counts": {
+  "blocking": 3,
+  "should_fix": 12,
+  "optional": 12
+ },
+ "findings": [
+  {
+   "id": "FF-D01",
+   "severity": "blocking",
+   "title": "The no-option category is stated for every group but holds only for the completed group",
+   "file": "integrated/sections/development.tex",
+   "line": 6,
+   "exact_passage": "nine with no construction option on any recorded menu",
+   "evidence": "The first management prompts for Grok's G1 orange window (d298) and G1 dark-blue window (d314) both list build_houses_or_hotel among available actions, with buildable_space_keys = [ATLANTIC_AVENUE]. Both attached notes discuss and decline the Atlantic house. The retained ledger defines the category per target group. The same two decisions are also counted among the 663 end_turn actions on menus offering construction, so the section places them in two populations that the present wording makes mutually exclusive. The same wording recurs in the Figure 1 bar label and caption (development.tex line 10), methods.tex line 8, and the heading and text of Appendix B.1 (appendix.tex lines 94 and 97). All nine Table 11 rows and remainders reproduce.",
+   "proposed_resolution": "Say 'no recorded menu offers construction on the completed group' in all five places, and state that two G1 prompts list a buildable house on another group. No count changes.",
+   "replacement_block": "FF-D01",
+   "check": "performed: original decision_started prompts for all nine windows; resolution_conditions.json end_records",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "data/first_management_windows.json",
+    "data/resolution_conditions.json",
+    "checks/windows_prices_conflicts.json"
+   ]
+  },
+  {
+   "id": "FF-L01",
+   "severity": "blocking",
+   "title": "A liquidation ceiling in G16 is described as an executed liquidation",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 18,
+   "exact_passage": "In G16, extensive liquidation instead reaches \\$1,393 against \\$2,000.",
+   "evidence": "At G16 d602 the debt menu opens with cash $288 and owed $2,000. The applied action is declare_bankruptcy with no prior sale or mortgage. The attached note reads: 'Even selling all Light Blue hotels ($375) and mortgaging all remaining unmortgaged properties ($730) would only bring total cash to $1,393'. Table 12 prints cash 288 and bound 1,393 for the same row. The paragraph opens 'Actual staged liquidation can succeed', so the sentence reads as a second executed liquidation. The G20 d327-336 figures in the same paragraph reproduce ($49 + $700 + $665 = $1,414 against $1,400).",
+   "proposed_resolution": "State that Gemini declares at the first debt menu and that its note computes the $1,393 total, which equals the bound. This is a correct insolvency calculation and can be presented as one.",
+   "replacement_block": "FF-L01",
+   "check": "performed: original G16 d602 and G20 d327-337 records; data/t06_eliminations.json",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "data/t06_eliminations.json"
+   ]
+  },
+  {
+   "id": "FF-Q01",
+   "severity": "blocking",
+   "title": "Fifteen displayed cards labelled 'excerpt' quote the complete field",
+   "file": "integrated/sections/transcript_quotes.tex",
+   "line": 3,
+   "exact_passage": "Grok · public message · G13 d250 · attempt 0 · excerpt",
+   "evidence": "The integration corrected eight labels in fable_quotes.tex from 'excerpt' to 'full field'. The same condition remains in transcript_quotes.tex. My field-level match finds that these displayed cards equal the whole original field: g13-opening-insurance (line 3), g13-seller-counter (4), g13-acceptance (7), g18-assurance (8), g18-invocation (9), g18-withdrawal (10), g18-withdrawal-explanation (11, modulo trailing whitespace), g20-coordination-appeal (12), g20-concrete-refusal (15), g7_d43_public (21), g19_d135_false_public (24), g19_d136_correction_accept (25), g12_d249_public_bankruptcy (28), g20-received-and-applied-public (29) and g20-recipient-recognition (30). Two declared but unused cards share it: g13-seller-floor (5) and g20-sale-response (14). All 49 declared cards, including the 35 displayed, match their original field verbatim, and no card labelled 'full field' is partial. Only the label is wrong.",
+   "proposed_resolution": "Apply the same label transformation to the seventeen lines, or drop the excerpt/full-field distinction from every card. Quotation text needs no change.",
+   "replacement_block": null,
+   "check": "performed: all 49 card payloads matched against original decision_resolved records",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "checks/quotes.json"
+   ]
+  },
+  {
+   "id": "FF-C01",
+   "severity": "should_fix",
+   "title": "G18 follow-up offers have no stated author, which hides that Opus bid lower",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 88,
+   "exact_passage": "Subsequent \\$150 and \\$225 offers also fail.",
+   "evidence": "Both are Opus's bids at G18 d454 and d455 (turn 194), six turns after the withdrawal. Sol, then holding $249, counters at $450 and $350 and later asks $300 (d461). Opus's message at d457 says 'My $225 offer stands'. Opus also unmortgages Pennsylvania at d445 (turn 190) and North Carolina at d448 (turn 192). The returned explanation quoted in the card says redeeming and building 'would cost far more than it's worth'. The record therefore shows repricing below the withdrawn figure, and the stated cost reason is not matched by later conduct. The rest of the card reproduces: $200 opening bid, $250 'final' counter, four 'offer stands' messages, two $750 payments, cash $69 then $49, and the $450 and $350 package offers.",
+   "proposed_resolution": "Name the bidder and the asks, and add the two redemptions. Adjust the reading so the explanation is attributed and contrasted with the later bids.",
+   "replacement_block": "FF-C01",
+   "check": "performed: original G18 d419-d461 records and offer ledger",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "data/agenda_offers.json"
+   ]
+  },
+  {
+   "id": "FF-R01",
+   "severity": "should_fix",
+   "title": "The AgentMonopoly prompt claim is attached to the repository but comes from the paper",
+   "file": "integrated/sections/related_limits.tex",
+   "line": 7,
+   "exact_passage": "Its prompt encourages bluffing while prohibiting public messages contradicting the action.",
+   "evidence": "The archived engine source (qa/literature, sha256 f509b017...) contains no prompt text. It does confirm the three implementation facts: evaluate_trade allows only accept_trade and reject_trade (line 359), bankruptcy follows balance < 0 with no liquidation step (lines 220-322), and _declare_bankruptcy reassigns owner_id to the creditor without clearing buildings (lines 536-545). The bluffing rule is in the paper, Section 4 and Appendix A.2, as is elimination at negative cash. The sentence follows 'These are implementation findings', carries no citation, and so reads as a repository fact. Separately, the FinBoardBench building-sale rule in line 9 has no locator although the evidence map credits Appendix C.3.",
+   "proposed_resolution": "Cite the paper with section locators for the prompt and the negative-cash rule, keep the repository citation for the three implementation facts, and add the Appendix C.3 locator.",
+   "replacement_block": "FF-R01",
+   "check": "performed: archived engine source read; arXiv HTML for 2610.29330v2 and 2605.27896v1 read through a fetch tool that returns extracted passages, not raw pages",
+   "sources": [
+    "integrated/qa/literature/agentmonopoly_engine_2434f427.py.txt",
+    "https://arxiv.org/html/2610.29330v2",
+    "https://arxiv.org/html/2605.27896v1"
+   ]
+  },
+  {
+   "id": "FF-B01",
+   "severity": "should_fix",
+   "title": "Recipient-level orderings are pooled over thread position right after the paper shows pooling matters",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 30,
+   "exact_passage": "Sol, Gemini and Grok reject author-only offers more often than recipient-only offers and accept them less often. Opus reverses both orderings",
+   "evidence": "The statement is true of Table 8, which pools positions. Within position, for Sol, Gemini and Grok, the rejection ordering holds in five of six cells and fails for Sol's openings (19/41 against 3/6). The acceptance ordering holds in three of six, ties for Sol's openings (0/41, 0/6), and reverses for Gemini's later offers (4/9 against 4/12) and Grok's openings (3/61 against 0/18). 'Reverses' overstates Opus's 7/52 against 5/42. The preceding paragraph also leaves two of Table 2's four rows unused. The 'neither' row is the natural reference: 152/238 (63.9%) opening and 27/170 (15.9%) later. 'Much of this pooled contrast changes' (line 28) can be stated as a halving.",
+   "proposed_resolution": "Mark the recipient statement as pooled, give the within-position cells, replace 'reverses' with 'shows neither ordering', and add the 'neither' and 'both' reference rates.",
+   "replacement_block": "FF-B01",
+   "check": "performed: re-tabulation of data/agenda_offers.json",
+   "sources": [
+    "data/agenda_offers.json",
+    "checks/offers.json"
+   ]
+  },
+  {
+   "id": "FF-B02",
+   "severity": "should_fix",
+   "title": "Counter-content counts have an unstated denominator and an undisclosed composition",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 56,
+   "exact_passage": "Eighty-five improve the counterer's net cash, with a median increase of \\$125.",
+   "evidence": "Eighty-five is out of the eighty-eight, not the 111 (where the count is 89) or the ninety-two (87). The prose predicate 'preserve the same original author's newly complete group' and the Table 4 heading 'All requested deeds retained' select the identical ninety-two counters, which the text does not say. Sol and Opus write 92 of the 111 counters and 80 of the 110; Opus writes 37 and 23 under action-only recovery. The section discloses the analogous concentration for rejection reasons but not for counters. The unchanged-bundle, more-cash form is the majority for each counterer in both rows (Sol 32/50, 36/47; Gemini 6/9, 3/5; Opus 32/42, 22/33; Grok 9/10, 20/25). All Table 4 cells reproduce: 111/92/79 and 110/87/81, with 169 non-completing counters and 59 requesting no deed.",
+   "proposed_resolution": "State the denominator, state that the two predicates coincide, and add the composition and per-counterer counts.",
+   "replacement_block": "FF-B02",
+   "check": "performed: independent join of all 394 counters in data/agenda_offers.json",
+   "sources": [
+    "data/agenda_offers.json",
+    "checks/offers.json"
+   ]
+  },
+  {
+   "id": "FF-B03",
+   "severity": "should_fix",
+   "title": "The agreed sixty-one can be itemized by configuration from retained ledgers",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 76,
+   "exact_passage": "the agreed sixty-one are not itemized by configuration",
+   "evidence": "Both row-level codings are retained: data/agenda_rejection_reasons.json and paper_agenda_revision_2026-10-29/reviews/negotiation/own_74_row_ledger.json. Joining them on game and decision reproduces 63, 63, 61 common and 65 either. The 61 are Gemini 29 of 31, Grok 27 of 31, Sol 4 of 4 and Opus 1 of 8. All eight Opus rows lack a private note. By cell they are 34 of 36 both-completing and 27 of 38 recipient-only. The 74 split 4/31/8/31 and 38/36 as printed, and 34 come from G1 and G15.",
+   "proposed_resolution": "Replace the disclaimer with the itemization. It shows that the result describes Gemini and Grok and that more than half the agreed reasons arise where the author's monopoly is itself on offer.",
+   "replacement_block": "FF-B03",
+   "check": "performed: row join of two retained coding ledgers; the codings themselves are inherited LLM-assisted labels",
+   "sources": [
+    "data/agenda_rejection_reasons.json",
+    "../paper_agenda_revision_2026-10-29/reviews/negotiation/own_74_row_ledger.json"
+   ]
+  },
+  {
+   "id": "FF-D02",
+   "severity": "should_fix",
+   "title": "The paper says what a conflict need not mean and omits what the content named",
+   "file": "integrated/sections/development.tex",
+   "line": 18,
+   "exact_passage": "In a received conflict, content may request a mortgage or an invalid build rather than an already executable house purchase.",
+   "evidence": "In 22 of the 24 conflicting end_turn records on construction menus the content names build_houses_or_hotel (the others name propose_trade and mortgage_property). In three of the four first-window conflicts Grok mortgages deeds in the window and the content of the final decision names a build: G8 d163, one house on each orange, $300 against $472, after four mortgages raising $310; G13 d151, one house on each of two yellows, $300 against $357, after two mortgages raising $335; G12 d166, 3/2/2 pink houses, $700 against $726, after three mortgages raising $350, a plan per-entry validation would reject. G20 d97 names a mortgage. Attached notes in G8, G12 and G13 record the houses as built. Grok builds at turn 89 in G8, turn 63 in G12, and never in G13. The hedge is accurate for G12 and G20 and understates G8 and G13.",
+   "proposed_resolution": "Describe the four windows and give the 22 of 24. Keep the statement that no content plan was executed.",
+   "replacement_block": "FF-D01 (line 18 paragraph) and FF-D02 (line 20 sentence)",
+   "check": "performed: original G8 d159-163, G12 d161-166, G13 d149-151, G20 d97-102 records; conflict ledger; build events",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "saved_games/railway-research-*/game-*/run/events.jsonl",
+    "data/resolution_conditions.json"
+   ]
+  },
+  {
+   "id": "FF-L02",
+   "severity": "should_fix",
+   "title": "The G12 note is described only by its errors although it derives the payment route",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 29,
+   "exact_passage": "The note also contains arithmetic errors.",
+   "evidence": "The applied private note at G12 d249 opens 'Full even liquidation cannot cover the $250', then recomputes: two Virginia houses, one each on St. Charles and States, one more, '+$50 to $293 ... pay $250, survive with $43'. That is the five-sale route and remainder of the retained witness. It then says five houses would remain when two would. The menu lists no mortgageable deed and only Virginia as sellable, consistent with the 2-2-3 holding.",
+   "proposed_resolution": "Say that the note reaches the witness route after an initial false statement, and name the miscount.",
+   "replacement_block": "FF-L02",
+   "check": "performed: original G12 d249 record",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl"
+   ]
+  },
+  {
+   "id": "FF-S01",
+   "severity": "should_fix",
+   "title": "A configured model-fallback stage is not disclosed, and it never ran",
+   "file": "integrated/sections/setup.tex",
+   "line": 36,
+   "exact_passage": "An invalid action-only response receives no further corrective request.",
+   "evidence": "Every Opus decision record carries response_policy claude_refusal_recovery_v1 with stages standard, same_model_without_private_thought and fallback_without_private_thought, a fallback model anthropic/claude-opus-4.8, and max_resolver_calls 3. The display name in the public records is 'claude-opus-5.5 with claude-opus-4.8 fallback'. Across all 1,696 Opus decisions model_fallback_used is false, returned_model is anthropic/claude-opus-5.5, and no decision has more than two attempts. A reader of the public artifacts will see the fallback name and cannot learn from the paper that it was unused. The printed counts reproduce: 1,604 first-attempt refusals, 1,605 decisions with a refusal, 215 of 306 and 1,390 of 1,390, one refusal text.",
+   "proposed_resolution": "Add two sentences stating the third stage and that it never ran.",
+   "replacement_block": "FF-S01",
+   "check": "performed: all 20 canonical decisions.jsonl files",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "checks/response_conditions.json"
+   ]
+  },
+  {
+   "id": "FF-S02",
+   "severity": "should_fix",
+   "title": "The 139 conflicts have no stated denominator",
+   "file": "integrated/sections/setup.tex",
+   "line": 40,
+   "exact_passage": "Grok's selected responses contain 139 disagreements between the action named in assistant content and the received tool call.",
+   "evidence": "Reading every Grok decision record, I find a JSON action name in the selected attempt's content in 1,068 of 1,663 decisions, and the name differs from the received call in 139 of those, the same 139 decisions as the retained ledger with none added or missing. The paper gives the 139 without saying how many records allow the comparison. My content-name pattern is simple, so the 1,068 should be confirmed with the retained parser.",
+   "proposed_resolution": "Give the denominator, for example '139 of the 1,068 selected responses whose content names an action'.",
+   "replacement_block": "FF-S02",
+   "check": "performed: all 20 canonical decisions.jsonl files; the denominator uses a simple pattern",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "checks/name_conflicts.json"
+   ]
+  },
+  {
+   "id": "FF-T01",
+   "severity": "should_fix",
+   "title": "The 240-decision sample is undefined, counted in the wrong unit, and concentrated in Grok",
+   "file": "integrated/sections/temporal_discussion.tex",
+   "line": 4,
+   "exact_passage": "The fixed 240-decision sample contains fifty-nine forward-looking own-action passages, thirty-six prospective opponent-capacity or outcome passages and twenty-five references to correction or feedback, with overlap.",
+   "evidence": "The retained protocol defines the sample as three hash-ranked decisions per player-game from a pool the earlier public-message extractor had not flagged, sixty per configuration, and says it is not a prevalence sample. The paper never states this. The 59, 36 and 25 are sampled decisions carrying a tag, not passages. Grok supplies 39 of the 59 and 22 of the 36; Opus supplies 5 and 0. Methods line 31 also cites '614 overlapping catalog entries', a population the paper never defines.",
+   "proposed_resolution": "State the sampling rule and per-configuration size, use 'decisions', give Grok's share, and delete or define the 614.",
+   "replacement_block": "FF-T01",
+   "check": "performed: data/agenda_temporal_rows.jsonl and the retained protocol; the tags are inherited single-reader labels",
+   "sources": [
+    "data/agenda_temporal_rows.jsonl",
+    "data/agenda_temporal.json",
+    "../paper_agenda_revision_2026-10-29/temporal/protocol.md"
+   ]
+  },
+  {
+   "id": "FF-T02",
+   "severity": "should_fix",
+   "title": "Feedback and configuration are fully confounded in the recurrence ledger",
+   "file": "integrated/sections/temporal_discussion.tex",
+   "line": 10,
+   "exact_passage": "Feedback exposure, states, targets and configurations differ, and some successors occur in the same turn.",
+   "evidence": "The ledger gives 9 repeats in 50 successors after delivered feedback and 54 in 59 without. All 59 successors without delivered feedback are Opus's. 'Configurations differ' is weaker than the record.",
+   "proposed_resolution": "State 54 of 59 and that all are Opus's.",
+   "replacement_block": "FF-T02",
+   "check": "performed: data/agenda_recurrence.json",
+   "sources": [
+    "data/agenda_recurrence.json"
+   ]
+  },
+  {
+   "id": "FF-W01",
+   "severity": "should_fix",
+   "title": "The abstract's lead result cannot be read without the body",
+   "file": "integrated/manuscript.tex",
+   "line": 13,
+   "exact_passage": "The systems complete 17, 18, 15 and 13 color groups through trade, but build on 16, 17, 7 and 3 in their first management windows.",
+   "evidence": "The abstract never says which system each number belongs to, and 'One participant receives action-only refusal recovery' is unnamed. A reader cannot connect the recovery condition to the system that built on 7. The abstract also uses plurals for single incidents: 'financial-denial appeals' (G20 only), 'changed assurances' (G18 only) and 'selective disclosure' (G13 only).",
+   "proposed_resolution": "Name the four systems in order, name Opus, and use the singular for single incidents.",
+   "replacement_block": "FF-W01",
+   "check": "performed: document read",
+   "sources": []
+  },
+  {
+   "id": "FF-C02",
+   "severity": "optional",
+   "title": "G2 holds a same-seller, same-deed price contrast and a fuller ledger that the card omits",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 85,
+   "exact_passage": "The residual cash calculation is correct; the construction calculation is not.",
+   "evidence": "At G2 d119, one turn before the card begins, Sol counters Grok's $200 bid for Marvin Gardens at $450. Grok holds no yellow and replies at d120 that '$450 is the price for the player who completes yellow'. Against Opus, Sol asks $650, then $600, and refuses $450 at d128. This is the most direct evidence in the corpus for the section's subject. The later ledger is also fuller than printed: both yellows arrive mortgaged; Sol pays $26 interest and $286 to redeem, mortgages four deeds for $410, and builds two houses for $300; after Opus's estate passes to Gemini with developed light blues, Sol pays $450 on Connecticut the next turn by selling both houses; Gemini redeems the yellows and builds six houses the turn after Sol's bankruptcy. Every figure already in the card reproduces ($845, $520, $195, $435, $17, $1,300, $300, $150, event 1566).",
+   "proposed_resolution": "Add one paragraph on the two asks and extend the finding. Keep the caveat that the negotiations differ.",
+   "replacement_block": "FF-C02 (optional)",
+   "check": "performed: original G2 d117-d129 and d197-198 records; G2 events turns 69-86",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "saved_games/railway-research-*/game-*/run/events.jsonl"
+   ]
+  },
+  {
+   "id": "FF-C03",
+   "severity": "optional",
+   "title": "G7 has a ledger follow-through that ties it to the paper's sequence",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 122,
+   "exact_passage": "The deed transfers for \\$600. Sol's note says it prefers reinvesting to holding out for another \\$25.",
+   "evidence": "Grok completes green at turn 95 through a $171 auction purchase of Pennsylvania, builds nothing on it, and is the first player eliminated at turn 110 owing Sol $1,400. The estate returns North Carolina to Sol inside the complete group, and Sol builds a house on each green at turn 112. As printed the card stops at a $25 gap and has no later consequence, which is why two reviewers preferred it in the appendix.",
+   "proposed_resolution": "Add three sentences. With them the card supports the acquisition, development and succession sequence.",
+   "replacement_block": "FF-C03 (optional)",
+   "check": "performed: G7 events; data/t06_eliminations.json; group_episodes.jsonl",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/events.jsonl",
+    "../paper_phase1_2026-10-28/sol/group_episodes.jsonl"
+   ]
+  },
+  {
+   "id": "FF-C04",
+   "severity": "optional",
+   "title": "The mortgaged Pennsylvania in G13 comes from the first-window conflict the paper counts elsewhere",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 67,
+   "exact_passage": "Grok offers its mortgaged Pennsylvania to Opus for \\$200:",
+   "evidence": "Pennsylvania is mortgaged at G13 turn 63 (event 1082) in Grok's first management window for yellow, is never redeemed, and transfers mortgaged at turn 107. That window is one of the four received-call conflicts. Grok has no HOUSE_BUILT event in G13.",
+   "proposed_resolution": "Add a cross-reference paragraph. It links the development and inheritance sections through one deed.",
+   "replacement_block": "FF-C04 (optional)",
+   "check": "performed: G13 events and d149-151 records",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "saved_games/railway-research-*/game-*/run/events.jsonl"
+   ]
+  },
+  {
+   "id": "FF-C05",
+   "severity": "optional",
+   "title": "G19 does not say that the accepted swap completes nothing",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 134,
+   "exact_passage": "\\TranscriptFinding{The swap and \\$150 payment execute.}",
+   "evidence": "The ledger cell is 'neither'. Sol's note at d136 reads 'No opponent monopoly enabled ... strictly favorable swap'. Saying so explains why acceptance needs no belief in the false premise.",
+   "proposed_resolution": "Add the clause and the note's phrase.",
+   "replacement_block": "FF-C05 (optional)",
+   "check": "performed: original G19 d135-136 records and offer ledger",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl",
+    "data/agenda_offers.json"
+   ]
+  },
+  {
+   "id": "FF-C06",
+   "severity": "optional",
+   "title": "Two small precision points in G20 and the G3 control",
+   "file": "integrated/sections/development.tex",
+   "line": 47,
+   "exact_passage": "Sol had already stated its own reason not to fund Grok",
+   "evidence": "Sol's reason is in its private note at G20 d95, one decision before the appeal, not in a public message. In Appendix D.2, Grok's quote says $58 and Gemini's next note says $43; Gemini's cash is $58 at d362 and d363 and $43 at d364, two turns later.",
+   "proposed_resolution": "Write 'had already recorded privately', and add a clause in D.2 that Gemini's cash fell to $43 by its next decision.",
+   "replacement_block": null,
+   "check": "performed: original G20 d95-d97 and G3 d362-364 records",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/decisions.jsonl"
+   ]
+  },
+  {
+   "id": "FF-I01",
+   "severity": "optional",
+   "title": "Route and creditor counts lack the reference figures that make them readable",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 36,
+   "exact_passage": "eighteen of sixty-three trade-completed groups belong to eventual winners",
+   "evidence": "One player in four wins. Trade completions are at 18/63 (29%) and auction completions at 2/9, against 12/16 for direct purchase and 45/52 for nonterminal estates. Line 55 says the creditor 'often' owns the developed property while Appendix B holds the number, 57 of 60. My event read finds 57 eliminations in which the debtor's last move ends on a color-group property and the creditor is a player. Auction-completed groups collect $3,358, a figure the routes paragraph omits. All printed route, deed and cash totals reproduce from events: 207, 397, 227, 202, $7,843, $7,148, 54 = 35 + 19, 18 and 16 games.",
+   "proposed_resolution": "Add the quarter reference and move the 57 into the main text.",
+   "replacement_block": "FF-I01 (optional)",
+   "check": "performed: all 20 events.jsonl files and group_episodes.jsonl; 'developed' in the 57 is inherited",
+   "sources": [
+    "saved_games/railway-research-*/game-*/run/events.jsonl",
+    "../paper_phase1_2026-10-28/sol/group_episodes.jsonl",
+    "checks/estates_from_events.json"
+   ]
+  },
+  {
+   "id": "FF-B04",
+   "severity": "optional",
+   "title": "Two exploratory cuts have undisclosed author or recipient composition",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 112,
+   "exact_passage": "are accepted in 12/85 cases, against 47/407 for other recipients, and are countered more often",
+   "evidence": "Fifty-nine of the 85 low-cash recipients are Sol (34) or Opus (25), the two configurations that mostly counter. Within configuration the counter share rises for Sol (27/34 against 63/110) and Grok (7/12 against 27/128) and is flat for Opus and Gemini. In Table 9, Opus authors 166 of the 307 bids. All printed cells reproduce: 48, $194, 57, $571, 21, 30, the four thresholds, 13, 16, 6, and all sixteen Table 9 medians.",
+   "proposed_resolution": "Add one clause on composition to each, or leave as is given the exploratory framing.",
+   "replacement_block": null,
+   "check": "performed: data/agenda_offers.json and contracts/data/board.json",
+   "sources": [
+    "data/agenda_offers.json",
+    "contracts/data/board.json"
+   ]
+  },
+  {
+   "id": "FF-W02",
+   "severity": "optional",
+   "title": "Scope disclaimers are dense and several repeat three or more times",
+   "file": "integrated/sections/bargaining.tex",
+   "line": 52,
+   "exact_passage": "Low acceptance does not establish absence of agreement bias.",
+   "evidence": "A pattern count over the abstract and main sections finds about 111 scope-limiting sentences in 537 and 52 of 97 prose paragraphs ending in one; in the bargaining section, 13 of 19. The count is a regex estimate. Repeated propositions include: no effect of completion (Table 2 caption, lines 28 and 30, limitations); no utility reference (line 52, related work, limitations, Table 6); board price (line 74, Table 9 caption, Appendix A.1 twice); cash and distress (lines 110 and 112 three times, Appendix A); winner conditioning (finance lines 36 and 55, Table 5 caption, limitations); no-option scope (methods, Figure 1 caption, development twice, Appendix B.1 three times); no general audit method (introduction, discussion, related work).",
+   "proposed_resolution": "Keep each caveat once in text and once in the limitations. Candidate deletions are listed in review.md.",
+   "replacement_block": "FF-W02 (optional compressions)",
+   "check": "performed: document-only count (tools/count_hedges.py); judgments of redundancy are mine",
+   "sources": [
+    "checks/hedges.json"
+   ]
+  },
+  {
+   "id": "FF-W03",
+   "severity": "optional",
+   "title": "Internal process vocabulary appears in the scientific text",
+   "file": "integrated/sections/methods.tex",
+   "line": 25,
+   "exact_passage": "This rewrite re-tabulates their retained results; it does not execute new game continuations.",
+   "evidence": "'This rewrite' or 'the rewrite' appears in methods lines 25 and 33, limitations line 23, and appendix lines 146, 189 and 191. A reader has no referent for it. The statement that no games were added appears four times (methods, limitations, Appendix B.1, Appendix C).",
+   "proposed_resolution": "Write 'this paper' in the body and keep the process account in Appendix E.",
+   "replacement_block": null,
+   "check": "performed: document read",
+   "sources": []
+  },
+  {
+   "id": "FF-W04",
+   "severity": "optional",
+   "title": "Two floats interrupt the text they belong to",
+   "file": "integrated/sections/finance_inheritance.tex",
+   "line": 8,
+   "exact_passage": "\\begin{figure}[t]",
+   "evidence": "Figure 2 lands on page 14 between Transcript 5's 'What happened' and 'What this shows'. Table 4 lands on page 7 above the last paragraph of Section 4.1 and before the heading of the subsection that discusses it. Pages 8, 10 and 16 end with roughly a third blank, and pages 24 and 33 are mostly blank. No text, table or card is clipped on any of the 33 pages.",
+   "proposed_resolution": "Add a float barrier after the G20 source line and before the Section 4.2 heading, or relax the two placements.",
+   "replacement_block": null,
+   "check": "performed: all 33 pages of the pinned PDF rendered and viewed",
+   "sources": [
+    "render/page_07.png",
+    "render/page_14.png"
+   ]
+  },
+  {
+   "id": "FF-P01",
+   "severity": "optional",
+   "title": "Six exhibit inputs sit outside the 38-file pin",
+   "file": "integrated/manuscript.tex",
+   "line": 27,
+   "exact_passage": "\\input{sections/appendix}",
+   "evidence": "integrated/data holds nine JSON files that are not in qa/integrated_file_hashes.json. Three quote manifests are covered by source_manifest.json. The other six (agenda_offers, first_management_windows, t01_cohort, t03_trade_groups, t06_eliminations, t09_entry_nonbuild_records) feed build_exhibits.py and the check scripts. Each is byte-identical to its parent data/ copy today. Their hashes are recorded in verification.md.",
+   "proposed_resolution": "Add the nine data files to the hash manifest.",
+   "replacement_block": null,
+   "check": "performed: hashes computed and compared",
+   "sources": [
+    "integrated/qa/integrated_file_hashes.json",
+    "integrated/source_manifest.json"
+   ]
+  },
+  {
+   "id": "FF-R02",
+   "severity": "optional",
+   "title": "One Arena detail was not confirmed at abstract level, and one FinBoardBench figure is available",
+   "file": "integrated/sections/related_limits.tex",
+   "line": 5,
+   "exact_passage": "studies promise follow-through",
+   "evidence": "The arXiv abstract page for 2608.14825v3 confirms 2,583 emails, twenty one-year runs, use of simulator ground truth and replication with judges from two other model families. It does not mention promise follow-through, which rests on Sol's earlier section read. FinBoardBench Section 3.2 reports that 33.3% of negotiation decisions choose counter; here 394 of 920 responses are counters, from 36/242 for Gemini to 141/189 for Opus.",
+   "proposed_resolution": "No change required. The 33.3% figure could be set beside this cohort's counter shares in one sentence.",
+   "replacement_block": null,
+   "check": "performed at abstract level only for Arena; FinBoardBench and DECE passages as extracted by the fetch tool",
+   "sources": [
+    "https://arxiv.org/abs/2608.14825v3",
+    "https://arxiv.org/html/2605.27896v1",
+    "https://arxiv.org/abs/2610.35773v1"
+   ]
+  }
+ ]
+}

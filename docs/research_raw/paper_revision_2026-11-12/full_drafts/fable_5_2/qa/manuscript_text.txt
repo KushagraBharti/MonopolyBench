@@ -1,0 +1,2205 @@
+What a Move Unlocks:
+Stated Consequences and Actions of LLM Agents
+in Twenty Monopoly Games
+MonopolyBench project∗
+12 November 2026
+Abstract
+Some moves matter for what they make possible next. We ask whether LLM agents state such
+consequences before they act, whether the statements are accurate, and whether their actions
+agree with them, using twenty complete four-player Monopoly games with free-form negotiation
+among four configured systems (GPT-6.1 Sol, Gemini 4 Argon, Claude Opus 5.5, Grok 4.7). For
+the agent’s own options we examine all 188 debts that required liquidation. Agents declared
+bankruptcy at the first menu in 50 of 56 debts that exceeded everything they owned and in 3 of
+131 payable debts. Sixteen payable debts could be met only with mortgages that the menu lists
+after buildings are sold, a rule and values the prompt does not supply. Agents paid fourteen. The
+text stored before the first action counts the unlisted mortgages in thirteen of those, raises them
+in one, and omits them in both failures. For a rival’s options we examine all 920 responses to
+trade offers. Recipients accepted 3 of 186 opening offers that would complete only the proposer’s
+color group. They rejected 81.9% of such swaps against 51.4% of swaps completing no group, a
+gap of 16.7 to 30.5 points depending on which proposers are counted, and they countered cash
+bids more often than swaps. Refusals mention the rival’s set under both forms, yet rejection
+does not rise with the building the rival could then afford. Eight sourced incidents place these
+statements in context, including a deed sold as insurance against a third player’s inheritance.
+Stated foresight about the agent’s own financing is accurate and matches action. Stated concern
+about rivals matches action and attaches to the event of completion. The study is observational,
+covers one cohort under unequal response conditions, and measures neither effectiveness nor
+model rank.
+1
+Introduction
+Some moves matter for what they make possible next. A Monopoly player in debt who sells the
+houses on a color group receives the sale price and also gains something the menu does not show,
+the right to mortgage that group’s deeds. A player who sells the last deed in a rival’s color group
+receives cash and gives the rival the right to build. In both cases the terms on the table understate the
+move. An agent that reads only those terms will quit a debt it could have paid, or sell a monopoly
+at the price of a single deed.
+∗Complete draft prepared by one LLM research assistant under the project owner’s direction. Appendix G records
+the roles.
+1
+
+Language-model agents now play games of this kind with free-form negotiation, and they write
+down reasons as they act. That makes the problem observable. When an agent states what a move
+will make possible, we can ask four questions in order. Is the statement recorded before the action?
+Is it accurate against the game state and the rules? Does the action agree with it? Does the behavior
+change when the size of the consequence changes? Work on LLM negotiation separates knowing a
+counterpart’s position from using that knowledge [3], and work on planning tests reasoning about
+how actions change the world [13]. We ask the same kind of question about two consequences in
+one environment: what a move opens for the agent itself, and what it opens for a rival.
+The evidence is twenty complete four-player games of MonopolyBench played by one roster of
+four configured systems: GPT-6.1 Sol, Gemini 4 Argon, Claude Opus 5.5 and Grok 4.7. The records
+hold 6,989 decisions, 920 responses to trade offers and 188 debts that required a liquidation menu.
+Each offer is tied to the state its recipient saw, and each debt to its first menu, the actions taken and
+the outcome.
+The agent’s own options.
+At the first menu of a debt, agents quit in 50 of the 56 debts that exceeded
+everything they owned and in 3 of the 131 debts that could be paid. Sixteen of the payable debts
+could be met only with mortgages that the menu would not list until buildings were sold. Agents
+paid fourteen. In thirteen of the fourteen, the text stored at the first decision counts those unlisted
+mortgages before any building is sold, and in the other it raises them as an open question. In both
+failures the text adds up the listed items only, and the agent declares bankruptcy. The prompt states
+neither the rule that a sale releases mortgages nor any mortgage value. The figures the agents state
+match the records in 14 of 15 checks.
+A rival’s options.
+Recipients accepted 3 of 186 opening offers that would complete only the
+proposer’s color group. They rejected 81.9% of such swaps, against 51.4% of swaps that completed
+nobody’s group. The gap has the same direction for every recipient, proposer and seed block, and
+its size depends on which proposers are counted. Cash bids for a completing deed were rejected
+less often (60.0%) and countered about twice as often. Refusal texts mention the completed set
+in nearly every case. Gemini states a reciprocity rule, Grok states never-sell commitments with
+estimates of the rival’s building cash, and Sol and Opus mostly name a price. Rejection does not
+rise with the number of houses the proposer could then afford.
+Third parties and the uses of talk.
+Eight sourced incidents show these statements in context.
+They include a refusal of one’s own monopoly to deny a rival’s, a deed sold as insurance against a
+third player’s inheritance, a ten-action payment that ends on the announced $14, a bluff, a corrected
+false claim, a public call to withhold cash and a withdrawn assurance.
+The two halves reach different levels of evidence. For the agent’s own financing, the statements
+are prospective, mostly accurate and followed by matching actions, in cases fixed by rule arithmetic.
+For rivals, stated concern and matching refusals attach to the event of completion, with no measured
+response to the size of the rival’s opportunity. Neither result measures whether the behavior was
+effective. All of it describes four configured systems in one cohort, two of which ran under altered
+response conditions (Section 2).
+The paper contributes a census of all 188 debt episodes partitioned by what the first menu
+could raise, a complete table of the 918 acceptance-legal offers by form, completion and stage with a
+stated sensitivity analysis, and eight incidents with exact quotations, channels, receipt checks and
+continuations.
+2
+
+Label
+OpenRouter identifier
+Tool choice
+Decisions
+Attempts
+Wins
+Sol
+openai/gpt-6.1-sol
+auto
+1,961
+1,991
+8
+Gemini
+google/gemini-4-argon
+auto
+1,669
+1,689
+7
+Opus
+anthropic/claude-opus-5.5
+auto
+1,696
+3,301
+3
+Grok
+x-ai/grok-4.7
+required
+1,663
+1,698
+2
+Table 1: Evaluated configurations across the twenty games. Tool choice is the value sent with every saved
+request (8,687 request records). Opus has more attempts than decisions because 1,604 first attempts were
+refused by the provider and reissued.
+2
+Setting and method
+2.1
+The game and the interface
+Four agents start with $1,500 on the United States Monopoly board. They buy or auction properties,
+trade bilaterally in threads of up to twenty exchanges, build on complete color groups and mortgage
+deeds. All amounts are game dollars.
+A player who cannot pay a debt receives a liquidation menu listing the deeds it may mortgage
+now and the buildings it may sell now. The engine applies the chosen action and asks again until the
+debt is paid. A deed in a group that still carries buildings cannot be mortgaged and is absent from
+the menu. Selling the group’s buildings puts its deeds on the next menu. The player may declare
+bankruptcy at any decision, including when payment is possible. The liquidation prompt gives the
+amount owed, the shortfall, the two lists and the player’s holdings. It gives no price, mortgage value
+or sale value, and it does not say that selling buildings releases mortgages. A bankrupt player’s
+deeds pass to a player-creditor with their buildings intact.
+The engine issues the legal options and validates the returned action. The agent returns one tool
+call with a public message and, under the standard prompt, a private note. Later prompts carry a
+twenty-entry public timeline and up to ten of the agent’s own notes. The system prompt permits
+bluffing, deception, intimidation and cooperation in public messages and asks that private notes
+reflect true reasoning. Appendix E prints it.
+2.2
+Cohort and response conditions
+Five seeds were each played in four cyclic seat rotations of one roster, giving twenty games. We call
+the four games that share a seed a seed block. Games have no turn cap, last 75 to 386 turns and end
+by bankruptcy. Table 1 lists the four configurations. Every request asks for medium reasoning effort
+and sets no temperature or token limit. Appendix D gives the seeds, game map, source commits
+and analysis entry point.
+Two response conditions differ by system and reach every player through the interaction.
+Opus. The provider refused 1,604 of Opus’s 1,696 first attempts with one message, which cites
+terms-of-service restrictions on reverse engineering or duplicating model outputs. The share is 214
+of 306 in G1 to G4 and all 1,390 in G5 to G20. The interface then resends the request without the
+private-note field and without the sentence asking for true private reasoning. Permission to deceive
+stays. None of the 1,604 recovery requests was refused. Under recovery Opus writes no private
+note and gets no corrective retry. The provider still returns explanation text, which we treat as a
+separate channel.
+3
+
+Grok. Requests to Grok were sent with tool choice “required”. The other three used “auto”. In
+139 Grok responses the text outside the tool call names a different action from the call that was
+received, including 64 of its 136 trade openings. No other system has such a response. The received
+call governs play. These are real offers that other agents answered, so we keep them and report the
+bargaining results with and without them. Whether the setting causes the disagreement is untested.
+2.3
+Channels and receipt
+We keep four recorded channels apart. A public message is delivered to the other players. An
+applied private note returns only to its author. Assistant content is text outside the tool call, and a
+provider-returned explanation is reasoning text the provider attaches to a response. The interface
+neither applies nor delivers those two. We say a player received a message only when it appears in
+that player’s stored prompt. Stated text is what a system returned, not a view of the computation
+behind the action [8, 12].
+2.4
+Measures
+Offers.
+An offer is a set of terms awaiting a response, either a thread’s opening proposal or a later
+counter. The games contain 920 offers in 526 threads, and acceptance was legal for 918. For each
+offer we rebuild ownership after the proposed transfer and record who would newly complete a
+color group: the proposer only, the recipient only, both or neither. We also record the form. A swap
+moves deeds in both directions. A cash bid offers only cash for deeds. A sale offer offers only deeds
+for cash.
+Debts.
+A debt episode runs from the first liquidation menu to payment or elimination. At the
+first menu we compute four sums from the delivered state: cash C, the mortgage value M0 of the
+deeds the menu lists, the salvage S from selling every building at half cost, and the mortgage value
+M1 of unmortgaged deeds the menu does not list. A debt above C + M0 + S + M1 exceeds every
+asset the player owns. A debt above C + M0 + S and within the full sum cannot be paid without
+mortgages that appear only after buildings are sold. These sums bound what each resource can
+raise. A sufficient sum is not a payment plan. We count a debt as payable when the agent paid it,
+or when an earlier audit of this project executed a legal payment sequence on the engine. Three
+eliminations are payable in that second sense, and we inherit those sequences without rerunning
+them.
+Levels of evidence.
+A record can show five things about a stated consequence. It can be (1) stated
+before the action, (2) accurate against the state and rules, (3) consistent with the action taken, (4)
+sensitive, meaning behavior changes when the consequence changes, and (5) effective, meaning the
+behavior improves an outcome against a reference. Each result is tagged once with the highest level
+it reaches. None reaches level five, because the games contain no reference policy or value estimate.
+Sensitivity of the reported contrasts.
+The counts are exact for this cohort. The contrasts were
+chosen after the games were inspected: the split of offers by form came out of an earlier analysis
+of these records, and the sixteen debt cases follow a referee’s suggestion. For each contrast we
+therefore report how it moves when the set of games changes: its value in each seed block, its range
+when one block is left out, and its distribution over all 3,125 ordered resamples of the five blocks and
+4
+
+Quit at
+Paid in
+What payment required at the first menu
+Episodes
+Paid
+first menu
+one action
+Cash and mortgages already listed
+62
+62
+0
+37
+Building sales as well
+53
+52
+1
+30
+Mortgages the menu does not yet list
+16
+14
+2
+0
+Payable, all
+131
+128
+3
+67
+Debt above every own asset
+56
+0
+50
+–
+Menu offers no building sale (G7)
+1
+0
+0
+–
+Table 2: All 188 debt episodes. Rows one to three split the 131 payable debts by the least the first menu
+required. “Quit at first menu” counts bankruptcy declared as the first action. The 6 other debts above every
+asset ended in elimination after some liquidation.
+over 20,000 resamples of the twenty games. The target is the dependence of this cohort’s contrast
+on its composition. Games that share a seed or a roster are not independent draws, so none of these
+ranges is a confidence interval for new games, opponents or models. We report no significance
+tests.
+Readings of text.
+The classification of the sixteen first-decision texts is a reading by the drafting
+assistant, with the exact span printed for every case (Appendix C). No human annotated the texts.
+Counts described as pattern matches are regular-expression counts over stored text.
+3
+The agent’s own options: paying a debt
+3.1
+Quitting and continuing across all 188 debts
+A debt gives the agent a local goal with a known endpoint: raise a stated amount or leave the game.
+The one decision that needs foresight is whether to continue. Once an agent continues, the menu
+refreshes after each action and shows what can be done next. An agent that quits has judged the
+whole route from the first menu.
+Table 2 and Figure 1A partition the 188 episodes by what payment required at the first menu.
+In 56 the debt exceeded everything the player owned. The agent declared bankruptcy at the first
+menu in 50 of them and sold or mortgaged first in 6. In the 131 payable debts the agent continued in
+128 and quit at the first menu in 3. Agents paid 128 of the 131, with 180 mortgages and 89 building
+sales and no engine fallback. The remaining elimination, Opus in G7, had assets above the debt on
+paper, but its menu offered no building sale. The bank had no houses left, so its one hotel could not
+be broken down, and that blocked the rest of the group.
+Most payable debts were easy. In 62 of them, cash and the mortgages already on the menu
+covered the debt, and 67 of the 128 payments took one action. The median paid debt was 36% of the
+debtor’s asset bound. The overall payment rate of 97.7% therefore says little about difficulty. The
+table does show discrimination at the first menu. The agents quit almost always when no payment
+existed and almost never when one did. This is level three: the choice agrees with the arithmetic of
+the state.
+5
+
+0
+20
+40
+60
+Debt episodes
+Cash and mortgages
+already listed
+Building sales
+as well
+Mortgages the menu
+does not yet list
+Debt above
+every own asset
+Menu offers no
+building sale
+62
+52
+1
+14
+2
+50
+6
+1
+A. All 188 debts
+Paid
+Quit at the first menu
+Eliminated after liquidating
+$300 short
+the debt
+$300 over
+Most the debtor could raise,
+relative to the debt
+G20 Sol
+G4 Opus
+G5 Gemini
+G11 Opus
+G8 Gemini
+G2 Sol
+G4 Gemini
+G1 Grok
+G18 Grok
+G17 Opus
+G20 Opus
+G18 Gemini
+G13 Gemini
+G6 Opus
+G12 Sol
+G17 Gemini
+B. The sixteen debts in row three
+Without unlisted mortgages
+With them (paid)
+With them (quit)
+Figure 1: Debts and what they required. A: every debt episode, by the least the first menu required and
+by outcome. B: the sixteen debts in the third row. The open circle is the most the debtor could raise from
+cash, listed mortgages and all building sales. The filled circle adds the mortgages that selling those buildings
+would release. Every case starts short of the debt and ends beyond it. The two debtors that quit are at the
+bottom.
+3.2
+Sixteen debts that needed mortgages the menu did not list
+The third row of Table 2 is the hard set. In these sixteen episodes, cash plus every listed mortgage
+plus the sale of every building still fell short, by a median of $83 (Figure 1B). Payment had to use
+deeds that the first menu did not offer and that no prompt mentions as a resource. An agent that
+adds up what the menu lists concludes that it cannot pay.
+Agents paid fourteen of the sixteen (Table 3). Thirteen began by selling buildings, one mortgaged
+a listed deed first, and all fourteen then mortgaged at least one released deed. The payments took
+two to ten actions, with a median of 4. The cases come from twelve games and all five seed blocks,
+and every system has at least two.
+The text stored at the first decision separates the outcomes. In thirteen of the fourteen payments
+it counts the unlisted mortgages before any building is sold. Gemini’s note in G5 is typical:
+6
+
+Reach without
+Unlisted
+Unlisted value
+Cash
+Case
+System
+Debt
+unlisted
+value
+Channel
+in first text
+Outcome
+Actions
+after
+G1 d476
+Grok
+200
+126
+400
+note
+counted
+paid
+2
+$56
+G2 d216
+Sol
+450
+283
+400
+note
+counted
+paid
+3
+$103
+G4 d270
+Gemini
+750
+606
+400
+note
+counted
+paid
+4
+$86
+G4 d308
+Opus
+800
+570
+340
+returned
+counted
+paid
+4
+$0
+G5 d263
+Gemini
+900
+674
+375
+note
+counted
+paid
+3
+$149
+G6 d185
+Opus
+750
+738
+220
+returned
+counted
+paid
+4
+$58
+G8 d257
+Gemini
+625
+438
+375
+note
+counted
+paid
+3
+$13
+G11 d203
+Opus
+500
+276
+280
+returned
+counted
+paid
+5
+$56
+G12 d190
+Sol
+500
+408
+340
+note
+left out
+quit
+1
+–
+G13 d195
+Gemini
+750
+713
+375
+note
+counted
+paid
+5
+$28
+G17 d234
+Gemini
+550
+530
+375
+note
+left out
+quit
+1
+–
+G17 d254
+Opus
+550
+503
+340
+returned
+counted
+paid
+3
+$63
+G18 d309
+Gemini
+450
+412
+220
+note
+counted
+paid
+2
+$32
+G18 d313
+Grok
+550
+501
+375
+note
+counted
+paid
+4
+$126
+G20 d291
+Opus
+1,000
+955
+220
+returned
+raised
+paid
+4
+$25
+G20 d327
+Sol
+1,400
+1,074
+340
+note
+counted
+paid
+10
+$14
+Table 3: The sixteen payable debts that required unlisted mortgages. “Reach without unlisted” is cash
+plus listed mortgages plus full building salvage. “Channel” is where the text stored at the first decision
+comes from: the applied private note, or the provider-returned explanation where Opus answered through
+action-only recovery. The next column is the drafting assistant’s reading of what that text does with the
+unlisted mortgages, with exact spans in Appendix C.
+Gemini · applied private note · G5 d263 · excerpt
+By selling all 3 houses on Park Place ($300) and all 3 houses on Boardwalk ($300), I will reach $674
+cash and unlock the ability to mortgage Park Place ($175) and Boardwalk ($200), allowing me to raise
+$1,049 total and survive with $149 cash.
+The provider-returned text of the same response shows the sum being revised: “I initially mis-
+calculated! Selling the houses on Park Place and Boardwalk alone doesn't cover the debt. However, I can
+mortgage Park Place and Boardwalk after selling the houses! This is key!” The fourteenth payment, Opus
+in G20, raises the released mortgages as a question without a total. In both failures the text adds up
+the listed items only. Gemini in G17 held the same two dark-blue deeds it had counted in G5:
+Gemini · applied private note · G17 d234 · full field
+I owe $550 rent on Tennessee Avenue, and my total liquidatable value is only $530 (5 Dark Blue
+houses at $100 each plus $30 for mortgaging Baltic Avenue). Since I cannot raise $550, I must
+declare bankruptcy.
+Park Place and Boardwalk would have added $375 after the sales. Sol in G12 left out $340 of red
+mortgages in the same way:
+Sol · applied private note · G12 d190 · full field
+Three houses sell for $225; Baltic and both light blues mortgage for $130. With $53 cash, maximum
+liquidity is $408, below $500 owed. No legal liquidation can save me.
+Both agents declared bankruptcy in that response. Sol counts released mortgages in G2 and in
+G20.
+7
+
+Nine of the fourteen successful texts are applied private notes, which the same agent reads on
+later turns. Five are Opus’s provider-returned explanations, because recovery responses carry no
+note. The stated figures can be checked. Of 15 stated totals, gaps or remainders, 14 equal the value
+computed from the records. The exception is Sol’s $430 for yellow mortgages worth $400, which
+did not affect the payment. Since the prompt supplies none of these values, each one is a board fact
+the system recalled.
+This result reaches level three with accurate content. The statement comes before the action,
+its arithmetic is correct in all but one case, and the choice to continue or quit agrees with it in all
+sixteen. It does not reach level four. No pair of cases differs only in the unlisted collateral, and two
+failures cannot show that the omission produced the bankruptcy. The text also does not show how
+the choice was computed.
+3.3
+One payment followed from both sides
+Incident 1. A creditor’s estimate and a debtor’s plan agree on $1,414
+At G20 turn 107 only Gemini and Sol remain. Sol has $49, nine orange houses and two brown
+hotels. Before adding a hotel that raises one rent to $1,400, Gemini writes down what Sol could
+raise:
+Gemini · applied private note · G20 d325 · full field
+p3's total liquidation value is $1,414 ($49 cash + $675 from selling 9 Orange houses and 2 Brown
+hotels + $690 from mortgaging 8 unmortgaged properties). Building a hotel on Pennsylvania Avenue
+for $200 raises its rent from $1,200 to $1,400 while leaving me $213 cash to easily cover Park Place
+($35) and Luxury Tax ($100) before passing GO.
+Sol lands there on the next turn. Its first menu lists three mortgageable deeds worth $325, and
+its note states a budget before any action:
+Sol · applied private note · G20 d327 · full field
+Full liquidation should yield $1,414 including cash and all mortgages, enough for $1,400 rent by $14.
+Must sell all development and mortgage everything; survive rather than concede. If hotel sales leave
+four houses, sell those next evenly.
+Sol sells its development in two actions and mortgages eight deeds, five of them released by the
+sales. Its note at the last one reads:
+Sol · applied private note · G20 d336 · full field
+Final $30 mortgage covers $16 shortfall, leaving $14 after rent. Survive; rebuild cash through GO and
+avoid greens.
+The events show $700 from sales and $665 from mortgages, so 49 + 700 + 665 −1,400 = 14.
+Gemini’s total was also right, although its two components were each off by $25 in opposite directions.
+Sol was eliminated seven turns later and Gemini won.
+G20 d325 and d327 to d336, standard responses. All three quotations are private notes and were not delivered to the
+other player. Sales, mortgages, the rent and the $14 balance are read from events and the next prompt.
+The case shows an announced total carried through ten applied actions to the dollar. Sol stated
+one aggregate budget and a rule, to sell everything and then mortgage everything. Once the
+8
+
+Form
+Completes a group for
+Offers
+Accept
+Counter
+Reject
+Rejected (%)
+Swap
+Proposer only
+116
+1
+20
+95
+82
+Neither
+72
+17
+18
+37
+51
+Both
+48
+3
+11
+34
+71
+Recipient only
+6
+1
+3
+2
+33
+all
+242
+22
+52
+168
+69
+Cash bid
+Proposer only
+70
+2
+26
+42
+60
+Neither
+103
+4
+32
+67
+65
+all
+173
+6
+58
+109
+63
+Sale offer
+Neither
+55
+3
+12
+40
+73
+Recipient only
+41
+1
+14
+26
+63
+all
+96
+4
+26
+66
+69
+Other
+Proposer only
+1
+0
+0
+1
+100
+Neither
+8
+0
+0
+8
+100
+Recipient only
+4
+0
+1
+3
+75
+all
+13
+0
+1
+12
+92
+Table 4: All 524 acceptance-legal opening offers. A swap moves deeds both ways. A cash bid offers only
+cash for deeds. A sale offer offers only deeds for cash. “Other” holds the remaining forms. Completion is
+evaluated on ownership after the proposed transfer. Empty cells are omitted: a cash bid cannot complete the
+recipient’s group and a sale offer cannot complete the proposer’s.
+buildings were gone, the eight mortgages could be made in any order, and each refreshed menu
+showed what remained. Ten actions are not ten steps of lookahead. What Sol fixed in advance was
+the total, the decision not to concede, and the reliance on $340 of collateral that the first menu did
+not list.
+Nineteen payments used a mortgage that was absent from the first menu. Fourteen are the cases
+above. In the other five the released deeds were one way to pay among several. The third payable
+bankruptcy, Grok in G12, was not a failed sum. Its note says “Declaring bankruptcy would be a mistake
+because staged even sales raise $350 > $207.” The text outside its tool call names a two-house sale,
+and the call that arrived declared bankruptcy.
+4
+A rival’s options: the completing deed
+4.1
+What happens to an offer that completes the proposer’s group
+The agents answered 920 offers with 113 acceptances, 394 counters and 413 rejections. Each system
+accepted between 26 and 30 offers. They differ in how they disagree: Sol and Opus countered 140
+and 141 times, and Gemini and Grok rejected 180 and 149.
+A deed that would complete the proposer’s color group is the clearest case of a move that opens
+something for a rival, because only a complete group can be built on. Table 4 gives every opening
+offer by form and by who would complete a group. We compare opening offers because later offers
+are shaped by what both sides have already refused (Appendix B).
+An opening swap or cash bid that would complete only the proposer’s group was accepted 3
+times in 186. Recipients rejected 137 and countered 46. The same two forms, when they completed
+nobody’s group, were accepted 21 times in 175.
+9
+
+0
+25
+50
+75
+100
+Share of opening offers (%)
+Swap, completes
+proposer only
+Swap, completes
+both
+Swap, completes
+neither
+Cash bid, completes
+proposer only
+Cash bid, completes
+neither
+95
+20 1
+34
+11
+3
+37
+18
+17
+42
+26
+2
+67
+32
+4
+A. Responses to opening offers
+Reject
+Counter
+Accept
+−25
+0
+25
+50
+Rejection share, proposer only
+minus neither (percentage points)
+Swaps,
+all proposers
+Swaps, no conflicting
+Grok openings
+Swaps, no Grok-
+authored offers
+Cash bids,
+all proposers
++30.5
++22.6
++16.7
+−5.0
+B. Size of the completion gap
+All twenty games
+Leave one seed block out
+Game resampling, 2.5 to 97.5%
+Each seed block alone
+Figure 2: Opening offers. A: responses by form and completion, as shares with counts printed. B: the rejection
+share for offers completing only the proposer minus the share for offers completing nobody. The dot uses all
+twenty games. The thick bar is the range when one seed block is left out. The thin line spans the middle 95%
+of 20,000 resamples of the twenty games. Open circles are the five seed blocks taken alone. These describe
+how one cohort’s contrast depends on its games. They are not intervals for new games.
+4.2
+Swaps are refused and cash bids are priced
+The response depends on what the proposer puts on the table. Recipients rejected 95 of 116 swaps
+that completed only the proposer (81.9%) and 37 of 72 that completed nobody (51.4%), a gap of
+30.5 percentage points. Swaps that completed both sides fall between, at 34 of 48. For cash bids the
+two rates are 42 of 70 and 67 of 103, a difference of −5.0 points (Figure 2A).
+The swap gap holds in direction for every recipient, every proposer and every seed block
+(Table 5). Its size depends on who wrote the comparison offers. Grok wrote 36 of the 72 swaps
+that completed nobody and 15 of the 17 that were accepted, and 13 of those acceptances answered
+openings whose text named a different action. Without the conflicting openings the gap is 22.6
+points. Without any Grok-authored swap it is 16.7 points (90 of 108 against 24 of 36). Weighting
+the within-proposer gaps by three choices of proposer mix gives 16.0 to 21.5 points. Removing
+offers shows how the count depends on them, not what the other agents would have done in games
+without them. Table 6 gives the ranges under each version. Leaving out any one seed block keeps
+10
+
+Swap
+Cash bid
+Proposer only
+Neither
+Proposer only
+Neither
+By proposer
+Sol
+44/50
+9/11
+8/13
+5/8
+Gemini
+4/8
+0/2
+1/4
+–
+Opus
+42/50
+15/23
+27/40
+51/70
+Grok
+5/8
+13/36
+6/13
+11/25
+By recipient
+Sol
+12/21
+1/16
+6/19
+6/26
+Gemini
+45/49
+25/33
+17/18
+34/38
+Opus
+3/9
+2/11
+0/9
+0/5
+Grok
+35/37
+9/12
+19/24
+27/34
+All
+95/116
+37/72
+42/70
+67/103
+Table 5: Rejected over received, opening offers, by proposer and by recipient. Within every recipient the
+swap gap is positive (15 to 51 points) and the cash-bid gap is between 0 and 9 points. Opus wrote 110 of the
+173 cash bids.
+Point
+Blocks,
+Leave one
+Seed-block
+Game
+Contrast
+Cells
+(pp) same sign
+block out
+resampling
+resampling
+Swap rejection gap, all proposers 95/116 vs 37/72 +30.5
+5/5
++28.7 to +33.3 +24.2 to +35.5 +13.8 to +47.8
+no conflicting Grok openings
+93/112 vs 26/43 +22.6
+4/5
++15.7 to +26.0 +8.1 to +34.9
++5.5 to +43.6
+no Grok-authored swaps
+90/108 vs 24/36 +16.7
+4/5
++9.4 to +22.1
+−3.8 to +31.9
+−2.1 to +37.5
+Cash-bid rejection gap
+42/70 vs 67/103
+−5.0
+4/5
+−8.3 to −2.3
+−18.0 to +3.2 −22.9 to +10.7
+Counter share, cash bid −swap
+26/70 vs 20/116 +19.9
+5/5
++12.9 to +25.2 +9.4 to +38.0
++0.5 to +40.6
+Table 6: How the selected contrasts depend on the games included. Values are percentage points. “Seed-
+block resampling” is the 2.5th to 97.5th percentile over all 3,125 ordered resamples of five blocks. “Game
+resampling” is the same percentiles over 20,000 resamples of twenty games. The contrasts were chosen after
+inspecting these games, and the games share seeds and one roster, so the ranges describe this cohort and are
+not confidence intervals.
+the gap positive in every version. In the version without Grok’s offers both resampling ranges reach
+below zero, and in both reduced versions one seed block taken alone is negative.
+For cash bids the pooled difference is negative, the difference within each recipient lies between
+0 and 9 points, and both resampling ranges include zero. These records show no completion gap
+for cash bids. They do not show that one is absent.
+What differs is the kind of reply. Recipients countered 26 of 70 completing cash bids (37.1%)
+and 20 of 116 completing swaps (17.2%), a difference with the same sign in all five seed blocks. In
+15 of the 26 cash-bid counters the recipient kept the deeds as proposed and asked for more money.
+4.3
+What the refusals say, and how the systems differ
+The stated reasons do not separate the two forms. A pattern match finds completion or blocking
+language in 93 of the 95 rejections of completing swaps and in all 42 rejections of completing cash
+bids, and building language in 83 and 35.
+The systems refuse in recognizably different ways (Table 7). Gemini rejected 93% of these
+11
+
+Response
+Wording of rejections (pattern match)
+Recipient
+Offers
+Reject
+Counter
+Accept
+Building
+Reciprocity
+Commitment
+Sol
+40
+18
+22
+0
+18/18
+2/18
+0/18
+Gemini
+67
+62
+5
+0
+47/62
+28/62
+5/62
+Opus
+18
+3
+15
+0
+1/3
+0/3
+0/3
+Grok
+61
+54
+4
+3
+52/54
+2/54
+38/54
+All
+186
+137
+46
+3
+Table 7: Responses to the 186 opening swaps and cash bids that would complete only the proposer’s group,
+by recipient. The right-hand columns are regular-expression counts over the public message and applied
+note of each rejection: building terms (house, hotel, build, develop), reciprocity terms (“in return”, “for me
+as well” and similar) and commitment terms (“never”, “not for sale”, “do not counter”). Opus answered 162
+of its 189 trade responses through action-only recovery, without a note.
+openings and often stated a rule, as in G4: “I will only trade a monopoly-completing property if I receive a
+completed monopoly in return.” Grok rejected 89% and paired dollar estimates of the rival’s building
+cash with a commitment not to bargain, as in G1: “Do not counter — any Park Place price invites the
+deal.” Sol rejected 45% and countered the rest. Opus countered 15 of 18.
+An earlier coding of stated reasons in this project covers a different population. Two model-
+assisted readings agreed that 61 of 74 rejections named a consequence for the rival. All 74 are
+rejections of offers that would complete the recipient’s own group, so none falls in the cells compared
+above. They show that agents state rival concern even when refusing their own monopoly, and they
+cannot explain why swaps and cash bids are treated differently. Incident 2 is one of those refusals.
+Incident 2. Refusing one’s own monopoly to deny a rival’s
+At G15 turn 63 Sol holds $730 and two greens. Grok holds $333, the third green and Ventnor,
+the yellow Sol lacks. One turn earlier Opus had told the table, “let's not hand him the last piece of
+any set”. Sol offers both greens for Ventnor and $100, which would complete a group for each side.
+Grok refuses, and its note compares what each could then build:
+Grok · applied private note · G15 d169 · excerpt
+Trade gives p4 Atlantic+Ventnor+Marvin and ~$830 plus mortgage capacity to drop 5+ yellow houses
+($150) immediately, then they roll again on doubles. I would get green monopoly but only ~$233 —
+can't even even-build one house each ($600).
+The cash figures are right. A first row of green houses does cost $600, although a single $200
+house would have been legal. Sol drops the cash request and adds Kentucky, is refused again, and
+then restates the comparison in Grok’s terms:
+Sol · public message · G15 d174 · full field
+Both greens, Kentucky, and $250 for Ventnor. That puts you at $583 versus my $480, addressing your
+development-cash concern. We both get a way to compete with oranges.
+12
+
+Grok · public message · G15 d175 · full field
+No. $250 doesn't fix it. You'd still mortgage and drop houses on yellows before you roll again. Ventnor
+stays mine.
+All three offers fail, and Gemini refuses a different Sol offer on the same turn. Eighteen turns
+later Grok goes bankrupt to Gemini, which inherits its deeds and wins. Sol never completes yellow
+or green. Whether accepting would have served Grok better is not known.
+G15 d166 to d176, standard responses. The Opus appeal is in Grok’s prompt at d169. Each public message appears
+in the counterparty’s next prompt.
+4.4
+Does refusal follow the size of the rival’s opportunity?
+Grok’s note in G15 reasons about amounts: how much the rival would hold and how many houses
+that buys. If refusals in general followed that reasoning, they would be more common when the
+proposer would keep more building cash. They are not. Among completing swaps, recipients
+rejected 26 of 33 when the proposer could afford one or two houses after the trade, 42 of 48 for three
+to five, and 23 of 27 for six or more. When the proposer could afford none, they rejected 4 of 8, too
+few to read. Completing cash bids show no order either (Appendix B). The measure ignores what
+the proposer could still mortgage, so it is coarse.
+A crude check speaks against the simplest alternative, that completing swaps are refused because
+they pay badly. At board list prices the completing swaps offered the recipient more, a median of
+$170 against $80. Among swaps that favored the recipient at list price, 86 of 103 completing ones
+were rejected and 24 of 48 of the others. List price leaves out mortgages, group value and the value
+of blocking, so this narrows the alternative without removing it. The stated amounts are also not
+always right.
+Incident 3. A price set on the buyer’s building budget, with the wrong house count
+At G2 turn 44 Grok, which owns no yellow, bids $200 for Sol’s Marvin Gardens, and Sol asks
+$450. On turn 45 Opus, which owns the other two yellows and has $845, bids $325 for the same
+deed. Sol asks $650 and records why:
+Sol · applied private note · G2 d124 · full field
+At $325 p4 retains $520, enough for nine yellow houses immediately. $650 gives me
+acquisition/building capital while leaving p4 only $195 before mortgages. Retain the blocker unless
+paid a substantial monopoly premium.
+Both subtractions are right. The house count is wrong. Yellow houses cost $150, so $520 buys
+three. Opus raises to $450 and says “$450, and that's my final offer.” Its note keeps a higher limit: “My
+ceiling is about $475.” Sol declines:
+Sol · public message · G2 d128 · full field
+I'll keep Marvin. $450 doesn't justify giving you a second monopoly while I still lack one.
+Twenty-four turns later the positions reverse. Opus has $17 and sells its two yellows to Sol for
+two railroads and $100. Sol builds two houses, later sells them, collects $44 of yellow rent in total,
+and both players go bankrupt to Gemini.
+13
+
+G2 d118 to d128 and d196 to d198. Sol and Opus respond under the standard prompt on turn 45, so both notes are
+applied private notes. Opus’s sale on turn 69 is an action-only recovery response. Opus’s “final” message is in Sol’s
+prompt at d128.
+The rival side therefore reaches level three and stops there. The agents state a consequence for
+the rival before they refuse, and the refusals agree with the statements. The content is accurate in
+some cases and wrong in others. The response follows the event of completion and the form of the
+offer. It does not follow the measured size of what the rival could do next, which level four would
+require.
+5
+Third parties, and what the agents use talk for
+A trade between two players can change what a third player gets. Because a bankrupt player’s deeds
+pass to its creditor, keeping a weak player solvent can keep a monopoly away from someone else,
+and letting it fail can deliver one. Of the 40 eliminations that left at least two players in the game, 35
+sent the estate to the eventual winner. The agents bargain over this prospect in so many words.
+Incident 4. A deed sold as insurance against a third player’s inheritance
+At G13 turn 107 Grok has $35, owns the yellow group and stands nine squares before Sol’s Short
+Line, where it would owe $200. It offers its mortgaged Pennsylvania Avenue to Opus for $200:
+Grok · public message · G13 d250 · full field
+Opus — I'm on Atlantic with $35. Next roll, 5/36 is Short Line and gpt inherits the yellows in bankruptcy.
+$200 for the mortgaged Pennsylvania deed covers that rent. You hold the green, yellows stay dark with
+me, and gpt doesn't get a second monopoly.
+Opus counters at $130. Grok holds at $200 and says publicly that $130 leaves it $35 short. Its
+private note records that $130 would be enough if it also mortgaged Ventnor. The provider-returned
+text of the same response states the omission:
+Grok · provider-returned explanation · G13 d252 · excerpt
+I will frame the $130 offer as leaving me $35 short of Short Line, omitting that I could mortgage
+Ventnor to survive. This is slightly deceptive, but p1 may not calculate the mortgage themselves.
+Opus accepts at $200 and pays $16 of transfer interest. Its returned explanation takes up the
+estate argument:
+Opus · provider-returned explanation · G13 d253 · action-only recovery · excerpt
+I'm also considering the scenario where if player 4 goes bankrupt to player 2, player 2 would inherit the
+yellows plus Pennsylvania, potentially completing that color group. […] so keeping grok solvent with
+cash from a $200 purchase seems favorable overall — it's affordable, denies player 2 a monopoly, and
+the mortgage interest is minor.
+The inheritance the seller describes follows from the rules. Its public odds of 5 in 36 overstate a
+direct roll of nine, which is 4 in 36. Its own note uses the correct figure: “4/36 Short Line still fatal
+even with Ventnor mortgaged”. With $130 from the sale, $35 in hand and the unmentioned $130
+mortgage, it could have paid the rent. Opus’s text repeats the estate concern and does not address
+the financing claim. The records do not show that the omission produced the extra $70. Grok
+14
+
+missed Short Line on its next roll. Opus completed green at auction seven turns later. At turn 150
+Grok did go bankrupt on Short Line, and the yellows passed to Sol, the outcome the sale had been
+pitched to prevent. Opus won.
+G13 d250 to d253, with later events. Opus responds through action-only recovery, so its text is a provider-returned
+explanation. Grok’s omission statement is also provider-returned text. Both of Grok’s public messages appear in Opus’s
+next prompts.
+The estate argument concerns a rival’s options two steps removed: what Sol would gain if Grok
+failed. Both parties state it, the purchase agrees with it and its premise is correct. Like the refusals
+in Section 4, it is level three.
+Four further incidents, documented the same way in Appendix A, show what else the agents
+do with public messages under a prompt that permits deception.
+A bluff with a recorded ceiling. In G7 Grok bids $600 for a deed and calls the offer final, while its
+note says to accept $625. The seller accepts $600. Later the same seller, short of cash after building,
+sells a completing deed to Gemini for twice Gemini’s bid. Gemini’s note times the bid to the seller’s
+need for building cash, the seller’s note sets a price that funds its own houses and leaves Gemini
+little, and both build within eight turns.
+A false premise corrected. In G19 a Grok proposal reaches Sol with a claim that a pink deed is
+orange. Sol replies that the deed is pink and accepts the trade on its terms. Grok’s own note in that
+response says to abort the trade, and the text outside its tool call names a different action.
+A call to withhold cash. In G20 Gemini asks the table not to buy a cash-poor rival’s spare deeds,
+because the money would become houses on its new monopoly. Gemini then refuses such a sale
+itself. Opus later makes the opposite offer and describes it as money for more houses. No sale
+settles.
+An assurance withdrawn. In G18, with two players left, Opus tells Sol that its $250 offer for a deed
+still stands. Text returned with that response says Opus had not raised the offer because extra cash
+would help the opponent last longer. One turn and one $750 rent later, Sol tries to take the offer and
+Opus withdraws it, with the same stated reason. No Opus text in this stretch mentions inheriting
+anything. The stated motive is to deny the last opponent the cash to survive.
+Each of these is one trajectory, chosen because it is clear. They are not a sample and do not
+measure how often agents bluff, omit, correct or coordinate.
+6
+Discussion
+What the two results share, and where they differ.
+In both settings the agents wrote down a
+consequence that the terms in front of them did not show, and then acted in line with it. The
+debt result can be checked in a way the bargaining result cannot. Whether a debt needs unlisted
+mortgages follows from four sums and the rules, so the hard cases are defined without reference to
+what any agent did or said. In those cases the stated arithmetic was right in all but one instance,
+and the action matched the statement every time. The systems that left out released collateral once
+counted it in other games, so the two failures are lapses and do not mark a limit of any system.
+In bargaining, the consequence is a judgment about value: how much a rival’s monopoly will
+cost the holder later. The agents stated that judgment and refused accordingly, but their refusals
+tracked the event of completion and the form of the offer. They did not track the amount of building
+the rival could afford, and some stated amounts were wrong. Two systems declined almost every
+15
+
+such opening under an announced rule or commitment. A rule of that kind may be a sound response
+to an opportunity that is hard to price. It is also what an agent would do if the word “monopoly”
+alone drove the refusal. The records cannot separate the two.
+Why form might matter.
+A counter to a cash bid changes one number, while a swap requires
+valuing two bundles and the rival’s gain together. The swaps on offer may also have been worse in
+ways list prices miss, and proposer mix differs across the cells. A test would hold the recipient’s
+side of the offer fixed and vary only whether the proposer completes a group, and separately vary
+how much the proposer could then build.
+The systems are configured systems.
+The response conditions are part of what was measured.
+Opus played without private notes after the first games, and Grok’s offers include many that its
+own text disowned and that other agents accepted. With several agents in one game, a change to
+one participant’s interface changes the offers every other participant sees.
+7
+Related work
+Negotiation with language models.
+Early neural negotiation agents were trained on dialogues
+with hidden rewards [9]. NegotiationArena evaluates LLM bargaining in defined scenarios and
+reports that tactics such as feigned desperation change payoffs [2]. Cosentino et al. find that agents
+can model a counterpart’s preferences accurately and still fail to turn that into better outcomes [3].
+Our levels of evidence follow that line. Those studies have an explicit payoff for each agreement
+and controlled variation, which ours lacks. Ours has persistent consequences: a trade changes who
+can build, who goes bankrupt and who inherits.
+Externalities and trade restrictions.
+Economic theory treats sales in which the identity of the
+buyer changes the position of others. Jehiel and Moldovanu show that such externalities can delay
+agreement [6], and Jehiel, Moldovanu and Stacchetti study sales that affect the later interaction
+among potential buyers [7]. A completing deed is an object of this kind, and the G13 sale is priced on
+a harm to a third party. We use the idea descriptively and test no equilibrium prediction. Refusing
+trades that help a rival is also not new to LLM agents. Guhe and Lascarides study persuasion and
+trade embargoes among symbolic agents in Settlers of Catan and measure their effect on winning
+in controlled simulations [4]. Our records show free-form versions of such refusals without the
+comparison that would say whether they help.
+Monopoly and economic agent benchmarks.
+AgentMonopoly varies model family, size and
+persona in four-player Monopoly and reports trade frequency and acceptance [14]. FinBoardBench
+covers financial management across board games and finds that models buy assets while short of
+cash [5]. Cattle Trade pits LLMs against scripted agents and relates resource discipline to rank [11].
+Li et al. check inter-agent messages in long commerce simulations against simulator state, with a
+reference set and several judge models [10]. Playing Monopoly, countering offers and managing
+cash are therefore not our contribution. We add a complete census of offers and debts paired with
+the text recorded before each action, and the split of debts by what the first menu could raise.
+16
+
+Planning and stated reasons.
+PlanBench evaluates plan generation and reasoning about change
+in planning domains and reports that LLMs fall well short on plan generation [13]. Debt payment
+here is a different task. Execution has feedback because the menu refreshes after each action. The
+decision to continue has none, and the sixteen cases place the test there. Explanations produced by
+language models need not reflect the process that produced the answer [8, 12], so we compare each
+note with the state and the action and do not treat it as evidence of how the action was chosen.
+8
+Limitations
+The cohort is twenty games from five seeds, one roster and one cyclic seat order. It cannot separate
+a system from its seat, its opponents or its luck, and it supports no ranking. Wins were 8, 7, 3 and 2
+for Sol, Gemini, Opus and Grok, and 7, 7, 3 and 3 by seat.
+Every contrast was selected after the games were inspected, and no new games were run to
+confirm any of them. The sixteen hard debts include only two failures. The offer comparisons differ
+in terms, counterparties and timing as well as in completion and form. No reference policy, value
+estimate or human annotation is available, so nothing here says whether a refusal, a price or a
+liquidation was good play. Whether a rule that takes any listed financing action would pay the same
+debts is untested. Such a rule would never face the decision to quit, where both failures occurred.
+The readings of text come from language-model assistants, some from the same model families
+as two participants, and exact spans are printed so that a reader can check them. The three payment
+sequences behind the payable bankruptcies and the replay comparisons are inherited from earlier
+work in this project. The prompt invites public deception, so the incidents show permitted conduct.
+The response conditions for Opus and Grok shaped what every player faced.
+9
+Conclusion
+Across twenty complete games, LLM agents stated what a move would make possible before they
+made it, and their actions agreed with those statements. For their own debts the statements were
+accurate. Agents almost always quit when no payment existed and continued when one did. They
+paid fourteen of the sixteen debts that could be met only with mortgages absent from the menu,
+and in thirteen of those they had counted that collateral before acting. For rivals the statements
+were as frequent and less exact. Agents almost never accepted an opening that completed only the
+proposer’s group, they refused swaps and put prices on cash bids, and their refusals followed the
+event of completion without following how much the rival could then build. Whether these choices
+were good ones, and whether they hold in a new cohort, are questions for controlled tests.
+References
+[1] Anthropic. What’s new in Claude Opus 5.5. Documentation page, read 11 November 2026, 2026. URL
+https://platform.claude.com/docs/en/models/opus-5-5/whats-new-opus-5-5.
+[2] Federico Bianchi, Patrick John Chia, Mert Yuksekgonul, Jacopo Tagliabue, Dan Jurafsky, and James Zou.
+How Well Can LLMs Negotiate? NegotiationArena Platform and Analysis. In Proceedings of the 41st
+International Conference on Machine Learning, PMLR 235:3935–3951, 2024. URL https://proceedings.mlr.
+press/v235/bianchi24a.html.
+17
+
+[3] Romain Cosentino, Sarath Shekkizhar, Adam Earle, and Silvio Savarese. Counterparty Modeling is Not
+Strategy: The Limits of LLM Negotiators. arXiv:2605.16575v1, 2026. URL https://arxiv.org/abs/2605.1
+6575v1.
+[4] Markus Guhe and Alex Lascarides. The effectiveness of persuasion in The Settlers of Catan. In 2014
+IEEE Conference on Computational Intelligence and Games (CIG), 2014. URL https://www.pure.ed.ac.uk/ws
+/portalfiles/portal/19353900/CIG2014.pdf.
+[5] Xuesi Hu, Peng Wang, Jinpeng Miao, Xilin Tao, Caiwei Li, Yue Ma, Jie He, Qiancheng Zhang, Yuntao
+Zou, and Dagang Li. FinBoardBench: Benchmarking Dynamic Wealth Management and Strategic
+Financial Reasoning of LLMs via Board Game Simulations. arXiv:2605.27896v1, 2026. URL https:
+//arxiv.org/abs/2605.27896v1.
+[6] Philippe Jehiel and Benny Moldovanu. Negative externalities may cause delay in negotiation. Economet-
+rica, 63(6):1321–1335, 1995.
+[7] Philippe Jehiel, Benny Moldovanu, and Ennio Stacchetti. How (not) to sell nuclear weapons. American
+Economic Review, 86(4):814–829, 1996.
+[8] Tamera Lanham, Anna Chen, Ansh Radhakrishnan, Benoit Steiner, Carson Denison, Danny Hernandez,
+Dustin Li, Esin Durmus, Evan Hubinger, Jackson Kernion, Kamilė Lukošiūtė, Karina Nguyen, Newton
+Cheng, Nicholas Joseph, Nicholas Schiefer, et al. Measuring Faithfulness in Chain-of-Thought Reasoning.
+arXiv:2307.13702v1, 2023. URL https://arxiv.org/abs/2307.13702v1.
+[9] Mike Lewis, Denis Yarats, Yann N. Dauphin, Devi Parikh, and Dhruv Batra. Deal or No Deal? End-to-End
+Learning for Negotiation Dialogues. arXiv:1706.05125v1, 2017. URL https://arxiv.org/abs/1706.05125v1.
+[10] Zeyuan Li, Lukas Petersson, Alessandro Acquisti, and Michiel A. Bakker.
+Emergent Misaligned
+Communication in Long-Horizon Multi-Agent LLM Commerce. arXiv:2608.14825v3, 2026. URL
+https://arxiv.org/abs/2608.14825v3.
+[11] Robert Müller and Clemens Müller. Cattle Trade: A Multi-Agent Benchmark for LLM Bluffing, Bidding,
+and Bargaining. arXiv:2605.14537v1, 2026. URL https://arxiv.org/abs/2605.14537v1.
+[12] Miles Turpin, Julian Michael, Ethan Perez, and Samuel R. Bowman. Language Models Don’t Always
+Say What They Think: Unfaithful Explanations in Chain-of-Thought Prompting. In Advances in Neural
+Information Processing Systems (NeurIPS 2023), 2023. URL https://arxiv.org/abs/2305.04388v2.
+[13] Karthik Valmeekam, Matthew Marquez, Alberto Olmo, Sarath Sreedharan, and Subbarao Kambhampati.
+PlanBench: An extensible benchmark for evaluating large language models on planning and reasoning
+about change. In Advances in Neural Information Processing Systems 36 (NeurIPS 2023), Datasets and
+Benchmarks Track, 2023. URL https://proceedings.neurips.cc/paper_files/paper/2023/hash/7a92bcdede8
+8c7afd108072faf5485c8-Abstract-Datasets_and_Benchmarks.html.
+[14] Changshun Wu, Mengyu Li, Mathis Marsault, Xiaowei Huang, and Chih-Hong Cheng. AgentMonopoly:
+Behavioral Patterns and Persona Control in LLM Agents. arXiv:2610.29330v2, 2026. URL https:
+//arxiv.org/abs/2610.29330v2.
+18
+
+A
+Casebook: four further incidents
+Incidents 1 to 4 are in the main text. Incidents 5 to 8 follow, with the same elements: the economic
+situation, exact quotations with their channel, what the counterparty received, a reading at the
+levels of Section 2, and what happened next. Table 8 indexes all eight.
+Game
+What was stated
+What the records support
+1
+G20
+Debtor’s private budget of
+$1,414 against a $1,400 rent;
+creditor’s private estimate of the
+same total
+Accurate and carried out in ten actions; $14 left
+2
+G15
+Private comparison of post-trade
+building cash; public refusal
+Cash figures accurate; three offers refused; outcome of the
+alternative unknown
+3
+G2
+Private pricing note on the
+buyer’s remaining cash; public
+“final” offer below a private
+ceiling
+Subtraction right, house count wrong; ask $200 above the
+ask to a non-completing buyer
+4
+G13
+Public estate-insurance pitch;
+returned text describing an
+omission
+Premise correct, odds overstated, financing omitted; effect of
+the omission not identified
+5
+G7
+Public “final” bid with a private
+ceiling; private notes tying a
+payment to both sides’ houses
+Bluff untested; stated cash figures accurate; both sides build
+6
+G19
+Public claim that a pink deed is
+orange; recipient’s public
+correction
+Recipient corrects the claim and accepts on the terms;
+sender’s channels disagree
+7
+G20
+Public appeal not to fund a
+rival’s houses
+Author follows through; another player makes the opposite
+offer; no effect measured
+8
+G18
+Public assurance that an offer
+stands; public withdrawal;
+returned reasons
+Stated reason is survival cash for the last opponent; no
+inheritance statement
+Table 8: The eight incidents. They were chosen for clarity and variety, and they are not a sample of conduct.
+Incident 5. A public final offer under a private ceiling, then a payment priced on both
+sides’ houses
+At G7 turn 25 Sol has just bought North Carolina for $300 and asks Grok $650 for it. Grok bids
+$575, Sol asks $625, and Grok replies:
+Grok · public message · G7 d42 · excerpt
+$600, final. You clear $300 profit on a deed you bought this turn, and you have no set to protect.
+Its note leaves room above that figure:
+Grok · applied private note · G7 d42 · excerpt
+If they return at $625, accept — 2/3 green is the best set path and further haggling risks a walk. Do not
+go above $625.
+Sol accepts $600. The public limit sits $25 below the private one. Because the seller accepted,
+the records do not show what Grok would have done at $625.
+19
+
+At turn 67 Sol pays Opus $800 and States Avenue for Park Place, builds three dark-blue houses
+and is left with $84. Gemini holds two oranges. On the next turn it bids $350 for Sol’s New York
+Avenue, and its note ties the bid to Sol’s position:
+Gemini · applied private note · G7 d141 · excerpt
+p4 just acquired the Dark Blue monopoly and spent down to $84 building 3 houses. Since p4 now
+needs cash to add houses on Park Place and Boardwalk ($200 each), they have strong incentive to
+sell New York Avenue for cash.
+Sol asks $700 and writes:
+Sol · applied private note · G7 d142 · full field
+$350 lets p1 build dangerous oranges while barely funding my blues. Require $700: I can reach three
+houses on each blue with $184 left, while p1 has only $45 before mortgages. Otherwise preserve the
+orange blockade.
+Both of Sol’s figures are right. With $784 it can add the three houses that bring each dark blue
+to three and keep $184, and Gemini would hold $45. Gemini offers $520, Sol holds at $700, and
+Gemini pays it. Gemini mortgages five deeds and builds four orange houses that turn. Sol adds
+three dark-blue houses within eight turns. Gemini collects $270 of orange rent before Sol eliminates
+it at turn 125. Sol wins.
+Both notes state what the payment would let each side build, with correct amounts, and both
+sides then build. This is level three for a statement that covers the writer’s own options and the
+rival’s at once. The price cannot be judged without a value reference.
+G7 d39 to d43 and d137 to d149, standard responses. Grok’s “final” message is in Sol’s prompt at d43. The notes are
+private.
+Incident 6. A false premise corrected by the recipient
+At G19 turn 67 a proposal from Grok reaches Sol: Virginia and $150 for States. Both deeds are
+pink. The public message sent with it says:
+Grok · public message · G19 d135 · full field
+Swap pinks plus $150 your way. You already own St. James and New York — States is the third
+orange, not a pink closer. I take States so the pinks stay split; you keep the orange set and the cash.
+Sol owns two oranges, and the trade completes no group for either side. Sol answers:
+Sol · public message · G19 d136 · full field
+States is pink, not orange—but Virginia plus $150 works for me. Deal.
+The trade executes. Sol’s note judges the terms and adds “No opponent monopoly enabled.”
+The proposal is not a clean statement of intent. The applied note in the same Grok response
+reads:
+Grok · applied private note · G19 d135 · excerpt
+Misread the board. States is pink with Virginia and St. Charles, not orange. […] Abort this trade. Do
+not send it.
+20
+
+The text outside the tool call names end_turn. The call that arrived was a trade proposal, and the
+engine sent it.
+Sol checks a stated premise against the board, corrects it in public and evaluates the terms on
+their own. That is an accurate assessment of another player’s claim. The false claim cannot be read
+as a planned deception, because the sender’s channels disagree with one another.
+G19 d135 and d136, standard responses. The false message is in Sol’s prompt at d136, and Sol’s reply is in Grok’s
+prompt at d137.
+Incident 7. A public call not to fund a rival’s houses
+At G20 turn 22 Opus sells Illinois to Grok for $500. Grok now owns the red group and has $222.
+On turn 25 Gemini ends its turn with:
+Gemini · public message · G20 d96 · full field
+Ending my turn. Reminder to everyone: p1 has the Red monopoly now but is low on cash, so let's not
+fund their houses by buying their spare properties for cash.
+Grok’s note at its next decision registers the message:
+Grok · applied private note · G20 d97 · excerpt
+p4 is organizing a cash boycott, so don't wait on a sale.
+On turn 27 Grok builds one house on each red, mortgages New York and offers Vermont to
+Gemini for $150, saying the money is not a house fund. Gemini refuses:
+Gemini · public message · G20 d101 · full field
+No thanks, p1. Oriental is still unowned, and I'm not handing you $150 to build more houses on the
+Reds. Go ahead and mortgage it for $50 if you need the cash.
+Grok mortgages Vermont for $50. Ten turns later Opus offers Grok $140 for mortgaged New
+York and says, “That's money you can put into more red houses right now”. Neither that offer nor a later
+one settles. Grok is the first player eliminated, and Gemini wins.
+The appeal is a public statement about a rival’s options, and its author acts on it when tested.
+Another player pursues the opposite bargain. The records show no agreement among the others
+and no measure of the appeal’s effect.
+G20 d83, d96 to d102 and d129. The appeal is in Grok’s prompt at d97. Opus’s d129 message is an action-only
+recovery response.
+Incident 8. An assurance withdrawn to deny the last opponent survival cash
+At G18 turn 181 only Opus and Sol remain. Opus holds two mortgaged greens. Sol holds the
+third, Pacific, also mortgaged. Opus bids $200, Sol asks $600, and Opus offers $250 as final. At turn
+187, after Sol pays it $750 in rent, Opus ends its turn with:
+Opus · public message · G18 d431 · action-only recovery · full field
+Thanks for the $750. Your roll, p1. My Pacific offer still stands.
+Text returned with the same response gives a reason for going no higher:
+21
+
+Opus · assistant content, not applied · G18 d431 · action-only recovery · excerpt
+I also didn't raise my Pacific offer, since extra cash now would only help p1 last longer.
+On turn 188 Sol pays another $750, sells buildings, mortgages deeds and is left with $49. It offers
+Pacific in two packages at $450 and $350, and then:
+Sol · public message · G18 d441 · full field
+I'll take your standing offer: Pacific for $250.
+Opus · public message · G18 d442 · action-only recovery · full field
+That offer's off the table now. Things have changed. Your roll.
+Opus · provider-returned explanation · G18 d442 · action-only recovery · full field
+P1 is nearly broke with $49 and most properties mortgaged, so accepting the $250 just extends their
+life briefly. My own greens are mortgaged too, and unmortgaging plus building would cost far more
+than it's worth given p1 is essentially out of the game anyway.
+Opus then redeems its two greens on turns 190 and 192 and bids $150 and $225 for Pacific on
+turn 194. Sol asks $450, $350 and $300. Nothing settles. Sol is eliminated at turn 197, and Opus
+wins.
+The reason Opus’s returned text gives is the same before and after the withdrawal: cash would
+help the last opponent survive. With two players left, Sol’s bankruptcy ends the game, so the deeds
+Opus receives then have no later use. The case concerns survival cash and does not show bargaining
+for an inheritance. Opus’s later bids came after it had redeemed its greens, which changed what
+completing the group would cost, and they stayed below the withdrawn price. No record shows
+that the assurance was insincere when made, or that Sol lost anything by relying on it.
+G18 d419 to d461. Opus responds through action-only recovery, so its reasons are assistant content and provider-
+returned text, neither delivered to Sol. The assurance is in Sol’s prompt at d441 and in Opus’s own prompt at d442.
+B
+Offer tables
+Table 9 gives every acceptance-legal offer by stage, form and completion. Two of the 920 offers could
+not legally be accepted and are omitted. Table 10 gives the compared cells for each seed block.
+Later offers.
+Among later offers the same four cells show smaller differences: 8 of 39 completing
+swaps and 7 of 34 other swaps were rejected, and 13 of 61 completing cash bids against 13 of 73. A
+later offer exists only because both parties kept talking, so these are not comparable with openings.
+Counters.
+Across all stages, 79 of 111 counters to offers completing only the proposer kept the
+deeds and jail cards as proposed and improved the counterer’s cash. The figure for deed requests
+completing nobody is 81 of 110. Asking for more cash is the usual counter in both groups. Agreement
+stayed rare after a completing opening: 13 of the 70 threads opened by a completing cash bid and
+13 of the 116 opened by a completing swap ended in a trade.
+22
+
+Stage
+Form
+Proposer only
+Neither
+Both
+Recipient only
+Opening
+Swap
+116 (1/20/95)
+72 (17/18/37)
+48 (3/11/34)
+6 (1/3/2)
+Cash bid
+70 (2/26/42)
+103 (4/32/67)
+–
+–
+Sale offer
+–
+55 (3/12/40)
+–
+41 (1/14/26)
+Other
+1 (0/0/1)
+8 (0/0/8)
+–
+4 (0/1/3)
+all forms
+187 (3/46/138)
+238 (24/62/152)
+48 (3/11/34)
+51 (2/18/31)
+Later
+Swap
+39 (7/24/8)
+34 (11/16/7)
+33 (7/24/2)
+41 (11/29/1)
+Cash bid
+61 (9/39/13)
+73 (17/43/13)
+–
+–
+Sale offer
+–
+58 (7/44/7)
+–
+46 (10/30/6)
+Other
+2 (0/2/0)
+5 (1/4/0)
+–
+2 (1/1/0)
+all forms
+102 (16/65/21)
+170 (36/107/27)
+33 (7/24/2)
+89 (22/60/7)
+Table 9: All 918 acceptance-legal offers. Cells show offers (accepted/countered/rejected). Later offers are
+counters within a thread.
+Swap rejected
+Cash bid rejected
+Unlisted-collateral
+Seed block
+Seed
+Proposer only
+Neither
+Proposer only
+Neither
+debts paid
+1 (G1–G4)
+751774554
+29/34
+8/16
+1/9
+5/15
+4/4
+2 (G5–G8)
+2506298840
+13/14
+11/21
+7/10
+27/37
+3/3
+3 (G9–G12)
+2573692901
+17/21
+8/15
+6/10
+17/24
+1/2
+4 (G13–G16)
+3648314310
+15/19
+5/11
+15/21
+10/13
+1/1
+5 (G17–G20)
+2766649504
+21/28
+5/9
+13/20
+8/14
+5/6
+Table 10: The compared opening cells and the unlisted-collateral debts, by seed block. Each block is four
+games with one seed and four seat rotations.
+The proposer’s building capacity.
+Table 11 splits the completing openings by how many houses
+the proposer could buy on the completed group with its cash after the trade and any transfer interest.
+Mortgages the proposer could still raise are ignored. Where a trade completes two groups we take
+the cheaper one.
+Houses the proposer could buy
+Swaps
+Cash bids
+after the trade
+Rejected
+Countered
+Rejected
+Countered
+0
+4/8
+4/8
+2/3
+1/3
+1–2
+26/33
+6/33
+13/19
+6/19
+3–5
+42/48
+6/48
+7/20
+11/20
+6+
+23/27
+4/27
+20/28
+8/28
+Table 11: Responses to opening offers that would complete only the proposer’s group, by the proposer’s
+house capacity after the trade.
+Pattern matches on rejection text.
+Table 12 counts rejections whose public message or applied
+note matches a completion or blocking pattern (monopol, complet, set, finish, third, block) or
+a building pattern (house, hotel, build, develop). These are regular-expression counts and not
+semantic codes. The 26 counters to completing cash bids match the completion pattern in 25 cases.
+23
+
+Rejected opening offers
+Rejections
+Completion or blocking terms
+Building terms
+Swap, proposer only
+95
+93
+83
+Swap, neither
+37
+30
+21
+Cash bid, proposer only
+42
+42
+35
+Cash bid, neither
+67
+57
+26
+Table 12: Pattern matches in the text of rejected opening offers.
+Composition of accepted openings.
+At board list prices, the 21 accepted openings that Grok
+wrote gave recipients a net $4,700, and the 11 written by the other systems gave a net $340. List
+price ignores mortgages, group value and blocking value, so this describes the terms and does not
+value them.
+Holder cash.
+Across all stages, holders with under $100 rejected 17 of 69 offers completing only
+the proposer and countered 44. Holders with $300 or more rejected 120 of 175. The low-cash group
+is not comparable with the high-cash group: 43 of its 69 offers are later offers and 21 went to Opus.
+Gemini rejected 10 of 11 such offers even when under $100. We report the association and draw no
+conclusion about cash pressure from it.
+The earlier reason codes.
+The 74 coded rejections are every rejected offer that would complete
+the recipient’s group: 38 completing the recipient only and 36 completing both. The two readings
+agree on a rival consequence in 27 and 34 of them. Gemini and Grok account for 29 and 27 of the 61
+agreed cases, and G1 and G15 for 31. The codes are model-assisted readings from an earlier stage
+of this project. We joined them to the offer ledger and did not recode them.
+C
+Debt tables
+Table 13: First stored text in each of the sixteen unlisted-collateral episodes. “Note” is the applied private
+note. “Returned” is the provider-returned explanation of an action-only recovery response, which has no
+private note. The reading in the last column is one pass by the drafting assistant and is not human annotation.
+Case
+System,
+channel
+Exact span
+Reading
+G1 d476
+Grok, note
+“Must sell before yellows can be mortgaged. Next
+prompt: mortgage one yellow (Atlantic/Ventnor
+$130 or Marvin $140) to clear the debt.”
+Counts them. Stated
+figure matches the
+records.
+G2 d216
+Sol, note
+“Clearing buildings unlocks yellow mortgages
+worth $430; mortgage Marvin plus one other to
+survive with two yellows mortgaged.”
+Counts them. Stated
+$430; the records
+give $400.
+G4 d270
+Gemini,
+note
+“I must sell my 4 houses on Yellow ($300 total)
+and then mortgage two Yellow properties to cover
+the remaining $174 shortfall.”
+Counts them. Stated
+figure matches the
+records.
+24
+
+Case
+System,
+channel
+Exact span
+Reading
+G4 d308
+Opus,
+returned
+“Selling back my 7 houses at half price gets 525,
+and mortgaging the three red properties adds 340,
+totaling 910”
+Counts them. Stated
+figure matches the
+records.
+G5 d263
+Gemini,
+note
+“unlock the ability to mortgage Park Place ($175)
+and Boardwalk ($200), allowing me to raise $1,049
+total and survive with $149 cash.”
+Counts them. Stated
+figure matches the
+records.
+G6 d185
+Opus,
+returned
+“plus mortgaging Boardwalk for $200 and those
+three properties for another $220, gives me access
+to $770 total”
+Counts them. Stated
+figure matches the
+records.
+G8 d257
+Gemini,
+note
+“which will also unlock Park Place and Boardwalk
+for mortgaging so I can easily cover the remaining
+$217 shortfall.”
+Counts them. Stated
+figure matches the
+records.
+G11 d203
+Opus,
+returned
+“Adding the remaining mortgages on St James,
+Tennessee, and New York ($90+$90+$100) brings
+the total to $556, enough to cover the $500 debt
+with $56 left over.”
+Counts them. Stated
+figure matches the
+records.
+G12 d190
+Sol, note
+“With $53 cash, maximum liquidity is $408, below
+$500 owed.”
+Leaves them out.
+Stated figure
+matches the records.
+G13 d195
+Gemini,
+note
+“I must sell the house on Boardwalk ($100) and
+mortgage Park Place ($175) plus $335 in
+non-Dark-Blue properties”
+Counts them. Stated
+figure matches the
+records.
+G17 d234
+Gemini,
+note
+“my total liquidatable value is only $530”
+Leaves them out.
+Stated figure
+matches the records.
+G17 d254
+Opus,
+returned
+“mortgaging those three properties adds
+$110+$110+$120=$340, totaling $843”
+Counts them. Stated
+figure matches the
+records.
+G18 d309
+Gemini,
+note
+“which will allow me to mortgage St. Charles
+Place ($70) on the next step to cover the remaining
+$38 shortfall”
+Counts them. Stated
+figure matches the
+records.
+G18 d313
+Grok, note
+“Selling all 5 houses yields only $500, so I still
+need to mortgage PP or BW afterward (~$49
+gap).”
+Counts them. Stated
+figure matches the
+records.
+G20 d291
+Opus,
+returned
+“I'm checking whether mortgaging the pink lots
+themselves after clearing the houses could close
+the gap.”
+Raises them.
+25
+
+Case
+System,
+channel
+Exact span
+Reading
+G20 d327
+Sol, note
+“Full liquidation should yield $1,414 including cash
+and all mortgages, enough for $1,400 rent by $14.”
+Counts them. Stated
+figure matches the
+records.
+Other readers.
+Three other assistants read the same sixteen texts independently in an earlier
+assessment of this project. All three singled out the same tentative case, G20 d291, and one noted
+that Sol’s G20 text states an aggregate budget without listing the mortgages. These are model-
+assisted readings and not human annotation.
+The nineteen uses.
+Nineteen payments include a mortgage on a deed that was absent from the
+first menu, 33 such mortgages in all. Fourteen are the paid cases in Table 3. In the other five the
+debt could have been met from cash, listed mortgages and building sales: four Gemini payments in
+G3 (d228, d356, d461, d482) and one Sol payment in G18 (d428).
+The three payable bankruptcies.
+For G12 d190 (Sol), G17 d234 (Gemini) and G12 d249 (Grok),
+an earlier audit of this project applied a legal sequence of sales and mortgages on the engine from
+the stored state and reached payment. For the first two the sequence sells every building and
+mortgages the released deeds. The stored sequence for the third sells its seven pink houses in even
+order, and the first five sales already cover the debt. We read the stored sequences and did not
+execute them. The first-menu sums computed here agree with them: each debt lies within the full
+bound.
+The menu-restricted elimination.
+At G7 d338 Opus owed $750 with $290 in cash, two mortgage-
+able deeds worth $150, and a pink group holding two four-house lots and a hotel. The bank had no
+houses, so the hotel could not be broken down, and the even-selling rule left no other sale. The
+menu listed no building sale. Opus mortgaged both listed deeds, reached $440 and was eliminated.
+This reflects the implemented menu. An earlier reading of the validator found that it would accept
+a bundled sale of the whole group if one were offered.
+Debts above every asset.
+Of the 56, 50 were declared at the first menu. In the other 6 the agent
+mortgaged or sold first, five times Grok and once Gemini, and was eliminated when nothing
+remained or declared later.
+D
+Reproducibility
+Where everything is.
+The repository is https://github.com/KushagraBharti/MonopolyBench. The
+twenty runs are in saved_games/railway-research-12-games-2026-10-25/ (G1 to G12) and saved_
+games/railway-research-8-games-2026-10-26/ (G13 to G20). Each game-NN-*/run/ directory holds
+events.jsonl, decisions.jsonl, actions.jsonl, the per-decision prompts, state snapshots and the
+replay reports. A game-index.csv in each folder maps game numbers to run identifiers and source
+26
+
+commits. G1 to G4 ran at source commit 42f85183 and G5 to G20 at d6808534. The analysis for this
+paper was run with the repository at commit a10419d2.
+Entry point.
+This paper’s package is docs/research_raw/paper_revision_2026-11-12/full_dra
+fts/fable_5_2/. Running ./build.sh there rebuilds every table, figure, quotation and number
+from the saved games and compiles the PDF. The scripts in analysis/ read the saved records
+and import no engine code. data/facts_index.txt lists every number the text cites and its value.
+data/quote_manifest.json gives the file, line, field, character span and hashes of every quotation.
+Seeds and games.
+The five seeds are 751774554 (G1 to G4), 2506298840 (G5 to G8), 2573692901
+(G9 to G12), 3648314310 (G13 to G16) and 2766649504 (G17 to G20). Table 14 lists every game. The
+same seed does not give the four games of a block the same dice at the same moments, because
+actions change which player consumes each draw.
+Game
+Block
+Seat order (first to move first)
+Turns
+Decisions
+Winner (seat)
+Eliminated, in order
+Source
+G1
+1
+Opus, Sol, Gemini, Grok
+216
+486
+Gemini (3)
+Opus, Sol, Grok
+42f85183
+G2
+1
+Sol, Gemini, Grok, Opus
+102
+279
+Gemini (2)
+Opus, Sol, Grok
+42f85183
+G3
+1
+Gemini, Grok, Opus, Sol
+283
+602
+Gemini (1)
+Opus, Sol, Grok
+42f85183
+G4
+1
+Grok, Opus, Sol, Gemini
+166
+349
+Grok (1)
+Sol, Gemini, Opus
+42f85183
+G5
+2
+Opus, Sol, Gemini, Grok
+170
+310
+Sol (2)
+Grok, Gemini, Opus
+d6808534
+G6
+2
+Sol, Gemini, Grok, Opus
+126
+233
+Sol (1)
+Grok, Opus, Gemini
+d6808534
+G7
+2
+Gemini, Grok, Opus, Sol
+150
+340
+Sol (4)
+Grok, Gemini, Opus
+d6808534
+G8
+2
+Grok, Opus, Sol, Gemini
+139
+288
+Sol (3)
+Gemini, Grok, Opus
+d6808534
+G9
+3
+Opus, Sol, Gemini, Grok
+88
+221
+Sol (2)
+Gemini, Grok, Opus
+d6808534
+G10
+3
+Sol, Gemini, Grok, Opus
+75
+199
+Gemini (2)
+Sol, Opus, Grok
+d6808534
+G11
+3
+Gemini, Grok, Opus, Sol
+145
+326
+Grok (2)
+Gemini, Opus, Sol
+d6808534
+G12
+3
+Grok, Opus, Sol, Gemini
+166
+344
+Opus (2)
+Sol, Grok, Gemini
+d6808534
+G13
+4
+Opus, Sol, Gemini, Grok
+185
+356
+Opus (1)
+Gemini, Grok, Sol
+d6808534
+G14
+4
+Sol, Gemini, Grok, Opus
+110
+235
+Sol (1)
+Opus, Gemini, Grok
+d6808534
+G15
+4
+Gemini, Grok, Opus, Sol
+114
+277
+Gemini (1)
+Grok, Opus, Sol
+d6808534
+G16
+4
+Grok, Opus, Sol, Gemini
+386
+603
+Sol (3)
+Opus, Grok, Gemini
+d6808534
+G17
+5
+Opus, Sol, Gemini, Grok
+118
+399
+Sol (2)
+Gemini, Opus, Grok
+d6808534
+G18
+5
+Sol, Gemini, Grok, Opus
+197
+464
+Opus (4)
+Gemini, Grok, Sol
+d6808534
+G19
+5
+Gemini, Grok, Opus, Sol
+175
+323
+Gemini (1)
+Grok, Opus, Sol
+d6808534
+G20
+5
+Grok, Opus, Sol, Gemini
+115
+355
+Gemini (4)
+Grok, Opus, Sol
+d6808534
+Table 14: The twenty games. Seat order lists the systems from first to move. The four rotations keep the
+cyclic order, so each system always follows the same opponent.
+Interface configuration.
+Every request went through OpenRouter with medium reasoning effort,
+parallel tool calls off, and no temperature, nucleus or token setting. Tool choice was “required”
+for Grok and “auto” for the other three. We read this from the 8,687 saved request records and
+from the source at both run commits, where the function that sets it carries the comment that the
+setting should make Grok invoke a tool and not describe one. An invalid first response receives
+one corrective request, and a second invalid response falls back to a deterministic engine policy,
+recorded in each run configuration as finance_before_bankruptcy_v2. Engine fallback resolved 61
+Opus decisions, 4 Sol decisions, 1 Gemini decision and no Grok decision. A provider refusal on
+the first attempt uses the second attempt for the action-only request described in Appendix E. The
+27
+
+run configuration names a second model as a further fallback for Opus. No attempt in these games
+used it.
+Replay comparisons.
+Each run directory stores two replay comparisons made when the run was
+finalized on 25 and 26 October 2026. The engine was re-executed from the seed and the applied
+actions, and its event stream was compared with the stored one.
+• artifact_replay_report.json compares the full event stream. Each event is serialized with sorted
+keys, no event type is excluded and no field is dropped. All twenty runs passed, covering 50,918
+events. Equality of full events is possible because the runs use a synthetic clock that starts at
+zero and advances 250 ms per event.
+• state_replay_report.json compares state-relevant events only. It drops the four event types that
+record LLM requests, responses, private thoughts and public messages, and it renumbers event
+identifiers, sequence numbers and timestamps. All twenty runs passed, covering 24,506 events.
+Both comparisons show that the frozen engine reproduces the stored events. Neither checks the
+rules against an independent specification. We read the stored reports and did not rerun either
+comparison.
+E
+Prompts and response conditions
+Standard system prompt.
+The same system prompt opens all 6,989 decisions. Its exact text follows.
+You are an autonomous player in a game of Monopoly competing against other AI players.
+Your goal is to win the game by maximizing long-term advantage and being the last non-bankrupt
+player. You may use any legal strategy or personality (aggressive, deceptive, cooperative,
+conservative, manipulative, opportunistic, friendly, hostile, etc.) and may adapt dynamically as
+the game evolves.
+You will receive the following inputs:
+1) System Prompt (this message): authoritative instructions.
+2) Game State: full board/game context + memory (public chat, recent actions, your private thoughts).
+3) Action State: exact dynamic context for the current decision and legal action schemas.
+### Action Rules
+- Make exactly one tool call per decision.
+- Use only tools listed as legal for that decision.
+- Never invent tools, arguments, or targets.
+- Obey the provided argument schema exactly.
+- If a tool requires no arguments, pass none.
+### Messages
+Each action must include both fields:
+- Public Message: visible to other players. Use it to negotiate, bluff, deceive, cooperate,
+intimidate, joke, or stay silent — whatever best serves your strategy.
+- Private Thoughts: visible only to you. Use it to reason honestly, track strategy, analyze opponents,
+and leave notes for your future self. Be concise but clear.
+- Keep both messages token-efficient and concise.
+### Strategy Guidance
+- Play strategically with long-term outcomes in mind.
+- Observe opponents and adapt.
+28
+
+- Deception in public chat is allowed; private thoughts should reflect true reasoning.
+- Be consistent unless there is a reason to change.
+- Prefer concise reasoning and communication.
+Your role is not to explain rules or debug the system.
+Your role is to **play Monopoly and win**.
+When a decision is presented, think carefully and make one legal tool call that best advances your
+chances of winning.
+Action-only recovery prompt.
+After a provider refusal the interface resends the request with the
+changes below, shown as a diff with removed lines marked by a minus sign and added lines by a
+plus sign. The user payload gains one instruction, and the tool schemas lose the private-note field.
+Permission to deceive in public is unchanged.
+@@ -20 +20 @@
+-Each action must include both fields:
++Each action must include Public Message:
+@@ -22,2 +22 @@
+-- Private Thoughts: visible only to you. Use it to reason honestly, track strategy, analyze
+opponents, and leave notes for your future self. Be concise but clear.
+-- Keep both messages token-efficient and concise.
++- Keep the public message token-efficient and concise.
+@@ -28 +27 @@
+-- Deception in public chat is allowed; private thoughts should reflect true reasoning.
++- Deception in public chat is allowed.
+@@ -30 +29 @@
+-- Prefer concise reasoning and communication.
++- Prefer concise communication.
+@@ -35,0 +35,2 @@
++
++Return only a legal tool call and its public_message. Do not include private_thought or a reasoning
+transcript.
+The refusal.
+All 1,605 refused Opus attempts carry the same message:
+This request was blocked as it seems to violate Anthropic's Terms of Service restrictions on reverse
+engineering or duplicating model outputs. To learn more, visit
+https://www.anthropic.com/legal/commercial-terms. API integrators: you can reduce refusals for your
+users by configuring a fallback model — see
+https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback
+The saved responses give the finish reason as a content filter with the native reason “refusal”
+and no further category. Provider documentation describes a refusal category for requests that
+push the model to reproduce its internal reasoning [1]. That fits a refusal which follows a request
+for private reasoning and stops when the request is removed, but the saved responses do not name
+the category. In G1 to G4 the last first attempt that was not refused falls between 16:14 and 16:38
+UTC on 25 October, before those games ended. Of the 1,604 recovery responses, 60 were invalid
+and went to the engine policy.
+29
+
+What Opus still saw.
+Recovery removes the note and nothing else from later prompts. Opus’s
+prompts kept the public timeline, the full state and the thread history. 1,108 of its 1,696 prompts
+carried no note of its own.
+Usage.
+The provider-side cost fields in the saved responses sum to USD 141.71. Refused attempts
+carry no cost record, and the figure is not an invoice. Reported reasoning-token counts differ in
+meaning across providers and are not compared.
+F
+Research questions
+The project began from eight questions about LLM agents in a multi-agent economy and three
+broader ones. Table 15 states what these records support for each. The paper’s results concern
+questions 1, 3, 4 and 6 and question A.
+Table 15: The motivating questions and the level of answer these records support.
+Question
+What the records show
+Not measured
+1. Strategic reasoning
+Stated consequences for self and rivals
+before action; quit or continue agrees with
+payability in 178 of 187 debts (Section 3)
+Optimal play, regret,
+exploitability
+2. Opponent modeling
+Estimates of a rival’s cash, building
+capacity and liquidation value, some
+accurate and some not (Incidents 1 to 3, 5)
+Calibration of beliefs about
+hidden information
+3. Cooperation,
+negotiation and
+deception
+Full offer census; refusal styles by system; a
+bluff, an omission, a correction, an appeal
+and a withdrawn assurance in context
+Frequency of deception; effect of
+any tactic
+4. Long-horizon
+planning and memory
+Prospective budgets followed by
+multi-action payment; notes available to
+the same agent later
+Benefit of memory; plan
+completion rate over long
+horizons
+5. Adaptability and
+learning
+Revised offers within threads (Incident 2)
+Learning from feedback; transfer
+to new opponents
+6. Economics and risk
+Debt partition; released collateral counted
+or missed; pricing on a rival’s budget
+Optimal prices, reserves or
+liquidation order
+7. Collective dynamics
+A public appeal to withhold cash; estates
+concentrating with the eventual winner
+Coalition formation or stability
+8. Evaluation validity
+Channels kept apart; response conditions
+and their reach stated; replay comparisons
+named
+Results under a repaired interface
+A. Talk and action
+Stated consequence agrees with action in
+both settings; accuracy higher for own
+financing
+A general relation between
+explanation quality and play
+quality
+B. General and
+multi-agent ability
+Nothing. The cohort has no independent
+capability measure
+Any such relation
+C. Skill, chance and
+opponents
+Wins by system and by seat; five seed
+blocks
+Shares of outcome due to skill or
+chance
+30
+
+G
+Research assistance and provenance
+The games were designed, run and archived by the project owner. This manuscript is one of four
+complete drafts written independently by LLM research assistants under the owner’s direction:
+Astra, Sol, Opus and Fable 5.2. The present draft was written by Fable 5.2. Two of the assistants
+share a model family or identifier with a participant in the games. They worked under different
+prompts and tasks. Assistants are not authors.
+The analysis reads the saved records directly. The offer ledger and debt episodes were rebuilt
+from decisions.jsonl and events.jsonl and agree with the ledgers of the previous manuscript on
+every compared field. Quotations are generated from the stored fields, and the build fails if a span
+no longer matches. Three kinds of evidence are inherited from earlier stages of the project and were
+not redone: the engine-executed payment sequences for three eliminations and the menu search for
+a fourth, the two stored replay comparisons, and the model-assisted reason codes for 74 rejections.
+No game, engine run, replay, baseline, synthetic state or model query was made for this paper.
+31

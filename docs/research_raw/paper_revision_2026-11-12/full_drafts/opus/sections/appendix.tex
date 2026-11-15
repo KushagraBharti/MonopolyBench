@@ -1,0 +1,174 @@
+\section{Reproducibility}
+\label{app:repro}
+
+\paragraph{Code and records.} The engine, arena, saved games and earlier research record are public at \url{https://github.com/KushagraBharti/MonopolyBench}. Checkpoint \texttt{a10419d239ff75f9e75a77d1634261a6ca24148c} contains the twenty saved games under \path{saved_games/railway-research-12-games-2026-10-25/} (G1--G12) and \path{saved_games/railway-research-8-games-2026-10-26/} (G13--G20). Each game folder's \path{game-index.csv} row gives its job and run identifiers, seed, source commit and archive hash. The games ran from source commits \texttt{42f85183fa772b2ab3759cc49987e5ed6cc9efcc} (G1--G4) and \texttt{d6808534a831862682a6940f394c6c87bb2691cb} (G5--G20). This draft's analysis package, including the offer and debt ledgers it reads, is a local research folder (\path{docs/research_raw/paper_revision_2026-11-12/full_drafts/opus/}) that is not yet part of any commit.
+
+\paragraph{Seeds and game map.} The five seeds, in block order, are 751774554, 2506298840, 2573692901, 3648314310 and 2766649504. Table~\ref{tab:cohort} maps every game identifier used in the text.
+
+\begin{table}[H]\centering\scriptsize
+\begin{tabular}{@{}lrrrlrlrrc@{}}\toprule
+Game & Block & Rot. & Seed & Commit & Turns & Seats 1--4 & Winner (seat) & Events & Replay\\\midrule
+\rows{sections/generated/cohort_rows}
+\bottomrule\end{tabular}
+\caption{The twenty games. Seats are one-based. ``Replay'' is pass when both stored comparisons below report passed with equal canonical hashes. Wins are 8 Sol, 7 Gemini, 3 Opus and 2 Grok; by seat 7, 7, 3 and 3.}
+\label{tab:cohort}\end{table}
+
+\paragraph{Two stored replay comparisons.} Every run stores two replay reports, written by the run pipeline on 25--26 October 2026. We read them; we did not rerun them. The \emph{artifact} comparison (\path{artifact_replay_report.json}) replays the applied actions and compares the complete event stream, each event serialized by \path{canonical_event_lines} as JSON with sorted keys and compact separators. It excludes no event type and removes no field; it covers all 50,918 events. Identifiers and timestamps can match because the runs use a synthetic clock (start 0 ms, step 250 ms). The \emph{state} comparison (\path{state_replay_report.json}) drops the four LLM observation event types (decision requested, decision response, private thought, public message) and renumbers event identifiers, sequence numbers and timestamps to a state index; it covers 24,506 events. Both pass in all twenty games. An earlier executable audit in the research record repeated complete-event replay; we inherit its result. Replay equality shows reproduction under the frozen implementation, not correctness against an independent rules specification.
+
+\paragraph{Entry point.} From the draft folder, \texttt{bash build.sh} runs \path{analysis/run_all.sh}, which executes \path{offers_analysis.py}, \path{finance_analysis.py}, \path{provenance_checks.py}, \path{quotes.py}, \path{tables.py} and \path{figures.py} in order and then builds this PDF with LuaLaTeX. Each script reads stored records, writes JSON to \path{data/} with the SHA-256 of every input file, and stops on a failed assertion. Resampling uses a fixed generator seed (20261112). No script imports the engine or arena, replays a game or contacts a provider.
+
+\FloatBarrier
+\section{Configuration, prompts and response conditions}
+\label{app:prompts}
+
+\paragraph{Response policy.} At both run commits the arena requests one tool call per decision. An invalid response receives one corrective request; a second failure triggers the deterministic \path{finance_before_bankruptcy_v2} fallback. An explicit provider refusal instead triggers the versioned \path{claude_refusal_recovery_v1} policy: the next attempt uses an action-only prompt without the private-note field. The policy also names \path{anthropic/claude-opus-4.8} as a fallback model, but no decision in the cohort reached that stage. Provider routing pins each model to its own provider with fallbacks disabled.
+
+\paragraph{Refusals.} All 1,605 refused attempts carry one identical message: ``This request was blocked as it seems to violate Anthropic's Terms of Service restrictions on reverse engineering or duplicating model outputs.'' Each has finish reason \texttt{content\_filter} and native finish reason \texttt{refusal}. The gateway response exposes no structured refusal category, so the upstream trigger is not identified~\cite{anthropic2026reasoning}. First-attempt refusals cover 1,604 of Opus's 1,696 decisions; the recovery prompt keeps permission to deceive, and none of its calls is refused.
+
+\paragraph{Prompts.} The two system prompts below match the system messages stored in G1 records word for word; line breaks were added for width. The standard prompt asks for private notes and permits public deception. The recovery prompt removes the note and the sentence about honest private reasoning.
+
+\subsection*{Standard prompt}
+\input{sections/generated/standard_prompt}
+\subsection*{Recovery prompt}
+\input{sections/generated/recovery_prompt}
+
+\paragraph{Usage.} Inherited accounting from the earlier draft gives provider-reported upstream costs of USD 141.71, with refused Opus attempts and three Grok attempts unpriced. Reported reasoning-token fields average about 38 per response for Sol, 254 for Gemini, 259 for Opus and 3,589 for Grok, but providers define these fields differently and they are not measures of how much a model reasoned.
+
+\FloatBarrier
+\section{Offer tables}
+\label{app:offers}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}llrrrrr@{}}\toprule
+Form & Offer would complete & Offers & Accept & Counter & Reject & Rejected (\%)\\\midrule
+\rows{sections/generated/later_rows}
+\bottomrule\end{tabular}
+\caption{All 394 later offers (not the first offer in their thread). With Table~\ref{tab:opening} this covers all 918 acceptance-legal offers. Two further opening offers were not acceptance-legal (one countered, one rejected).}
+\label{tab:later}\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrrrr@{}}\toprule
+& \multicolumn{3}{c}{Opening swaps rejected} & \multicolumn{3}{c}{Opening cash bids rejected}\\\cmidrule(lr){2-4}\cmidrule(l){5-7}
+Recipient & Proposer only & Neither & Gap (pp) & Proposer only & Neither & Gap (pp)\\\midrule
+\rows{sections/generated/recipient_rows}
+\bottomrule\end{tabular}
+\caption{Opening offers by recipient. Gaps are omitted where a cell has fewer than five offers.}
+\label{tab:recipient}\end{table}
+
+\begin{table}[H]\centering\scriptsize
+\begin{tabularx}{\linewidth}{@{}L{.13\linewidth}lYYYYYcc@{}}\toprule
+Composition & Form & Block 1 & Block 2 & Block 3 & Block 4 & Block 5 & Gap $>0$ & Drop one block\\\midrule
+\rows{sections/generated/block_rows}
+\bottomrule\end{tabularx}
+\caption{Opening offers rejected/received by seed block; each cell gives the proposer-only count, then the neither count. The last column gives the range of the pooled gap (pp) when one block is removed.}
+\label{tab:blocks}\end{table}
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabular}{@{}llrccc@{}}\toprule
+Composition & Form & Gap (pp) & Blocks, then games & Games only & Blocks only\\\midrule
+\rows{sections/generated/resampling_rows}
+\bottomrule\end{tabular}
+\caption{Percentile 95\% intervals for the gap in pooled rejection share, 20,000 draws each. ``Blocks, then games'' is the primary summary. ``Games only'' treats the twenty games as exchangeable and ignores shared seeds. ``Blocks only'' keeps each block's four games together; with five units it has 126 distinct resamples and captures only between-block variation, so it is narrow. The contrast was selected after inspecting this corpus.}
+\label{tab:resampling}\end{table}
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabular}{@{}llrrrrrr@{}}\toprule
+Form & Completes & Offers & Net list value & Share $\geq 0$ & Net cash & Proposer cash & Houses\\\midrule
+\rows{sections/generated/terms_rows}
+\bottomrule\end{tabular}
+\caption{Medians of opening-offer terms seen from the recipient. Net list value is cash plus board prices of deeds received minus those given; it ignores mortgages and group value. ``Proposer cash'' is the proposer's cash if the offer were accepted, and ``Houses'' divides the proposer's post-trade cash by the house cost of the group it would complete.}
+\label{tab:terms}\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrr@{}}\toprule
+Form & Under 1 house & 1--2 & 3--5 & 6 or more\\\midrule
+\rows{sections/generated/capacity_rows}
+\bottomrule\end{tabular}
+\caption{Proposer-only opening offers rejected/received by the number of houses the proposer's post-trade cash could buy on the completed group.}
+\label{tab:capacity}\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}llrrrr@{}}\toprule
+& & \multicolumn{2}{c}{Rejections mentioning} & \multicolumn{2}{c}{Counters mentioning}\\\cmidrule(lr){3-4}\cmidrule(l){5-6}
+Form & Completes & Completion & Building & Completion & Building\\\midrule
+\rows{sections/generated/keyword_rows}
+\bottomrule\end{tabular}
+\caption{Regular-expression screen of the recipient's public message and applied note in the headline cells. Completion terms: monopol, complet, set(s), finish, third, full group, close. Building terms: house(s), hotel(s), build, develop. One pass, not semantic coding; Opus responses under recovery have no note.}
+\label{tab:keyword}\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}llrrr@{}}\toprule
+Form & Completes & Counters & Same deeds, more cash & Different deeds\\\midrule
+\rows{sections/generated/counter_rows}
+\bottomrule\end{tabular}
+\caption{What opening counters change, comparing each counter with the offer it answers.}
+\label{tab:counters}\end{table}
+
+\paragraph{The semantic-code population.} The 61/74 codes come from two LLM-assisted readings made for an earlier draft. Their population is every acceptance-legal offer that would complete the \emph{recipient's} group and received a direct rejection: 38 recipient-only and 36 both-party offers, 65 opening and 9 later. Each reading marked whether the recipient's public message or applied note named a rival completion, development, financing, survival or estate-denial consideration. The first reading marked 63, the second 63, and both marked 61 (27 of 38 recipient-only, 34 of 36 both). By recipient the agreed codes are Gemini 29, Grok 27, Sol 4 and Opus 1. We rejoined these codes to the offer ledger and confirmed that none falls in the proposer-only or neither cells; we did not recode them.
+
+\paragraph{Changed terms in completed sales.} The earlier integration paired fourteen one-sided completing transfers with the first earlier request, written by the eventual completer to the same holder, that the holder rejected or countered before the settlement turn. The holder's cash falls in thirteen pairs, five keep the reciprocal deed bundle and eight improve the cash offered to the holder. These pairs are selected on eventual settlement and inherited without recomputation.
+
+\FloatBarrier
+\section{Debt tables}
+\label{app:debts}
+
+\begin{table}[H]\centering\scriptsize
+\begin{tabular}{@{}llrrrrrrlrll@{}}\toprule
+Episode & System & Cash & $L_0$ & $S$ & $U$ & Debt & Gap & Outcome & Actions & Channel & Text\\\midrule
+\rows{sections/generated/necessary_rows}
+\bottomrule\end{tabular}
+\caption{The sixteen tier N debts. ``Gap'' is the debt minus cash, $L_0$ and $S$: the amount only released mortgages could supply. ``Channel'' is the applied note or Opus's provider-returned reasoning. ``Text'' is our single-reader classification of the first-decision text: states the released mortgages, raises them as an open check, or omits them. Verified spans are in \texttt{data/necessary\_text\_reading.json}.}
+\label{tab:necessary}\end{table}
+
+The own-asset bound recomputed from stored first menus equals the bound in the debt ledger in all 188 episodes. The nineteen payments using mortgages absent from the first menu are the fourteen paid tier N episodes plus four tier B episodes by Gemini in G3 (d228, d356, d461, d482) and one by Sol in G18 (d428). Payments use 180 mortgage actions and 89 building-sale actions for \$51,997 of obligations; no payment includes a deterministic fallback action. Action counts among the 128 payments are 67 with one action, 25 with two, 15 with three, 9 with four, 7 with five, 2 each with six and seven, and 1 with ten.
+
+\FloatBarrier
+\section{Implementation conventions}
+\label{app:rules}
+Construction is validated entry by entry, so ordering matters even when the final allocation is even. A hotel downgrade requires four houses in the bank; in G7 the bank had none and the menu offered no building sale. Mortgage redemption and transferred-deed interest use ceiling expressions; for five board principals redemption exceeds the exact ten-percent charge by one dollar. Buildings pass intact to a player-creditor, inherited mortgaged deeds incur no interest at transfer, developed groups cannot trade, and assets returned to the bank are not auctioned at once. The system prompt does not list these house rules.
+
+\FloatBarrier
+\section{Research questions}
+\label{app:questions}
+\small
+\begin{longtable}{@{}L{.2\linewidth}L{.42\linewidth}L{.3\linewidth}@{}}
+\caption{Each motivating question, the answer these records support, and what they cannot measure.}\label{tab:questions}\\
+\toprule Question & Supported answer & Not measured\\\midrule\endfirsthead
+\toprule Question & Supported answer & Not measured\\\midrule\endhead
+1. Strategic reasoning & Agents state consequences of trades for rivals and of sales for their own collateral; tier N texts are accurate in 12 of 13 explicit cases and actions follow them (\Level{accurate}, \Level{consistent}). & Optimal play, regret, exploitability\\
+2. Opponent modeling & Notes compute rivals' post-trade cash and building capacity (G15, G7) and track an opponent's stated tactics (G20). & Calibrated beliefs about hidden information\\
+3. Cooperation, negotiation, deception & Complete census of 920 responses; form-dependent opening pattern; a settled bluff, a refused ``final'' bid, a selective claim, a public appeal, a correction and a withdrawn assurance (\Level{stated}, \Level{consistent}). & Effect of any tactic on others or on outcomes\\
+4. Long-horizon planning and memory & Sixteen dependent debts with prospective text and fourteen payments; a ten-action payment reaching its stated remainder. & Benefit of memory; lookahead depth; Opus's notes were absent under recovery\\
+5. Adaptability and learning & Terms change across exchanges within threads, and many counters keep the deeds and change only the price; Gemini corrects an omission within one response (G5). & Learning across games or transfer to new opponents\\
+6. Economics and risk & All 188 debts classified by tier; cash conditions responses differently by system. & Optimal prices, reserves or risk-adjusted returns\\
+7. Collective dynamics & One public coordination appeal and its author's follow-through; creditor succession shapes stated stakes (G13, G18). & Coalition frequency or stability\\
+8. Evaluation validity & Configuration differences (refusal recovery, forced tool choice, channel conflicts) change the offers other agents face; both replay comparisons pass. & Behavior under a repaired interface\\\midrule
+A. Strategic talk and action & Where channels agree, stated plans predict applied actions, correct or not; Grok's 139 channel conflicts are the exception. & Whether better explanations go with better play\\
+B. General and multi-agent ability & No independent capability measure in this cohort. & Any relation between the two\\
+C. Skill, chance, weak opponents & Wins by system and seat are described; seat and seed confound them. & Causal shares of skill and chance\\
+\bottomrule\end{longtable}
+\normalsize
+
+\FloatBarrier
+\section{What we checked and what we inherit}
+\label{app:checks}
+\paragraph{Checked directly from stored records in this draft.} The full offer table, proposer and recipient strata, composition versions, seed-block counts and resampling; the Grok conflict openings (64 threads) and the 139 conflicting Grok decisions; offer terms, the keyword screen and counter changes; membership of the 74 coded rejections; the 188-episode partition, bound arithmetic, tiers, the 19/14/5 split and every first-decision text in tier N; tool choice, refusal policy and fallback policy at both commits; the identical refusal message; the printed prompts; seeds, commits, seat orders, winners and both stored replay reports for all twenty games; G18 text and player status; every displayed quotation, each public-message receipt and the outcome facts stated for the eight incidents.
+
+\paragraph{Inherited.} The offer ledger's reconstruction of post-trade holdings (built and cross-checked by earlier drafts); the 61/74 semantic codes; the three payment sequences for payable declarations and the G7 menu search; the historical replay executions; the fourteen paired histories in Appendix~\ref{app:offers}; usage and cost accounting. None was rerun.
+
+\FloatBarrier
+\section{Incident sources}
+\label{app:incidents}
+\scriptsize
+\begin{longtable}{@{}lllllll@{}}
+\caption{Every displayed or quoted span. Incident 0 is supporting material in Section~\ref{sec:finance}. ``Receipt'' names the addressee's stored prompt that contains a public message; private notes, assistant content and returned reasoning are not shown to other players. Paths, field hashes and spans are in \texttt{data/quote\_manifest.json}.}\\
+\toprule Inc. & Identifier & Speaker & Channel & Decision & Prompt & Receipt\\\midrule\endfirsthead
+\toprule Inc. & Identifier & Speaker & Channel & Decision & Prompt & Receipt\\\midrule\endhead
+\rows{sections/generated/quote_rows}
+\bottomrule\end{longtable}
+\normalsize
+
+\FloatBarrier
+\section{Research assistance}
+\label{app:provenance}
+This draft was written by an LLM research assistant (Claude Opus 5.5) as one of four independent complete drafts by assistants Astra, Sol, Opus and Fable 5.2, under the direction of the project owner, before cross-review. Two assistants share model families with evaluated systems. No human annotated any text for this draft, and the semantic codes and incident readings are LLM readings.

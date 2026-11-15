@@ -1,0 +1,240 @@
+\section{The prompt and the request}
+\label{app:prompt}
+
+Every decision sends one system message and one user message. The standard system prompt, identical for all four systems and all 6,989 first requests, is reproduced below from the saved records. Markdown asterisks are part of the original text.
+
+\input{sections/gen_prompt}
+
+The user message is a JSON object with two parts. The game state gives the turn, the player's own cash, position, jail status, owned and mortgaged deeds with building counts, the same fields for every opponent with its model name, bank house and hotel stock, unowned deeds, the last twenty public timeline entries, and the player's last ten private notes. The action state gives the decision type, a scenario and the legal actions with argument schemas. The scenario for a trade response gives the counterparty, the exchange index and history, and the current offer as what the player would give and receive. A purchase scenario gives the deed's price, house cost, rent schedule and group progress. A liquidation scenario gives the amount owed, the creditor, the shortfall and the deeds that can be mortgaged or have buildings to sell. The action-only request adds a line asking for a tool call with a public message and no private thought, and removes the private-thought field from every tool schema.
+
+\FloatBarrier
+\section{Response and information conditions}
+\label{app:conditions}
+
+\paragraph{Opus refusals.} All 1,605 refused responses have \texttt{finish\_reason} \texttt{content\_filter}, native reason \texttt{refusal}, and the same text: ``This request was blocked as it seems to violate Anthropic's Terms of Service restrictions on reverse engineering or duplicating model outputs. To learn more, visit https://www.anthropic.com/legal/commercial-terms. API integrators: you can reduce refusals for your users by configuring a fallback model'' followed by a documentation link. The 1,696 Opus decisions resolve as follows: 91 standard first attempts are valid; 1,544 refusals are followed by a valid action-only answer; 60 refusals are followed by an invalid action-only answer and an engine default; and in G2 d129 an invalid standard answer is followed by a refused corrective retry and a default. The configured third stage, a different Opus model, never ran. No other system had a refusal.
+
+\begin{table}[htbp]
+\centering\small
+\begin{minipage}[t]{0.5\linewidth}\centering
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Game & Refused & Share & Last accepted\\
+\midrule
+\RefusalRows
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\linewidth}\centering
+\begin{tabular}{@{}lr@{\hspace{2em}}lr@{}}
+\toprule
+\multicolumn{4}{@{}l@{}}{G1--G4 by ten-minute bin (refused/all)}\\
+\midrule
+\BinRows
+\bottomrule
+\end{tabular}
+\end{minipage}
+\caption{Opus first-attempt refusals. Games 1 to 4 ran together on 25 October 2026 from 15:39 UTC. Times are UTC request start times of first attempts.}
+\label{tab:refusals}
+\end{table}
+
+\paragraph{Memory.} Of Opus's 1,696 delivered prompts, 1,108 have an empty private-note window, 286 hold only the literal fallback text, and 302 hold at least one note written by the model. Opus still receives the same public timeline, holdings and trade history as everyone else.
+
+\paragraph{Tokens and cost.} Table~\ref{tab:tokens} reports provider usage fields. The reasoning-token field is present in every usage record. Sol reports zero in 1,296 of 1,991 records; zero is what the provider reported, not evidence that no reasoning occurred. Grok's largest completion is 69,595 tokens, and its largest reported reasoning count in any attempt is 28,018. None of the 8,679 saved request bodies sets an output-token cap or a sampling parameter; Grok's requests set tool choice to \texttt{required} and the others to \texttt{auto}. For cost, OpenRouter records \texttt{usage.cost} and \texttt{cost\_details.upstream\_inference\_cost}. For bring-your-own-key calls the first is zero and the second holds the charge. Summing both fields double-counts. Taking the upstream field for bring-your-own-key calls and \texttt{usage.cost} otherwise gives \$141.39 for the cohort; 1,600 refused Opus attempts and three Grok attempts carry no usage record. These are recorded provider fields, not invoices.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+& \multicolumn{4}{c}{Reasoning tokens per attempt} & Max. & \multicolumn{3}{c}{Recorded USD}\\
+\cmidrule(lr){2-5}\cmidrule(lr){7-9}
+System & Records & Zero & Mean & Max. & completion & usage.cost & upstream & rule\\
+\midrule
+\TokenRows
+\bottomrule
+\end{tabular}
+\caption{Provider usage fields by system. ``Rule'' is the single-field accounting described in the text.}
+\label{tab:tokens}
+\end{table}
+
+\paragraph{Grok channels and information.} The retained parser finds an action name in the assistant content of 1,068 of Grok's 1,663 selected responses; 139 differ from the received call, which the engine applies. The responses were non-streamed JSON bodies, so the disagreement is present in what the provider returned. The trade-history formatter misattributes authors or terms of past trades in the history text of 2,054 prompts; current holdings and current offers are correct in all 920 trade responses. Of 6,882 applied non-empty public messages, 149 never enter the public timeline. These counts are inherited from the earlier audit; the 64 conflict-opened threads were re-joined here.
+
+\FloatBarrier
+\section{Supplementary bargaining tables}
+\label{app:bargaining}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\begin{tabular}{@{}llrlrlrlrl@{}}
+\toprule
+& & \multicolumn{2}{c}{Author only} & \multicolumn{2}{c}{Recipient only} & \multicolumn{2}{c}{Both} & \multicolumn{2}{c}{Neither}\\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+Recipient & Stage & $N$ & A/C/R & $N$ & A/C/R & $N$ & A/C/R & $N$ & A/C/R\\
+\midrule
+\JointRows
+\bottomrule
+\end{tabular}
+\caption{Acceptance-legal offers by recipient, thread position and completion cell (accept/counter/reject).}
+\label{tab:joint}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Population & Author only rejected & Neither rejected & Difference (points)\\
+\midrule
+\OpenRows
+\bottomrule
+\end{tabular}
+\caption{Opening rejection contrast with every block, configuration and condition cut.}
+\label{tab:openrows}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+& \multicolumn{2}{c}{Concessions accepted, when the exchange completes}\\
+\cmidrule(l){2-3}
+Cut & the author only & neither\\
+\midrule
+\ConcessionRows
+\bottomrule
+\end{tabular}
+\caption{Accepted cash concessions on an unchanged bundle by recipient and seed block. Many cells are small.}
+\label{tab:concession_cuts}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+& Deed completes buyer's group & Otherwise\\
+\midrule
+\PriceRows
+\bottomrule
+\end{tabular}
+\caption{Median cash divided by list price (number of offers) for acceptance-legal cash-for-deed offers. Overlapping descriptive cuts; deeds, stages and states differ.}
+\label{tab:prices}
+\end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}llXXXl@{}}
+\toprule
+Game & Seller & Deed & Asks to completing buyer (\$, turn) & Asks to other buyer (\$, turn) & First ask\\
+\midrule
+\PairRows
+\bottomrule
+\end{tabularx}
+\caption{Every game in which one seller asked cash for the same deeds from a buyer the deeds would complete and from one they would not. ``m'' marks a mortgaged deed. The first row with two deeds is not one of the seven single-deed comparisons.}
+\label{tab:pairs}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{minipage}[t]{0.48\linewidth}\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Author's cash after exchange & Opening & Later\\
+\midrule
+\CapacityRows
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Who leads in asset value & Opening & Later\\
+\midrule
+\StandingRows
+\bottomrule
+\end{tabular}
+\end{minipage}
+\caption{Rejected/all offers. Left: offers completing only the author's group, by whether the author would keep the cost of a full first layer of houses, of one house, or less. Right: all offers, by which party leads in asset value at the response.}
+\label{tab:capacity}
+\end{table}
+
+\FloatBarrier
+\section{Debts, estates and the cohort}
+\label{app:debts}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Debtor & Episodes & Paid & Paid in $\ge2$ decisions & Paid with building sales & Eliminated\\
+\midrule
+\DebtRows
+\bottomrule
+\end{tabular}
+\caption{All debt episodes. Of the 60 eliminations, the earlier engine-executed classification finds 56 above the generous own-asset bound, 3 with a legal payment route (G12 Sol d190, G17 Gemini d234, G12 Grok d249) and one menu restriction (G7 Opus d339).}
+\label{tab:debts}
+\end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\begin{tabular}{@{}rrlllrrrll@{}}
+\toprule
+Game & Turn & Debtor & Creditor & \multicolumn{2}{c}{Creditor rank} & Creditor & Asset leader & Leader & Winner\\
+& & & & Assets & Rent & value & & value & \\
+\midrule
+\EstateRows
+\bottomrule
+\end{tabular}
+\caption{Standing immediately before each game's first estate transfer. Rank 1 is highest among the four players; rent is cumulative rent received.}
+\label{tab:estates_full}
+\end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\begin{tabular}{@{}rrrlrlr@{}}
+\toprule
+Game & Block & Seed & Seats 1 / 2 / 3 / 4 & Turns & Winner & Seat\\
+\midrule
+\CohortRows
+\bottomrule
+\end{tabular}
+\caption{The cohort. Games 1--4 carry treatment fingerprint 2f471f70 and games 5--20 9a15ddc8; the difference is a change to campaign concurrency limits, not to rules, prompts or response policy.}
+\label{tab:cohort}
+\end{table}
+
+\FloatBarrier
+\section{The motivating questions}
+\label{app:questions}
+
+\begingroup\footnotesize
+\renewcommand{\arraystretch}{1.12}
+\begin{longtable}{@{}L{0.21\linewidth}L{0.42\linewidth}L{0.31\linewidth}@{}}
+\caption{The eight motivating questions and three broader questions, with what this cohort supports. ``Not measured'' is not a negative capability finding.}\label{tab:questions}\\
+\toprule
+Question & What this cohort shows & Not measured here\\
+\midrule\endfirsthead
+\toprule
+Question & What this cohort shows & Not measured here\\
+\midrule\endhead
+\bottomrule\endfoot
+1. Strategic reasoning and rationality & Agents reject trades that complete their own group when the counterparty also gains, and refuse proposer-completing offers more often than neutral ones (Section~\ref{sec:bargaining}) & Whether those choices were optimal; regret or exploitability\\
+2. Opponent modelling & Explicit reasoning about rivals' public capacity, resale routes and inheritance; responses follow the category of rival completion but not the rival's building cash & Calibrated inference of hidden beliefs, preferences or intentions\\
+3. Cooperation, negotiation and deception & Full response census; repricing; selected bluff, omission, correction, withdrawal and a denial appeal; low acceptance gives no sign of agreement bias & Persuasion effects, joint surplus, fairness, deception prevalence\\
+4. Long-horizon planning and memory & Completion-to-development timing and exposure; all 188 debt episodes; Opus's altered note condition & Memory benefit; a general plan-completion rate\\
+5. Adaptability and learning & Offer revisions within threads; settlements after counters & Learning caused by feedback; adaptation to unfamiliar opponents\\
+6. Economic decision-making and risk & Prices relative to list; rent per landing; distress sales; 3 of 131 payable debts ending in elimination & Ex ante value of a price; optimal reserves; risk-adjusted returns\\
+7. Emergent and collective dynamics & Creditor succession that mostly follows existing leads; a public appeal to deny a rival's funding & Coalition incidence or stability; causal coordination effects\\
+8. Evaluation validity and generalization & Exact reconstruction from records; condition-specific reporting; block-level replication of contrasts & Model rankings; corrected-interface results; transfer to new opponents\\
+\midrule
+A. Strategic talk versus action & Stated rival reasons align with the categorical response pattern; cited capacity does not produce a gradient; several cited numbers are wrong & A general relation between explanation quality and play quality\\
+B. General versus multi-agent capability & Not evaluated & Any capability relationship\\
+C. Skill, chance and weak opponents & Seat and seed patterns; first creditors usually already lead & The separate shares of skill and chance in winning\\
+\end{longtable}
+\endgroup
+
+\FloatBarrier
+\section{Provenance and reproducibility}
+\label{app:provenance}
+
+\paragraph{Fresh arithmetic.} The following were computed for this draft by scripts in \texttt{tools/} that read the saved records (events, decision streams, snapshots and board data) and import neither the engine nor a model client. \texttt{corpus.py} loads the twenty games and records SHA-256 hashes of every source file. \texttt{offers.py} rebuilds the 920 offers from delivered requests and compares them with the retained ledger (no field differs). \texttt{bargaining.py}, \texttt{pricing.py}, \texttt{extras.py} and \texttt{sensitivity.py} produce every bargaining number. \texttt{track.py} replays events into board state and matches all 3,246 turn-start snapshots. \texttt{groups.py}, \texttt{debts.py} and \texttt{estates.py} produce the episode, debt and estate results. \texttt{conditions.py} produces the refusal, prompt-difference, token and cost results. \texttt{build\_figures.py} and \texttt{build\_tables.py} format the outputs.
+
+\paragraph{Inherited evidence.} The classification of the 60 eliminations, the payment witnesses, the 61 executable Opus construction targets, the Grok channel-conflict census, the history-formatter and message-delivery counts, and the first-management-window findings come from earlier engine-executed or record-reading audits and were not rerun. The stated-reason codes are earlier LLM-assisted labels, joined here without recoding. The quoted fields in the transcript cards come from earlier checked quote definitions; this draft adds four new definitions from G2 and re-verifies every displayed quote against its original field.
+
+\paragraph{Research assistance.} This draft was written by a Claude Opus 5.5 research-assistant instance working for the MonopolyBench project, one of four assistants who each wrote a complete independent paper before cross-review. The same model identifier is one of the evaluated configurations. Human authorship and accountability for any submitted version remain to be set by the project owner.

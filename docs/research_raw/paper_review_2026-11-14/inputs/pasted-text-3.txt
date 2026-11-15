@@ -1,0 +1,567 @@
+**These are much more relevant comparisons than a generic “NeurIPS-quality paper” standard. Having examined their actual methods, my assessment is more specific: your paper is behind them in some important forms of experimental comparison, but it is not uniformly behind them in rigor. Your financing analysis is more precise and directly checkable than several of their broader behavioral claims.**
+
+The central difference is this:
+
+**Your strongest evidence establishes what happened, what an agent said beforehand, and whether a legal financial dependency was successfully executed. The strongest additions in these other projects establish how behavior changes across conditions, how performance compares with an explicit reference, or how a phenomenon behaves across an entire population.**
+
+You should borrow those forms of evidence. You do not need to copy every feature of every benchmark.
+
+Also, a calibration of my previous review: the **5.5/10 assessment was against a demanding publication standard**, not a claim that AgentMonopoly, FinBoardBench, or every vending publication deserves an 8 or 9. I would not automatically rank FinBoardBench above your revised manuscript after inspecting its methods.
+
+## 1. The comparison at a glance
+
+| Work | Its most useful addition relative to your current paper | What that suggests for you |
+|---|---|---|
+| **AgentMonopoly** | Explicit comparisons across opponent configurations, model sizes, and persona instructions | Test whether your observed behavior survives a relevant change in conditions |
+| **FinBoardBench** | Several financial environments, a common opponent roster, a reasoning-mode comparison, and systematic behavioral profiles | Add a compact set of state-conditioned measures and one carefully controlled configuration comparison |
+| **Original Vending-Bench** | Repeated operating trajectories and experiments varying resource constraints and context | Separate initial competence, continued execution, and sensitivity to information or resources |
+| **Vending-Bench 2** | A fixed operating horizon, a clear economic objective, disruptions, and cost comparisons | Define what successful operation means and measure its consistency |
+| **Vending-Bench Arena communication study** | Population-level communication classification and replication across judge families | If communication remains central, systematically measure a defined phenomenon beyond selected incidents |
+| **AutoVend** | A transparent rule-based competitor and operational diagnostics tied to economic outcomes | Calibrate whether successful financing is difficult and whether execution is economical |
+| **Project Vend** | Physical deployment and revisions motivated by observed failures | Turn a concrete failure into a targeted intervention |
+
+These are the distinctions I draw from the primary papers and official reports discussed below. They are **different research contributions**, not a checklist that every paper must satisfy.
+
+---
+
+# 2. AgentMonopoly: the closest overlap, and an important difference in your favor
+
+## What it actually does
+
+AgentMonopoly reports **140 games** across four experimental series: identical-model games, mixed-size games within families, cross-family games, and persona games. It tests eight model versions and uses five seeds per configuration. Its measurements include trading, acceptance, rent waiving, cash, properties, and language.
+
+Its reported rules also matter: players are eliminated when cash becomes negative, and games end at one survivor or a **150-step limit**, with net worth deciding capped games. [arxiv.org](https://arxiv.org/html/2610.29330v2?utm_source=chatgpt.com)
+
+### What it does that you currently do not
+
+**It gives the reader explicit conditions to compare.**
+
+Your twenty games repeatedly observe one four-system roster, with seat rotations. That is useful for documenting that interacting system. It does not answer questions such as:
+
+- Does a configuration behave similarly against copies of itself?
+- Does a behavioral tendency persist when opponents change?
+- Does an instruction change actions as well as language?
+- Does a pattern depend on a particular pairing?
+
+Those are different questions from “Did we observe this behavior in these games?”
+
+That difference matters because a reader can understand the purpose of each experimental group in AgentMonopoly. Your manuscript still has to work harder to explain why financing, the opening-offer rejection contrast, and eight communication incidents belong in one scientific argument.
+
+**This is the first thing I would borrow: make the experimental structure follow a small number of explicit questions.**
+
+For your strongest result, those questions could be:
+
+1. Can agents distinguish currently available finance from finance obtainable after their own actions?
+2. When do their initial financial assessments correctly anticipate that distinction?
+3. Which information changes prevent false infeasibility judgments?
+
+These questions fit your evidence much better than a broad investigation of economic intelligence.
+
+## The overlap you must take seriously
+
+AgentMonopoly already records explanations, public messages, actions, and outcomes and examines agreement between language and behavior. Therefore:
+
+> “We connect what agents say with what they subsequently do in Monopoly” is not, by itself, a strong differentiating contribution. [arxiv.org](https://arxiv.org/html/2610.29330v2?utm_source=chatgpt.com)
+
+Your current related-work section acknowledges this, which is good. But the introduction should make the additional contribution unmistakable.
+
+Your strongest differentiation is:
+
+> **You evaluate prospective financial assessments against a locally verifiable dependency: whether payment requires resources that become available only after intervening actions.**
+
+That is much more specific than “strategic talk versus action.”
+
+## Where your paper has a real advantage
+
+**Their reported environment does not expose your focal post-obligation debt-rescue problem.**
+
+Immediate elimination after negative cash means their agents do not face the same explicit sequence of selling development, unlocking collateral, mortgaging it, and paying an already-incurred obligation. Your sixteen necessary-collateral cases therefore investigate a capability that their reported setup does not directly test. [arxiv.org](https://arxiv.org/html/2610.29330v2?utm_source=chatgpt.com)
+
+This is scientifically useful because your outcome can be checked against legal state transitions.
+
+“Conservative behavior” can reasonably mean several things. A claim that a debt is impossible to pay is much sharper when an executable payment sequence exists.
+
+**You have a potentially cleaner measurement target. You have not yet exploited it fully.**
+
+## What I would not copy
+
+Their persona design is not a fully crossed causal experiment: different families receive different personas, the designated agent is always at the first seat, and its opponents react to it within the same game. The authors acknowledge these restrictions. [arxiv.org](https://arxiv.org/html/2610.29330v2?utm_source=chatgpt.com)
+
+So the lesson is not “add personas.”
+
+The useful lesson is **introduce a manipulation that can distinguish explanations for your own result**. A rule reminder or explicit resource inventory would be more relevant to your paper than a “ruthless banker” persona.
+
+**My comparison:** AgentMonopoly has the stronger comparative design. Your financing analysis has the more precise local criterion. Combining those strengths would be more valuable than simply expanding your tournament.
+
+---
+
+# 3. FinBoardBench: broader coverage, but several conclusions deserve serious skepticism
+
+## What it actually does
+
+FinBoardBench evaluates **nine focal models across Cashflow, Acquire, and Monopoly**. Its main experiment contains **108 matches**, corresponding to four matches per focal model per game. Each focal model faces a common three-model opponent roster, with its starting seat rotated. It also compares thinking settings for three models. [Academic Research](https://finboardenv.github.io/?utm_source=chatgpt.com)
+
+## What it does that you currently do not
+
+### A. It has a common reference population for model comparisons
+
+If your ambition were to rank systems, a common opponent battery would be useful.
+
+In your existing tournament, each system participates in the same four-agent ecology, but each necessarily faces a different set of three opponents. That is adequate for describing that ecology. A standardized opponent battery would make a different claim possible:
+
+> How does each focal configuration perform against the same reference opposition?
+
+That claim would still depend on the chosen opponents. It would nevertheless be easier to interpret than an intrinsic ranking inferred from a single mixed roster.
+
+**You only need this addition if comparative system performance becomes a central claim.** Your current manuscript explicitly avoids that claim, so this is an expansion opportunity rather than an existing validity defect.
+
+### B. It systematically characterizes financial behavior
+
+FinBoardBench examines purchasing under different cash conditions, debt burdens, investment, control, and monetization. [arxiv.org](https://arxiv.org/html/2605.27896v1?utm_source=chatgpt.com)
+
+The useful lesson is to make behavior visible across a defined population.
+
+Your manuscript could do more with the records it already has:
+
+| Question | Useful measure from your existing corpus |
+|---|---|
+| Do initial assessments include all relevant resources? | Complete, incomplete, incorrect, uncertain, or unstated resource inventories |
+| Do stated budgets reconcile? | Predicted versus legally available cash |
+| Do intentions match execution? | Agreement between the initial assessment, selected tool action, and subsequent route |
+| Does financing require substantial restructuring? | Actions, building sales, newly available mortgages, and remaining cash |
+| What follows a completed trade? | Development, holding duration, realized receipts, and liquidation before receipts |
+| How much behavior depends on response handling? | The same measures separated by ordinary responses, recovery, fallback, and channel conflict |
+
+The strongest version would use **a few measures that advance the financing question**, rather than a large dashboard of loosely related statistics.
+
+### C. It attempts an intervention
+
+Changing reasoning settings is a real experimental addition. Your paper does not currently manipulate an agent configuration and measure the resulting change.
+
+However, the intervention needs enough evidence to support its interpretation.
+
+## Where I would be harsh with FinBoardBench itself
+
+### Its thinking-mode conclusion is too strong
+
+The displayed thinking table totals **4 wins in 36 non-thinking entries versus 10 in 36 thinking entries**, with only four observations per cell. That is my sum of Table 2. The paper’s conclusion that deeper thinking cannot significantly improve dynamic financial performance is substantially stronger than this small comparison establishes. [arxiv.org](https://arxiv.org/html/2605.27896v1?utm_source=chatgpt.com)
+
+Pooling across games and models is not an adequate significance test. But these numbers certainly do not demonstrate that the benefit is negligible.
+
+**Borrow the intervention. Do not borrow the certainty.**
+
+### Its trade-quality labels are not economic ground truth
+
+FinBoardBench uses **DeepSeek V4 Pro as a judge** of trade and auction quality. [arxiv.org](https://arxiv.org/html/2605.27896v1?utm_source=chatgpt.com)
+
+That attempts something your paper deliberately leaves unmeasured. It does not establish optimal trade values.
+
+A judge’s assessment cannot automatically tell us:
+
+- What would have happened had the offer been accepted.
+- Whether refusing increased eventual win probability.
+- Whether an apparently expensive purchase was strategically justified.
+- Whether a conservative bid was actually a mistake.
+
+Your restraint here is appropriate. **A legal financing witness is firmer evidence for local feasibility than an unvalidated model judgment is for strategic value.**
+
+### Its static-to-dynamic framing outruns its experiment
+
+The publication prominently argues that strong static financial reasoning does not translate into dynamic performance. I found no matched evaluation of static knowledge and interactive execution in the inspected paper. Its several-game evaluation also does not, by itself, demonstrate transfer between games. [Academic Research](https://finboardenv.github.io/?utm_source=chatgpt.com)
+
+You could actually make a cleaner contribution here: ask a system to assess a financial state in one independent trial, then test its execution from that state in another. That would help distinguish knowing the rule, identifying its relevance, and acting on it.
+
+**My comparison:** FinBoardBench is broader and has a clearer comparative presentation. Your revised paper is more careful about several crucial evidential distinctions. I would not tell you to imitate its breadth at the expense of your precision.
+
+---
+
+# 4. Original Vending-Bench: the most useful lesson is controlled variation
+
+## What the original paper actually does
+
+The original Vending-Bench evaluates simulated business operation, with repeated runs, financial trajectories, tool-use analysis, and operational breakdowns. It reports five repeats per condition and caps runs at **2,000 messages**, so simulated duration varies.
+
+It also varies starting capital, operating fees, and available context for GPT-4o mini. The human reference consists of **one participant operating for five hours**, reaching 67 simulated days. [arxiv.org](https://arxiv.org/html/2502.15840v1?utm_source=chatgpt.com)
+
+## What it does that you currently do not
+
+**It tests sensitivity to relevant conditions.**
+
+Your paper shows that an agent can sometimes anticipate a financing dependency and execute through it. That is meaningful. It does not yet tell us how fragile that ability is.
+
+For example:
+
+- Does it work only when the agent already remembers the property values?
+- Does a small debt increase cause an incorrect impossibility judgment?
+- Does a longer dependency sequence cause failure?
+- Does a concise reminder eliminate the mistake?
+- Does an irrelevant but plausible resource distract the agent?
+- Does carrying an incorrect earlier estimate into the prompt increase errors?
+
+These are experimentally answerable questions. They are also much closer to your contribution than simply adding more games.
+
+## A long game does not automatically establish long-term planning
+
+This distinction deserves emphasis.
+
+Your agents operate over long games. Your strongest financing result concerns a local dependency, with refreshed menus and feedback during execution.
+
+Those observations support **interactive execution of a prospective financial assessment**. They do not automatically establish reliable pursuit of a distant objective throughout a game.
+
+If you want a stronger long-term claim, define something that has to persist:
+
+- A financial target.
+- A commitment whose relevant conditions remain stable.
+- A plan spanning intervening events.
+- A stored fact needed after a delay.
+- A policy that must survive contradictory suggestions.
+
+Then measure whether the agent retains or appropriately revises it.
+
+Simply plotting performance later in a game would not settle the question. Later states differ, opponents disappear, and the surviving systems are a selected population. You would need to distinguish those effects from degradation over time.
+
+## What you should not over-credit
+
+The original paper’s human comparison is small, and its analysis of when histories fill does not isolate memory as a cause. Its context-size experiment is more informative than a correlation between history-fill time and failure time. [arxiv.org](https://arxiv.org/html/2502.15840v1?utm_source=chatgpt.com)
+
+You do not need a human baseline merely because Vending-Bench included one. You need a reference that clarifies your particular claim.
+
+For financing feasibility, a verified legal route and a transparent reactive policy may be more informative than a handful of human games.
+
+**My comparison:** Vending-Bench offers a stronger program for testing robustness. Your paper offers a more sharply reconstructable local phenomenon. The missing bridge is a controlled test of the phenomenon’s boundaries.
+
+---
+
+# 5. Vending-Bench 2, Arena, and Project Vend add different things
+
+These should be separated because they answer different questions.
+
+## Vending-Bench 2: sustained operation under an explicit objective
+
+Vending-Bench 2 uses a **one-year simulated horizon** and scores final bank balance. Its official description adds adversarial suppliers, delivery disruptions, supplier failures, and refund requests. It also presents score versus API cost.
+
+Its approximately **$63,000 “good strategy” reference is a calculation under assumptions**, not an observed human result or a demonstrated optimal policy. [Andon Labs](https://andonlabs.com/evals/vending-bench-2?utm_source=chatgpt.com)
+
+### What this adds relative to your manuscript
+
+It makes operational success easy to state and compare.
+
+Your financing subsection already has a clear endpoint: legal payment of an obligation. The paper as a whole is less unified. Payment success, trade rejection, bluffing, corrections, and ownership consequences are not interchangeable measures of one capability.
+
+You should decide what the principal success criterion is:
+
+- Correct feasibility assessment?
+- Reliable payment when payment is possible?
+- Economical liquidation?
+- Consistency between forecasts and execution?
+- General strategic success?
+
+You can report several, but the reader needs to know which one carries the contribution.
+
+### Your cost reporting already exists
+
+You already disclose cost fields and their incompleteness. I would not criticize the paper for omitting all cost accounting.
+
+What you do not yet have is a meaningful **cost-performance comparison**. For a future controlled financing experiment, you could report successful episodes, errors, calls, and monetary cost together. That would be much more interpretable than treating provider-reported reasoning tokens as equivalent amounts of thought.
+
+## A qualification: Vending-Bench 2 is not a pristine methodological gold standard
+
+A recent primary audit by Epoch AI reports unequal usable context across providers and exploitable environment behavior. It inspected creator-provided code and two official traces and ran additional experiments. It **did not observe the reported exploits in the two official traces it inspected**. Its experimental changes also prevent interpreting score changes as a clean effect of context alone. [Epoch AI](https://epoch.ai/benchmarks/vending-bench-2/review?utm_source=chatgpt.com)
+
+This matters directly to your paper.
+
+It would be unfair to demand that you disclose every harness difference while treating a prominent benchmark as if its own model comparisons were perfectly controlled.
+
+**Preserve your disclosure of unequal response conditions. Improve those conditions in new experiments. The disclosure itself is a strength.**
+
+## Vending-Bench Arena: your competition claim is already covered
+
+Arena places competing vending agents at the same location and permits communication and trade while scoring agents individually. [Andon Labs](https://andonlabs.com/evals/vending-bench-arena?utm_source=chatgpt.com)
+
+Your paper already has competing agents, persistent assets, negotiated exchanges, and consequences for other players. You are not missing “multi-agent interaction” as a basic ingredient.
+
+The more relevant comparison is the separate communication study.
+
+### The communication study does population-level measurement
+
+*Emergent Misaligned Communication in Long-Horizon Multi-Agent LLM Commerce* reports analysis of **2,583 emails from 20 one-year Arena runs across 13 models**. It defines communication categories, connects classification to simulator information, and reports replication with judges from other model families. [arxiv.org](https://arxiv.org/abs/2608.14825?utm_source=chatgpt.com)
+
+I could verify those reported features from the primary abstract and the author’s research-talk summary; I could not retrieve the full methods reliably, so I would not assign its annotation pipeline a comprehensive methodological rating. [complexdatalab.com](https://www.complexdatalab.com/stamina/?utm_source=chatgpt.com)
+
+The useful distinction is clear nonetheless:
+
+**Your eight incidents establish contextual examples. A population analysis can establish a rate, distribution, or state association under a defined coding procedure.**
+
+If communication remains a major contribution, pick one measurable phenomenon and examine its complete eligible population. For example:
+
+- Incorrect claims about current ownership.
+- Incorrect claims about current cash or development costs.
+- Stated limits contradicted by a subsequent offer.
+- Commitments followed by inconsistent actions while the relevant conditions remain unchanged.
+
+Do not collapse factual error, bargaining exaggeration, changed circumstances, and intentional deception into one label. Your source distinctions already put you in a good position to avoid that mistake.
+
+And note the sample-size lesson: **twenty runs are not inherently disqualifying**. The adequacy of twenty runs depends on the question, sampling, dependencies, and intended generalization.
+
+## Project Vend: deployment and failure-directed revision
+
+Project Vend operated a physical office shop with actual customers and goods, supported by human restocking and other assistance. The later phase changed models, tools, instructions, and organizational structure, so improved performance does not isolate the contribution of any one change. [anthropic.com](https://www.anthropic.com/research/project-vend-1?utm_source=chatgpt.com)
+
+You do not need to turn MonopolyBench into a real-money deployment.
+
+The useful lesson is narrower:
+
+> Find a specific recurring failure, make a change predicted to address it, and measure whether it does.
+
+Your omitted-collateral failures are an excellent candidate.
+
+---
+
+# 6. AutoVend: the strongest additional comparison for your financial analysis
+
+## What it actually does
+
+AutoVend evaluates five agents operating **20 vending sites over 180 simulated days**. It compares them with a rule-based inventory policy and examines operational quantities such as waste, capital efficiency, and conditional pricing regret. Only one evaluated model exceeds the rule-based reference in all three executions.
+
+Its limitations matter: the LLM evaluations use **three executions per model in one frozen world**, so its breadth does not imply broad environmental replication. [arxiv.org](https://arxiv.org/html/2610.36980v2?utm_source=chatgpt.com)
+
+## What it does that you currently do not
+
+**It makes “successful” performance answer to a reference.**
+
+This is probably the most important missing component in your current financing analysis.
+
+You report that:
+
+- 128 of 131 demonstrated-payable obligations were paid.
+- Fourteen of sixteen necessary-collateral cases were paid.
+
+Those are useful observations. But a reviewer can still ask:
+
+> Would a short, reactive program with access to the same legal menu also pay essentially all of them?
+
+Until you test that, payment success is weakly calibrated as evidence of task difficulty.
+
+That does not erase the value of a correct prospective financial statement. It means **forecasting and successful execution need separate measurements**.
+
+## Three different references would serve three different purposes
+
+| Reference | What it answers | What it does not establish |
+|---|---|---|
+| **Legal feasibility verifier** | Does a legal payment route exist? | Whether the agent found it or whether it is strategically desirable |
+| **Transparent reactive policy** | How much can be achieved by repeatedly selecting available financing actions? | Whether an agent anticipated future resources |
+| **Explicit local efficiency reference** | How costly is the chosen route under a specified local objective? | Globally optimal Monopoly strategy |
+
+A reactive policy could mortgage currently available deeds, sell a legal building when further cash is required, refresh the menu, and continue according to a fixed ordering.
+
+If it succeeds broadly, that is an informative result. It would show that **successful payment can occur without an explicit initial financial forecast**.
+
+You could then ask the more interesting question: does an accurate forecast improve reliability, reduce unnecessary liquidation, or help under a constrained action budget?
+
+## Be precise about “economic quality”
+
+AutoVend uses conditional diagnostics, including a pricing reference that holds important aspects of the state fixed. It also acknowledges that its early-versus-late comparison does not causally identify learning. [arxiv.org](https://arxiv.org/html/2610.36980v2?utm_source=chatgpt.com)
+
+That is a useful model for your analysis.
+
+You do not need a perfect Monopoly strategy. You can define a narrower reference, such as the fewest financing actions or the least building value liquidated among legal payment routes.
+
+But label that objective precisely. A route with fewer actions may sacrifice a strategically valuable group. A route with less immediate liquidation may leave expensive mortgages. Local efficiency and eventual victory are different questions.
+
+**My comparison:** AutoVend’s most valuable advantage is difficulty and performance calibration. A simple version of that would materially strengthen your paper.
+
+---
+
+# 7. What your manuscript already does well enough that you should preserve it
+
+There are several things I would defend against an overly generic review.
+
+## A. You have a complete financing population
+
+You do not merely present a dramatic successful episode. You account for all 188 financing episodes and situate the sixteen focal dependencies within that population.
+
+That lets the reader distinguish an interesting subset from the overall task distribution.
+
+## B. Your strongest correctness criterion is independently inspectable
+
+Whether a legal payment route exists can be checked against the engine. That is substantially clearer than judging whether a negotiation was clever, a persona was followed, or a purchase was strategically wise.
+
+This is the foundation I would build on.
+
+## C. You distinguish the evidence channels
+
+Applied private notes, public messages, provider-returned explanations, delivered prompts, proposed actions, and executed actions are not interchangeable. Your revised manuscript increasingly respects that distinction.
+
+Keep it. A polished benchmark dashboard cannot substitute for knowing what the agent actually received and executed.
+
+## D. You have made the claims narrower and more defensible
+
+Your manuscript explicitly avoids intrinsic model rankings, causal persuasion claims, optimal trade values, and treating generated explanations as access to internal computation.
+
+Those limitations constrain the contribution, but they also prevent several common overclaims.
+
+The next improvement should be **additional evidence that permits one stronger claim**, rather than stronger wording around the same evidence.
+
+## E. You have a useful negative phenomenon
+
+The most promising result may be the false infeasibility judgment.
+
+For example, in the G17 case, the initial calculation reaches $530 against a $550 obligation while omitting $375 of collateral released by sales. That gives you a specific hypothesis about a resource inventory failure.
+
+That is more experimentally actionable than “the model made a bad financial decision.”
+
+A targeted test could distinguish:
+
+- Failure to recall a rule.
+- Failure to apply a known rule.
+- Failure to retrieve property values.
+- Arithmetic error.
+- An assessment–action conflict.
+- A deliberate decision to stop financing.
+
+Those possibilities should not be grouped together.
+
+---
+
+# 8. What I would actually add, in priority order
+
+## Priority 1: Make the sixteen-case analysis a compact, explicit measurement
+
+You already print the source fields. Now score their distinct contents.
+
+| Dimension | Question |
+|---|---|
+| Dependency recognition | Does the initial statement identify finance that becomes available after another action? |
+| Resource completeness | Does it include every resource needed for the stated budget? |
+| Value accuracy | Are the relevant mortgage and sale values correct? |
+| Arithmetic accuracy | Do the stated totals reconcile? |
+| Route specificity | Is it a budget, a dependency statement, or an ordered executable route? |
+| Execution agreement | Do subsequent actions realize the stated assessment? |
+| Outcome | Is payment completed, or is an impossibility claim contradicted by a legal witness? |
+
+**Do not treat an unstated quantity as an incorrect quantity.** Missing evidence, uncertainty, and error need different labels.
+
+This is primarily reanalysis. It strengthens your existing contribution without pretending that sixteen retrospective cases constitute a large general benchmark.
+
+## Priority 2: Add a transparent financing reference
+
+Run a simple policy on the saved states and report its behavior.
+
+Separate:
+
+1. Legal feasibility.
+2. Payment completion.
+3. Local liquidation cost.
+4. Action count.
+
+This would answer the skeptical question that the current success percentages cannot answer: **how much of the result follows from the menu and an elementary policy?**
+
+Also preserve the distinction between the original game objective and a local payment task. In a game, voluntary bankruptcy may be a choice. In a test explicitly asking the agent to pay whenever legally possible, premature declaration is a task failure.
+
+## Priority 3: Run a fresh, focused experiment
+
+Use the existing sixteen cases to motivate the experiment. Do not present them as untouched confirmation of hypotheses derived from inspecting them.
+
+Build fresh valid states covering:
+
+- Payment possible using currently available resources.
+- Payment requiring a sale that releases collateral.
+- Payment impossible after all legal liquidation.
+- Apparently sufficient nominal resources blocked by a legal constraint.
+
+Then vary the information in a small factorial design:
+
+| Condition | Explicit reminder of the collateral-release rule | Explicit relevant asset values |
+|---|---:|---:|
+| A | No | No |
+| B | Yes | No |
+| C | No | Yes |
+| D | Yes | Yes |
+
+This could distinguish rule application from numerical retrieval.
+
+Use comparable prompts, legal menus, and recovery rules. If provider differences remain, disclose them as part of the evaluated configurations.
+
+Measure separately:
+
+- Initial feasibility judgment.
+- Recognition of released collateral.
+- Numerical forecast.
+- Legal execution.
+- Local cost and action count.
+
+If you elicit a structured forecast, acknowledge that this changes the protocol. A separate assessment trial should not quietly supply the answer to the execution trial.
+
+Report effects across states, with repeated calls nested within states. Repeated samples from one state do not replace coverage of different states. Choose the eventual sample size using the precision needed for the effects you care about.
+
+**This experiment would address the central scientific gap much more directly than another uncontrolled tournament.**
+
+## Priority 4: Give the main paper one center
+
+At present, financing and bargaining still compete for attention.
+
+You have two credible directions.
+
+### Direction A: A focused paper on financial dependencies
+
+Center the paper on:
+
+- Feasibility assessment.
+- Anticipation of resources absent from the current menu.
+- Execution through dependent actions.
+- Failure diagnosis.
+- A controlled information intervention.
+
+Use negotiation as context or a smaller secondary analysis.
+
+This is my recommendation because it builds on your most verifiable evidence.
+
+### Direction B: A broader paper on strategic communication
+
+Then you need to make communication systematic:
+
+- Define one or two phenomena.
+- Identify the complete eligible population.
+- Develop a codebook.
+- Validate labels.
+- Link statements to recipient information and later actions.
+- Separate association from effects on outcomes.
+
+Your eight incidents would remain useful illustrations. They would no longer carry most of the communication contribution.
+
+Trying to pursue both directions at equal depth risks producing a paper with many interesting observations and no decisive result.
+
+---
+
+# 9. What you do **not** need to copy
+
+I would not make any of the following automatic requirements:
+
+- Nine or more models.
+- Three different games.
+- Hundreds of complete games.
+- A human tournament.
+- A new learning algorithm.
+- A globally optimal Monopoly solver.
+- A physical deployment.
+- A causal explanation for every narrated interaction.
+
+Each becomes necessary only for a particular claim.
+
+You can write a strong focused empirical paper with a modest number of systems if the question is sharp, the measurement is valid, the comparison is informative, and the uncertainty is honest.
+
+The harsh criticism is **not that your project is too small in every dimension**. It is that the current manuscript leaves its best phenomenon insufficiently calibrated and insufficiently tested.
+
+## My direct verdict
+
+**AgentMonopoly does more to test context and instruction dependence. FinBoardBench does more to organize comparative financial behavior. Vending-Bench does more to test sustained operation and sensitivity to conditions. AutoVend does more to establish performance relative to an explicit reference. The Arena communication study attempts broader measurement of communication phenomena.**
+
+Your current advantage is the precise connection between a financial state, a prospective assessment, a necessary dependency, and executed actions.
+
+The paper should make that advantage carry more scientific weight.
+
+The strongest next version would let you answer:
+
+> **When a necessary resource is absent from the current action menu, can agents correctly anticipate its availability, and which information changes prevent them from falsely concluding that the task is impossible?**
+
+That would give the paper a distinct contribution relative to these comparators. It would also give a demanding reviewer something more substantial to assess than whether the twenty games contain interesting examples.

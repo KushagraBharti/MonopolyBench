@@ -1,0 +1,13 @@
+# Independent position after all four whole papers
+
+All four manuscripts, including Fable's main text, appendices, tables and literature record, have now been read. This position precedes opening any new Sol, Opus or Fable cross-review. My earlier three-paper comparison remains dated and provisional rather than being overwritten.
+
+Fable supplies the most useful addition to the central argument: cash-on-hand is associated with whether holders reject or continue negotiating over a completing deed. I independently reproduce its cash-band counts and the 13 of 14 refusal-to-sale cash declines. This changes my earlier proposal: cash-sensitive bargaining deserves a main result and figure, alongside Opus's opening/concession comparisons and the all-debt payment census.
+
+I do not adopt Fable's title. Low-cash holders mostly counter rather than accept; the within-pair comparison conditions on eventual settlement, and most final offers differ in other assets from the first refused offer. The supported account is bargaining that reopens under cash pressure, not a rule that agents withhold until they need cash. Nor does subsequent construction prove what a seller used the sale proceeds for. Two of the 43 one-sided completion exchanges actually require the holder to pay cash. These are useful trajectories with distinct economic circumstances, not one treatment.
+
+My preferred integrated paper studies rival-aware bargaining, its association with the holder's own resources, and the execution of resulting financial positions. Its strongest positive result is that systems routinely resolve a concrete shortfall when payment is possible: 128 observed payments and only three known payable eliminations. The construction and estate histories connect that local competence to the wider game without turning rent multipliers or winner-conditioned transfers into headline discoveries.
+
+I retain eight main incidents, but use about twenty short cards. Fable's extended G7 trajectory is especially valuable because it connects a bluff, a correctly anticipated cash opportunity, an expensive completing sale and construction by both sides. G19 remains a main competence control. G1 becomes an appendix case rather than displacing the correction-and-acceptance incident.
+
+None of the four manuscripts should be adopted wholesale. The final paper should use Sol's precise attention concept, Opus's comparisons and intermediary example, Fable's cash-pressure trajectories, and Astra's positive execution census and shorter structure. New computational or causal conclusions are not available through better rhetoric, and no new evaluations are authorized.

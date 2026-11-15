@@ -1,0 +1,420 @@
+{
+  "reviewer": "fable_5_2",
+  "review": "final whole-paper review of the pinned integrated manuscript",
+  "date": "2026-11-12",
+  "target_pdf_sha256": "f0312183aa8794ec08614966570395e55abd769410ff99f06992f25f314ed8a1",
+  "severity_scale": "major: changes what a reader concludes from a claim or an incident. moderate: a population, composition or method statement that needs a bounded fix. minor: precision or presentation.",
+  "path_base": "docs/research_raw/paper_revision_2026-11-12/",
+  "findings": [
+    {
+      "id": "FR-F52-01",
+      "severity": "major",
+      "kind": "source fidelity",
+      "title": "G18: the returned text at the renewed assurance already carries the survival objection",
+      "locations": [
+        {
+          "file": "integrated/sections/conduct.tex",
+          "line": 53,
+          "pdf_page": 10,
+          "passage": "The records establish neither original insincerity nor a cost incurred by relying on the offer. Those distinctions allow the observed opportunistic change to be described directly without attributing an unrecorded motive."
+        },
+        {
+          "file": "integrated/sections/conduct.tex",
+          "line": 46,
+          "pdf_page": 10,
+          "passage": "Opus repeatedly offers \\$250 for Sol's mortgaged Pacific, which would complete its greens. After collecting \\$750 rent it renews the assurance:"
+        },
+        {
+          "file": "integrated/sections/conduct.tex",
+          "line": 51,
+          "pdf_page": 10,
+          "passage": "Over the next four turns Opus redeems its two greens and bids \\$150 and \\$225, while Sol asks \\$450, \\$350 and \\$300."
+        }
+      ],
+      "evidence": "The response that carries the quoted public renewal (G18 d431, turn 187) returns this reasoning text: 'Buying Pacific might just prolong p1's survival, so maybe it's smarter to hold onto cash in case p1's orange hotels hit me with heavy rent.' Two turns earlier (d427) the returned text says 'Trading for Pacific at $300 isn't appealing either' while the public message says the offer still stands. The first $250 counter (d421) reads as a live offer in its own returned text. So the paper's sentence is right about the original offer and incomplete about the renewal it quotes. The survival concern is recorded one turn before the withdrawal, in the same response as the public statement. Sequence details: Opus makes one $200 bid and one $250 counter, then four public statements that the offer stands (d423, d425, d427, d431, turns 181 to 187). Sol first proposes two larger packages at $450 and $350, which Opus rejects, before invoking the standing offer. The redemptions are at turns 190 and 192, the two bids at turn 194 and Sol's last ask at turn 196, which is eight turn indices after the withdrawal at turn 188. Elsewhere the paper counts turns by index (G15 'eighteen turns later', G13 'seven turns after'). The word 'opportunistic' attributes a motive in a sentence that disclaims motive attribution.",
+      "check_status": "checked from decisions.jsonl: public messages, returned reasoning and turn indices for d419 to d461; spans in data/checks.json",
+      "correction": "replacement_prose.tex R13",
+      "integration_decision": "7 (G18 remains survival-cash denial). The motive reading is right. The sincerity sentence needs the d431 evidence."
+    },
+    {
+      "id": "FR-F52-02",
+      "severity": "major",
+      "kind": "source fidelity and interpretation",
+      "title": "G15 and G2: the added third-party warnings are accurate, but the focal agent's own notes hold the blocking rule earlier",
+      "locations": [
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 36,
+          "pdf_page": 6,
+          "passage": "Immediately before the offers, Opus publicly urges the others not to give Sol a final completing deed; Grok receives that appeal."
+        },
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 51,
+          "pdf_page": 7,
+          "passage": "One turn earlier Sol asked Grok, which owned no yellow, for \\$450 for that deed. Between those asks, Grok publicly warns Sol against completing Opus's yellows; the warning appears in Sol's next prompt."
+        }
+      ],
+      "evidence": "Both additions check out. Opus's message (G15 d166) is in Grok's d169 request, and Grok's message (G2 d122) is in Sol's d124 request. Each addition leaves out what the same records show before it. G15: Grok's note at turn 33 (d76) says 'Don't sell Ventnor back to p4 (gives them 2/3 yellow)'. Its notes at turns 61 and 62 (d158, d162) say 'Never trade Ventnor'. The offers come at turn 63. Gemini and Opus had also addressed public warnings to Grok during auctions at turns 55, 61 and 62 (d135, d152, d154, d159, d161), so Opus's turn-62 appeal is the last of a run by two players. G2: Sol's note at turn 41 (d115) says 'Keep Marvin blocking p4's yellows'. At turn 44 Sol's own public counter to Grok says 'Marvin controls access to a well-funded yellow monopoly' (d119), before Grok's warning at the end of that turn. Grok's warning follows its own failed bid for the deed, which its note calls 'a blocker, not a set' (d118). As printed, each incident places a rival's warning directly before the focal statement and says nothing about the agent's earlier position. A reader will take the statement as prompted. The fuller sequence also gives the paper a shown case of a rule kept in notes for thirty turns and then applied to three offers.",
+      "check_status": "checked from decisions.jsonl: notes, public messages and delivered timelines; spans in data/checks.json",
+      "correction": "replacement_prose.tex R10 and R11",
+      "integration_decision": "7 and adjudication entries OPX-10 and XR-F52-19",
+      "own_prior_contribution": "XR-F52-19 was mine. I recommended adding the G15 appeal after checking only the turn before the offers. I did not read Grok's earlier notes or the earlier appeals."
+    },
+    {
+      "id": "FR-F52-03",
+      "severity": "major",
+      "kind": "missing definition",
+      "title": "The paper never says what a provider-returned explanation is",
+      "locations": [
+        {
+          "file": "integrated/sections/study.tex",
+          "line": 11,
+          "pdf_page": 2,
+          "passage": "We distinguish the applied private note, public message, assistant content and provider-returned explanation."
+        },
+        {
+          "file": "integrated/sections/supplement.tex",
+          "line": 52,
+          "pdf_page": 15,
+          "passage": "print the full applied private note when present, otherwise the full provider-returned explanation of the final attempt. Five successful Opus episodes use the latter channel."
+        }
+      ],
+      "evidence": "The channel is the gateway's reasoning field (message.reasoning, with reasoning_details). It carries five of the sixteen financing texts, the G13 omission quote, the G13 buyer quote, the G18 withdrawal text and the G5 revision. The prompt does not ask for it, no other player receives it and later requests do not contain it, since each request holds one system and one user message. The gateway labels it reasoning.summary beside encrypted reasoning for Grok (1,662 of 1,663 final responses) and for Sol (287 of 1,961), and reasoning.text for Gemini (1,316 of 1,669) and Opus (1,560 of 1,696). A reader cannot weigh the G13 sentence 'This is slightly deceptive' without knowing that it sits in a provider summary of a 21,000-character reasoning trace. The word 'explanation' suggests text written to justify the action to someone. The field is reasoning text produced before the tool call.",
+      "check_status": "checked from decisions.jsonl: final-attempt message fields in all 6,989 decisions",
+      "correction": "replacement_prose.tex R01",
+      "integration_decision": "none recorded"
+    },
+    {
+      "id": "FR-F52-04",
+      "severity": "major",
+      "kind": "interpretation",
+      "title": "The central result is not placed on the planning and retrieval distinction the paper cites, and the checked contents of the sixteen requests are not reported",
+      "locations": [
+        {
+          "file": "integrated/sections/study.tex",
+          "line": 27,
+          "pdf_page": 3,
+          "passage": "The system prompt does not enumerate the house variants or the rule releasing mortgages after building sales. Carried notes can contain earlier financial estimates and rule statements. The records do not identify the source of every value an agent subsequently uses."
+        },
+        {
+          "file": "integrated/sections/interpretation.tex",
+          "line": 21,
+          "pdf_page": 11,
+          "passage": "PlanBench tests planning and reasoning about change across domains from automated planning, including the distinction between planning and retrieving familiar knowledge~\\cite{valmeekam2023planbench}. Our financial episodes observe stated prerequisites and subsequent actions within a running economy."
+        },
+        {
+          "file": "integrated/sections/interpretation.tex",
+          "line": 5,
+          "pdf_page": 10,
+          "passage": "This is positive evidence of expressed anticipation and local execution."
+        }
+      ],
+      "evidence": "In the sixteen first requests no system prompt mentions mortgages and no menu option lists a dollar value. Menus list space keys only. The timeline shows a dollar amount for a released deed once, a $193 redemption of Park Place in G13 d195. I screened all 120 carried notes in those requests for mortgage statements about the released groups and read every flagged sentence. In G1 d476 Grok's own note from turn 210 states the rule ('yellows cannot be mortgaged while it stands') and the total ('yellow mortgages ~$400 as reserve'). In G18 d309 two of Gemini's carried notes say a rival 'must sell all 5 Dark Blue houses and mortgage a Dark Blue property', which implies the rule for another player's group. In G12 d190 six of ten carried notes give $130 as Sol's mortgage capacity, the figure its failed sum uses. In G17 d234 two carried notes name the $30 Baltic mortgage that Gemini's failed sum uses. Partial figures also precede successes: $774 before G5 d263 and '$325 idle mortgage capacity' before G20 d327. So the environment supplies neither the rule nor the values. The agents supply both, at the debt or in notes they wrote earlier, and the rule is a standard rule of the published game. The paper's general caution in section 2.2 is correct. What is missing is the consequence for the main claim. The episodes show a familiar rule applied to a live state before the menu shows the resource. They do not show discovery of a dependency. The paper cites the distinction that makes this matter and does not say which side its evidence is on.",
+      "check_status": "checked from decisions.jsonl: system prompts, menus, timelines and carried notes of the sixteen first requests. The carried-note check is a pattern screen followed by reading of all flagged sentences, not a full reading of every note.",
+      "correction": "replacement_prose.tex R03 and R04",
+      "integration_decision": "3 (information and memory). I agree that the paper should not assert recall as a mechanism. I dissent from stopping at a general caution when the request contents were checked.",
+      "own_prior_contribution": "XR-F52-03 was mine and asked for the sentence 'the values are not in the request for those deeds'. That is too strong for G1 d476, where the agent's own carried note holds the rule and the total."
+    },
+    {
+      "id": "FR-F52-05",
+      "severity": "moderate",
+      "kind": "population and clarity",
+      "title": "The first-action paragraph uses an outcome-defined class and does not say what the context is for",
+      "locations": [
+        {
+          "file": "integrated/sections/finance.tex",
+          "line": 22,
+          "pdf_page": 4,
+          "passage": "Agents begin financing in 128 of 131 payable episodes and declare immediately in three. For debts exceeding the full own-asset bound, they declare immediately in 50 of 56 and first mortgage or sell in six. Eight of those 56 menus offer bankruptcy alone."
+        }
+      ],
+      "evidence": "All counts reproduce. '128 of 131 begin financing' is true by construction, because a paid episode cannot start with a declaration. The paragraph says as much and then ends with a disclaimer, so the reader gets numbers and no reason for them. Defined by the state at entry, the bound is sufficient in 132 episodes (the 131 payable debts and G7 d338) and short in 56. First-menu declarations are 3 of 132 and 50 of 56. With the eight bankruptcy-only menus removed, 42 of 48 are choices. Five of the six that liquidate first are Grok (G7 d286, G9 d194, G17 d396, G19 d224, G20 d273) and one is Gemini (G18 d344). The use of this context is narrow. It shows that agents do not simply take any listed financing action, which is the main alternative reading of fourteen payments in sixteen. One sentence can say so without a new contrast or a score.",
+      "check_status": "checked: all 188 episodes rebuilt from decisions.jsonl and matched to the integrated ledger on debt, cash, bound and actions",
+      "correction": "replacement_prose.tex R02",
+      "integration_decision": "1 (first actions as context). I agree with the status and with refusing a matched-shortfall headline. The dissent is about wording.",
+      "own_prior_contribution": "My draft presented 50/56 against 3/131 as discrimination. My cross-review withdrew that. I do not ask to restore it."
+    },
+    {
+      "id": "FR-F52-06",
+      "severity": "moderate",
+      "kind": "composition",
+      "title": "One proposer writes most opening cash bids, and the paper reports proposer composition for swaps only",
+      "locations": [
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 30,
+          "pdf_page": 6,
+          "passage": "Recipient composition matters too. The pooled cash-bid difference is $-5.0$ points, while the four within-recipient differences range from $-0.2$ to $+8.5$."
+        },
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 9,
+          "pdf_page": 6,
+          "passage": "Pure cash bids give a different estimate: 42/70 proposer-only bids and 67/103 neither-completing bids are rejected."
+        }
+      ],
+      "evidence": "Opus writes 110 of the 173 opening cash bids: 40 of the 70 proposer-only bids and 70 of the 103 others. 105 of the 110 come from action-only recovery. Sol and Opus write 50 each of the 116 proposer-only swaps, and Grok writes 36 of the 72 neither-completing swaps. The swap row and the cash-bid row therefore differ in proposer mix as well as in form. The paper states the Grok share for swaps and the recipient strata for both forms. It does not state the Opus share for cash bids, so a reader may take the difference between rows as a difference between forms.",
+      "check_status": "checked: all 920 responses rebuilt from decisions.jsonl with form and completion, zero row differences from integrated/data/offers.json",
+      "correction": "replacement_prose.tex R08",
+      "integration_decision": "5 (bargaining). Consistent with it."
+    },
+    {
+      "id": "FR-F52-07",
+      "severity": "moderate",
+      "kind": "figure interpretation",
+      "title": "The block ticks in the main bargaining figure rest on cells as small as three offers, and no cell sizes are printed",
+      "locations": [
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 27,
+          "pdf_page": 7,
+          "passage": "Blue circles show pooled differences, orange ticks the five seed-block differences, and gray segments the range after leaving out each block in turn."
+        }
+      ],
+      "evidence": "Block gaps reproduce: all swaps 35.3, 40.5, 27.6, 33.5, 19.4; no Grok authors 27.5, 45.5, 6.0, -23.5, 11.1; cash bids -22.2, -3.0, -10.8, -5.5, 7.9. In the row without Grok authors the neither-completing cells hold 10, 11, 8, 4 and 3 offers. The tick at -23.5 is 13/17 against 4/4 and the tick at 45.5 is 11/11 against 6/11. The leave-one-block-out ranges also reproduce (28.7 to 33.3, 9.4 to 22.1, 15.7 to 26.0, -8.3 to -2.3). The figure is honest about spread. It gives a reader no way to see that the widest ticks come from four and eleven offers.",
+      "check_status": "checked from my rebuild; counts in data/checks.json",
+      "correction": "replacement_prose.tex R09",
+      "integration_decision": "6 (uncertainty). Consistent with it."
+    },
+    {
+      "id": "FR-F52-08",
+      "severity": "moderate",
+      "kind": "source fidelity",
+      "title": "G5: the revision is inside one response, and the returned text does not cite the earlier note",
+      "locations": [
+        {
+          "file": "integrated/sections/finance.tex",
+          "line": 38,
+          "pdf_page": 4,
+          "passage": "The texts can also record correction within an episode. Before its G5 debt, Gemini's carried note had compared cash and house salvage with a possible rent bill while leaving out dark-blue mortgages. At the debt decision, its returned explanation revises that assessment:"
+        }
+      ],
+      "evidence": "The carried note is from turn 141, four turns before the debt and outside the episode. It reads 'my total liquidatable cash + houses is $774 < $900'. The text returned at d263 first says 'Selling all six houses would only raise $600' and then 'I initially miscalculated!'. The revision is of the sum made a few lines earlier in the same returned text. That sum repeats the note's omission, and the note is in the request, but the text does not refer to it. 'Within an episode' and 'revises that assessment' both say more than the record. The facts that follow in the paper are right: the applied note gives $175, $200 and $1,049, and the payment leaves $149.",
+      "check_status": "checked from decisions.jsonl: G5 d263 request, returned reasoning, applied note, and d264 to d266",
+      "correction": "replacement_prose.tex R05",
+      "integration_decision": "7",
+      "own_prior_contribution": "I proposed this sequence in XR-F52-18 under the title 'the same omission made in advance and revised at the debt'. That title implied the returned text revised the note."
+    },
+    {
+      "id": "FR-F52-09",
+      "severity": "moderate",
+      "kind": "method description",
+      "title": "The feasibility audit is described by when it happened, and its three witnesses are not printed",
+      "locations": [
+        {
+          "file": "integrated/sections/finance.tex",
+          "line": 7,
+          "pdf_page": 3,
+          "passage": "Historical feasibility checks identify three further payable debts that end in declaration."
+        },
+        {
+          "file": "integrated/sections/study.tex",
+          "line": 40,
+          "pdf_page": 3,
+          "passage": "previously executed legal sequences establish three additional payable declarations. A separate historical search resolves one menu-restricted case."
+        },
+        {
+          "file": "integrated/sections/supplement.tex",
+          "line": 79,
+          "pdf_page": 18,
+          "passage": "The earlier executable audit covers sixty eliminations: fifty-six insufficient generous bounds, three positive payment sequences and one restricted menu search. [...] These are prior engine-executed results; the present descriptive scripts read their retained reports."
+        }
+      ],
+      "evidence": "The denominator of 131 and both necessity failures rest on these witnesses. The text tells the reader that something was done earlier and not what it was. 'Historical' appears ten times in the active sources with several meanings, and 'earlier', 'prior' and 'previously' refer to project history seven more times. The stored report holds the witnesses with their steps and final cash. G12 d190: sell three red houses, mortgage Baltic, Illinois and Indiana, cash after payment $38. G17 d234: sell five dark-blue houses, mortgage Baltic and Boardwalk, $180. G12 d249: sell five pink houses, $43. G7: from the state after Opus's first mortgage, one state, one further action (a $50 mortgage), graph scope 'no building-sale action offered at any expanded state'. Printing these lets a reader check the two necessity failures by arithmetic. It also removes the revision-relative wording the second referee objected to.",
+      "check_status": "read from the stored report docs/research_raw/paper_agenda_revision_2026-10-29/baseline/data/certificate_results.json. Not executed. The G7 menu at d338 and d339 is checked from decisions.jsonl.",
+      "correction": "replacement_prose.tex R14",
+      "integration_decision": "9 (rules and replay). Consistent with it."
+    },
+    {
+      "id": "FR-F52-10",
+      "severity": "moderate",
+      "kind": "abstract",
+      "title": "The abstract names a different population and gives bargaining only a shrinking number",
+      "locations": [
+        {
+          "file": "integrated/manuscript.tex",
+          "line": 15,
+          "pdf_page": 1,
+          "passage": "A retrospective rejection difference between completing and non-completing swaps falls from 30.5 to 16.7 percentage points when Grok-authored offers are excluded, illustrating the importance of who supplies the offers."
+        },
+        {
+          "file": "integrated/manuscript.tex",
+          "line": 15,
+          "pdf_page": 1,
+          "passage": "correcting false pitches"
+        }
+      ],
+      "evidence": "'Completing and non-completing swaps' drops 'opening' and 'only the proposer's group'. Swaps that complete both groups (34/48 rejected) and the recipient only (2/6) are completing swaps too. The body supports a fuller statement: each of the four recipients rejects proposer-only swaps more often than neither-completing swaps (gaps 50.9, 16.1, 15.2, 19.6 points, at least nine offers per cell), and the size of the pooled gap depends on who writes the offers. The body shows one correction of a false pitch (G19). The plural has a second instance in the records (G11 d256) that the paper does not show.",
+      "check_status": "checked from my rebuild",
+      "correction": "replacement_prose.tex R06",
+      "integration_decision": "5"
+    },
+    {
+      "id": "FR-F52-11",
+      "severity": "minor",
+      "kind": "unprinted support",
+      "title": "Four statements rest on numbers or identities the paper does not print",
+      "locations": [
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 5,
+          "pdf_page": 6,
+          "passage": "Sol and Opus counter most frequently, whereas Gemini and Grok reject most frequently."
+        },
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 46,
+          "pdf_page": 7,
+          "passage": "Single-deed asking prices are generally higher for completing buyers within seller and mortgage-status cells."
+        },
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 13,
+          "pdf_page": 6,
+          "passage": "Table~\\ref{tab:proposer} shows that each observed proposer stratum has a positive rejection difference"
+        },
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 33,
+          "pdf_page": 6,
+          "passage": "The concentration and reader identities matter when interpreting how representative those statements are."
+        }
+      ],
+      "evidence": "Response totals by recipient (received, accepted, countered, rejected): Sol 235, 30, 140, 65. Gemini 242, 26, 36, 180. Opus 189, 29, 141, 19. Grok 254, 28, 77, 149. Asking prices: seven seller and mortgage cells have both buyer types. The median ask-to-list ratio is higher for completing buyers in all seven (0.62 against 0.60 in Opus's mortgaged cell) and the median dollar ask in five. The completing cells hold 1, 4, 9, 16, 13, 17 and 11 asks. The proposer table prints a dash for Gemini (4/8 against 0/2, a 50-point gap on two offers) while the sentence counts that stratum as positive. The caption does not explain the dash. The readers of the 74 refusals are not named anywhere, so 'reader identities matter' cannot be used by the reader. 62 of the 74 refusals come from Gemini and Grok, which is why 56 of the 61 agreed cases do.",
+      "check_status": "response totals and refusal counts checked from my rebuild. Asking-price cells recomputed from integrated/data/single_deed_prices.json, with its definitions inherited. Reader identities not available to me.",
+      "correction": "replacement_prose.tex R07, R08 and R15. Name the two reading models in section 2.3.",
+      "integration_decision": "adjudication OPX-12 (small-cell suppression) is applied in the table and not explained in the caption"
+    },
+    {
+      "id": "FR-F52-12",
+      "severity": "minor",
+      "kind": "incident precision",
+      "title": "G20 appeal: the cash path does not add up as printed, and an earlier private note is missing",
+      "locations": [
+        {
+          "file": "integrated/sections/conduct.tex",
+          "line": 38,
+          "pdf_page": 9,
+          "passage": "Opus sells Illinois to Grok for \\$500, completing reds and leaving Grok \\$222."
+        },
+        {
+          "file": "integrated/sections/conduct.tex",
+          "line": 40,
+          "pdf_page": 9,
+          "passage": "Grok's next note recognizes the appeal. It builds one house on each red, then offers Vermont to Gemini for \\$150:"
+        }
+      ],
+      "evidence": "Three red houses cost $450 and Grok has $222 in the previous sentence. Between them Grok collects $25, $200 and $10. It builds with $457, which leaves $7, and mortgages New York for $100 before it offers Vermont. Grok's note at the offer says $107 cannot cover a $150 card. Separately, Sol's note one turn before Gemini's appeal (d95, turn 24) already declines to buy Grok's New York because that 'would fund dangerous development'. So one bystander states the denial reasoning privately before the public appeal, one makes the appeal and one acts against it. The paper reports only the last two. All other facts in the incident check out, including the $500 sale and both of Opus's later cash offers.",
+      "check_status": "checked from decisions.jsonl and events.jsonl",
+      "correction": "replacement_prose.tex R12",
+      "integration_decision": "7"
+    },
+    {
+      "id": "FR-F52-13",
+      "severity": "moderate",
+      "kind": "repetition",
+      "title": "About one sentence in six bounds or disclaims an inference, the same share the second referee measured before",
+      "locations": [
+        {"file": "integrated/sections/scientific_introduction.tex", "line": 9, "pdf_page": 1, "passage": "while leaving the internal computation and the quality of asset selection unresolved"},
+        {"file": "integrated/sections/finance.tex", "line": 32, "pdf_page": 4, "passage": "This is evidence of expressed assessment, not access to the computation producing the action."},
+        {"file": "integrated/sections/interpretation.tex", "line": 5, "pdf_page": 10, "passage": "It does not require treating returned text as a transparent record of internal reasoning, or assuming that a long sequence was planned without help from intermediate menus."},
+        {"file": "integrated/sections/scientific_introduction.tex", "line": 13, "pdf_page": 2, "passage": "these observations characterize tactics under that instruction rather than estimating a rate of instruction violations"},
+        {"file": "integrated/sections/interpretation.tex", "line": 13, "pdf_page": 10, "passage": "Reading the continuation makes those acts interpretable without converting selected cases into a population misconduct rate. The prompt permits deception, so an alignment judgment would additionally require a norm the behavior violates."},
+        {"file": "integrated/sections/interpretation.tex", "line": 29, "pdf_page": 11, "passage": "Our explicit permission to deceive also makes the normative comparison task-dependent."},
+        {"file": "integrated/sections/interpretation.tex", "line": 18, "pdf_page": 11, "passage": "These questions remain open under the present design."},
+        {"file": "integrated/sections/interpretation.tex", "line": 34, "pdf_page": 11, "passage": "The shared source trail supports the historical observations; it does not remove these design limits."},
+        {"file": "integrated/sections/supplement.tex", "line": 107, "pdf_page": 21, "passage": "Semantic classifications are LLM-assisted readings, not human annotations."},
+        {"file": "integrated/sections/supplement.tex", "line": 35, "pdf_page": 14, "passage": "All ranges omit uncertainty from retrospective choice of the comparison and do not identify an effect of completion."}
+      ],
+      "evidence": "My pattern count on the abstract and six main sections gives about 70 of 445 sentences that bound or disclaim an inference, 15.7 percent. The second referee reported 79 of 511 for the previous version, 15 percent. The count is a keyword screen and is approximate. The limits themselves are right. The same five limits recur. Returned text is not internal computation: six places. No ranking or effectiveness claim: seven. Deception is permitted: seven. Readings are LLM-assisted and not human: five. Selection was retrospective: seven. Each needs one statement where it first applies and one in the limitations. The ten passages listed can go with no loss of content, because section 2.1, section 2.3 or section 8 already says the same thing. Main prose is about 5,900 words without the abstract, inside the charter's target.",
+      "check_status": "counted from the LaTeX sources by pattern; passages read in the rendered PDF",
+      "correction": "delete or merge the ten listed passages. No replacement text is needed.",
+      "integration_decision": "none recorded"
+    },
+    {
+      "id": "FR-F52-14",
+      "severity": "minor",
+      "kind": "provenance",
+      "title": "An analysis input sits in qa/ and is not in the 78-entry pin",
+      "locations": [
+        {
+          "file": "integrated/tools/analyze.py",
+          "line": 68,
+          "pdf_page": null,
+          "passage": "conf={r['thread'] for r in json.loads((HERE/'qa/fable_cross_review_reproduction.json').read_text())['conflict_openings']}"
+        }
+      ],
+      "evidence": "The 'No conflicting openings' row (93/112 against 26/43) is computed from a thread list in integrated/qa/fable_cross_review_reproduction.json. The manifest pins data/, sections/, tools/ and assets/ and no qa/ file. The numbers are right. My own screen of Grok's proposing calls finds the same 64 conflicting openings and reproduces 93/112, 26/43 and 13 of 17 accepted comparator swaps. The file came from my 11 November cross-review.",
+      "check_status": "checked: manifest contents, script source, and an independent conflict screen from decisions.jsonl",
+      "correction": "move the thread list under data/, or regenerate it in tools/integrate_checks.py, and pin it",
+      "integration_decision": "the decisions file says no reviewer working folder is a build dependency. That is true. The dependency is on an unpinned file inside the package."
+    },
+    {
+      "id": "FR-F52-15",
+      "severity": "minor",
+      "kind": "missing connection",
+      "title": "G2 links the bargaining and financing halves and is the paper's clearest case for the externality model, and neither link is drawn",
+      "locations": [
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 53,
+          "pdf_page": 8,
+          "passage": "Sol builds, later liquidates those buildings, collects \\$44 undeveloped rent and no developed yellow rent, then loses the group to Gemini through bankruptcy."
+        },
+        {
+          "file": "integrated/sections/interpretation.tex",
+          "line": 25,
+          "pdf_page": 11,
+          "passage": "We use this perspective to organize the observed motives, without claiming to estimate an equilibrium strategy or a causal benefit of withholding."
+        }
+      ],
+      "evidence": "The liquidation in this sentence is the G2 d216 necessity episode of Table 9, four turns after the purchase. The same deeds appear in both halves of the paper with no cross-reference. In the same game a player who cannot use Marvin bids for it as a blocker, the seller asks that player $450 and the completing buyer $650, and the blocker says '$450 is the price for the player who completes yellow. I'm not building it.' The second referee said the externality theory was cited and not used. This exchange is a recorded case of what that theory describes. One sentence makes the link.",
+      "check_status": "checked from decisions.jsonl and events.jsonl: G2 d115 to d128, d196 to d200, d216 to d218, and yellow-group events",
+      "correction": "replacement_prose.tex R11",
+      "integration_decision": "none recorded"
+    },
+    {
+      "id": "FR-F52-16",
+      "severity": "minor",
+      "kind": "unsupported row",
+      "title": "The question map credits persistent development targets that the paper does not show",
+      "locations": [
+        {
+          "file": "integrated/sections/supplement.tex",
+          "line": 63,
+          "pdf_page": 18,
+          "passage": "Planning and memory & Prospective financing text and dependent payments; persistent development targets in selected games & Memory benefit or a representative long-term plan-success rate"
+        },
+        {
+          "file": "integrated/sections/interpretation.tex",
+          "line": 18,
+          "pdf_page": 11,
+          "passage": "They contain some persistent targets and revised offers"
+        }
+      ],
+      "evidence": "No incident or table in the pinned paper shows a persistent target. The G16 quotation macros that carried one are declared in sections/fable_quotes.tex and never used. The G15 note chain in FR-F52-02 is a shown case: one rule restated from turn 33 to turn 62 and applied at turn 63.",
+      "check_status": "checked: grep of the active sources for the declared G16 macros, and the G15 notes",
+      "correction": "replacement_prose.tex R10, last line",
+      "integration_decision": "10 (scope)"
+    },
+    {
+      "id": "FR-F52-17",
+      "severity": "minor",
+      "kind": "rendering",
+      "title": "Two layout defects on pages 6 to 8",
+      "locations": [
+        {
+          "file": "integrated/sections/negotiation.tex",
+          "line": 41,
+          "pdf_page": 7,
+          "passage": "G15 d168--175, standard responses. The quoted public message occurs in the next counterparty request."
+        }
+      ],
+      "evidence": "The G15 source note starts at the foot of page 6 and ends under Table 4 on page 7, after two floats. On page 8 the left column has large vertical gaps around the Incident 4 heading and the two source notes. Neither affects a claim. All 21 pages, both figures, all cards and all tables are otherwise legible in my Ghostscript render at 125 dpi.",
+      "check_status": "inspected in my own render of the pinned PDF",
+      "correction": "keep each source note with its incident, for example by placing Table 4 and Figure 2 before the incident or by a needspace before the note",
+      "integration_decision": "none"
+    }
+  ]
+}

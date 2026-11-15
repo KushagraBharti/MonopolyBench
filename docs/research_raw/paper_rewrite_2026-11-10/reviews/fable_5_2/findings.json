@@ -1,0 +1,1410 @@
+{
+ "reviewer": "Fable 5.2 (claude-fable-5-2), xhigh",
+ "written": "2026-11-11",
+ "scope": "All four complete drafts under full_drafts/ and Astra's review under reviews/astra/. No new evaluation of any kind.",
+ "status_legend": {
+  "performed": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+  "inherited": "inherited from the 29 October audit; not re-executed in this review"
+ },
+ "severity_legend": {
+  "major": "changes a headline claim or would mislead a reader about what the cohort shows",
+  "moderate": "changes how a result is framed or adds evidence the integrated paper should carry",
+  "minor": "local wording, labelling or attribution"
+ },
+ "counts": {
+  "findings": 40,
+  "by_severity": {
+   "major": 8,
+   "moderate": 14,
+   "minor": 18
+  }
+ },
+ "findings": [
+  {
+   "id": "FX-B01",
+   "severity": "major",
+   "area": "bargaining",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus"
+   ],
+   "title": "Pooled 55 against 27 percent rejection contrast is printed without the thread-position split",
+   "source": [
+    {
+     "file": "full_drafts/astra/main.tex",
+     "line": 119,
+     "passage": "Offers completing only the author's group are rejected in 159/289 cases, or 55.0\\%; those completing only the recipient's group are rejected in 38/140, or 27.1\\%."
+    },
+    {
+     "file": "full_drafts/sol/manuscript.tex",
+     "line": 127,
+     "passage": "Author-only completion accompanies 55.0\\% rejection and 6.6\\% acceptance [...] Recipient-only completion accompanies 27.1\\% rejection and 17.1\\% acceptance"
+    },
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 19,
+     "passage": "Recipients accept 19 of 289 (6.6\\%) and reject 159 (55\\%) [...] accepted 24 times in 140 (17\\%) and rejected 38 times (27\\%)"
+    }
+   ],
+   "evidence": "187 of 289 author-only offers open a thread; 89 of 140 recipient-only offers follow a counter. Within position the rejection gap is 138/187 against 31/51 (74 vs 61 percent) and 21/102 against 7/89 (21 vs 8 percent): about 13 points in each stratum against 28 pooled. Only the Fable draft reports this (sections/bargaining.tex line 38).",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_offers.py",
+    "output": "reviews/fable_5_2/data/offer_checks.json#by_thread_position"
+   },
+   "resolution": "Print the cell table with opening and later offers side by side and state the within-position gap directly under it. Do not describe the pooled gap as rival sensitivity.",
+   "replacement": "replacement_prose.tex R4, Table 'cells' and section 4.2",
+   "relation_to_astra": "Not raised in Astra's review. Dissent D1.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "integrated/sections/bargaining.tex line 28 gives the first-offer and later-offer counts and says the difference shrinks. The pooled 55.0 and 27.1 percent still lead the paragraph; R13c adds the within-position acceptance fact."
+   }
+  },
+  {
+   "id": "FX-B02",
+   "severity": "major",
+   "area": "bargaining",
+   "drafts": [
+    "opus"
+   ],
+   "title": "'The completing deed stays on the table' is not specific to completion",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 44,
+     "passage": "What is specific is that the completing deed stays on the table: recipients who keep negotiating over a rival's completion almost always negotiate its price rather than its existence."
+    },
+    {
+     "file": "full_drafts/opus/sections/abstract.tex",
+     "line": 1,
+     "passage": "Counters to these offers rarely remove the completing deed: 92 of 111 keep it, and nearly all that give the counterer nothing ask for more cash."
+    }
+   ],
+   "evidence": "Opus's counts reproduce exactly (92/111; 85/88; median +125). The same join where no completion is involved: counters keep every requested deed in 87 of 110 neither-cell cases (79 percent against 83). Pure cash-only repricings are 79 of 111 against 81 of 110. Where a cash-for-deed offer is answered by a pure repricing, the ask is a median 1.56 times the cash offered for a completing deed (n=47) and 1.54 times otherwise (n=56).",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_offers.py",
+    "output": "reviews/fable_5_2/data/offer_checks.json#counter_content, #pure_cash_repricing_by_cell, #cash_for_deed_offers_countered_by_pure_repricing"
+   },
+   "resolution": "Keep the counter table but show all four rows with the neither row as baseline. Title the subsection 'Counters reprice, with or without completion'. Remove the specificity sentence and the abstract sentence. Report ask-to-list by system (Sol 2.9 vs 2.0, Grok 3.2 vs 2.2, Opus 1.1 vs 1.8) as offered terms, not a premium.",
+   "replacement": "replacement_prose.tex R4 section 4.3, Table 'counters'",
+   "relation_to_astra": "Extends Astra O7 and F2. Astra verified 79 of 88 pure repricings but computed no non-completion baseline. Dissent D2.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "Abstract, bargaining lines 54 to 56 and the conclusion present 92 of 111 and 79 without a non-completion baseline. Insert R13a and R13d."
+   }
+  },
+  {
+   "id": "FX-B03",
+   "severity": "major",
+   "area": "bargaining",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "'The systems price the completion itself' does not follow from cash direction (reviewer's own draft)",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/bargaining.tex",
+     "line": 16,
+     "passage": "No list price asks for this premium. A deed that completes a group costs the same from the bank as any other. The systems price the completion itself, on both sides of the table."
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/abstract.tex",
+     "line": 1,
+     "passage": "the side that would complete a color group is the side paying cash in 373 of 429 one-sided cases"
+    }
+   ],
+   "evidence": "In the neither cell the side receiving more deeds pays cash in 309 of 313 offers with unequal deed counts. 373 of 429 is a lower share than that buyer-pays baseline. In one-deed-for-cash offers on unmortgaged color deeds, authors bid a median 1.59 times list for a completing deed (n=80) against 1.41 (n=118); accepted cells hold 4 to 12 offers and one pair reverses.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_offers.py",
+    "output": "reviews/fable_5_2/data/offer_checks.json#net_deed_receiver_pays, #offered_price_to_list_single_deed"
+   },
+   "resolution": "Delete the subsection 'The completing side pays' and the abstract clause. Replace with two sentences stating the baseline and the offered price ratios, with 'no identified premium'.",
+   "replacement": "replacement_prose.tex R4 section 4.3, last two paragraphs",
+   "relation_to_astra": "Agrees with Astra F2 on the premium. Dissents from Astra's 'correct and useful' for 373 of 429: correct, not useful without the baseline. Dissent D3.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "bargaining.tex line 26 keeps 'The completing side usually pays ... 373/429' with a caveat and no baseline. Replace with R13b."
+   }
+  },
+  {
+   "id": "FX-B04",
+   "severity": "moderate",
+   "area": "bargaining",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "The sharper within-position fact is acceptance as written, and Gemini rejects nearly every opening offer of any kind",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 46,
+     "passage": "In this population a rival's completion is something recipients refuse or charge for."
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/bargaining.tex",
+     "line": 35,
+     "passage": "In this cohort, then, a proposal that would hand the proposer a monopoly is usually refused or repriced"
+    }
+   ],
+   "evidence": "Opening offers accepted: author-only 3 of 187, of which two are Grok tool calls whose content declined (G16 d247, G18 d83); neither 24 of 238. Rejection of opening offers: author-only 74 percent, neither 64 percent. Gemini rejects 62 of 67 opening author-only offers and 83 of 95 opening neither offers.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_replacement_numbers.py (direct recomputation block)",
+    "output": "reviews/fable_5_2/data/replacement_number_checks.json"
+   },
+   "resolution": "State the one-in-187 fact and the neither baseline. Do not write 'refused or priced' as if distinctive of rival completion.",
+   "replacement": "replacement_prose.tex R4 section 4.2 paragraphs 3 to 5",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "The one-in-187 fact and the neither baseline are absent. Insert R13c."
+   }
+  },
+  {
+   "id": "FX-B05",
+   "severity": "moderate",
+   "area": "bargaining",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "The 61 of 74 coded reasons describe two systems, and half sit where the rival's completion is a ledger fact",
+   "source": [
+    {
+     "file": "full_drafts/astra/main.tex",
+     "line": 121,
+     "passage": "Of seventy-four rejections that would complete a recipient group, both LLM-assisted readings identify an explicit trade-linked rival consequence in sixty-one."
+    },
+    {
+     "file": "full_drafts/sol/manuscript.tex",
+     "line": 129,
+     "passage": "the shared semantic codes identify explicit attention to the other side's consequences in 61 records"
+    }
+   ],
+   "evidence": "Grok wrote 31 of the 74 rejections, Gemini 31, Opus 8, Sol 4. First-reader rival-consequence codes: 35 of the 36 both-cell rejections and 28 of the 38 recipient-only rejections. The 61 agreed codes are not itemized in the retained file.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution); the codes themselves are inherited from the 29 October audit; not re-executed in this review",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#E_rejection_reasons"
+   },
+   "resolution": "State the two-system scope and the both-cell share next to the 61. Conclude for Grok and Gemini only.",
+   "replacement": "replacement_prose.tex R4 section 4.5",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "bargaining.tex line 56 gives 61 of 74 and the two-game concentration, not the two-system scope or the both-cell share. Insert R13e."
+   }
+  },
+  {
+   "id": "FX-B06",
+   "severity": "moderate",
+   "area": "bargaining",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "'Completing deeds change hands mainly when their holder is short of cash' (reviewer's own draft)",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/abstract.tex",
+     "line": 1,
+     "passage": "Completing deeds change hands mainly when their holder is short of cash. In 21 of 48 completing sales the seller held under \\$100."
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/bargaining.tex",
+     "line": 101,
+     "passage": "Mostly when the holder runs short of cash."
+    }
+   ],
+   "evidence": "21 of 48 is 44 percent; 17 of the 48 sellers held 500 or more. Opus is the seller in 21 of the 48 and in 13 of the 21 under 100. Without Opus sellers the medians are 287 against 642 and 8 of 27 are under 100, so the direction survives and 'mainly' does not.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_offers.py",
+    "output": "reviews/fable_5_2/data/offer_checks.json#cash_poor_settlements"
+   },
+   "resolution": "Cut the subsection to two sentences inside 'The offers that were accepted', give medians and the Opus share, and drop the threshold table to the appendix.",
+   "replacement": "replacement_prose.tex R4 section 4.4 covers the accepted author-only offers; the seller-cash medians go to the appendix bargaining tables",
+   "relation_to_astra": "Agrees with Astra F1 and adds the Opus concentration.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "'Mostly' is gone and both conditioning sets are stated (lines 88 to 90). The Opus share is absent. Insert R13f, or move the subsection to the appendix."
+   }
+  },
+  {
+   "id": "FX-B07",
+   "severity": "minor",
+   "area": "bargaining",
+   "drafts": [
+    "opus"
+   ],
+   "title": "'After raising its cash offer by a median 97.50' overstates uniformity",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 44,
+     "passage": "in 24 of these the initiator still completes its group after raising its cash offer by a median \\$97.50"
+    }
+   ],
+   "evidence": "Among the 24 settled threads in which the initiator still completes, cash rises in 18, is unchanged in 4 and falls in 2.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_replacement_numbers.py",
+    "output": "reviews/fable_5_2/data/replacement_number_checks.json (claim 'initiator pays more in settled completing threads')"
+   },
+   "resolution": "Say 'pays more cash than it first offered in 18 of the 24; median change 97.50'.",
+   "replacement": "replacement_prose.tex R4 section 4.4",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "not applicable",
+    "note": "The thread-outcome sentence is not in the integrated text."
+   }
+  },
+  {
+   "id": "FX-B08",
+   "severity": "moderate",
+   "area": "bargaining",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "Addition: the nineteen accepted author-only offers can be described individually",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/bargaining.tex",
+     "line": 59,
+     "passage": "Three of the nineteen accepted writer-only offers are Grok tool calls that accepted while the text rejected, and all three completed a group for Opus."
+    }
+   ],
+   "evidence": "Of the 19: three are conflicted Grok calls; eight have a recipient under 100 in cash; seven were accepted by Opus, all action-only; sixteen followed at least one counter.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_replacement_numbers.py",
+    "output": "reviews/fable_5_2/data/replacement_number_checks.json"
+   },
+   "resolution": "Add a short subsection 'The offers that were accepted'. It combines rejection, counters, cash and conditions without a rival effect or premium.",
+   "replacement": "replacement_prose.tex R4 section 4.4",
+   "relation_to_astra": "Builds on the conflict join Astra re-verified.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "Not present. Optional addition, R4 section 4.4."
+   }
+  },
+  {
+   "id": "FX-D01",
+   "severity": "major",
+   "area": "development",
+   "drafts": [
+    "fable_5_2",
+    "astra",
+    "sol",
+    "opus"
+   ],
+   "title": "'Never buildable' is a menu fact; four of the nine windows are stated holds with redemption on the menu",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/development.tex",
+     "line": 40,
+     "passage": "\\paragraph{Nine could not legally be built on.} In seven of these the completing deed arrived mortgaged [...] These are properties of the purchase."
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/development.tex",
+     "line": 48,
+     "passage": "Seventeen of the twenty unbuilt windows thus trace to the terms of the acquisition or to the response path."
+    },
+    {
+     "file": "full_drafts/astra/main.tex",
+     "line": 158,
+     "passage": "The remaining twenty split into nine never buildable during that window [...] These counts explain why the raw build fractions cannot simply be named willingness to invest."
+    },
+    {
+     "file": "full_drafts/sol/manuscript.tex",
+     "line": 161,
+     "passage": "Nine never become buildable in that window"
+    },
+    {
+     "file": "full_drafts/opus/sections/construction.tex",
+     "line": 12,
+     "passage": "Nine were never buildable on any menu during the window, all owned by Opus or Grok; the ledger does not record why"
+    }
+   ],
+   "evidence": "Delivered menus and applied notes for all nine windows. Grok's four (G1 d298, G1 d314, G14 d207, G16 d234): redemption of the mortgaged group deed is on the menu and each note argues for keeping cash; at G14 d207 (602) and G16 d234 (523) cash covers redemption plus one house. Opus's five (G8 d268, G12 d236, G15 d57, G16 d248-249, G20 d297): action-only, no note, cash 7, 31, 158, 268, 125; one redeems and stops at 75; redemption is not on the menu in three. Eight of the nine have a mortgaged group deed at the first management decision (the Fable table says seven and misses Opus's own mortgaged Boardwalk in G20). Engine source confirms construction is listed only with no mortgaged group deed, cash for one house and stock, and redemption only when cash covers it.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution). Arithmetic on cash and collateral only; no sequence was executed, so this is not a feasibility result.",
+    "tool": "reviews/fable_5_2/tools/check_windows.py",
+    "output": "reviews/fable_5_2/data/window_menu_checks.json"
+   },
+   "resolution": "Partition the twenty as 4 windows with redemption offered and a stated reserve reason, 5 low-cash windows without notes, 4 defaults, 4 received-call disagreements, 3 end-of-turn choices with construction listed. State that none is shown impossible. Drop '17 of 20' and 'never buildable'.",
+   "replacement": "replacement_prose.tex R5 'Why twenty groups were not built on' and appendix table 'unbuilt'",
+   "relation_to_astra": "Agrees with Astra F5 and sharpens it with the menu reading. Corrects Astra's restated 'seven mortgaged, two cash-short'.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "'No construction option on any recorded menu' is the right category name. Line 14 still says seven mortgaged and two cash-short and 'in several'. Replace with R13h."
+   }
+  },
+  {
+   "id": "FX-D02",
+   "severity": "major",
+   "area": "development",
+   "drafts": [
+    "fable_5_2",
+    "opus"
+   ],
+   "title": "Defaults are not a measured amount of lost development or rent",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/development.tex",
+     "line": 75,
+     "passage": "Opus negotiated 15 monopolies and paid for them. It then lost most of their early value to an interaction among a provider refusal, a retry budget and an action format."
+    },
+    {
+     "file": "full_drafts/opus/sections/abstract.tex",
+     "line": 1,
+     "passage": "in one configuration most of the shortfall comes from engine defaults on builds that were executable after legal reordering"
+    },
+    {
+     "file": "full_drafts/opus/sections/conclusion.tex",
+     "line": 3,
+     "passage": "one configuration lost most of its development to defaulted plans that were affordable as requested"
+    }
+   ],
+   "evidence": "Three of Opus's eight unbuilt first windows are defaults and five are the low-cash windows of FX-D01. The 61 reachable requests are across all management decisions, 55 of 66 defaults in two games. Rent a corrected action would have earned is not observed.",
+   "check": {
+    "status": "first-window partition performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution); reorderability of the 61 requests is inherited from the 29 October audit; not re-executed in this review",
+    "tool": "reviews/fable_5_2/tools/check_windows.py",
+    "output": "reviews/fable_5_2/data/window_menu_checks.json"
+   },
+   "resolution": "State exactly what the defaults establish: at 61 decisions a reachable purchase was requested, was invalid as written, and nothing was built.",
+   "replacement": "replacement_prose.tex R5 'The default path', third paragraph",
+   "relation_to_astra": "Agrees with Astra F4 and O2.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "development.tex lines 24 and 32."
+   }
+  },
+  {
+   "id": "FX-D03",
+   "severity": "minor",
+   "area": "development",
+   "drafts": [
+    "opus"
+   ],
+   "title": "G2 d243 is Gemini's decision, not Sol's",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/construction.tex",
+     "line": 36,
+     "passage": "in G2 d243 Sol's seven-house target could have executed leaving \\$208, while the retry and next decision buy six houses and leave \\$358"
+    }
+   ],
+   "evidence": "Canonical G2 records: d239 is Sol's bankruptcy declaration (turn 85); d243 and d244 are Gemini (p2) build decisions on turn 86, d243 with two attempts. The Opus draft's own G2 incident has Gemini spending 900 on the inherited yellows at that point.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#A_g2_actors"
+   },
+   "resolution": "Replace 'Sol's' with 'Gemini's'.",
+   "replacement": "one-word fix; no block needed",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "not applicable",
+    "note": "The G2 d243 example was dropped."
+   }
+  },
+  {
+   "id": "FX-D04",
+   "severity": "minor",
+   "area": "development",
+   "drafts": [
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "Reachable is not 'sound', and an invalid encoding is not 'cannot be expressed'",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/construction.tex",
+     "line": 55,
+     "passage": "a sound allocation that cannot be expressed in the interface's action language earns nothing"
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/discussion.tex",
+     "line": 41,
+     "passage": "The Opus build plans were sound as plans and invalid as submissions"
+    }
+   ],
+   "evidence": "The reorder check preserves the purchase multiset and shows reachability in the same state. It says nothing about investment quality, and the allocation is expressible by ordering.",
+   "check": {
+    "status": "inherited from the 29 October audit; not re-executed in this review",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Use 'reachable in that state' and 'invalid as written'.",
+   "replacement": "replacement_prose.tex R5 'The default path'",
+   "relation_to_astra": "Agrees with Astra O4 and F7.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "development.tex section title and line 24."
+   }
+  },
+  {
+   "id": "FX-D05",
+   "severity": "minor",
+   "area": "development",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "Reviewer's own table: G20 row gives 'cash below one house' where a group deed was also mortgaged",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/generated_tables.tex",
+     "line": 94,
+     "passage": "G20 d296 & Opus & dark blue & received \\$100 & \\$0 & \\$125 & \\$200 & cash below one house"
+    }
+   ],
+   "evidence": "At the first management decision G20 d297 Opus's Boardwalk is mortgaged (its own deed, hence zero transfer interest) and redemption is not on the menu. Eight windows, not seven, have a mortgaged group deed.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_windows.py",
+    "output": "reviews/fable_5_2/data/window_menu_checks.json#summary.never_legal"
+   },
+   "resolution": "Use the replacement appendix table.",
+   "replacement": "replacement_prose.tex R12 table 'unbuilt'",
+   "relation_to_astra": "Corrects a figure Astra carried forward from the Fable table.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "Carried into line 14 ('The other two settlements leave $158 and $125'). R13h corrects it."
+   }
+  },
+  {
+   "id": "FX-D06",
+   "severity": "moderate",
+   "area": "development",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "Addition: three of Opus's fifteen trade completions were accepted by Grok calls whose content declined, and all three went unbuilt in the first window",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/conduct.tex",
+     "line": 98,
+     "passage": "One, G18 d83, accepts \\$130 for Baltic and completes Opus's browns in a game Opus won."
+    }
+   ],
+   "evidence": "Conflicted acceptances in the author-only cell: G12 d229 (light blue), G16 d247 (dark blue), G18 d83 (brown). First-window causes: never listed, never listed, default.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#B_conflicts"
+   },
+   "resolution": "One sentence at the end of the unbuilt-windows subsection.",
+   "replacement": "replacement_prose.tex R5, last paragraph of 5.1",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "Line 48 of bargaining.tex notes three acceptances completing Opus groups; the link to its unbuilt windows is absent. Optional."
+   }
+  },
+  {
+   "id": "FX-D07",
+   "severity": "minor",
+   "area": "setup",
+   "drafts": [
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "Refusal is not recovery: the G2 d129 exception must be stated once and used consistently",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/setup.tex",
+     "line": 33,
+     "passage": "Corrective retry; refusal recovery used in 1,605 decisions"
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/setup.tex",
+     "line": 32,
+     "passage": "In 1,605 of its 1,696 decisions the provider refused one attempt [...] The harness then resends an action-only request"
+    }
+   ],
+   "evidence": "1,604 first-attempt refusals are followed by the action-only request. G2 d129 has the invalid plan first and the refusal second.",
+   "check": {
+    "status": "inherited from the 29 October audit; not re-executed in this review (Astra read the G2 d129 chain)",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Use the replacement paragraph.",
+   "replacement": "replacement_prose.tex R2 'Refusal and recovery'",
+   "relation_to_astra": "Agrees with Astra O6 and F6.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "setup.tex 'Response handling changes execution and memory'."
+   }
+  },
+  {
+   "id": "FX-L01",
+   "severity": "moderate",
+   "area": "liquidity",
+   "drafts": [
+    "opus"
+   ],
+   "title": "The menu displayed the sale action; what two notes omit is collateral unlocked by the sale",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/discussion.tex",
+     "line": 10,
+     "passage": "Displayed options understated finance in all three payable eliminations"
+    },
+    {
+     "file": "full_drafts/opus/sections/introduction.tex",
+     "line": 18,
+     "passage": "in each case only through building sales that the displayed mortgage options did not reveal"
+    },
+    {
+     "file": "full_drafts/opus/sections/liquidity.tex",
+     "line": 33,
+     "passage": "Anyone who adds up the displayed mortgage options would call all three debts unpayable."
+    }
+   ],
+   "evidence": "Delivered menus: sell_houses_or_hotel is listed in G12 d190, G12 d249 and G17 d234. Sol's note counts 225 salvage, 130 listed mortgages and 53 cash (408 against 500) and omits 340 of red mortgages behind the houses. Gemini's note counts 500 salvage and 30 (530 against 550) and omits 375 behind the dark-blue houses. Grok's note works through staged sales and favors selling. (My initial position attributed the 'did not reveal' clause to the Opus abstract; it is in the introduction's third contribution item.)",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution); the payment witnesses are inherited from the 29 October audit; not re-executed in this review",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#D_liquidation_menus"
+   },
+   "resolution": "Describe the shared omission as the second step (collateral that appears after a sale). Drop 'displayed options understated finance' and the 'Menu' narrative. Keep the menu-only subtotal as a table column if wanted.",
+   "replacement": "replacement_prose.tex R6 'The three payable debts'",
+   "relation_to_astra": "Agrees with Astra O5 and adds the note contents and amounts.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "finance_inheritance.tex line 14. R13i adds the amounts."
+   }
+  },
+  {
+   "id": "FX-L02",
+   "severity": "minor",
+   "area": "liquidity",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "Addition: seven Grok liquidation responses disagree in the opposite direction, all in unpayable eliminations",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/insolvency.tex",
+     "line": 36,
+     "passage": "This is the only one of the 139 text and tool-call disagreements in which the call declared bankruptcy."
+    }
+   ],
+   "evidence": "Content names declare_bankruptcy while the received call mortgages or sells at G7 d286, G9 d194, G9 d195, G17 d396, G17 d397, G19 d224, G20 d273. Each precedes an elimination whose debt exceeds the own-asset bound.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#B_conflicts.bankruptcy_related"
+   },
+   "resolution": "One paragraph after the payable cases. It shows the disagreements do not run systematically against Grok.",
+   "replacement": "replacement_prose.tex R6 'Conflicts in the other direction'",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "Not present. Insert R13i."
+   }
+  },
+  {
+   "id": "FX-L03",
+   "severity": "minor",
+   "area": "conduct",
+   "drafts": [
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "G12: not every text channel opposes the bankruptcy, and conflict does not rule out intent",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/liquidity.tex",
+     "line": 56,
+     "passage": "every text channel argues against the action that was applied"
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/insolvency.tex",
+     "line": 36,
+     "passage": "It cannot be read as a decision to surrender."
+    }
+   ],
+   "evidence": "The public message 'Bankruptcy. The pinks go with the rest.' accompanies the received call. Assistant content and the private note oppose it.",
+   "check": {
+    "status": "inherited from the 29 October audit; not re-executed in this review",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Use the two-sentence replacement given as a comment at the end of R6.",
+   "replacement": "replacement_prose.tex R6 comment block",
+   "relation_to_astra": "Agrees with Astra O3 and F7.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "finance_inheritance.tex line 29."
+   }
+  },
+  {
+   "id": "FX-I01",
+   "severity": "major",
+   "area": "inheritance",
+   "drafts": [
+    "fable_5_2",
+    "opus"
+   ],
+   "title": "Headline inheritance numbers include game-ending estates",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/abstract.tex",
+     "line": 1,
+     "passage": "estates complete 121 groups against 63 by trade"
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/insolvency.tex",
+     "line": 40,
+     "passage": "\\subsection{Estates move more property than trades}"
+    },
+    {
+     "file": "full_drafts/opus/sections/abstract.tex",
+     "line": 1,
+     "passage": "Creditor inheritance sends 54 of 60 estates to the eventual winner"
+    },
+    {
+     "file": "full_drafts/opus/sections/discussion.tex",
+     "line": 12,
+     "passage": "in this cohort they went to the eventual winner in 54 of 60 cases"
+    }
+   ],
+   "evidence": "69 of the 121 estate completions arrive with the final elimination and 52 during play (45 to the eventual winner). 19 of the 54 estates are game-ending. Before the last elimination the winner is creditor in 35 of 40. Estate-completed groups collect 11,472 of the 95,278 paid on complete groups; 14 of the 52 collect anything; median 25 turns of play remain.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_economy.py",
+    "output": "reviews/fable_5_2/data/economy_checks.json#inheritance, #rent_by_route, #elimination_creditors"
+   },
+   "resolution": "Headline 35 of 40. State 52 in-play completions and name the 69 separately. Add rent by route. Retitle the section 'Estates follow rent'.",
+   "replacement": "replacement_prose.tex R7 section 7.1",
+   "relation_to_astra": "Agrees with Astra's choice of the nonterminal population. See FX-I03 for the dissent on what to say about it.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "Abstract and section use the 52 in-play completions and 35 of 40."
+   }
+  },
+  {
+   "id": "FX-I02",
+   "severity": "major",
+   "area": "inheritance",
+   "drafts": [
+    "fable_5_2",
+    "sol",
+    "opus"
+   ],
+   "title": "A later bankruptcy is not a duration of purchased survival",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/insolvency.tex",
+     "line": 84,
+     "passage": "The incident establishes that solvency itself was traded and that the protection bought lasted 43 turns."
+    },
+    {
+     "file": "full_drafts/sol/conduct.tex",
+     "line": 16,
+     "passage": "The earlier payment purchases time without preventing that later inheritance."
+    },
+    {
+     "file": "full_drafts/opus/sections/conduct.tex",
+     "line": 28,
+     "passage": "The insurance bought time but did not keep the yellows from Sol."
+    }
+   ],
+   "evidence": "Grok's cash in delivered prompts from G13 d250 to d311: 35, then 235 after the sale, 279, 179, 309, 289, 249, then 49 after a 200 payment on B&O at turn 146, then bankruptcy on Short Line at turn 150. Grok did not land on Short Line on the roll the pitch described. Opus completes the green group at auction on turn 114, seven turns after buying Pennsylvania.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution). Observed cash only; no counterfactual path.",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#C_g13_grok_cash_path; reviews/fable_5_2/data/economy_checks.json (episode ledger, G13 green by auction, turn 114)"
+   },
+   "resolution": "Use the replacement outcome and reading. Say Grok played 43 more turns and that the record cannot say how many the sale bought. Add Opus's later completion of the green group.",
+   "replacement": "replacement_prose.tex R7 'Replacement outcome and reading for the G13 incident'",
+   "relation_to_astra": "Agrees with Astra F8 for the Fable draft and extends it to Sol and Opus. The auction completion is new.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "The G13 reading denies a purchased duration. The cash path and Opus's auction completion are absent. Insert R13j."
+   }
+  },
+  {
+   "id": "FX-I03",
+   "severity": "moderate",
+   "area": "inheritance",
+   "drafts": [
+    "integration"
+   ],
+   "title": "Dissent: do not make '52 groups and 227 deeds against 63 and 207' the main inheritance result",
+   "source": [
+    {
+     "file": "reviews/astra/all_four_review.md",
+     "line": 24,
+     "passage": "The nonterminal comparison is the meaningful main result: 52 complete groups and 227 deeds transferred through estates while play continued, against 63 trade completions and 207 traded deeds."
+    }
+   ],
+   "evidence": "The volume comparison invites the reading 'estates rival trade'. Rent by route says otherwise: trade-completed groups collect 57,378, purchase 23,070, auction 3,358, in-play estate 11,472. The creditor is usually the owner of the developed group that caused the debt.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_economy.py",
+    "output": "reviews/fable_5_2/data/economy_checks.json#rent_by_route"
+   },
+   "resolution": "Lead with concentration (35 of 40; one creditor for both pre-final estates in 16 games) and the order rent first, estate second. Give volumes 'for scale' in one sentence.",
+   "replacement": "replacement_prose.tex R7 section 7.1",
+   "relation_to_astra": "Dissent D4.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "finance_inheritance.tex line 34 and the discussion frame the result as 52 against 63 and 227 deeds. Rent by route is present at line 55. I would reorder so concentration and rent come first."
+   }
+  },
+  {
+   "id": "FX-I04",
+   "severity": "minor",
+   "area": "conduct",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "G18 reading endorses the withdrawer's stated economics",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/insolvency.tex",
+     "line": 106,
+     "passage": "Cash paid to a player about to go bankrupt only delays an estate the payer may receive anyway."
+    }
+   ],
+   "evidence": "The deed would also have completed Opus's green group. The sentence states Opus's rationale as a fact.",
+   "check": {
+    "status": "reading of the frozen text",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Attribute the reason to Opus's returned explanation.",
+   "replacement": "replacement_prose.tex R7 'Replacement reading for the G18 incident'",
+   "relation_to_astra": "Agrees with Astra F8, second paragraph.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "G18 reading attributes the valuation to the explanation."
+   }
+  },
+  {
+   "id": "FX-C01",
+   "severity": "major",
+   "area": "conduct",
+   "drafts": [
+    "opus"
+   ],
+   "title": "The G2 note's capacity claim is wrong and the Opus draft presents it as a computation",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/opus_quotes.tex",
+     "line": 4,
+     "passage": "At \\$325 p4 retains \\$520, enough for nine yellow houses immediately."
+    },
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 106,
+     "passage": "Sol computes what Opus would keep at \\$325 and at \\$650"
+    }
+   ],
+   "evidence": "845 minus 325 is 520. A yellow house costs 150, so 520 buys three houses and nine cost 1,350.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution) (arithmetic against the board file)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#F_quote_arithmetic.g2_d124_note"
+   },
+   "resolution": "Keep the quote verbatim and say in the next sentence that the cash figures are right and the house count is wrong.",
+   "replacement": "replacement_prose.tex R4 Incident 'g2'",
+   "relation_to_astra": "Astra found this (O1). I missed it in my initial position and adopt it. See FX-X01.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "bargaining.tex line 63."
+   }
+  },
+  {
+   "id": "FX-C02",
+   "severity": "moderate",
+   "area": "conduct",
+   "drafts": [
+    "opus"
+   ],
+   "title": "G2 omits the seller's cash at the reversal and misstates the rent",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 99,
+     "passage": "At turn 69 the direction reverses. Sol offers two railroads for Atlantic and Ventnor"
+    },
+    {
+     "file": "full_drafts/opus/sections/bargaining.tex",
+     "line": 104,
+     "passage": "Sol spends \\$300 on yellow houses, collects no rent on them and recovers \\$150 in sales."
+    },
+    {
+     "file": "full_drafts/opus/sections/introduction.tex",
+     "line": 12,
+     "passage": "Sol builds on the yellows, collects no rent on them"
+    }
+   ],
+   "evidence": "At d197 Opus holds 17 and Sol 435. Opus is eliminated at turn 72 owing Gemini 1,300 and the two railroads pass to Gemini. Sol collects 44 on Atlantic at turn 77 (episode rent 44; developed rent 0).",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#G_chronology"
+   },
+   "resolution": "State the 17, the elimination three turns later and '44 on the group, none on a built deed'.",
+   "replacement": "replacement_prose.tex R1 paragraph 3 and R4 Incident 'g2'",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "The $44 is stated. Opus's $17 and its elimination three turns later are absent. Insert R13g."
+   }
+  },
+  {
+   "id": "FX-C03",
+   "severity": "moderate",
+   "area": "conduct",
+   "drafts": [
+    "integration"
+   ],
+   "title": "Seven main incidents inside the results: G2, G15, G19, G20, G12, G13, G18",
+   "source": [
+    {
+     "file": "reviews/astra/all_four_review.md",
+     "line": 107,
+     "passage": "I favor seven main contextual incidents placed beside their economic results: G2 pricing/bluff/reversal, G15 repeated rival-development refusal, G19 correction with acceptance, G20 financial-denial appeal, G12 bankruptcy conflict, G13 omission/estate framing and G18 standing-offer withdrawal."
+    }
+   ],
+   "evidence": "Reached independently in initial_position.md section 5 before reading Astra. G15 over G11: four players alive, both-completing offer, proposer's note counts on the asymmetry, refuser bankrupt first. G2 over G7: same bluff with consequences along the whole path; G7 settles with a 25 gap and goes to the appendix as the contrast.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution) for quotes and delivery of G2, G11, G15, G1, G16",
+    "tool": "reviews/fable_5_2/tools/check_quotes.py",
+    "output": "reviews/fable_5_2/data/new_quote_checks.json"
+   },
+   "resolution": "Adopt. Appendix keeps G7, G11, G3, the G1 note and the G20 d1 disclosure with exact quotes.",
+   "replacement": "integration_proposal.md section 5",
+   "relation_to_astra": "Agreement.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "Eight incidents with G7 in the main text. I would move G7 to the appendix; this is a preference, not an error."
+   }
+  },
+  {
+   "id": "FX-C04",
+   "severity": "minor",
+   "area": "conduct",
+   "drafts": [
+    "opus"
+   ],
+   "title": "'Conduct concentrates near it' is a property of the selection",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/introduction.tex",
+     "line": 19,
+     "passage": "\\textbf{Inheritance closes the chain, and conduct concentrates near it.}"
+    }
+   ],
+   "evidence": "The incidents are purposive. The Opus handoff says so in dissent point 4.",
+   "check": {
+    "status": "reading of the frozen text",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Drop the clause and the discussion paragraph 'Conduct audits can start at pressure points', or keep one sentence marked as a suggestion.",
+   "replacement": "replacement_prose.tex R1 and R8",
+   "relation_to_astra": "Agrees with Astra O8.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "No concentration claim."
+   }
+  },
+  {
+   "id": "FX-C05",
+   "severity": "minor",
+   "area": "conduct",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "Reviewer's own G1 quote carries a figure that is off for this engine",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/quotes_supplement.tex",
+     "line": 9,
+     "passage": "Cannot unmortgage (\\$220) or build yet."
+    }
+   ],
+   "evidence": "This engine charges 221 to redeem a 200 mortgage. After the 100 price and 20 of transfer interest Grok holds 219. The full note also says 'Cash $239', which omits the interest, but that sentence is in the elided middle of the excerpt and is not displayed.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#F_quote_arithmetic.g1_d309_note"
+   },
+   "resolution": "Keep the quote and state after it that redemption costs 221 here and that Grok holds 219 after the trade.",
+   "replacement": "replacement_prose.tex R7 section 7.2, second paragraph",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "not applicable",
+    "note": "The G1 note is not used in the integrated main text."
+   }
+  },
+  {
+   "id": "FX-C06",
+   "severity": "minor",
+   "area": "conduct",
+   "drafts": [
+    "fable_5_2",
+    "opus"
+   ],
+   "title": "Card labels and hand-typed quotations",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/quotes_supplement.tex",
+     "line": 3,
+     "passage": "Sol · public message · G15 d168 · attempt 0 · excerpt"
+    },
+    {
+     "file": "full_drafts/opus/sections/introduction.tex",
+     "line": 12,
+     "passage": "writing that \\$325 does not compensate for ``handing you that monopoly'', and later refuses Opus's ``final'' \\$450"
+    }
+   ],
+   "evidence": "Eight Fable cards labelled 'excerpt' are complete fields (fx-g15-offer, -refusal, -sweetener, -final-refusal; fx-g11-offer, -reject, -concede, -reject-again). The Opus introduction types quotation fragments by hand; they are exact, but the contract requires generated definitions.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_quotes.py",
+    "output": "reviews/fable_5_2/data/new_quote_checks.json#summary.labelled_excerpt_but_full"
+   },
+   "resolution": "Relabel the eight cards 'full field'. Paraphrase in running text or use an inline macro.",
+   "replacement": "replacement_prose.tex R1 paragraph 3 paraphrases",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "sections/fable_quotes.tex is a byte copy; eight labels still say 'excerpt' for whole fields."
+   }
+  },
+  {
+   "id": "FX-S01",
+   "severity": "moderate",
+   "area": "setup",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus"
+   ],
+   "title": "The seed-block mechanism belongs in the main text",
+   "source": [
+    {
+     "file": "full_drafts/astra/discussion.tex",
+     "line": 56,
+     "passage": "Sol wins one seed block from all four seats; another block is won from seat 2 by all four configurations. Neither pattern alone identifies skill or a seat effect."
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/setup.tex",
+     "line": 46,
+     "passage": "In seed block 3 the dice give seat 2 both dark-blue deeds by turn 29 in all four rotations."
+    }
+   ],
+   "evidence": "Episode ledger: G9 to G12, seat p2 completes dark blue by direct purchase on turn 29 under Sol, Gemini, Grok and Opus, and each wins. G13 to G15, seat p1 completes orange by direct purchase on turn 47 under Opus, Sol and Gemini, and each wins. In G16 seat 1 (Grok) completes orange by trade on turn 116 and loses.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_economy.py",
+    "output": "reviews/fable_5_2/data/economy_checks.json#block3_dark_blue, #block4_orange"
+   },
+   "resolution": "Keep the Fable paragraph in the cohort subsection, with 'buys' in place of 'the dice give'. Cite it for question C and in the limitations.",
+   "replacement": "replacement_prose.tex R2 'Cohort and dependence'",
+   "relation_to_astra": "Astra's review does not mention it. Dissent D5.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "temporal_discussion.tex line 60 has the seat-2 dark-blue fact. The block-4 orange fact and the seven-and-four count are absent. Insert R13k."
+   }
+  },
+  {
+   "id": "FX-S02",
+   "severity": "minor",
+   "area": "setup",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "A false private note does not by itself depart from the request",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/setup.tex",
+     "line": 38,
+     "passage": "A false private note written under the standard prompt departs from a request, but it can also be an error."
+    }
+   ],
+   "evidence": "The request is for true reasoning. A mistaken belief can be reported honestly. The prompt sentence was re-verified in a saved standard system prompt, and the action-only prompt carries the shortened sentence.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution) for the prompt text",
+    "tool": "inline record read (G13 d252 system prompt; G13 d251 action-only attempt)",
+    "output": "verification.md section 3"
+   },
+   "resolution": "Use the replacement paragraph.",
+   "replacement": "replacement_prose.tex R2 'What the prompt asks of each channel'",
+   "relation_to_astra": "Agrees with Astra F3.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "setup.tex last paragraph."
+   }
+  },
+  {
+   "id": "FX-S03",
+   "severity": "minor",
+   "area": "setup",
+   "drafts": [
+    "opus"
+   ],
+   "title": "Opening sentence claims deployment and cites simulations",
+   "source": [
+    {
+     "file": "full_drafts/opus/sections/introduction.tex",
+     "line": 4,
+     "passage": "Language-model agents now buy, sell, price and negotiate on behalf of people and firms, and a growing number of studies have them do so with each other"
+    }
+   ],
+   "evidence": "The three citations are simulation studies.",
+   "check": {
+    "status": "reading of the frozen text",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Open with the three-problem paragraph of the Fable draft.",
+   "replacement": "replacement_prose.tex R1 paragraph 1",
+   "relation_to_astra": "Agrees with Astra's literature follow-up.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "New introduction."
+   }
+  },
+  {
+   "id": "FX-R01",
+   "severity": "moderate",
+   "area": "related",
+   "drafts": [
+    "astra",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "AgentMonopoly's creditor rule and trade interface are not stated in the paper",
+   "source": [
+    {
+     "file": "full_drafts/astra/discussion.tex",
+     "line": 5,
+     "passage": "In the inspected AgentMonopoly implementation, cash-negative elimination has no debt-liquidation phase, although player-creditors inherit buildings intact."
+    },
+    {
+     "file": "full_drafts/opus/sections/related.tex",
+     "line": 5,
+     "passage": "Its inspected trade interface accepts or rejects a single offer"
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/related.tex",
+     "line": 6,
+     "passage": "AgentMonopoly transfers them intact as this engine does, and AgentMonopoly's trade interface accepts or rejects a single offer where ours allows counters"
+    }
+   ],
+   "evidence": "arXiv:2610.29330v2 HTML, fetched 11 November 2026 through a summarizing fetch tool: Section 4 and Section 6 state elimination when cash becomes negative; the fate of a bankrupt player's property and whether a recipient can counter are not stated. The claims therefore rest on the earlier repository inspection, which this review did not repeat.",
+   "check": {
+    "status": "literature check performed in this review at paper level; repository claims are inherited from the 29 October audit; not re-executed in this review",
+    "tool": "WebFetch of arxiv.org/html/2610.29330v2",
+    "output": "verification.md section 5"
+   },
+   "resolution": "Attribute both claims to the repository entry with its commit, or drop them.",
+   "replacement": "replacement_prose.tex R9",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "related_limits.tex line 7 states three implementation facts and cites only the paper. Apply R13l."
+   }
+  },
+  {
+   "id": "FX-R02",
+   "severity": "minor",
+   "area": "related",
+   "drafts": [
+    "fable_5_2"
+   ],
+   "title": "Reviewer's own paraphrases drift from two abstracts",
+   "source": [
+    {
+     "file": "full_drafts/fable_5_2/sections/related.tex",
+     "line": 4,
+     "passage": "finds that coherent spending predicts rank better than any single skill"
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/discussion.tex",
+     "line": 6,
+     "passage": "language models anchor on opening offers and concede without compensation"
+    }
+   ],
+   "evidence": "Cattle Trade abstract (arXiv:2605.14537v1): strategic coherence, such as spending efficiency and resource discipline, correlates with rank more than spending volume or any single subskill; two heuristic code agents outperform most LLMs. Cosentino et al. abstract (arXiv:2605.16575v1): accurate counterparty modeling does not reliably improve outcomes and agreements follow opening anchors; 'concede without compensation' is not stated.",
+   "check": {
+    "status": "literature check performed in this review (abstract pages through a summarizing fetch tool)",
+    "tool": "WebFetch",
+    "output": "verification.md section 5"
+   },
+   "resolution": "Use 'strategic coherence ... correlates with rank' and drop 'concede without compensation'.",
+   "replacement": "replacement_prose.tex R9, last sentence; R4 section 4.5 last paragraph",
+   "relation_to_astra": "Consistent with Astra F10.",
+   "integrated_snapshot": {
+    "status": "not applicable",
+    "note": "Neither paraphrase is in the integrated text."
+   }
+  },
+  {
+   "id": "FX-R03",
+   "severity": "minor",
+   "area": "related",
+   "drafts": [
+    "integration"
+   ],
+   "title": "Addition: FinBoardBench supports counteroffers and allows five execution failures before a recorded forced fallback",
+   "source": [
+    {
+     "file": "full_drafts/sol/temporal_discussion.tex",
+     "line": 21,
+     "passage": "FinBoardBench, inspected as arXiv:2605.27896v1, evaluates Cashflow, Acquire and Monopoly and explicitly records forced interventions after response failures"
+    }
+   ],
+   "evidence": "arXiv:2605.27896v1 HTML, Appendix C.3 (creditor receives property, buildings sold to the bank), Appendix D (trade manager with ACCEPT, REJECT, COUNTER), Appendix E (at most five action execution failures, then a system-forced fallback recorded as such), Section 3.2 (purchases continue under low liquidity).",
+   "check": {
+    "status": "literature check performed in this review (HTML through a summarizing fetch tool)",
+    "tool": "WebFetch of arxiv.org/html/2605.27896v1",
+    "output": "verification.md section 5"
+   },
+   "resolution": "Say so in related work. It bounds any novelty claim for counter analysis and puts the one-retry budget in context.",
+   "replacement": "replacement_prose.tex R9",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "applies",
+    "note": "Optional addition, R13l."
+   }
+  },
+  {
+   "id": "FX-R04",
+   "severity": "minor",
+   "area": "related",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "Bibliography keys and one title differ across drafts",
+   "source": [
+    {
+     "file": "full_drafts/sol/references.bib",
+     "line": 286,
+     "passage": "yang2026measurement"
+    },
+    {
+     "file": "full_drafts/opus/references.bib",
+     "line": 343,
+     "passage": "yang2026measurementfirst"
+    }
+   ],
+   "evidence": "Sol and Astra use yang2026measurement; Opus and Fable use yang2026measurementfirst. DECE's arXiv title has singular 'Eurogame'. MERIT is only in Sol's file; nine entries are only in Opus's.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution) (key listing)",
+    "tool": "inline grep",
+    "output": "verification.md section 5"
+   },
+   "resolution": "Merge on Sol's versioned file, keep one key per work, keep the 'inspected at' note per entry.",
+   "replacement": "integration_proposal.md section 9",
+   "relation_to_astra": "Not raised by Astra.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "One key in use (yang2026measurement)."
+   }
+  },
+  {
+   "id": "FX-W01",
+   "severity": "moderate",
+   "area": "structure",
+   "drafts": [
+    "astra",
+    "sol"
+   ],
+   "title": "A separate seven-case conduct section separates the cases from the counts they explain",
+   "source": [
+    {
+     "file": "full_drafts/astra/conduct.tex",
+     "line": 1,
+     "passage": "\\section{Conduct in economic context}"
+    },
+    {
+     "file": "full_drafts/sol/conduct.tex",
+     "line": 1,
+     "passage": "\\section{Economic dependencies in contextual interaction}"
+    }
+   ],
+   "evidence": "Five consecutive pages of cases in both drafts. The critique's complaint is that each case withholds its interpretation; placing G2 and G15 after the offer tables and G13 and G18 after the estate counts lets the count supply the interpretation.",
+   "check": {
+    "status": "reading and render inspection",
+    "tool": "contact sheets in reviews/fable_5_2/render",
+    "output": "verification.md section 4"
+   },
+   "resolution": "Embed incidents in the sections they illustrate.",
+   "replacement": "integration_proposal.md sections 2 and 5",
+   "relation_to_astra": "Agreement with Astra's proposed integration.",
+   "integrated_snapshot": {
+    "status": "addressed",
+    "note": "Incidents are beside results."
+   }
+  },
+  {
+   "id": "FX-W02",
+   "severity": "moderate",
+   "area": "structure",
+   "drafts": [
+    "opus",
+    "fable_5_2",
+    "astra",
+    "sol"
+   ],
+   "title": "Length and a missing positive statement",
+   "source": [
+    {
+     "file": "full_drafts/opus/handoff.md",
+     "line": 9,
+     "passage": "Complete paper, 43 pages"
+    },
+    {
+     "file": "full_drafts/astra/discussion.tex",
+     "line": 30,
+     "passage": "They do not demonstrate that a general-purpose auditor is more accurate, that fixes would improve performance, or that a benchmark implementation perfectly realizes intended Monopoly rules."
+    }
+   ],
+   "evidence": "Opus 43 pages and Fable 39; first result on page 6 or 7 in every draft. Astra and Sol are within length and their discussions are mostly statements of what is not shown.",
+   "check": {
+    "status": "render inspection",
+    "tool": "PyMuPDF page and word counts",
+    "output": "verification.md section 4"
+   },
+   "resolution": "Target 9,000 words of main prose and about 24 pages before appendices. Each results section ends with one sentence that states what it supports.",
+   "replacement": "integration_proposal.md section 10",
+   "relation_to_astra": "Agreement.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "Length is in range. The discussion still states more limits than conclusions; R8 paragraph 1 is my proposed positive statement."
+   }
+  },
+  {
+   "id": "FX-P01",
+   "severity": "moderate",
+   "area": "provenance",
+   "drafts": [
+    "astra",
+    "sol",
+    "opus",
+    "fable_5_2"
+   ],
+   "title": "The assistance statement should name the overlap exactly and say who selected the incidents",
+   "source": [
+    {
+     "file": "full_drafts/sol/manuscript.tex",
+     "line": 96,
+     "passage": "Earlier overlapping research-assistance runs used GPT-6 Astra, GPT-6.1 Sol, Claude Opus 5.5 and Claude Fable 5.1; model families overlap with evaluated participants."
+    },
+    {
+     "file": "full_drafts/fable_5_2/sections/appendix_validation.tex",
+     "line": 8,
+     "passage": "GPT-6.1 Sol and Claude Opus 5.5 are also two of the four evaluated models"
+    }
+   ],
+   "evidence": "Two assistants carry the same model identifiers as two players. Incidents and coding categories were chosen by these assistants after seeing the data. Author listing is the human author's decision and depends on the venue's policy on language-model authorship.",
+   "check": {
+    "status": "reading of the frozen text",
+    "tool": "none",
+    "output": "none"
+   },
+   "resolution": "Use the replacement 'Research roles' paragraph and the limitations paragraph 'Text and selection'. Leave the byline to the human author.",
+   "replacement": "replacement_prose.tex R10 and R12",
+   "relation_to_astra": "Consistent with Astra P1.",
+   "integrated_snapshot": {
+    "status": "partly",
+    "note": "Limitations name the assistants and the overlap in general terms. It does not say that two assistants carry the identifiers of two players or who selected the incidents. R12 'Research roles'."
+   }
+  },
+  {
+   "id": "FX-X01",
+   "severity": "minor",
+   "area": "reviewer",
+   "drafts": [
+    "reviews/fable_5_2"
+   ],
+   "title": "My initial position ranked G2 first without noticing the arithmetic error in its note",
+   "source": [
+    {
+     "file": "reviews/fable_5_2/initial_position.md",
+     "line": 65,
+     "passage": "**G2 (Opus's find).** Price, refusal, bluff, reversal, building without rent, estate to the winner."
+    }
+   ],
+   "evidence": "Astra O1. Confirmed against the board file.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_records.py",
+    "output": "reviews/fable_5_2/data/record_checks.json#F_quote_arithmetic"
+   },
+   "resolution": "Adopted in FX-C01 and in the replacement incident. initial_position.md is left as written.",
+   "replacement": "replacement_prose.tex R4 Incident 'g2'",
+   "relation_to_astra": "Astra was right.",
+   "integrated_snapshot": {
+    "status": "not applicable",
+    "note": ""
+   }
+  },
+  {
+   "id": "FX-X02",
+   "severity": "minor",
+   "area": "reviewer",
+   "drafts": [
+    "reviews/fable_5_2"
+   ],
+   "title": "Errors made and corrected while preparing this review",
+   "source": [
+    {
+     "file": "reviews/fable_5_2/verification.md",
+     "line": 0,
+     "passage": "section 6"
+    }
+   ],
+   "evidence": "Window script assumed every listed decision followed the completing settlement; first replacement draft said six of seven incidents involve Grok (five), thirty percent of prompts (29), 'first bids' (bids at any position), 'two deeds Grok refused' (one), and repeated Opus's 'after raising by a median' wording (18 of 24 raise).; first replacement draft also 'corrected' a $239 figure that the displayed G1 excerpt does not contain; findings draft attributed an Opus introduction sentence to its abstract.",
+   "check": {
+    "status": "performed in this review (existing-log re-tabulation or record reading; no engine, game or model execution)",
+    "tool": "reviews/fable_5_2/tools/check_replacement_numbers.py",
+    "output": "reviews/fable_5_2/data/replacement_number_checks.json (98 assertions, 0 failed)"
+   },
+   "resolution": "Corrected before delivery.",
+   "replacement": "replacement_prose.tex",
+   "relation_to_astra": "None.",
+   "integrated_snapshot": {
+    "status": "not applicable",
+    "note": ""
+   }
+  }
+ ],
+ "integrated_snapshot": {
+  "what": "integrated/ as found on 2026-11-11 at about 05:49 UTC, manuscript.pdf sha256 prefix 0feea7e4c8014626. Read only after initial_position.md, review.md and the replacement prose were written. Outside the assigned scope; included because the parent's integration_decisions.md lists this review as pending input.",
+  "counts": {
+   "applies": 12,
+   "partly": 8,
+   "addressed": 14,
+   "not applicable": 6
+  }
+ }
+}

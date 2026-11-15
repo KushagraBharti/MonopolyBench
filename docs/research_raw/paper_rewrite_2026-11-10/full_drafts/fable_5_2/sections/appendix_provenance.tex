@@ -1,0 +1,49 @@
+\section{What was checked for this draft}
+\label{app:provenance}
+
+Tables~\ref{tab:provenance} and~\ref{tab:inherited} give the status of each group of quantities. \textbf{R} means recounted for this draft from the canonical decision logs. \textbf{T} means re-tabulated for this draft from a retained ledger, whose construction and agreement with the engine were established by the earlier audit. \textbf{I} means inherited from the earlier audit without recomputation. The scripts are in \artifact{tools/} and their outputs in \artifact{data/} of this draft's folder. No script calls a model or runs the game engine.
+
+\begin{table}[H]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\linewidth}{@{}YcL{5.6cm}@{}}
+\toprule
+Quantity & Status & Source for this draft\\
+\midrule
+Decisions and attempts per system; refusals by game; 66 defaults by system and game; action counts & R & \artifact{tools/census_decisions.py} over all twenty \artifact{decisions.jsonl}\\
+Offer responses by completion category; cash direction; breakdowns by recipient, block, game and thread position; response styles & T & \artifact{tools/retab_offers.py} on \artifact{agenda_offers.json}\\
+Cash-poor offers and settlements, with thresholds & T (new) & \artifact{tools/retab_distress.py}\\
+Join of Grok text and tool-call disagreements to threads and responses & T (new) & \artifact{tools/retab_conflicts.py} on \artifact{resolution_conditions.json}\\
+Completion episodes by route and winner; rent by route and owner; first-window outcomes; post-trade cash; first completion per game & T & \artifact{tools/retab_economy.py} on the phase-1 episode ledger, \artifact{first_management_windows.json} and \artifact{agenda_offers.json}\\
+Rent per episode & T, cross-checked & Episode ledger against \artifact{agenda_flows.json}: 209 of 209 agree\\
+Elimination classes, shortfalls, order and estate recipients & T & \artifact{t06_eliminations.json}, \artifact{certificate_results.json}, \artifact{agenda_flows.json}\\
+All excerpts & R & \artifact{tools/build_quotes.py}: 28 retained fields and 30 spans re-checked against canonical files; 14 new quotes extracted from them\\
+Instruction text quoted in Section~\ref{sec:setup} & R & Arena source and one saved standard and action-only prompt\\
+Spending units by system & T & \artifact{t05_spending_units.json}\\
+Build rule for mortgaged groups; rent doubling on a complete group & R & Engine source, read only\\
+\bottomrule
+\end{tabularx}
+\caption{Quantities recounted or re-tabulated for this draft. Retained ledgers are in the shared \texttt{data/} folder two levels above this draft unless noted.}
+\label{tab:provenance}
+\end{table}
+
+\begin{table}[H]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\linewidth}{@{}YcL{5.6cm}@{}}
+\toprule
+Quantity & Status & Source\\
+\midrule
+Engine executions: payment sequences, rebuilt build plans, the game-7 search, full replay & I & 126-case certificate suite of 29 October\\
+Reconciliation of 6,989 states and 113 settlements; 50,918 events & I & Earlier audit\\
+Trade-history formatter and timeline-omission counts; memory-window counts & I & Earlier audit\\
+Negotiation propensity per eligible turn; repeat-pair threads & I & \artifact{t02_negotiation.json}, \artifact{agenda_negotiation.json}\\
+Uneven-build recovery and recurrence tables; 663 end-of-turn provenance & I & \artifact{t07_build_recovery.json}, \artifact{agenda_recurrence.json}, \artifact{resolution_conditions.json}\\
+Semantic codes: 74 rejection reasons; 240-decision sample & I & Two and one language-model readings respectively\\
+Token, latency and source-revision statements & I & Earlier audit\\
+Incident facts outside the quoted spans and ledgers (event numbers, exact-prefix alternatives, recipient-prompt checks) & I & Bounded source reviews of 29 October\\
+\bottomrule
+\end{tabularx}
+\caption{Quantities inherited from the earlier audit without recomputation.}
+\label{tab:inherited}
+\end{table}

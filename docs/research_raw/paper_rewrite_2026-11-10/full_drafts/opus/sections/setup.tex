@@ -1,0 +1,71 @@
+\section{Environment, cohort and conditions}
+\label{sec:setup}
+
+\subsection{The game as a small economy}
+\label{sec:rules}
+
+MonopolyBench is a deterministic four-player Monopoly implementation on the United States board, with \$1,500 starting cash, \$200 for passing Go, and 32 houses and 12 hotels in the bank. Declining a purchase opens an ascending auction. In a negotiation thread one player proposes a bundle of cash, deeds and jail cards, and the recipient accepts, rejects or counters, for at most twenty exchanges; deeds in a group with buildings cannot be traded. The engine alone decides legality: at each decision it emits a menu of legal actions, validates the selected action and records the resulting events.
+
+Five rule choices matter for the economic analysis.
+\begin{enumerate}
+\item Mortgaged deeds can be traded, and the recipient pays ten percent of the mortgage value as transfer interest.
+\item Construction checks even building after each entry of a build plan. A count-valued request such as ``three houses on each pink'' can therefore be invalid as written even though the same purchases are legal in another order.
+\item A player who owes more than its cash enters liquidation, where it can sell buildings, mortgage deeds or declare bankruptcy, but not trade. Declaration is allowed even when a legal sequence could pay. Mortgaging a deed in a developed group requires first removing that group's buildings, and downgrading a hotel requires houses in the bank.
+\item A bankrupt player's deeds and buildings pass intact to a player creditor. Deeds owed to the bank return to it and are not auctioned at once.
+\item Redemption uses a floating-point ceiling that overcharges by one dollar for some principals, for example \$111 rather than \$110 on a \$100 mortgage. The applied records include this behavior.
+\end{enumerate}
+Appendix~\ref{app:cohort} lists the remaining settings. Results about financing and inheritance are results about this implementation.
+
+Agents see public state, including every opponent's cash, holdings and configured model name, but not opponents' private notes or future dice and cards. Memory holds twenty public timeline entries, the agent's ten most recent private notes, and negotiation history inside a trade thread.
+
+The standard system prompt asks each agent to ``win the game by maximizing long-term advantage and being the last non-bankrupt player'' and allows ``any legal strategy or personality''. It states: ``Deception in public chat is allowed; private thoughts should reflect true reasoning.'' A false public statement is therefore an authorized move, not a violation of the task. The private-honesty request applies only when the standard prompt is used (Section~\ref{sec:conditions}).
+
+\subsection{Configured systems and cohort}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{lYrrL{3.3cm}}
+\toprule
+Label & OpenRouter identifier & Decisions & Attempts & Resolution condition\\
+\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991 & Corrective retry\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689 & Corrective retry\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301 & Corrective retry; refusal recovery used in 1,605 decisions\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698 & Required tool choice; corrective retry\\
+\bottomrule
+\end{tabularx}
+\caption{Configured systems. All use the recorded ``medium'' reasoning setting through OpenRouter, with provider default sampling. A label names a complete configured participant (model, prompt, tools, memory and response policy), not a base model. An attempt is one provider response; a decision is one applied action and can contain several attempts.}
+\label{tab:configurations}
+\end{table}
+
+Table~\ref{tab:configurations} lists the four configured systems. The common ``medium'' label does not equalize computation. Recorded completion tokens average 128 per decision for Sol and 4,041 for Grok, with mean latencies of 4.8 and 65 seconds, and providers count reasoning tokens differently. Recorded OpenRouter charges total USD~141.71, a lower bound because 1,600 Opus attempts and three Grok attempts have no charge record.
+
+The cohort is twenty games: five seeds, each played in four cyclic seat rotations, so each configuration plays five games from each seat. All twenty end by bankruptcy without a turn cap, after 75 to 386 global turns, with 50,918 events, 6,989 decisions and 8,679 attempts in total. Sol wins eight games, Gemini seven, Opus three and Grok two. We report the totals once and do not use them as a ranking. Rotations within a seed block share opponent order and an initial random sequence, every configuration always faces the same three opponents, and the response conditions below differ by configuration. Appendix~\ref{app:cohort} gives the per-game table.
+
+\subsection{Conditions that precede interpretation}
+\label{sec:conditions}
+
+Table~\ref{tab:conditions} lists the run conditions that change what a behavioral reading can claim. They are part of the evaluated systems. They do not license excluding inconvenient decisions, and they are not randomized treatments whose effects we could estimate.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}L{2.75cm}L{4.6cm}Y@{}}
+\toprule
+Condition & Scope in the records & Consequence for interpretation\\
+\midrule
+Opus refusal recovery & The provider refused 1,605 Opus attempts in 1,605 decisions (1,604 first attempts and one second attempt), each with the same Terms-of-Service message about reverse engineering or duplicating model outputs. Every Opus first attempt from G5 onward was refused. & The action-only retry removes the private-note field and its honesty clause and uses up the retry. 1,394 of 1,696 Opus decisions have no model-authored private note in memory (1,108 empty, 286 synthetic fallback notes). The trigger is unidentified.\\
+Engine defaults & 66 decisions (61 Opus, 4 Sol, 1 Gemini), all on construction menus. & The engine applied \End{} after failed attempts. These are not chosen holds.\\
+Grok required tool choice & 139 selected responses whose assistant content names a different action from the received call. & The engine applies the received call. All 139 conflicts are present in the non-streamed response bodies, so local stream assembly is excluded for these records; generation, provider processing and gateway behavior are not distinguished.\\
+Trade-history formatter & The formatter treats the thread initiator as the author of the final terms. It reverses giving directions in 44 of 113 accepted-trade summaries, misattributes 26 of 413 rejections and writes self-partner wording in 232 of 394 counters. & At least one manifestation appears in 2,054 of 6,989 initial prompts. Structured holdings and cash remain correct, so agents face contradictory text rather than wrong state.\\
+Public-message delivery & 149 of 6,882 nonempty public messages never enter any timeline. & A logged message is not necessarily a delivered one. Every focal message in the incidents below was checked in the recipient's prompt.\\
+Text channels & Sol and Gemini's assistant-content fields are empty; readable provider reasoning exists for 4,834 decisions. & Text--action conflicts are detectable mainly for Grok. Cross-configuration consistency or deception rates are not comparable.\\
+Version boundary & Games 1--4 and 5--20 carry different treatment fingerprints (commits \texttt{42f85183} and \texttt{d6808534}). & The inspected diff changes no engine, prompt, resolver or client file. The boundary coincides with the refusal shift; its cause is unresolved.\\
+\bottomrule
+\end{tabularx}
+\caption{Run conditions. Counts are inherited from the baseline resolution and formatter audits (Appendix~\ref{app:provenance}). Decision indices are zero-based within each game; G13 d252 is decision \texttt{000252}.}
+\label{tab:conditions}
+\end{table}
+
+The Opus condition changes three things at once. The action-only retry changes the prompt and tool schema, so its success does not reveal what triggered the refusal; it removes the private note from later memory; and it consumes the retry that other configurations receive after an invalid action, which matters for construction (Section~\ref{sec:construction}). The provider's message names a policy category, but the records do not show why the first attempt triggered it, and we do not read the refusals as an objection to bargaining. Opus-specific numbers describe this configured condition.
+
+\FloatBarrier

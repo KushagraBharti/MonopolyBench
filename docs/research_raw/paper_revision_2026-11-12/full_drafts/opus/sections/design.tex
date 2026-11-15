@@ -1,0 +1,35 @@
+\section{Study design}
+\label{sec:design}
+
+\subsection{Environment}
+Four agents start with \$1,500 on the forty-space United States board. They buy and auction deeds, trade through bilateral threads of up to twenty exchanges, and build evenly on complete color groups. The bank holds 32 houses and twelve hotels. Developed groups cannot be traded, and a deed in a group with buildings cannot be mortgaged until the group's buildings are sold. A player who owes more than its cash receives a liquidation menu of building sales and mortgages, refreshed after every action. It cannot trade during liquidation, and it may declare bankruptcy even when payment is possible. A player-creditor receives the debtor's assets with buildings intact. Appendix~\ref{app:rules} lists other conventions.
+
+The engine alone validates actions, changes state and emits events. At each decision one player gets a menu of legal actions and returns one tool call with the action, a public message and, under the standard prompt, a private note. The engine applies the received call; assistant content and provider-returned reasoning are stored but never applied, even when they describe another action.
+
+\subsection{Cohort and configurations}
+The twenty games use five seeds, each played in four cyclic seat rotations of one fixed roster (Appendix Table~\ref{tab:cohort}). Every system occupies every seat five times but always sits after the same opponent. Games last 75 to 386 turns and all end by bankruptcy. The cohort has 50,918 events, 6,989 decisions and 8,679 response attempts. G$n$ d$k$ denotes zero-based decision $k$ in game $n$. Games 1--4 ran from source commit \texttt{42f85183} and games 5--20 from \texttt{d6808534}.
+
+\begin{table}[t]\centering\small
+\begin{tabularx}{\linewidth}{@{}lYrrcrr@{}}\toprule
+System & OpenRouter identifier & Decisions & Attempts & Tool choice & Recovery & Fallback\\\midrule
+\rows{sections/generated/config_rows}
+\bottomrule\end{tabularx}
+\caption{Evaluated configurations. All request \texttt{medium} reasoning effort and set no temperature, nucleus or token cap. Tool choice is read from \texttt{tool\_choice\_for\_model} at both run commits. Recovery counts decisions resolved by the action-only prompt after a provider refusal. Fallback counts decisions resolved by the deterministic \texttt{finance\_before\_bankruptcy\_v2} policy. A named fallback model for Opus is configured but never invoked.}
+\label{tab:config}\end{table}
+
+Response conditions differ across systems (Table~\ref{tab:config}). An invalid response normally receives one corrective request and then a deterministic fallback. When a provider refuses a first attempt, the second attempt instead uses an action-only prompt with no private note. All 1,605 refusals are of Opus and carry one identical provider message about reproducing model outputs; none of the recovery calls is refused. Opus therefore plays 1,604 of its 1,696 decisions without a note and without a further correction, and the text we read for Opus is its provider-returned reasoning. Grok runs with \texttt{tool\_choice} set to \texttt{required}; the others use \texttt{auto}. In 1,068 selected Grok responses the assistant content names an action, and in 139 that action differs from the call the engine applied. We cannot attribute these conflicts to the tool-choice setting, but other agents answered the offers they produced. Finally, past-trade summaries misattribute some authors or terms in 2,054 prompts; current holdings and every current offer are correct.
+
+\subsection{Information and channels}
+Prompts show every player's cash, deeds, buildings and mortgages, the bank's stock, a twenty-entry public timeline and the agent's own last ten notes. Trade responses include the thread history. Only purchase prompts list a deed's price and rents. The standard prompt permits public bluffing and deception and asks that private notes reflect true reasoning; the recovery prompt drops the note and that sentence but keeps the permission to deceive (Appendix~\ref{app:prompts}).
+
+Every quotation names its channel. An \emph{applied private note} is attached to the executed call and never shown to opponents. \emph{Provider-returned reasoning} is the reasoning field of the selected attempt. \emph{Assistant content} is free text that the engine does not apply. A \emph{public message} is emitted with the action, and we say it reached a recipient only after finding it in that recipient's stored prompt. Recorded text is evidence of what a system returned, not a view of its computation~\cite{turpin2023unfaithful,lanham2023faithfulness}.
+
+\subsection{Measures}
+\paragraph{Offers.} An offer is a set of terms awaiting a response; its author can differ from the thread's initiator. For each of the 918 offers the recipient could accept, we reconstruct both parties' cash and holdings after the proposed transfer and record which color groups it would newly complete: the proposer's only, the recipient's only, both, or neither. A \emph{swap} moves deeds in both directions and may add cash. A \emph{cash bid} offers only cash for deeds. Other forms, mostly deed-for-cash sales, form a third class. An opening offer is the first offer of a thread.
+
+\paragraph{Debts.} A liquidation episode starts at the first explicit debt menu and ends in payment or elimination; debts covered by cash on hand never reach it. At the first menu we compute cash, the mortgage value of deeds listed on the menu ($L_0$), half the building cost of every building level ($S$, a hotel counting as five) and the mortgage value of unmortgaged deeds absent from the menu ($U$). Their sum is the own-asset bound. Payable debts fall into three tiers: tier A when cash and $L_0$ cover the debt, tier B when sales are also needed but $U$ is not, and tier N, \emph{necessary released collateral}, when only $U$ can close the gap. A bound above the debt is arithmetic, not a legal route. For the three unpaid debts within the bound, earlier engine-executed checks supply payment sequences, which we inherit without rerunning.
+
+\subsection{Uncertainty}
+Counts are exact for this finite cohort. When we describe uncertainty, the target is the difference between two pooled rejection shares for a cohort of the same design: the same roster and configurations, five seed blocks of four rotations. Games within a block share a seed and are not independent draws. Our primary summary therefore resamples seed blocks and then games within each drawn block (20,000 draws); Appendix~\ref{app:offers} adds resampling by games alone and by whole blocks, and every block separately. An earlier draft's authors found the offer-form contrast after inspecting this corpus, so these intervals describe its spread within the cohort and do not confirm it. We report no p-values.
+
+The analysis reads stored records only and runs no game, engine branch, replay, baseline policy or model query. Appendix~\ref{app:repro} gives the repository, commits, seeds, game map, both stored replay comparisons and the commands that regenerate every number. Appendix~\ref{app:checks} separates what we checked directly from what we inherit.

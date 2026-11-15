@@ -1,0 +1,54 @@
+\section{Study design and evidence}
+\label{sec:setup}
+
+\subsection{A persistent competitive economy}
+
+MonopolyBench places four agents on the forty-space United States Monopoly board with \$1,500 each. They buy and auction deeds, negotiate bilateral exchanges, build on complete color groups, and use mortgages and building sales to meet debts. A declined purchase opens an ascending auction. Trade threads permit up to twenty exchanges, with acceptance, rejection or counteroffer at each response. Play resumes after the thread closes. All monetary amounts below are game currency unless explicitly marked USD.
+
+The game makes one transaction relevant to several agents. A completing deed permits its buyer to develop, subject to cash, mortgage status, bank stock and even-building rules. Sale proceeds can finance the seller's competing development. When a player fails, a player-creditor receives its properties with buildings intact; mortgaged inherited deeds incur no immediate interest. Bankrupt estates returned to the bank are not immediately auctioned. Developed groups cannot be traded. These conventions make financing and creditor identity part of the stakes in a bilateral exchange. Appendix~\ref{app:rules} specifies the implementation, including building-sale constraints.
+
+The deterministic engine emits the legal menu and applies the selected action. A language-model response can contain a tool call, public message, private note, assistant content and provider-returned explanation. The engine applies the received valid tool call, not a separately stated plan. Agents can take several management actions in a turn. During liquidation they can sell buildings, mortgage available deeds or declare bankruptcy; they cannot negotiate a new rescue trade. A declaration is permitted even if the current debt is payable, so financial solvency is assessed separately from the declaration.
+
+\subsection{Cohort and information}
+
+The observational cohort consists of twenty complete games: five seeds, each with four cyclic seat rotations of the same roster. There are 50,918 events, 6,989 decisions and 8,679 response attempts. Games last 75--386 turns and end in bankruptcy without a turn cap. Every system occupies each seat five times, but the cyclic opponent order is fixed. Rotations share a random sequence, not necessarily the same later dice exposure: different actions can change which player consumes subsequent draws. We use G$n$ d$k$ for zero-based decision $k$ in game $n$.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}lYrr@{}}
+\toprule
+Label & OpenRouter identifier & Decisions & Attempts\\\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698\\\bottomrule
+\end{tabularx}
+\caption{Configured participants. The recorded effort request is \texttt{medium}; this is an API setting, not a matched amount of computation. Sampling temperature, nucleus probability and a token cap were not set by the client.}
+\label{tab:systems}
+\end{table}
+
+Agents see their own and opponents' cash and holdings, buildings, mortgage flags, bank stock, a twenty-entry public timeline and up to ten own private notes. Model names are visible. Current trade terms and thread history accompany trade responses. Opponents' private notes and future random outcomes are hidden. Purchase prompts supply the landed property's price, group, building cost and rent schedule; other phases supply less static board information. The system prompt does not enumerate the house rules. Agents can therefore draw on board knowledge as well as supplied information, and remembered values need not match every implementation convention.
+
+The task explicitly permits public bluffing, deception, intimidation and cooperation. It asks private notes to reflect honest reasoning. The recovery prompt described below retains permission to deceive while removing the private-note request. We study strategic communication under this norm. An authorized bluff is not a violation of the task, and the observed tactics do not establish unprompted emergence. The exact two prompts appear in Appendix~\ref{app:prompts}.
+
+\subsection{Conditions affecting interpretation}
+
+An invalid response normally receives one corrective request before a deterministic fallback. A first-attempt provider refusal instead consumes that second attempt with an action-only request. Opus has 1,604 such first-attempt refusals; a further refusal occurs after an invalid first response. All 1,605 refusals contain the same provider message about reverse engineering or duplicating model outputs. None of the 1,604 action-only recovery responses is refused. The standard prompt requests private reasoning, whereas recovery removes that request and retains public deception. This evidence points to a reasoning-request incompatibility, not refusal to bluff. Current provider documentation describes a reasoning-extraction refusal category~\cite{anthropic2026reasoning}; the saved responses do not include that category field, so the exact upstream trigger is not established.
+
+The refusal rate reaches 100\% of first attempts in G5--G20, with the transition already occurring by wall clock within G1--G4. Opus consequently has fewer authored private notes and no further corrective attempt after invalid recovery. Its delivered private-memory field contains no authored note in 1,394 decisions. It still receives public history and current state. Grok has a different condition: in 139 selected responses, the action named in assistant content disagrees with the received tool call. Sixty-four of its 136 opening proposals and seven of its twenty-eight acceptances have this disagreement. Those calls remain actual offers faced by opponents, but they do not cleanly measure the proposer's stated intention.
+
+Past-trade summaries also misattribute some terms and authors in 2,054 initial prompts. Current structured holdings are correct, and all 920 current offers agree with the recipient's acceptance menu. We distinguish transaction measurement from interpretation of delivered history. Excluding the affected participant would not remove its influence on the other players. These conditions define the studied systems and prevent a clean ranking of underlying models. Detailed timing, usage and delivery records are retained in the appendix rather than repeated with each result.
+
+\subsection{Measures, comparisons and uncertainty}
+
+An offer is one set of terms awaiting a response; its author can differ from the thread initiator. We reconstruct each party's post-transfer cash, charges, ownership and newly completed groups. Completion includes mortgaged deeds and does not imply immediate construction. A completion episode ends when its owner loses the group or the game ends. A first management window comprises that owner's management decisions in the first management turn after completion. Construction availability is specific to the completed group.
+
+Our new liquidation census begins whenever a debt requires an explicit liquidation menu. It follows consecutive actions against the same obligation until the event stream records payment or bankruptcy. Cash-sufficient automatic payments are outside this denominator. For each episode we record the initial cash shortfall, sales, mortgages and outcome. The generous own-asset bound is initial cash plus half the building cost per level and the mortgage value of every unmortgaged deed, including collateral that building sales would unlock. It ignores sale-order and bank-stock restrictions. Falling below the debt rules out payment by these own assets; exceeding it does not establish feasibility. Historical legal-sequence checks resolve the four elimination cases above that bound. We do not execute new branches in this revision.
+
+Asking-price comparisons use acceptance-legal offers exchanging exactly one deed for cash, without jail cards. We divide the requested cash by the deed's board purchase price and separate author, mortgage status and thread position. This normalizes units, not economic value. A same-game, same-seller, same-deed comparison still changes buyer, time or terms. Rejection comparisons similarly separate opening from later offers. The appendix gives every cell, including exceptions.
+
+These are dependent, retrospectively studied records. We report exact finite-corpus counts, conditional contrasts, and leave-one-seed-block-out ranges showing how concentrated a contrast is. Those ranges are sensitivity summaries, not confidence intervals or a significance test. Five seeds and one observation per seed/rotation do not estimate repeated-run variability at a fixed state or isolate chance from strategy. We make no population claim that an extra offer supplies an independent trial of reasoning ability.
+
+Semantic evidence has a separate status. Two Astra research instances coded the seventy-four outright rejections of legally acceptable, recipient-completing offers; the second had partial exposure to prior aggregates and one record. We retain agreed codes and disagreements, rather than call them human ground truth. A single LLM-assisted reader examined a 240-decision temporal sample. Eight incidents were chosen for distinct mechanisms and contrasts. Exact quotations, source channels and recipient exposure are checked, but selection is not a prevalence sample. Explanation text is evidence of an expressed reason, not privileged access to internal computation~\cite{turpin2023unfaithful,lanham2023faithfulness}.
+
+The underlying artifact checks reconstruct cash, holdings and bank stock at all 6,989 initial prompts and 10,235 snapshots and reconcile all 113 settlements. Previously executed historical replays reproduce all twenty event streams under documented canonicalization. Our new analyses read the frozen records and preserve input hashes. This provides an inspectable account of the observed behavior, distinct from a validated general annotation method or a claim that the implementation equals every intended Monopoly rule.

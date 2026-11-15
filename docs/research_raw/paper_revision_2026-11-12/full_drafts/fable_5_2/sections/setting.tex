@@ -1,0 +1,42 @@
+\section{Setting and method}
+\label{sec:setting}
+
+\subsection{The game and the interface}
+Four agents start with \$1,500 on the United States Monopoly board. They buy or auction properties, trade bilaterally in threads of up to twenty exchanges, build on complete color groups and mortgage deeds. All amounts are game dollars.
+
+A player who cannot pay a debt receives a liquidation menu listing the deeds it may mortgage now and the buildings it may sell now. The engine applies the chosen action and asks again until the debt is paid. A deed in a group that still carries buildings cannot be mortgaged and is absent from the menu. Selling the group's buildings puts its deeds on the next menu. The player may declare bankruptcy at any decision, including when payment is possible. The liquidation prompt gives the amount owed, the shortfall, the two lists and the player's holdings. It gives no price, mortgage value or sale value, and it does not say that selling buildings releases mortgages. A bankrupt player's deeds pass to a player-creditor with their buildings intact.
+
+The engine issues the legal options and validates the returned action. The agent returns one tool call with a public message and, under the standard prompt, a private note. Later prompts carry a twenty-entry public timeline and up to ten of the agent's own notes. The system prompt permits bluffing, deception, intimidation and cooperation in public messages and asks that private notes reflect true reasoning. Appendix~\ref{app:prompts} prints it.
+
+\subsection{Cohort and response conditions}
+Five seeds were each played in four cyclic seat rotations of one roster, giving twenty games. We call the four games that share a seed a seed block. Games have no turn cap, last \fact{p.totals.turns-min} to \fact{p.totals.turns-max} turns and end by bankruptcy. Table~\ref{tab:systems} lists the four configurations. Every request asks for medium reasoning effort and sets no temperature or token limit. Appendix~\ref{app:repro} gives the seeds, game map, source commits and analysis entry point.
+
+\begin{table}[t]\centering\small
+\TableSystems
+\caption{Evaluated configurations across the twenty games. Tool choice is the value sent with every saved request (\fact{x.intents} request records). Opus has more attempts than decisions because \fact{c.opus.first-attempt-refusals} first attempts were refused by the provider and reissued.}
+\label{tab:systems}\end{table}
+
+Two response conditions differ by system and reach every player through the interaction.
+
+\emph{Opus.} The provider refused \fact{c.opus.first-attempt-refusals} of Opus's \fact{c.resolution.Opus.decisions} first attempts with one message, which cites terms-of-service restrictions on reverse engineering or duplicating model outputs. The share is \fact{x.g14.first4.refused} of \fact{x.g14.first4.decisions} in G1 to G4 and all \fact{x.g520.refused} in G5 to G20. The interface then resends the request without the private-note field and without the sentence asking for true private reasoning. Permission to deceive stays. None of the \fact{c.opus.action-only-attempts} recovery requests was refused. Under recovery Opus writes no private note and gets no corrective retry. The provider still returns explanation text, which we treat as a separate channel.
+
+\emph{Grok.} Requests to Grok were sent with tool choice ``required''. The other three used ``auto''. In \fact{o.census.grok-conflicts-all} Grok responses the text outside the tool call names a different action from the call that was received, including \fact{o.census.grok-openings-conflict} of its \fact{o.census.grok-openings} trade openings. No other system has such a response. The received call governs play. These are real offers that other agents answered, so we keep them and report the bargaining results with and without them. Whether the setting causes the disagreement is untested.
+
+\subsection{Channels and receipt}
+We keep four recorded channels apart. A \emph{public message} is delivered to the other players. An \emph{applied private note} returns only to its author. \emph{Assistant content} is text outside the tool call, and a \emph{provider-returned explanation} is reasoning text the provider attaches to a response. The interface neither applies nor delivers those two. We say a player received a message only when it appears in that player's stored prompt. Stated text is what a system returned, not a view of the computation behind the action~\cite{turpin2023unfaithful,lanham2023faithfulness}.
+
+\subsection{Measures}
+\paragraph{Offers.}
+An offer is a set of terms awaiting a response, either a thread's opening proposal or a later counter. The games contain \fact{o.census.responses.n} offers in \fact{o.census.threads} threads, and acceptance was legal for \fact{o.census.acceptance-legal}. For each offer we rebuild ownership after the proposed transfer and record who would newly complete a color group: the proposer only, the recipient only, both or neither. We also record the form. A \emph{swap} moves deeds in both directions. A \emph{cash bid} offers only cash for deeds. A \emph{sale offer} offers only deeds for cash.
+
+\paragraph{Debts.}
+A debt episode runs from the first liquidation menu to payment or elimination. At the first menu we compute four sums from the delivered state: cash $C$, the mortgage value $M_0$ of the deeds the menu lists, the salvage $S$ from selling every building at half cost, and the mortgage value $M_1$ of unmortgaged deeds the menu does not list. A debt above $C+M_0+S+M_1$ exceeds every asset the player owns. A debt above $C+M_0+S$ and within the full sum cannot be paid without mortgages that appear only after buildings are sold. These sums bound what each resource can raise. A sufficient sum is not a payment plan. We count a debt as payable when the agent paid it, or when an earlier audit of this project executed a legal payment sequence on the engine. Three eliminations are payable in that second sense, and we inherit those sequences without rerunning them.
+
+\paragraph{Levels of evidence.}
+A record can show five things about a stated consequence. It can be (1) \emph{stated} before the action, (2) \emph{accurate} against the state and rules, (3) \emph{consistent} with the action taken, (4) \emph{sensitive}, meaning behavior changes when the consequence changes, and (5) \emph{effective}, meaning the behavior improves an outcome against a reference. Each result is tagged once with the highest level it reaches. None reaches level five, because the games contain no reference policy or value estimate.
+
+\paragraph{Sensitivity of the reported contrasts.}
+The counts are exact for this cohort. The contrasts were chosen after the games were inspected: the split of offers by form came out of an earlier analysis of these records, and the sixteen debt cases follow a referee's suggestion. For each contrast we therefore report how it moves when the set of games changes: its value in each seed block, its range when one block is left out, and its distribution over all 3,125 ordered resamples of the five blocks and over 20,000 resamples of the twenty games. The target is the dependence of this cohort's contrast on its composition. Games that share a seed or a roster are not independent draws, so none of these ranges is a confidence interval for new games, opponents or models. We report no significance tests.
+
+\paragraph{Readings of text.}
+The classification of the sixteen first-decision texts is a reading by the drafting assistant, with the exact span printed for every case (Appendix~\ref{app:debts}). No human annotated the texts. Counts described as pattern matches are regular-expression counts over stored text.

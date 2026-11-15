@@ -1,0 +1,42 @@
+\section{Environment, participants and measures}
+\label{sec:setup}
+
+\subsection{A persistent competitive economy}
+Four players begin with \$1,500 on the forty-space US Monopoly board. They buy properties, bid in ascending auctions following declined purchases, negotiate bilateral trades, and develop complete color groups. Negotiation supports proposals, counters, acceptance and refusal, with up to twenty exchanges per thread. Deeds, cash and jail cards can change hands. A developed group cannot be traded. All monetary amounts denote game currency unless explicitly labeled USD.
+
+Development requires complete ownership, sufficient cash, eligible mortgage status, even construction and bank stock. A player unable to pay an obligation enters a financing phase. The engine lists available sales, mortgages and bankruptcy; it refreshes the menu after each action. Trades cannot rescue a debtor during this phase. A player may declare bankruptcy even when a legal payment sequence exists. Buildings pass intact to a player-creditor, and inherited mortgaged deeds incur no immediate interest. Assets returned to the bank are not immediately auctioned. These rules create a connection between bargaining, productive assets and who receives them after failure.
+
+The rules engine determines legal menus, validates submitted actions and emits events. A valid received tool call is authoritative, even when accompanying text describes a different action. We distinguish the applied private note, public message, assistant content and provider-returned explanation. The prompt permits public bluffing, deception and cooperation while asking private notes to reflect honest reasoning. Both complete prompts appear in Appendix~\ref{app:prompts}. Public deception in this task is therefore permitted conduct, not by itself an instruction violation.
+
+\subsection{Cohort and response conditions}
+Five seeds each receive four cyclic seat rotations of one roster. Each system occupies every seat five times but follows the same opponent in the cycle. Games last 75--386 turns and end in bankruptcy without a turn cap. The corpus contains 50,918 events, 6,989 decisions and 8,679 attempts. Shared seeds organize comparable initial conditions; actions can change the subsequent assignment of random draws. Appendix~\ref{app:artifacts} provides seeds, source commits and the G1--G20 artifact map. Decision identifiers are zero-based.
+
+\begin{table}[t]\centering\small
+\begin{tabularx}{\linewidth}{@{}lYr@{}}\toprule
+Label & OpenRouter identifier & Decisions\\\midrule
+Sol & \path{openai/gpt-6.1-sol} &1,961\\
+Gemini & \path{google/gemini-4-argon} &1,669\\
+Opus & \path{anthropic/claude-opus-5.5} &1,696\\
+Grok & \path{x-ai/grok-4.7} &1,663\\\bottomrule
+\end{tabularx}
+\caption{Participants. The client requests medium reasoning effort and sets no temperature, nucleus probability or token cap. Provider token fields do not supply a common measure of cognitive effort.}\label{tab:systems}
+\end{table}
+
+Players receive current holdings, cash, mortgages, buildings, bank stock, model names, a twenty-entry public timeline and up to ten own notes. Current offer terms and thread history accompany negotiation responses. Purchase prompts contain the landed deed's price, group, construction cost and rents. Other phases supply less board-value information, and the system prompt does not enumerate the house variants. An agent's board-value calculation may therefore use recalled rather than currently supplied information.
+
+An ordinary invalid first attempt receives one corrective request before deterministic fallback. A first-attempt refusal instead consumes the second attempt in action-only recovery. Opus has 1,604 first-attempt refusals and one later refusal, all with the same provider message about reverse engineering or duplicating outputs. No recovery response is refused. Recovery removes the private-note request while retaining permission to deceive. First attempts are universally refused in G5--G20, with the transition already occurring during G1--G4 by wall clock. Opus then has public state and history but usually no authored private note or further corrective attempt. The historical gateway records expose no structured refusal category.
+
+Grok's recorded source configuration requires a tool call, whereas the other systems use automatic tool choice. Its received call conflicts with the action named in assistant content in 139 selected responses, including 64 of its 136 thread openings. This is a plausible setting to investigate, not an established cause of those conflicts. A historical formatter also misattributes some trade summaries in 2,054 initial prompts. Current holdings and all 920 delivered offer terms agree with the acceptance menus. These conditions are part of the interacting systems studied, since one participant's offers become another's inputs.
+
+\subsection{Observation and analysis}
+An offer is one set of terms awaiting a response; a counter changes its author without changing the thread's initiator. We evaluate newly completed color groups after the proposed transfer. Completion can include mortgaged deeds. Opening and later responses are separated. Swaps transfer deeds in both directions; cash bids request deeds for cash; cash asks offer deeds for cash; other forms retain their own category. Every completion category is reported, including zero cells.
+
+A financing episode starts at an explicit debt menu and ends at payment or elimination. Debts paid directly from adequate cash are outside this population. At entry, let $D$ be the debt, $C$ cash, $S$ the salvage value of all buildings, $M_0$ the sum of initially offered mortgages and $M_*$ the sum for all unmortgaged owned deeds. We use
+\begin{align}
+U_0&=C+S+M_0, & U_*&=C+S+M_*.
+\end{align}
+If $U_*<D$, own assets cannot pay even under the generous bound. If $U_0<D\leq U_*$, payment requires mortgages unavailable initially. A sufficient bound alone does not prove a legal sequence. Actual payments establish feasibility for successful episodes; previously executed legal sequences establish three additional payable declarations. A separate historical search resolves one menu-restricted case.
+
+Counts describe this cohort. The bargaining contrasts and incidents were selected retrospectively. We report proposer and seed-block composition and enumerate all $5^5=3,125$ draws of five whole seed blocks with replacement. The central 95\% of this empirical distribution measures sensitivity to reweighting the observed blocks; it is not a selection-adjusted confidence interval. We also leave out each block in turn. No independent-trial model is applied to individual offers.
+
+Two earlier LLM-assisted readings classified seventy-four refusals involving recipient completion; the second had partial prior exposure. Their agreement is consistency of reading rather than human validation. Initial texts in the sixteen necessary-collateral episodes receive source-linked model-assisted reading as well. Returned explanations are evidence of expressed considerations, not privileged access to internal computation~\cite{turpin2023unfaithful,lanham2023faithfulness}. Each incident distinguishes its quoted channel, verified receipt when applicable, and the executed continuation.

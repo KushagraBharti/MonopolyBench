@@ -1,0 +1,179 @@
+{
+  "reviewer": "opus_xhigh",
+  "target": "integrated/manuscript.pdf",
+  "pdf_sha256": "f0312183aa8794ec08614966570395e55abd769410ff99f06992f25f314ed8a1",
+  "pin_check": "78/78 manifest entries matched before and after review (pin_check_before.txt, pin_check_after.txt)",
+  "severity_scale": {
+    "major": "changes how a central result should be read; small textual fix available",
+    "moderate": "materially improves the accuracy or completeness of a stated claim or incident",
+    "minor": "precision of a sentence; no change to conclusions"
+  },
+  "findings": [
+    {
+      "id": "OFR-01",
+      "severity": "major",
+      "topic": "llm-interpretation / necessary-collateral",
+      "title": "The paper never says that the release dependency is the standard Monopoly rule, so 'anticipation' can be read as discovery rather than applying a familiar rule to unlisted resources",
+      "locations": [
+        {"file": "integrated/sections/finance.tex", "line": 32, "passage": "These prospective statements add evidence beyond the fact that an agent eventually follows refreshed menus."},
+        {"file": "integrated/sections/study.tex", "line": 27, "passage": "The system prompt does not enumerate the house variants or the rule releasing mortgages after building sales."},
+        {"file": "integrated/sections/interpretation.tex", "line": 21, "passage": "PlanBench tests planning and reasoning about change across domains from automated planning, including the distinction between planning and retrieving familiar knowledge"},
+        {"file": "integrated/sections/interpretation.tex", "line": 4, "passage": "Anticipation has an observable temporal structure."}
+      ],
+      "evidence": "Fresh. The G20 d327 liquidation state lists only mortgageable_space_keys [ST_CHARLES_PLACE, VIRGINIA_AVENUE, PARK_PLACE], sellable building keys, and the scenario note. A search of the whole user payload finds no price, cost, salvage or mortgage_value field. Agents nonetheless state exact values for deeds absent from the menu, e.g. G5 Gemini 'Park Place ($175) and Boardwalk ($200)'. Requiring buildings to be cleared before mortgaging is the published Monopoly rule. The related-work section raises the planning-versus-retrieval distinction but never applies it to the paper's own central task.",
+      "recommendation": "State that the dependency is the standard rule, absent from the prompt. Successful statements apply familiar rules and board values to current holdings, including unlisted deeds; failures leave out the same familiar resource. This does not infer recall (it respects integration decision 3); it characterizes what the task requires.",
+      "replacement": "replacement_prose.tex R1",
+      "check": "fresh (prompt payload inspection; 16 rows recomputed from prompts and contracts/data/board.json)"
+    },
+    {
+      "id": "OFR-02",
+      "severity": "moderate",
+      "topic": "bargaining / composition",
+      "title": "The introduction says the cash-bid comparison 'points in the other direction', which holds only when pooled",
+      "locations": [
+        {"file": "integrated/sections/scientific_introduction.tex", "line": 11, "passage": "The difference falls substantially when the proposer population changes, and the corresponding cash-bid comparison points in the other direction."}
+      ],
+      "evidence": "Fresh recomputation from offers.json. The pooled cash-bid gap is -5.0. Within recipients the gaps are Sol +8.5 (6/19 vs 6/26), Gemini +5.0 (17/18 vs 34/38), Opus 0.0 (0/9 vs 0/5) and Grok -0.2 (19/24 vs 27/34). The paper's own appendix table and negotiation text (line 27) report the -0.2 to +8.5 range. Within recipients, the swap gaps run 15.2 to 50.9.",
+      "recommendation": "Replace with the within-recipient contrast; the negative sign is itself a composition result. This finishes my earlier cross-review finding OPX-09, which the integration applied in the body but not in the introduction.",
+      "replacement": "replacement_prose.tex R3",
+      "check": "fresh"
+    },
+    {
+      "id": "OFR-03",
+      "severity": "moderate",
+      "topic": "bargaining / block stability",
+      "title": "The prose omits that one seed block reverses sign once Grok's offers are removed, and that three blocks have very small comparison cells",
+      "locations": [
+        {"file": "integrated/sections/negotiation.tex", "line": 23, "passage": "Across the five seed blocks, the unfiltered opening-swap difference stays positive. Leaving one block out gives 28.7--33.3 points overall and 9.4--22.1 without Grok authors."}
+      ],
+      "evidence": "Fresh. Without Grok authors, the block gaps are 27.5, 45.5, 6.0, -23.5 and 11.1. The neither-completing cells hold 10, 11, 8, 4 and 3 offers (blocks 1-2 supply 21 of 36). The leave-one-block-out range of 9.4-22.1 looks stable only because each omission keeps the two large blocks. 5.2% of the 3,125 intact-block draws are at or below zero. The figure shows the negative tick, but the text does not.",
+      "recommendation": "Print the five no-Grok block values and the cell sizes beside the leave-one-block-out range.",
+      "replacement": "replacement_prose.tex R5",
+      "check": "fresh (independent script recompute_bargaining.py)"
+    },
+    {
+      "id": "OFR-04",
+      "severity": "moderate",
+      "topic": "incident fidelity / G18",
+      "title": "G18: Opus's returned text already doubts funding Sol's survival when it renews the standing offer, before Sol's second liquidation",
+      "locations": [
+        {"file": "integrated/sections/conduct.tex", "line": 46, "passage": "After collecting \\$750 rent it renews the assurance:"},
+        {"file": "integrated/sections/conduct.tex", "line": 53, "passage": "This is a renewed assurance followed by withdrawal after the counterpart's financial deterioration. The stated concern is financing the last opponent's survival. The records establish neither original insincerity nor a cost incurred by relying on the offer. Those distinctions allow the observed opportunistic change to be described directly without attributing an unrecorded motive."}
+      ],
+      "evidence": "Fresh, exact span (extracted_spans.json g18-d431-reservation, offset 407). At G18 d431 (turn 187, recovery), the same response that publicly says 'My Pacific offer still stands' returns: 'Buying Pacific might just prolong p1's survival, so maybe it's smarter to hold onto cash'. Before the invocation, Opus also rejects Sol's $450 and $350 packages; at d438 it gives the reason 'giving them $450 mainly just extends the game'. The paper's 'withdrawal after the counterpart's financial deterioration' and 'without attributing an unrecorded motive' therefore omit a recorded reservation that predates the deterioration.",
+      "recommendation": "Quote the d431 reservation and the d438 rejection reason. Describe the case as a public renewal accompanied by a recorded reservation, followed by withdrawal. Do not claim the offer would not have been honored. Keep 'not inheritance'.",
+      "replacement": "replacement_prose.tex R10",
+      "check": "fresh (decisions d421-d462 read; spans extracted with offsets and field hashes)"
+    },
+    {
+      "id": "OFR-05",
+      "severity": "moderate",
+      "topic": "llm-interpretation / channels",
+      "title": "'Provider-returned explanation' is a provider-surfaced reasoning text that may be condensed; five of the fourteen successes rest on it",
+      "locations": [
+        {"file": "integrated/sections/study.tex", "line": 44, "passage": "Returned explanations are evidence of expressed considerations, not privileged access to internal computation"},
+        {"file": "integrated/sections/supplement.tex", "line": 52, "passage": "Five successful Opus episodes use the latter channel."}
+      ],
+      "evidence": "Fresh. In the five Opus necessity episodes, the final (recovery) attempt returns one reasoning.text block of 59-105 words while reporting 220-429 reasoning tokens (G4 d308 88/293, G6 d185 90/300, G11 d203 80/220, G17 d254 105/429, G20 d291 59/384). Gemini's G5 d263 response carries reasoning.text (158 words, 516 tokens) and a reasoning.encrypted block.",
+      "recommendation": "Add one sentence: these texts may be partial or condensed, so an absent quantity in such a field is not evidence of omission. This does not affect the two failures, which are private notes.",
+      "replacement": "replacement_prose.tex R2",
+      "check": "fresh"
+    },
+    {
+      "id": "OFR-06",
+      "severity": "minor",
+      "topic": "abstract precision",
+      "title": "The abstract's 'completing and non-completing swaps' misnames the population; 'establish' overstates a selected, model-read subset",
+      "locations": [
+        {"file": "integrated/manuscript.tex", "line": 15, "passage": "A retrospective rejection difference between completing and non-completing swaps falls from 30.5 to 16.7 percentage points"},
+        {"file": "integrated/manuscript.tex", "line": 15, "passage": "The findings establish prospective financial assessment followed by dependent execution"}
+      ],
+      "evidence": "Both-completing swaps are also completing (34/48 rejected). The contrast is proposer-only against neither.",
+      "recommendation": "Say 'swaps completing only the proposer's group and swaps completing neither'. Use 'document' in place of 'establish'.",
+      "replacement": "replacement_prose.tex R4",
+      "check": "fresh"
+    },
+    {
+      "id": "OFR-07",
+      "severity": "moderate",
+      "topic": "incident fidelity / G2, G15 warnings",
+      "title": "The newly added third-party warnings omit that each holder's blocking policy predates the warning, which invites a persuasion reading the paper disclaims",
+      "locations": [
+        {"file": "integrated/sections/negotiation.tex", "line": 36, "passage": "Immediately before the offers, Opus publicly urges the others not to give Sol a final completing deed; Grok receives that appeal."},
+        {"file": "integrated/sections/negotiation.tex", "line": 51, "passage": "Between those asks, Grok publicly warns Sol against completing Opus's yellows; the warning appears in Sol's next prompt."}
+      ],
+      "evidence": "Fresh, exact spans. G15: Grok's applied notes at d162 and d165 (turn 62, during the Kentucky auction, before Opus's d166 appeal) say 'Never trade Ventnor or Penn Ave.' G2: Sol's d115 note (turn 41) says 'Keep Marvin blocking p4's yellows'. Its d119 public counter to Grok (turn 44, before Grok's d122 warning) says 'Marvin controls access to a well-funded yellow monopoly.' Receipt of both warnings is confirmed in the d124 and d169 prompts. This corrects my own cross-review finding OPX-10: its evidence recorded Sol's d119 wording but did not require the text to carry the holders' earlier policies.",
+      "recommendation": "Add one clause to each incident giving the holder's earlier stated policy. Keep the no-influence wording.",
+      "replacement": "replacement_prose.tex R7, R8",
+      "check": "fresh"
+    },
+    {
+      "id": "OFR-08",
+      "severity": "minor",
+      "topic": "conclusion wording",
+      "title": "'A rejection pattern sensitive to offer form' invites a causal reading",
+      "locations": [
+        {"file": "integrated/sections/interpretation.tex", "line": 37, "passage": "Bargaining shows explicit rival concern alongside a rejection pattern sensitive to offer form and proposer composition."}
+      ],
+      "evidence": "The body treats the form difference as a retrospective, composition-sensitive association.",
+      "recommendation": "Say 'opening rejection rates that differ by offer form and change materially with proposer composition'.",
+      "replacement": "replacement_prose.tex R11",
+      "check": "reading"
+    },
+    {
+      "id": "OFR-09",
+      "severity": "minor",
+      "topic": "incident fidelity / G5",
+      "title": "G5: 'revises that assessment' compresses two steps; the returned reasoning first repeats the carried omission, then corrects it",
+      "locations": [
+        {"file": "integrated/sections/finance.tex", "line": 38, "passage": "At the debt decision, its returned explanation revises that assessment:"}
+      ],
+      "evidence": "Fresh. The d263 reasoning's first block says 'Selling all six houses would only raise $600.' Its second block says 'I initially miscalculated!' The carried t141 note ('my total liquidatable cash + houses is $774 < $900') is in the d263 prompt. Payment leaves $149 (d266 cash).",
+      "recommendation": "Quote the first block as well, so 'initially' has a visible referent.",
+      "replacement": "replacement_prose.tex R6",
+      "check": "fresh"
+    },
+    {
+      "id": "OFR-10",
+      "severity": "minor",
+      "topic": "incident fidelity / G13",
+      "title": "G13: Grok's note does not state a '$130 Ventnor mortgage', and Opus's solvency reasoning appears already at its $130 counter",
+      "locations": [
+        {"file": "integrated/sections/conduct.tex", "line": 27, "passage": "Grok's next applied note recognizes a \\$130 Ventnor mortgage"},
+        {"file": "integrated/sections/conduct.tex", "line": 31, "passage": "Its solvency reasoning follows Grok's appeal rather than preceding it independently."}
+      ],
+      "evidence": "Fresh. The d252 note says '$130 only works if I also mortgage Ventnor'; the $130 is Opus's counter, not a stated mortgage value. Opus's d251 reasoning: 'That payment also keeps p4 solvent enough to cover Short Line rent to p2, which matters for how the game continues.' The sentence 'follows Grok's appeal' is true only relative to the d250 pitch.",
+      "recommendation": "Use the exact wording, and note that Opus raises solvency at its $130 counter, before the omission-framed reply.",
+      "replacement": "replacement_prose.tex R9",
+      "check": "fresh"
+    },
+    {
+      "id": "OFR-11",
+      "severity": "minor",
+      "topic": "related work (optional, unverified by me)",
+      "title": "A referee-cited paper on counterparty modeling versus strategy is not discussed",
+      "locations": [
+        {"file": "integrated/sections/interpretation.tex", "line": 23, "passage": "Our distinction between stated assessment and effectiveness follows that established separation."}
+      ],
+      "evidence": "The attached referee report cites 'Counterparty Modeling is Not Strategy' as directly addressing the distinction between representing counterpart information and using it. It does not appear in literature_notes.md. I did not search for or read it (no web access was used in this review).",
+      "recommendation": "After verifying the reference, consider one sentence; otherwise record in literature_notes.md why it is omitted.",
+      "replacement": null,
+      "check": "inherited claim from referee, not verified"
+    }
+  ],
+  "no_change_needed_checked": [
+    "All nine opening form/completion cells and all later cells (918 offers; 920 responses: 113/394/413; 526 threads)",
+    "Proposer strata 44/50, 4/8, 42/50, 5/8 vs 9/11, 0/2, 15/23, 13/36; recipient strata for swaps and cash bids",
+    "Pooled gaps 30.5, 16.7, -5.0; leave-one-block-out 28.7-33.3, 9.4-22.1, -8.3 to -2.3; intact-block ranges exactly; game and two-stage ranges within Monte Carlo error",
+    "Grok conflicting openings 64/136; 13 of 15 Grok-authored accepted neither-completing swaps originate in conflicting calls; 7/28 Grok acceptances conflict",
+    "Debt census 188 = 128 paid + 60; 62/53(52 paid)/16(14 paid)/56; all sixteen D, U0, U* and outcomes recomputed from prompts and board data; 19 uses and 33 released mortgages; five named non-necessary users",
+    "Paid actions 180 mortgages and 89 sales; $51,997; 67 one-action; 50/56 immediate declarations, 6 first sell/mortgage, 8 bankruptcy-only menus",
+    "Sixteen initial texts: 12 explicit + 1 aggregate + 1 tentative + 2 omissions (my own reading)",
+    "G20 ten actions, $700 + $665, $14 remainder; Gemini components $675/$690 offset by $25",
+    "G7, G13, G15, G19, G20 coordination, G2, G12 d249 continuations and quotations",
+    "Opus refusals 64/84, 40/60, 30/53, 80/109; 1,390/1,390 in G5-G20; 1,604 first-attempt; G2 d129 later refusal; zero recovery refusals",
+    "8,687 saved call intents: Grok tool_choice required (1,705), others auto; no temperature/top_p/token cap",
+    "Replay: all 20 artifact and state reports pass; artifact exclusion list empty; state replay drops four LLM event types; 50,918 events; deterministic ts start 0 step 250",
+    "Seeds and winners in the cohort table; wins 8/7/3/2 and 7/7/3/3 by seat"
+  ]
+}

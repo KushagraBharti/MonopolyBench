@@ -1,0 +1,35 @@
+\section{Measurement}
+\label{sec:measurement}
+
+\subsection{Units}
+
+An \emph{attempt} is one provider response; a \emph{decision} is one engine menu resolved into one applied action. A negotiation \emph{thread} runs from a proposal to its final acceptance or rejection, and each received offer is a \emph{response opportunity}. The \emph{offer author} is the player who wrote the terms currently on the table; after a counter it is the former recipient, so it is often not the thread's initiator. For each offer we record whether acceptance would give the author, the recipient, both or neither a newly complete color group, computed from the offered bundles (railroads and utilities excluded, mortgaged deeds counted). These are the four \emph{completion cells}. For a counter we compare the counteroffer with the offer it answers: whether it keeps the original author's completion, whether it gives the counterer one, and how the counterer's net cash changes.
+
+A \emph{trade-completed group} is a color group completed by a settled trade. Its \emph{first management window} begins at the owner's first optional-management decision after settlement and runs to the end of that global turn. A \emph{spending unit} joins a game, a player and a color group with any own construction spending. An \emph{elimination} is one bankruptcy, declared or automatic, and its \emph{estate} is the cash and deeds that pass to the creditor. We cite decisions as G$n$ d$k$, with $k$ zero-based within game $n$.
+
+\subsection{Ledgers and checks}
+
+The economic results rest on event-derived ledgers retained with the baseline manuscript: offers (920 rows), threads (526), typed transfer flows that keep trade cash, traded deeds, paid rent, estate cash and estate deeds separate, first-management windows, spending units, eliminations and a construction-resolution census. Earlier audits showed that the reconstructions match the cash, ownership, development and bank stock in all 6,989 initial decision prompts and 10,235 state snapshots, that all twenty action streams replay through the engine to the same 50,918 events after documented canonicalization, and that a separately written implementation reproduces all 920 offer rows and all 113 accepted-trade transitions.
+
+For this draft we re-tabulated the ledgers with a short script (\path{tools/retabulate.py}), which reproduces the completion table, the estate counts and the elimination partition and computes the new quantities: counteroffer content, thread outcomes, configuration and seed-block breakdowns, and cash medians. We also checked ten new quotations against the canonical decision files and found each quoted message in the recipient's next prompt. We did not re-run the engine or re-execute the legal-sequence certificates. Appendix~\ref{app:provenance} separates checked from inherited results.
+
+\subsection{Legal-sequence tests}
+\label{sec:legal-tests}
+
+Claims about what a player could have done are stated for a restored historical prefix, an acting player, a class of permitted actions and an endpoint, such as ``pay the current debt using only the debtor's own sales and mortgages.'' A \emph{witness} is a legal action sequence that the unchanged engine executes to the endpoint. It proves feasibility and nothing about optimality, survival or what any player would do next. An \emph{upper bound} rules feasibility out. For a debtor with cash $C$ owing $D$,
+\begin{equation}
+U = C + V_{\text{salvage of all buildings}} + V_{\text{mortgage of all clear deeds}}.
+\label{eq:upper}
+\end{equation}
+Each sale consumes salvage and each mortgage one clear deed, and ignoring stock and even-selling only enlarges the sum, so $U<D$ means no own-asset route pays. If $U\ge D$, access still has to be shown, either by a witness or by \emph{exhaustive search}. Because a reviewer found that atomic search can miss an engine-accepted bundled building sale, the checker certifies impossibility by search only where no building sale is offered. For construction, we test whether splitting a count-valued request into single purchases and reordering them, with no extra cash, stock or turns, reaches the requested allocation. This separates whether an allocation was reachable from whether its encoding was valid. A frozen package of 126 cases, all 60 eliminations and all 66 defaulted construction decisions, reproduces these results in a clean environment (Appendix~\ref{app:certificates}).
+
+\subsection{Text, channels and coding}
+\label{sec:coding}
+
+The records hold four text channels. The \emph{public message} accompanies the applied action and can reach other players. The \emph{applied private note} is an instrumented field the agent writes with its action and sees again in later memory. A \emph{returned provider explanation} is reasoning text that some providers return, and \emph{assistant content} is free text that may accompany a tool call. None is direct access to the computation behind an action~\cite{turpin2023unfaithful,lanham2023faithfulness,chen2025cotfaithful}, so we report what each says and where they conflict.
+
+Mechanical facts come from the ledgers. Two semantic results come from LLM-assisted coding. Two readers, both instances of the GPT-6 Astra research-assistance model, coded the stated reasons in the 74 direct rejections of offers that would complete the recipient's group; the second had seen aggregate counts and one row's labels beforehand. One such reader coded a fixed sample of 240 decisions for plans and forecasts (Section~\ref{sec:temporal}). No human annotation study was conducted, and agreement between model readers is not evidence of validity. Earlier project phases also used GPT-6.1 Sol, Claude Opus 5.5 and Claude Fable 5.1 research-assistance runs, two of which share families with evaluated participants, and this draft was written by a Claude Opus 5.5 run.
+
+The incidents in Sections~\ref{sec:bargaining}--\ref{sec:conduct} are a purposive selection for distinct mechanisms, available recipient responses and checkable consequences. They support no prevalence estimate. Each gives the setup, verbatim excerpts labelled with speaker, channel, game, decision and selected attempt, the observed outcome, and our reading.
+
+\FloatBarrier

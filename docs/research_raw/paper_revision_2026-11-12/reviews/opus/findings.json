@@ -1,0 +1,432 @@
+{
+  "review": "Opus whole-paper cross-review of the four frozen November 12 drafts",
+  "date": "2026-11-12",
+  "severity_scale": {
+    "major": "changes how a central result should be stated or read",
+    "moderate": "changes a secondary claim, a denominator or what the reader can infer",
+    "minor": "a precise correction with little effect on interpretation"
+  },
+  "paths_relative_to": "docs/research_raw/paper_revision_2026-11-12/full_drafts/",
+  "fresh_evidence_file": "reviews/opus/checks/fresh_checks.json",
+  "findings": [
+    {
+      "id": "OPX-01",
+      "severity": "major",
+      "drafts": [
+        "astra",
+        "sol",
+        "opus",
+        "fable_5_2"
+      ],
+      "own_draft": true,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/setting.tex",
+          "line": 7,
+          "passage": "The liquidation prompt gives the amount owed, the shortfall, the two lists and the player's holdings."
+        },
+        {
+          "file": "opus/sections/design.tex",
+          "line": 5,
+          "passage": "A player who owes more than its cash receives a liquidation menu of building sales and mortgages, refreshed after every action."
+        },
+        {
+          "file": "sol/sections/methods.tex",
+          "line": 6,
+          "passage": "After a financing action the engine returns the updated state and legal menu."
+        }
+      ],
+      "finding": "No draft quotes or describes the scenario note carried by every liquidation prompt, which tells the agent the menu will be refreshed and when to declare bankruptcy.",
+      "evidence": "All 439 stored LIQUIDATION_DECISION prompts carry the identical note: \"Choose exactly one liquidation action now. The engine will apply it, update your cash/assets, and ask you again if you still cannot pay. Declare bankruptcy only when you cannot or should not raise enough cash.\" (fresh_checks.json: liquidation_scenario_notes; exact match at G20 d327 in quote_checks.json).",
+      "recommendation": "Quote the note in the methods. In the quit-or-continue result, say that declaring on an unpayable debt follows this instruction and that declaring on a payable debt follows the agent's own stated belief that it cannot pay. Keep the release rule and values out of the claim about what the note supplies; it states neither.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-02",
+      "severity": "major",
+      "drafts": [
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/own.tex",
+          "line": 14,
+          "passage": "The table does show discrimination at the first menu. The agents quit almost always when no payment existed and almost never when one did."
+        },
+        {
+          "file": "fable_5_2/sections/discussion.tex",
+          "line": 42,
+          "passage": "Agents almost always quit when no payment existed and continued when one did."
+        }
+      ],
+      "finding": "The 50/56 against 3/131 comparison reproduces, but its payable denominator is dominated by 115 debts that cash, listed mortgages and listed building sales cover, which do not test whether an agent can see a route the menu hides. One of the three payable declarations is a channel conflict.",
+      "evidence": "Fresh: 50/56 above-bound and 3/131 payable debts declared at the first decision. Within the 72 debts whose visible sum (cash + listed mortgages + all salvage) falls short: 50/56 unpayable against 2/16 tier N. Above-bound debts with shortfall no larger than the largest tier N shortfall ($326): 15/19 declared; with debt/visible ratio no larger than 1.81: 20/24. Tiers A and B: 1/115 declared (G12 Grok d249, whose note and content describe a sale). Continuers: five Grok, one Gemini; Opus and Sol declared at once in all 27 of theirs.",
+      "recommendation": "Present the comparison inside the 72 visible-shortfall debts, with the matched-shortfall row, and name G12 Grok as a channel conflict. Call it agreement between the first choice and payability at population level, not sensitivity or calibrated difficulty, and state that the split was computed after the corpus was studied.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-03",
+      "severity": "major",
+      "drafts": [
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/rival.tex",
+          "line": 14,
+          "passage": "The same two forms, when they completed nobody's group, were accepted \\fact{x.nei.accept} times in \\fact{x.nei.n}."
+        },
+        {
+          "file": "fable_5_2/sections/introduction.tex",
+          "line": 14,
+          "passage": "Recipients accepted \\fact{x.po.accept} of \\fact{x.po.n} opening offers that would complete only the proposer's color group."
+        },
+        {
+          "file": "fable_5_2/sections/discussion.tex",
+          "line": 42,
+          "passage": "Agents almost never accepted an opening that completed only the proposer's group"
+        }
+      ],
+      "finding": "The acceptance contrast between completing openings (3/186) and non-completing openings (21/175) is Grok composition, not completion.",
+      "evidence": "Fresh: 18 of the 21 accepted non-completing swap or cash-bid openings answered Grok-authored offers. Without Grok-authored openings: 3/165 against 3/114. All forms: 32/524 openings accepted, 21 Grok-authored; Sol, Gemini and Opus openings 11/389; later offers 81/394. Thread settlement: 26/186 against 49/175, and 23/165 against 25/114 without Grok-authored openings.",
+      "recommendation": "Replace with: openings almost never settle unless Grok wrote them, and trades happen through counters; completing openings are no exception. Keep the thread-settlement counts in the appendix as a retrospective slice.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-04",
+      "severity": "major",
+      "drafts": [
+        "fable_5_2",
+        "opus"
+      ],
+      "own_draft": true,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/rival.tex",
+          "line": 73,
+          "passage": "The response follows the event of completion and the form of the offer. It does not follow the measured size of what the rival could do next, which level four would require."
+        },
+        {
+          "file": "fable_5_2/sections/introduction.tex",
+          "line": 19,
+          "passage": "For rivals, stated concern and matching refusals attach to the event of completion, with no measured response to the size of the rival's opportunity."
+        },
+        {
+          "file": "fable_5_2/sections/discussion.tex",
+          "line": 7,
+          "passage": "their refusals tracked the event of completion and the form of the offer. They did not track the amount of building the rival could afford"
+        },
+        {
+          "file": "opus/sections/bargaining.tex",
+          "line": 49,
+          "passage": "The cells are small and cash omits mortgage capacity, but these slices give no sign that refusals scale with the rival's building power."
+        }
+      ],
+      "finding": "A flat rejection rate near a ceiling, on a coarse capacity measure, is read as evidence that refusals ignore the size of the rival's opportunity and respond to the event of completion.",
+      "evidence": "Fresh: completing swaps rejected 4/8, 26/33, 42/48, 23/27 by proposer house capacity (none, 1-2, 3-5, 6+); cash bids 2/3, 13/19, 7/20, 20/28; swaps by proposer post-trade cash terciles 29/38, 35/39, 31/39. Swap rejection is 79-88% in every bin with data. House counts treat a light-blue house and a dark-blue house alike (46 and 37 of the groups opening offers would complete) and ignore mortgage capacity.",
+      "recommendation": "Write: rejection of completing swaps is 79 to 88 percent in every capacity bin with data; this coarse measure shows no gradient, which neither supports nor excludes sensitivity to the size of the rival's opportunity. Drop 'follows/attaches to the event of completion' and 'does not follow the size'.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-05",
+      "severity": "moderate",
+      "drafts": [
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/own.tex",
+          "line": 38,
+          "passage": "Since the prompt supplies none of these values, each one is a board fact the system recalled."
+        },
+        {
+          "file": "fable_5_2/sections/own.tex",
+          "line": 21,
+          "passage": "Payment had to use deeds that the first menu did not offer and that no prompt mentions as a resource."
+        }
+      ],
+      "finding": "Correct that no prompt states a mortgage value or the release rule; overstated in implying nothing in the prompt could carry them: the prompt carries the agent's own last ten notes, which sometimes carry values and, twice, the release rule. Purchase prompts also show a landed deed's price, from which a mortgage value can be derived.",
+      "evidence": "Fresh, sixteen first-decision prompts: no price, rent, mortgage-value, house-cost or group field (0/16); system prompt never mentions mortgages (0/16); 12/16 carry own notes; 11 of those state some mortgage or liquidity amount (e.g. G20 Sol \"$325 idle mortgage capacity\"); G1 Grok's carried note states the rule (\"yellows cannot be mortgaged while it stands\"); G18 Gemini's states it about an opponent; G4 Opus and G13 Gemini carry redemption costs of a to-be-released deed ($121, $193); by search and reading, none states a released deed's mortgage value.",
+      "recommendation": "Write: no prompt states a mortgage value or the release rule, and liquidation prompts show no prices; no carried note states the mortgage value of a deed the sales would release; listed capacity, and twice the rule, were carried in the agents' own notes. Report the carried-note observation under the memory question.",
+      "check": "fresh (text search plus one reading)"
+    },
+    {
+      "id": "OPX-06",
+      "severity": "moderate",
+      "drafts": [
+        "opus",
+        "fable_5_2"
+      ],
+      "own_draft": true,
+      "locations": [
+        {
+          "file": "opus/sections/finance.tex",
+          "line": 6,
+          "passage": "\\subsection{Most debts were easy}"
+        },
+        {
+          "file": "fable_5_2/sections/own.tex",
+          "line": 14,
+          "passage": "Most payable debts were easy."
+        },
+        {
+          "file": "fable_5_2/sections/own.tex",
+          "line": 21,
+          "passage": "The third row of Table~\\ref{tab:debt} is the hard set."
+        },
+        {
+          "file": "fable_5_2/handoff.md",
+          "line": 36,
+          "passage": "the first-menu partition calibrates difficulty from stored records"
+        }
+      ],
+      "finding": "Resource-requirement tiers are described as difficulty, which the charter rules out.",
+      "evidence": "Tiers A/B/N are arithmetic on the first menu and holdings; no reference policy or human or model difficulty measure exists in the records.",
+      "recommendation": "Use requirement language: 'required only listed items', 'required building sales', 'required released mortgages'. Keep 'the payment rate says little about difficulty'.",
+      "check": "reading"
+    },
+    {
+      "id": "OPX-07",
+      "severity": "moderate",
+      "drafts": [
+        "astra",
+        "sol"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "astra/sections/negotiation.tex",
+          "line": 21,
+          "passage": "The whole-block resampling range is 24.2--35.5 points, but removing Grok authors changes it to $-3.8$--31.9."
+        },
+        {
+          "file": "sol/sections/methods.tex",
+          "line": 43,
+          "passage": "The central 95\\% resampling bands describe sensitivity to reweighting these five observed blocks."
+        }
+      ],
+      "finding": "Whole-block resampling is the only interval shown. With five blocks it has 126 distinct multisets and ignores variation among games within a block, so it is narrow by construction.",
+      "evidence": "Fresh: block-only 24.2 to 35.5 (all swaps) against two-stage 12.7 to 48.7 and games-only 13.8 to 48.2. Without Grok authors, block-only cash-bid band is -21.3 to -0.1 (excludes zero) against two-stage -32.9 to +8.7.",
+      "recommendation": "Show per-block values and leave-one-block-out ranges first, then the two-stage (blocks, then games within blocks) interval as the single summary; if block-only appears, state why it is narrow.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-08",
+      "severity": "moderate",
+      "drafts": [
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/rival.tex",
+          "line": 37,
+          "passage": "What differs is the kind of reply."
+        },
+        {
+          "file": "fable_5_2/sections/rival.tex",
+          "line": 47,
+          "passage": "The systems refuse in recognizably different ways (Table~\\ref{tab:styles})."
+        }
+      ],
+      "finding": "Counter rates and refusal wording are reported without non-completing baselines, which changes their reading.",
+      "evidence": "Fresh: counters 26/70 completing cash bids, 20/116 completing swaps, but also 32/103 and 18/72 in non-completing cells. Reciprocity wording in Gemini rejections: 28/62 completing against 1/59 non-completing. Commitment wording in Grok rejections: 38/54 against 12/36.",
+      "recommendation": "Print both cells. Say cash bids draw more counters than swaps in both cells and the gap widens under completion; Gemini's reciprocity rule is specific to completing offers; Grok's 'never' is partly a general refusal style.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-09",
+      "severity": "minor",
+      "drafts": [
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/rival.tex",
+          "line": 35,
+          "passage": "the difference within each recipient lies between \\fact{x.rec.Opus.cbgap} and \\fact{x.rec.Sol.cbgap} points"
+        }
+      ],
+      "finding": "Rounding hides that one within-recipient cash-bid gap is negative; the useful substantive point (recipient composition reverses the pooled sign) is right.",
+      "evidence": "Fresh: Sol +8.5, Gemini +5.0, Opus 0.0, Grok -0.2. Recipient-standardized gaps: cash bids +3.5/+3.9, swaps +23.4/+24.3 (weights from completing/non-completing cells).",
+      "recommendation": "Print -0.2 to +8.5 and both recipient-standardized gaps next to the proposer-standardized ones.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-10",
+      "severity": "moderate",
+      "drafts": [
+        "astra",
+        "sol",
+        "opus",
+        "fable_5_2"
+      ],
+      "own_draft": true,
+      "locations": [
+        {
+          "file": "opus/sections/bargaining.tex",
+          "line": 67,
+          "passage": "One turn earlier Sol had asked Grok, which held no yellow, for \\$450 for the same deed."
+        },
+        {
+          "file": "sol/sections/appendix.tex",
+          "line": 10,
+          "passage": "One turn earlier Sol had asked Grok, which owned no yellow, for \\$450 for the same deed."
+        }
+      ],
+      "finding": "G2 omits a third-party public warning that reached the holder before the refusal (all four drafts); G15 omits Opus's prior appeal (Astra, Sol, Opus).",
+      "evidence": "Fresh: Grok's d122 public message (\"p1, sit on Marvin. Selling it to p4 gives them a second monopoly ...\") is in Sol's d124 prompt; Sol's $450 counter to Grok at d119 already cites \"access to a well-funded yellow monopoly\". Opus's d166 message (\"let's not hand him the last piece of any set\") is in Grok's d169 prompt.",
+      "recommendation": "Add both, with receipt and without any claim of influence; connect them to the G20 appeal under collective dynamics.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-11",
+      "severity": "moderate",
+      "drafts": [
+        "astra",
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "astra/sections/negotiation.tex",
+          "line": 33,
+          "passage": "\\TranscriptTitle{g15}{Rejecting one's own completion because of the rival's}"
+        },
+        {
+          "file": "astra/sections/scientific_introduction.tex",
+          "line": 13,
+          "passage": "refusing one's own monopoly because of the rival's stated opportunity"
+        },
+        {
+          "file": "fable_5_2/sections/rival.tex",
+          "line": 51,
+          "passage": "\\IncidentTitle{g15}{Refusing one's own monopoly to deny a rival's}"
+        }
+      ],
+      "finding": "Causal or purposive wording for a stated reason, which the attached report specifically flagged.",
+      "evidence": "Completion was not varied; the record shows a refusal and a note that cites the rival's building cash.",
+      "recommendation": "Use 'A refusal that cites the rival's building cash' or 'Refusing one's own monopoly while citing the rival's'.",
+      "check": "reading"
+    },
+    {
+      "id": "OPX-12",
+      "severity": "moderate",
+      "drafts": [
+        "astra"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "astra/sections/proposer_rows.tex",
+          "line": 2,
+          "passage": "Gemini & 4/8 & 0/2 & 50.0 \\\\"
+        },
+        {
+          "file": "astra/sections/negotiation.tex",
+          "line": 11,
+          "passage": "Table~\\ref{tab:proposer} shows that each observed proposer stratum has a positive rejection difference"
+        }
+      ],
+      "finding": "A 50-point gap from a 0/2 comparison cell is printed with the same authority as large cells.",
+      "evidence": "Fresh: Gemini-proposed swaps 4/8 against 0/2.",
+      "recommendation": "Suppress gaps where a cell has fewer than five offers, as in the Opus draft, and say how many strata remain.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-13",
+      "severity": "moderate",
+      "drafts": [
+        "astra"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "astra/manuscript.tex",
+          "line": 14,
+          "passage": "supply evidence of local financial planning"
+        }
+      ],
+      "finding": "Title ('Planning and Bargaining') and abstract read stated plans plus execution as planning.",
+      "evidence": "The records show returned text and applied actions; refreshed menus supplied each step.",
+      "recommendation": "Say 'stated financial plans and their execution'.",
+      "check": "reading"
+    },
+    {
+      "id": "OPX-14",
+      "severity": "minor",
+      "drafts": [
+        "sol"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "sol/evidence_map.md",
+          "line": 27,
+          "passage": "Request artifacts do not retain tool_choice, so this is source configuration evidence."
+        }
+      ],
+      "finding": "Saved request records do carry tool_choice.",
+      "evidence": "Fresh: 8,687 cloud/calls/*.intent.json records; Grok 'required' in 1,705, Opus 'auto' 3,301, Sol 'auto' 1,991, Gemini 'auto' 1,690. The 8,687 records exceed the 8,679 logged attempts by eight.",
+      "recommendation": "Cite request records and source at both commits; do not equate request records with attempts.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-15",
+      "severity": "moderate",
+      "drafts": [
+        "opus"
+      ],
+      "own_draft": true,
+      "locations": [
+        {
+          "file": "opus/sections/introduction.tex",
+          "line": 16,
+          "passage": "\\paragraph{Conduct in context.} Eight incidents show these statements in play"
+        },
+        {
+          "file": "opus/sections/conduct.tex",
+          "line": 32,
+          "passage": "Grok's private assessment is accurate, and its public claim leaves out a resource it knows it has."
+        }
+      ],
+      "finding": "My draft puts eight full incident cards in the body (main text to page 19) and omits continuation facts the other drafts got right: G13 bankruptcy on Short Line at turn 150 and Opus's win, G7's $270 orange rent and Sol's elimination of Gemini at turn 125, Grok's red build in G20.",
+      "evidence": "Fresh event checks for G7, G13 and G20 (review.md section 3.12).",
+      "recommendation": "Use four body incidents and a four-incident casebook with main-text summaries; add the continuation facts.",
+      "check": "fresh"
+    },
+    {
+      "id": "OPX-16",
+      "severity": "minor",
+      "drafts": [
+        "fable_5_2"
+      ],
+      "own_draft": false,
+      "locations": [
+        {
+          "file": "fable_5_2/sections/appendix.tex",
+          "line": 191,
+          "passage": "That fits a refusal which follows a request for private reasoning and stops when the request is removed"
+        }
+      ],
+      "finding": "Reads the provider refusal trigger from documentation and timing; the saved responses name no category.",
+      "evidence": "All 1,605 refusals carry one message and finish reason content_filter/refusal; no structured category is stored.",
+      "recommendation": "Keep the documentation pointer and the zero refusals in recovery; describe the trigger as unidentified.",
+      "check": "inherited counts, reading"
+    }
+  ],
+  "confirmations": [
+    "Quit at first decision: 50/56 above bound, 3/131 payable (Fable) reproduced.",
+    "Sixteen tier N debts, 14 paid, tiers 62/53/16 with 62/52/14 paid, 19 uses of unlisted mortgages (14 necessary, 5 optional): agree across Opus and Fable episode tables, 0 tier disagreements in 188.",
+    "Opening table, 95/116 vs 37/72, 42/70 vs 67/103, 34/48, proposer and recipient strata reproduced from the inherited ledger.",
+    "The 74 coded rejections are exactly all rejections of acceptance-legal offers completing the recipient's group (38 recipient-only, 36 both; 65 opening).",
+    "Composition versions 30.5 / 22.6 / 16.7; per-block and leave-one-block-out values; two-stage, games-only and exact block resampling reproduced.",
+    "35 of 40 nonterminal estates went to the eventual winner (Fable).",
+    "G7 $270 orange rent and turn-125 elimination; G13 turn-150 Short Line bankruptcy and Opus win; G20 red build before the Vermont offer; G15 Opus appeal received at d169; G2 Opus cash $845 (Fable).",
+    "Sol's G9 three-house target (turn 29, reached turn 60), G14 and G15 winners without a settled trade, $3,250 developed orange rent in G15."
+  ]
+}

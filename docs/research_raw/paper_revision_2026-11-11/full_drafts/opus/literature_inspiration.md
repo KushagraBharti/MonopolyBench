@@ -1,0 +1,28 @@
+# Literature read for this draft, and what it changed
+
+Read on 11 November 2026. "Read" means the text named below was actually inspected in this session; anything else is marked inherited from the earlier team's verification records (`paper_rewrite_2026-11-10/integrated/evidence_map.md`, `qa/literature/sources.json`). I did not copy prose from any source; quotations in the manuscript come only from game records and one documentation sentence.
+
+## Read in this session
+
+**Jehiel, Moldovanu and Stacchetti (1996), "How (Not) to Sell Nuclear Weapons", AER 86(4):814–829.** Read the abstract and introduction (pp. 814–816) from the JSTOR copy hosted by the University of Bonn (PDF SHA-256 in `data/source_hashes.json`). Exact support used: the model assumes "an agent who does not acquire the object for sale incurs an identity-dependent externality"; buyers "have preferences over which other agent may get the good"; outside options and participation constraints are endogenous. I did not read the formal sections, so the manuscript cites the paper only for the concept, and states that our agents are not mechanism designers and that Monopoly sellers are themselves exposed to the externality. *Inspiration:* it supplied the economic frame for the central claim. The completing deed is valued by who would hold it, which turned a loose "seller premium" into a testable question: do responses and prices depend on the buyer's identity (completion status)?
+
+**Cosentino, Shekkizhar, Earle and Savarese (2026), "Counterparty Modeling is Not Strategy: The Limits of LLM Negotiators", arXiv:2605.16575v1.** Read the abstract page and the HTML full text through about 100,000 characters (Sections 3–8). Exact findings used: bilateral car-purchase bargaining over ten terms with randomized linear utilities (Sec. 3); counterparty information does not reliably benefit the informed side (Sec. 4, Table 3); final prices track opening anchors more than utility weights, described as "anchoring and local adjustment" (Sec. 4, Fig. 3); agents form accurate beliefs about partner priorities (Sec. 5); sellers are the more accommodating role (Sec. 6); trade-plan templates do not improve outcomes (Sec. 7). *Inspiration:* the attention-versus-effectiveness framing and the specific reading that our agents apply a categorical rule plus generic repricing. Their controlled design can score agreements; ours cannot, which the paper states.
+
+**Li, Petersson, Acquisti and Bakker (2026), "Emergent Misaligned Communication in Long-Horizon Multi-Agent LLM Commerce", arXiv:2608.14825v3.** Read Sections 1–6 and the visible appendices through about 100,000 characters. Facts used: 20 standard-round one-year runs, 13 models, 2,583 emails (Secs. 1–2); factual claims extracted by an LLM and checked by code against the simulator event log (Sec. 4.1); promise follow-through measured (Sec. 5.1.3); judging replicated with two other model families (Secs. 4.3, 6). *Inspiration:* joining a message to state and later action, and being explicit that selected incidents are not a population rate. It also models how to present an example alongside the measurement pipeline.
+
+**Wu, Li, Marsault, Huang and Cheng (2026), "AgentMonopoly: Behavioral Patterns and Persona Control in LLM Agents", arXiv:2610.29330v2.** Read the HTML (Secs. 4–5, limitations). Facts used: four open-weight model families at two sizes, temperature 0, five seeds per configuration, 140 games; 150-step limit; elimination at negative cash; Oldenburg-adapted board; personas assigned to one player; persona effects judged by actions, not language. The paper does not state whether counteroffers exist. *Inspiration:* the "judge by actions" stance, which our design follows by drawing conclusions from applied actions and using text only as stated attention.
+
+**Anthropic (2026), "What's new in Claude Opus 5.5".** Read the full page. Exact sentence used (Behavior differences): requests that push the model to reproduce its internal reasoning in the response text "might be declined with the `reasoning_extraction` category". The Refusals and fallback section says a declined request returns `stop_reason: "refusal"` and a `stop_details` object naming the policy area. Our saved OpenRouter responses carry no such category, so the manuscript calls this a plausible, unconfirmed explanation.
+
+## Inherited verification (cited only within the earlier team's checked scope)
+
+- **FinBoardBench** (arXiv:2605.27896v1): counteroffers (§3.2), Monopoly bankruptcy sells buildings to the bank (App. C.3). Verified by the earlier team; I did not reread it.
+- **DECE** (arXiv:2610.35773v1): complete model-and-execution configurations across ten Eurogames with matched execution-framework comparisons. Earlier verification of the abstract and title.
+- **NegotiationArena** (ICML 2024, PMLR 235): controlled bargaining with tactic manipulations.
+- **Vending-Bench** (arXiv:2502.15840v1): long-horizon simulated business.
+- **Turpin et al. 2023; Lanham et al. 2023**: unfaithful explanations; cited only for the general caution.
+- **HAL** (ICLR 2026): evaluating complete agent systems.
+
+## Considered and not cited
+
+Rubinstein (1982) alternating offers, Shleifer and Vishny (1992) on fire sales, and the holdout literature were suggested by a referee. I did not read them in this session, so the manuscript uses the plain descriptions "distress" and "holdout-like" behaviour without citing them. Shleifer–Vishny's prediction of depressed prices would in any case fit only Opus's sales here; standard-condition distressed sellers still asked about twice list. Cattle Trade, MindGames, MERIT and SOTOPIA were in the inherited bibliography; they did not bear on the central claim and are omitted.

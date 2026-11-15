@@ -1,0 +1,62 @@
+\section{Setting, cohort and conditions}
+\label{sec:setup}
+
+\subsection{The game}
+
+Four players start with \$1,500 on the standard forty-space United States board. The bank holds 32 houses and 12 hotels. A player who declines to buy an unowned property starts an ascending auction. On its own turn a player may open a bilateral trade thread, in which the two parties alternate offers and counteroffers for up to twenty exchanges until one accepts or rejects. An offer may combine cash, deeds and get-out-of-jail cards on both sides. A player who owns every deed of a colour group may build evenly on it if no deed in the group is mortgaged. A player who cannot pay a debt enters a liquidation menu offering mortgages, building sales and bankruptcy, and may declare bankruptcy even when payment is possible.
+
+The implementation departs from common house practice in ways that matter for this paper (Table~\ref{tab:rules}). The most important is that a bankrupt player's deeds pass to a player creditor with their buildings and mortgages intact, so an estate can deliver a developed group at once. No rule text, price list or rent table appears in the agents' instructions. Purchase prompts state the landed deed's price, house cost, rent schedule and group, and auction prompts state its group. Management, trade, jail and liquidation prompts name deeds by key without those values. Agents therefore value deeds in negotiation from prior knowledge of the game, from earlier prompts, or from messages.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}YYc@{}}
+\toprule
+Convention in the engine & Relevance here & Stated to agents\\
+\midrule
+Estate to a player creditor keeps buildings and mortgages; no interest is charged & Creditors can inherit developed groups & No\\
+Deeds returned to the bank are not auctioned & Bank estates leave deeds unowned & No\\
+A deed in a group with buildings cannot be traded & Development ends bargaining over that group & No\\
+Build plans are checked for evenness after each entry & ``Three houses on one deed'' first is invalid even if the final plan is even & No\\
+Redemption costs $\lceil 1.1\,M \rceil$ in floating point (\$1 above exact at five principals) & Affects redemption arithmetic & No\\
+Prices and rents appear only in purchase and auction prompts & Valuation in trades relies on recall & Partly\\
+\bottomrule
+\end{tabularx}
+\caption{Implementation conventions relevant to bargaining and development, and whether the agents' prompts state them. Appendix~\ref{app:prompt} reproduces the prompt.}
+\label{tab:rules}
+\end{table}
+
+\subsection{The cohort}
+
+The cohort is the complete set of twenty research games run in October 2026. Five engine seeds are each used for four cyclic seat rotations of the same four configured systems, so each system sits in each seat five times. The cyclic order is fixed, so each system always moves directly after the same opponent; the design covers four of the twenty-four seat orders. Games last 75 to 386 turns and all end by bankruptcy without a turn cap. Sol wins eight games, Gemini seven, Opus three and Grok two; by seat the counts are seven, seven, three and three. These outcomes are too few and too dependent to rank the systems, and we do not use them to do so. The same seed does not fix the later dice a player sees, because different actions consume the random sequence differently.
+
+Table~\ref{tab:config} lists the systems. All four were called through OpenRouter with the recorded reasoning setting ``medium'' and no temperature or sampling parameter. Opponents' model names were visible in every prompt. Grok was called with required tool choice. Each player saw its cash, the full holdings and buildings of every player, bank stock, the last twenty public timeline entries and its own last ten private notes. Trade responses also showed the current terms and the thread history. Appendix~\ref{app:prompt} gives the system prompt in full and an outline of the request.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}llrrY@{}}
+\toprule
+Label & OpenRouter identifier & Decisions & Attempts & Response condition\\
+\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991 & Standard\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689 & Standard\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301 & Action-only recovery in 1,604 decisions\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698 & Standard; received call contradicts content in 139 decisions\\
+\bottomrule
+\end{tabularx}
+\caption{Configured systems. An attempt is one provider response; a decision is one engine menu resolved into one applied action. Reported reasoning-token means are 38, 254, 259 and 3,589 per attempt, but providers fill that field differently, so it is not a common measure of computation (Appendix~\ref{app:conditions}).}
+\label{tab:config}
+\end{table}
+
+\subsection{Response conditions}
+
+The prompt asks every agent to attach a public message and a private note to each action, and states, ``Deception in public chat is allowed; private thoughts should reflect true reasoning.'' An invalid action receives one corrective retry and then a deterministic engine default.
+
+Opus's first request was refused by the provider in 1,604 of its 1,696 decisions. Every one of the 1,605 refused responses (one is a second attempt) carries the same text, beginning ``This request was blocked as it seems to violate Anthropic's Terms of Service restrictions on reverse engineering or duplicating model outputs.'' A refusal triggered an action-only request. That request removes the private-note field, the instruction that private thoughts reflect true reasoning and the request for concise reasoning, and adds ``Return only a legal tool call and its public\_message. Do not include private\_thought or a reasoning transcript.'' It keeps ``Deception in public chat is allowed'' and the invitation to ``negotiate, bluff, deceive, cooperate, intimidate''. None of the 1,604 action-only requests was refused. An invalid action-only answer received no corrective retry, and 60 such answers became engine defaults.
+
+The refusals changed over time rather than at a code change. In games 1 to 4, which ran together on 25 October, 64 of 84, 40 of 60, 30 of 53 and 80 of 109 Opus first attempts were refused. The last accepted first attempts were sent between 16:14 and 16:38 UTC, and every first attempt sent after 16:40 UTC in those games, and in games 5 to 20, was refused. Anthropic's current documentation for this model says that requests pushing it to reproduce its internal reasoning in the response text ``might be declined with the \texttt{reasoning\_extraction} category''~\cite{anthropic2026opus55}. That is a plausible explanation for refusing a request for honest private reasoning. The saved responses, which came through OpenRouter, do not contain the refusal category, so the trigger is not confirmed.
+
+The consequences are specific. In 1,394 of Opus's 1,696 prompts the private-note window held no note written by the model (1,108 were empty and 286 held only fallback text). Opus still saw the full game state, the public timeline and the trade history. Its public messages and actions are its own. Its corrective retry was gone: 60 of its 61 construction defaults follow an invalid action-only build request that could not be corrected. We report Opus's bargaining separately because it may reflect this condition, the model, or both. Opus also authored 381 of the 920 offers and opened 240 of the 526 threads, so its condition shaped the market the other three agents faced.
+
+For Grok, 139 of 1,663 selected responses carry a received tool call that differs from the action named in the assistant content. The engine applied the call. Sixty-four threads open with such a call, and 17 of them settle. We keep these offers, because they are offers that other agents actually received, and we report the main contrasts without them.
+
+Two information conditions affect all agents. A formatter misattributed some past trades in the history text of 2,054 prompts, although the structured holdings and current-offer fields were correct in every trade response. And 149 applied public messages never entered the public timeline. Incident claims about what a recipient saw are checked against that recipient's actual request.

@@ -1,0 +1,50 @@
+\section{Environment, cohort and conditions}
+\label{sec:setup}
+
+\subsection{The implemented economy}
+
+Four players start with \$1,500 on the forty-space United States Monopoly board. The bank has 32 houses and twelve hotels. A declined property purchase opens an ascending auction. Bilateral trade threads allow proposals and counteroffers, up to twenty exchanges, before ordinary play resumes. All reported money is game currency unless identified as provider USD.
+
+The engine alone changes state, determines legality and emits events. Each decision presents one player with explicit legal actions. Optional management may span multiple decisions in a turn. A complete color group can be developed only when cash, mortgage status, stock and even-building constraints permit it. Build plans are validated entry by entry, so buying three houses on one deed before its siblings is invalid even if the requested final allocation is even.
+
+Debt liquidation permits sales, mortgages or bankruptcy, but not a new rescuing trade or construction. Removing all buildings from a group unlocks its mortgages. The sale menu offers a hotel downgrade only when four bank houses are available. The player may declare bankruptcy even when its own assets could pay the current debt; some exhausted positions instead terminate automatically. Player-creditor bankruptcy transfers properties with buildings intact. Assets returned to the bank are not immediately auctioned. Appendix~\ref{app:rules} specifies this ruleset's liquidation and interest conventions.
+
+\subsection{Twenty complete games}
+
+The cohort contains eighty player-games, 50,918 events, 6,989 decisions and 8,679 response attempts. Five seeds are each used for four cyclic seat rotations, so every configuration occupies every seat five times. All twenty games end through bankruptcy without a turn cap; lengths range from 75 to 386 turns. G$n$ d$k$ denotes zero-based decision $k$ in game $n$. Turns and decisions are different units.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}lYrr@{}}
+\toprule
+Label & OpenRouter identifier & Decisions & Attempts\\
+\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698\\
+\bottomrule
+\end{tabularx}
+\caption{Evaluated configurations. All use the recorded medium reasoning setting. That label does not match computation across providers. Grok uses required tool choice; Opus predominantly follows refusal-specific recovery. These conditions remain attached to their results.}
+\label{tab:config}
+\end{table}
+
+All calls use OpenRouter, with no temperature or nucleus parameter supplied. Recorded completion tokens average 128 per decision for Sol, 368 for Gemini, 410 for Opus and 4,041 for Grok; provider token semantics differ. The configurations face the same three opponents, whose model names are visible.
+
+\subsection{Response and memory conditions}
+
+The standard policy permits one corrective retry after invalid output, then a deterministic fallback. A first-attempt provider refusal instead triggers an action-only request that consumes the remaining attempt and removes the private-note requirement. For Opus, this occurs in 1,604 of 1,696 decisions. An invalid action-only response receives no further corrective request. Although the recorded policy also names a fallback model, that stage never runs: all Opus decisions return from the identifier in Table~\ref{tab:config}. Appendix~\ref{app:conditions} gives the complete response counts and policy settings.
+
+Response handling also affects later information. In 1,394 of Opus's 1,696 delivered prompts, the ten-note private-memory field is empty or contains only synthetic fallback entries. Its observed planning and negotiation must therefore be read under this altered note and retry condition.
+
+For Grok, 1,068 of 1,663 selected responses contain an extractable action name in assistant content; 139 disagree with the received tool call, which the engine applies. The disagreements already appear in saved nonstreamed response bodies, but their origin remains unresolved. Empty content for Sol and Gemini precludes the same comparison. Where relevant, we distinguish these executed calls from the accompanying stated action.
+
+\subsection{Delivered information and conduct norms}
+
+Prompts show cash, ownership, buildings, bank stock, twenty public timeline entries and ten own private notes. Trade responses include current terms and thread history. Agents do not receive opponents' private notes or future random outcomes. Static board parameters are supplied unevenly: the 547 initial purchase prompts give the landed deed's price, building cost, rent schedule and group; the 854 auction prompts give its group. Management, trade-response, jail and liquidation states identify deeds by space key without those parameters or mortgage and redemption values. Valuation in those phases requires board knowledge or information recoverable from earlier observations.
+
+Past-trade summaries misattribute some authors and terms, affecting 2,054 initial prompts. Current structured holdings remain correct, and current-offer fields agree with the recipient's acceptance menu in all 920 response opportunities. We use the delivered request when interpreting a participant's information, and the transaction records when measuring the exchange.
+
+Public messages enter a bounded timeline, so incident claims about reception use the actual recipient's request. The delivery and history-reconstruction counts are in Appendix~\ref{app:conditions}.
+
+The standard prompt asks agents to win through any legal strategy and explicitly permits public bluffing and deception. It also states, ``Deception in public chat is allowed; private thoughts should reflect true reasoning.'' The action-only prompt omits that sentence. A permitted public bluff is not instruction misalignment. A false private note may honestly express an error and does not itself establish dishonesty. Private notes, assistant content and returned provider explanations are separately recorded channels, not privileged measurements of internal reasoning~\cite{turpin2023unfaithful,lanham2023faithfulness}.

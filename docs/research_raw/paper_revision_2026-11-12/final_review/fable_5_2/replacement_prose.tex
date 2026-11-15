@@ -1,0 +1,147 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Pagella}
+\setmonofont[Scale=0.85]{Latin Modern Mono}
+\usepackage{microtype,booktabs,array,xcolor,enumitem,xurl,needspace}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=black]{hyperref}
+\setlength{\parskip}{4pt plus 1pt}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{2em}
+\definecolor{rule}{HTML}{8B9CA8}
+\newcounter{rep}
+\newcommand{\Rep}[3]{\refstepcounter{rep}\par\bigskip\Needspace{9\baselineskip}
+  {\large\bfseries R\ifnum\value{rep}<10 0\fi\arabic{rep}. #1}\par
+  {\small\textit{Finding #2. Location: #3}}\par\smallskip}
+\newcommand{\Now}[1]{{\small\textbf{Current text.} #1}\par\smallskip}
+\newcommand{\New}{{\small\textbf{Replacement.}}\par}
+\newcommand{\Why}[1]{\par\smallskip{\small\textbf{Basis.} #1}\par{\color{rule}\hrule}}
+\title{Replacement prose for the integrated manuscript\\[2pt]\large Final whole-paper review, Fable 5.2 xhigh, 12 November 2026}
+\author{}\date{}
+\begin{document}
+\maketitle
+\vspace{-3em}
+Each block gives text that can replace a passage in the pinned integration. Every number comes from my own rebuild of the saved records, stored in \path{data/checks.json}. Every quoted span was matched against its source field by \path{tools/checks.py}, which records the decision, the field and a hash. Locations are source files and line numbers in \path{integrated/}. The integration itself is unchanged. New quotations appear inline here. If the authors adopt them, the card generator should extract them from the original fields.
+
+\Rep{Define the fourth text channel}{FR-F52-03}{sections/study.tex, line 11}
+\Now{We distinguish the applied private note, public message, assistant content and provider-returned explanation.}
+\New
+We distinguish four text channels. The applied private note and the public message are arguments of the received tool call. Assistant content is text returned beside the call. The provider-returned explanation is the reasoning text that the gateway returns with a response. The prompt does not request it, no player sees it and no later prompt carries it. The gateway marks it as a summary of otherwise encrypted reasoning for Grok and Sol and as reasoning text for Gemini and Opus. It accompanies 1,662 of 1,663 final Grok responses, 1,560 of 1,696 for Opus, 1,316 of 1,669 for Gemini and 287 of 1,961 for Sol.
+\Why{Field \texttt{message.reasoning} and \texttt{reasoning\_details} of the final attempt in every resolved decision. Request messages contain only a system and a user message.}
+
+\Rep{First actions, defined by the state at entry}{FR-F52-05}{sections/finance.tex, line 22}
+\Now{Agents begin financing in 128 of 131 payable episodes and declare immediately in three. For debts exceeding the full own-asset bound, they declare immediately in 50 of 56 and first mortgage or sell in six. [\ldots] The counts therefore describe first actions rather than a payability-classification score.}
+\New
+The first action shows how these episodes start. Under the generous bound, own assets cover the debt at entry in 132 episodes and fall short in 56. Agents declare bankruptcy at the first menu in three of the 132 and in 50 of the 56. Eight of those 56 menus offer bankruptcy alone, so 42 of 48 immediate declarations were choices. Grok accounts for five of the six episodes that begin with a sale or mortgage despite the shortfall. No first action is a fallback. These counts are not a payability score, because 128 of the 131 payable debts are known to be payable only from their payment. They do show that agents usually stop when their resources cannot cover a debt and do not simply take whatever financing action is listed. That matters for the sixteen episodes below, where the listed resources also fall short.
+\Why{The 132 are the 131 payable debts and G7 d338, whose first action is a mortgage. The six are G7 d286, G9 d194, G17 d396, G19 d224 and G20 d273 for Grok and G18 d344 for Gemini.}
+
+\Rep{What the sixteen requests contain}{FR-F52-04}{sections/supplement.tex, after line 48, as a new paragraph}
+\New
+\textbf{What the sixteen requests contain.} No system prompt states that building sales release mortgages, and no liquidation menu lists a dollar value. Menus name mortgageable deeds and sellable buildings by key. The twenty-row timeline shows a dollar amount for a released deed in one of the sixteen first requests, a \$193 redemption of Park Place in G13. Carried notes are the other route. In G1 d476 Grok's own note from two turns earlier says that the yellows `cannot be mortgaged while it stands' and puts their mortgages at about \$400. In G18 d309 two of Gemini's carried notes apply the same rule to a rival's dark blues. In G12 d190 six of Sol's ten carried notes give \$130 as its mortgage capacity, the figure its failed sum uses. In G17 d234 two of Gemini's carried notes name the \$30 Baltic mortgage that its failed sum uses. Partial figures also precede successes, such as Gemini's \$774 before G5 d263 and Sol's \$325 of idle mortgage capacity before G20 d327. The environment therefore supplies neither the rule nor the values in these episodes. The agents bring both, in the debt response or in notes they wrote earlier. The rule is a standard rule of the published game. These episodes show agents applying a rule they already hold to a particular state before the menu shows the resource. They do not test whether an agent would find a dependency it had not met.
+\Why{Sixteen first requests read from \path{decisions.jsonl}. The timeline check is exact. The carried-note check screened all 120 carried notes for mortgage statements about the released groups, and I read every flagged sentence.}
+
+\Rep{Apply the planning and retrieval distinction to this result}{FR-F52-04}{sections/interpretation.tex, line 21}
+\Now{Our financial episodes observe stated prerequisites and subsequent actions within a running economy. Refreshed menus and carried notes make this an interactive execution setting, rather than a test of generating an entire plan without feedback.}
+\New
+Our financial episodes fall on the familiar side of that distinction. The dependency is a standard Monopoly rule that the environment never states, and the agents supply the rule and the board values themselves (Appendix~B). What the episodes add is application to a live state. Refreshed menus and carried notes make this interactive execution. It is not a test of generating an entire plan without feedback, and it is not a test of an unfamiliar rule.
+
+\Rep{The G5 revision}{FR-F52-08}{sections/finance.tex, lines 38 to 40}
+\Now{The texts can also record correction within an episode. Before its G5 debt, Gemini's carried note had compared cash and house salvage with a possible rent bill while leaving out dark-blue mortgages. At the debt decision, its returned explanation revises that assessment:}
+\New
+The texts can also record a revision. Four turns before its G5 debt, Gemini's note had put its `total liquidatable cash + houses' at \$774, below a \$900 green rent, and had left out the dark-blue mortgages. That note is in the request at the debt decision. The returned explanation first repeats the houses-only sum, `Selling all six houses would only raise \$600', and then revises it:
+
+[card \texttt{integrated-g5-revision}, unchanged]
+
+Its applied note then states both mortgage values and a \$1,049 budget, and the payment leaves the stated \$149. The returned text does not cite the earlier note. This is a revision followed by execution within one game. It does not establish learning across games.
+\Why{G5 d263, note carried from turn 141, debt at turn 145, returned reasoning and applied note of the same response.}
+
+\Rep{The abstract's bargaining sentence}{FR-F52-10}{manuscript.tex, line 15}
+\Now{Negotiation records show agents computing competitors' development budgets, pricing completing deeds, correcting false pitches and bargaining over a rival's survival. A retrospective rejection difference between completing and non-completing swaps falls from 30.5 to 16.7 percentage points when Grok-authored offers are excluded, illustrating the importance of who supplies the offers.}
+\New
+Negotiation records show agents computing competitors' development budgets, pricing completing deeds, correcting a false pitch and bargaining over a rival's survival. Each of the four recipients rejects opening swaps that would complete only the proposer's group more often than swaps completing neither side. The pooled difference, chosen retrospectively, falls from 30.5 to 16.7 percentage points without Grok-authored offers, so its size depends on who supplies the offers.
+\Why{Recipient gaps of 50.9, 16.1, 15.2 and 19.6 points, with at least nine offers in every cell. The paper shows one correction of a false pitch.}
+
+\Rep{Response totals by recipient}{FR-F52-11}{sections/negotiation.tex, line 5}
+\Now{Sol and Opus counter most frequently, whereas Gemini and Grok reject most frequently. Each nevertheless accepts between 26 and 30 offers.}
+\New
+Sol and Opus mostly counter, in 140 of 235 and 141 of 189 responses. Gemini and Grok mostly reject, in 180 of 242 and 149 of 254. Each nevertheless accepts between 26 and 30 offers.
+
+\Rep{Proposer composition of the two forms}{FR-F52-06}{sections/negotiation.tex, line 30, after the second sentence}
+\New
+Proposer composition also differs between the two forms. Opus writes 110 of the 173 opening cash bids, 40 of the 70 proposer-only bids and 70 of the 103 others, and 105 of them come from action-only recovery. Sol and Opus write 100 of the 116 proposer-only swaps, and Grok writes half of the neither-completing swaps. The swap and cash-bid rows therefore differ in who proposes as well as in form.
+
+Add to the caption of Table~4: A dash marks a gap withheld because one cell has fewer than five offers. Gemini's two cells are 4/8 and 0/2.
+
+\Rep{Block cells behind the stability figure}{FR-F52-07}{sections/supplement.tex, after the resampling table, and the caption at sections/negotiation.tex, line 27}
+\New
+Add to the figure caption: Block ticks rest on small cells. In the row without Grok authors the five neither-completing cells hold 10, 11, 8, 4 and 3 offers.
+
+\begin{center}\small
+\begin{tabular}{@{}lrrrrr@{}}\toprule
+Opening population, cell & Block 1 & Block 2 & Block 3 & Block 4 & Block 5\\\midrule
+All swaps, proposer only & 29/34 & 13/14 & 17/21 & 15/19 & 21/28\\
+All swaps, neither & 8/16 & 11/21 & 8/15 & 5/11 & 5/9\\
+No Grok authors, proposer only & 28/32 & 11/11 & 17/21 & 13/17 & 21/27\\
+No Grok authors, neither & 6/10 & 6/11 & 6/8 & 4/4 & 2/3\\
+No conflicting openings, proposer only & 29/34 & 11/11 & 17/21 & 15/19 & 21/27\\
+No conflicting openings, neither & 7/11 & 7/14 & 6/10 & 4/5 & 2/3\\
+Cash bids, proposer only & 1/9 & 7/10 & 6/10 & 15/21 & 13/20\\
+Cash bids, neither & 5/15 & 27/37 & 17/24 & 10/13 & 8/14\\\bottomrule
+\end{tabular}
+\end{center}
+Caption: Rejected/received in each seed block for the four populations of Figure~2. Blocks are games 1 to 4, 5 to 8, 9 to 12, 13 to 16 and 17 to 20.
+\Why{The tick at $-23.5$ points is 13/17 against 4/4. Row sums reproduce the pooled counts behind Table~6.}
+
+\Rep{G15: the refuser's standing rule and the earlier appeals}{FR-F52-02}{sections/negotiation.tex, line 36}
+\Now{Immediately before the offers, Opus publicly urges the others not to give Sol a final completing deed; Grok receives that appeal.}
+\New
+Grok's notes had ruled this trade out long before. At turn 33 its note says `Don't sell Ventnor back to p4 (gives them 2/3 yellow)', and its notes at turns 61 and 62 repeat `Never trade Ventnor'. Gemini and Opus had also urged Grok publicly to contest Sol's auction purchases at turns 55, 61 and 62, and Opus ends turn 62 by asking the table not to `hand him the last piece of any set'. That appeal is in Grok's request. The refusal follows a standing private rule and a run of public appeals. The records do not separate their contributions.
+
+In the question map, replace `persistent development targets in selected games' with `a blocking rule restated in notes across thirty turns and then applied to three offers (G15)'.
+\Why{G15 d76, d158 and d162 (Grok notes), d135, d154 and d161 (Gemini public), d152, d159 and d166 (Opus public), and the timeline in Grok's d169 request.}
+
+\Rep{G2: the blocking bid, the two prices and the earlier note}{FR-F52-02, FR-F52-15}{sections/negotiation.tex, lines 51 and 53}
+\Now{One turn earlier Sol asked Grok, which owned no yellow, for \$450 for that deed. Between those asks, Grok publicly warns Sol against completing Opus's yellows; the warning appears in Sol's next prompt.}
+\New
+One turn earlier Grok, which owned no yellow, had bid \$200 for the same deed. Its note calls the purchase `a blocker, not a set'. Sol asked \$450, saying that Marvin `controls access to a well-funded yellow monopoly', and Grok answered: `\$450 is the price for the player who completes yellow. I'm not building it.' When its bid failed, Grok publicly told Sol to `sit on Marvin'. That warning is in Sol's next request. Sol's own note four turns before Opus's bid already reads `Keep Marvin blocking p4's yellows', so the warning did not introduce the concern.
+
+At line 53, after `later liquidates those buildings', add: (the G2 d216 episode of Table~9).
+\Why{G2 d115 (Sol note, turn 41), d118 to d122 (turn 44) and d123 to d124 (turn 45). A buyer who cannot use the deed bids to keep it from the buyer who can, and the seller quotes the two buyers different prices. This is the case the cited externality model describes.}
+
+\Rep{G20: the cash path around the appeal}{FR-F52-12}{sections/conduct.tex, lines 38 to 40}
+\Now{Grok's next note recognizes the appeal. It builds one house on each red, then offers Vermont to Gemini for \$150:}
+\New
+Sol's note one turn before the appeal had already declined to buy Grok's New York because the cash `would fund dangerous development'. Grok's next note recognizes the appeal. After collecting \$235 it builds one house on each red, which leaves \$7, mortgages New York for \$100, and offers Vermont to Gemini for \$150:
+\Why{G20 d95 (Sol note, turn 24), d96 (appeal, turn 25), and Grok's cash changes at turns 26 and 27: $+25$, $+200$, $+10$, $-450$, $+100$.}
+
+\Rep{G18: what the returned text says when the assurance is renewed}{FR-F52-01}{sections/conduct.tex, lines 46 to 53}
+\Now{Opus repeatedly offers \$250 for Sol's mortgaged Pacific, which would complete its greens. After collecting \$750 rent it renews the assurance: [\ldots] Over the next four turns Opus redeems its two greens and bids \$150 and \$225, while Sol asks \$450, \$350 and \$300. [\ldots] The records establish neither original insincerity nor a cost incurred by relying on the offer.}
+\New
+Only Opus and Sol remain. Opus bids \$200 and then \$250 for Sol's mortgaged Pacific, which would complete its greens, and Sol refuses. From turn 181 to turn 187 Opus says publicly four times that the offer stands. The fourth follows a \$750 rent:
+
+[card \texttt{g18-assurance}, unchanged]
+
+The explanation returned with that message already leans the other way: `Buying Pacific might just prolong p1's survival, so maybe it's smarter to hold onto cash in case p1's orange hotels hit me with heavy rent.' Another \$750 rent forces Sol to liquidate and leaves \$49. After two larger package offers fail, Sol invokes the standing offer:
+
+[cards \texttt{g18-invocation} and \texttt{g18-withdrawal}, unchanged]
+
+Opus's returned explanation objects to prolonging a nearly bankrupt rival and to the cost of green development. It does not explicitly invoke inheritance. By turn 196 Opus has redeemed its two greens and bid \$150 and \$225, while Sol has asked \$450, \$350 and \$300. Nothing settles. Opus eventually wins at Sol's elimination, whose terminal estate has no later earning opportunity.
+
+This is a renewed assurance followed by withdrawal after the counterpart's financial deterioration. The stated concern is financing the last opponent's survival. It appears in the returned explanation one turn before the withdrawal, in the same response as the public renewal. The first \$250 bid reads as a live offer in its own returned explanation. The records do not show a cost that Sol incurred by relying on the offer.
+\Why{G18 d419 to d461. Public renewals at d423, d425, d427 and d431. Returned reasoning at d421, d427 and d431. Redemptions at turns 190 and 192, bids at turn 194, Sol's last ask at turn 196.}
+
+\Rep{State the feasibility audit as a method and print its witnesses}{FR-F52-09}{sections/study.tex, line 40; sections/finance.tex, line 7; sections/supplement.tex, line 79}
+\Now{The earlier executable audit covers sixty eliminations: fifty-six insufficient generous bounds, three positive payment sequences and one restricted menu search. [\ldots] These are prior engine-executed results; the present descriptive scripts read their retained reports.}
+\New
+An engine audit covers the sixty eliminations. It replayed each recorded game up to the debt and was run before this manuscript was written. The analysis here reads its stored report without running the engine again. Fifty-six debts exceed the generous bound. For three declarations the audit executed a paying sequence. In G12 d190 it sold the three red houses and mortgaged Baltic, Illinois and Indiana, leaving \$38. In G17 d234 it sold the five dark-blue houses and mortgaged Baltic and Boardwalk, leaving \$180. In G12 d249 it sold five pink houses, leaving \$43. In G7 it searched from the state after Opus's first mortgage. The only further action at any state was a \$50 mortgage, and no building sale was offered.
+
+In the main text, replace `Historical feasibility checks identify' with `The engine audit of Appendix~D identifies', `previously executed legal sequences establish' with `sequences executed in that audit establish', and `A separate historical search' with `Its menu search'.
+\Why{Read from \path{docs/research_raw/paper_agenda_revision_2026-10-29/baseline/data/certificate_results.json}: three \texttt{legal\_payment\_witness} cases with their steps and final cash, and one \texttt{exhaustive\_financing\_impossibility} case. I read the report. I did not execute anything.}
+
+\Rep{Asking prices with their counts}{FR-F52-11}{sections/negotiation.tex, line 46}
+\Now{Single-deed asking prices are generally higher for completing buyers within seller and mortgage-status cells.}
+\New
+Seven seller and mortgage-status cells contain single-deed asks to both kinds of buyer. The median ask relative to list price is higher for completing buyers in all seven, by 0.02 in one, and the median dollar ask is higher in five. The completing-buyer cells hold between one and seventeen asks.
+\Why{Recomputed from \path{integrated/data/single_deed_prices.json}. The definition of an ask and of a completing buyer is inherited from that file.}
+
+\end{document}

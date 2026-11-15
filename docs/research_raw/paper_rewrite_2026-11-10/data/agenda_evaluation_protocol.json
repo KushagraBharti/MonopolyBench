@@ -1,0 +1,111 @@
+{
+  "protocol_id": "agenda-evaluation-v1",
+  "created_date": "2026-10-29",
+  "registration": "Local design frozen before running the pilot; not an external preregistration",
+  "historical_cohort": {
+    "status": "observational, unchanged",
+    "games": 20,
+    "seed_blocks": 5,
+    "rotations_per_block": 4,
+    "unit": "game and configured participant; decisions are nested observations",
+    "restriction": "New baseline runs are not added to this cohort and cannot estimate historical LLM transfer"
+  },
+  "offline_pilot": {
+    "purpose": "Reference-policy and scenario-library quality audit, not a model ranking or skill benchmark",
+    "network_allowed": false,
+    "provider_calls_allowed": false,
+    "spending_cap_usd": 0,
+    "engine_max_turns": null,
+    "decision_limit": 1000,
+    "seeds": [73001, 73002],
+    "policy_ids": ["always_buy", "auction_aggressive", "builder", "cash_conservative", "no_trade", "random_legal"],
+    "homogeneous_rosters": true,
+    "mixed_roster": ["builder", "always_buy", "cash_conservative", "random_legal"],
+    "mixed_rotations": [0, 1, 2, 3],
+    "primary_games": 20,
+    "repeat_runs": ["homogeneous-builder-73001", "mixed-r0-73001"],
+    "endpoints": ["termination versus right censoring", "invalid generated actions", "applied decision count", "action repertoire", "deterministic repeated-seed equality"],
+    "winner_rule": "Only engine-recorded termination supplies a winner; censored games have no imputed winner",
+    "resolution": "Stop on invalid generated action; never silently repair or apply fallback",
+    "uncertainty": "Descriptive only; two purpose-chosen seeds do not support population ranking or confidence intervals",
+    "scenario_population": "All JSON files in contracts/micro/scenarios at frozen source hashes",
+    "scenario_endpoints": ["baseline-action economic legality", "reference/preferred-action economic legality", "rubric criterion types and weights", "action repertoire and identity collapse"]
+  },
+  "future_arms": [
+    {
+      "id": "local_skill",
+      "questions": ["Q1", "Q6", "A", "C"],
+      "status": "not run",
+      "target": "Exact local endpoint attainment and action-value distributions under declared utility",
+      "units": "held-out source state, configured model, response replicate",
+      "design": "Group-split related states and source games; certify payment/building endpoints; independently evaluate plan quality and applied execution",
+      "controls": ["unchanged production condition", "validated reference policies", "matched resources"],
+      "holdout": "Prospectively authored states grouped away from published historical cases; freeze scoring before model output",
+      "hypothesis": "Executable endpoint attainment varies independently of a fluent explanation score",
+      "decision_rule": "Report valid action, achieved endpoint, encoding failure and unresolved cases separately",
+      "prompt_change_required": false,
+      "blocked_on": ["approved model roster and spending cap", "frozen validated task population", "precision-based sample allocation"]
+    },
+    {
+      "id": "adaptation",
+      "questions": ["Q2", "Q4", "Q5"],
+      "status": "not run",
+      "target": "Improvement after feedback at a later comparable decision and transfer after an opponent-policy switch",
+      "units": "model-by-task sequence and independently randomized sequence replicate",
+      "design": "Randomize truthful feedback versus equally sized irrelevant feedback; retain identical task constraints; evaluate post-feedback and held-out transfer opportunities",
+      "controls": ["no relevant feedback", "unchanged opponent policy", "switch to held-out opponent policy"],
+      "holdout": "Hold out opponent-policy family and repeated-task template, not only surface wording",
+      "hypothesis": "Relevant feedback improves later target choices relative to control without increasing forbidden actions",
+      "decision_rule": "Estimate within-sequence improvement and treatment interaction; do not label a single correction as learning",
+      "prompt_change_required": true,
+      "blocked_on": ["explicit authorization for versioned feedback/memory treatment", "approved budget and model roster", "frozen scoring and sample-size design"]
+    },
+    {
+      "id": "opponent_transfer",
+      "questions": ["Q1", "Q2", "Q6", "Q8", "C"],
+      "status": "not run",
+      "target": "Performance and uncertainty across opponent compositions and independently sampled seeds",
+      "units": "independent game; seat rotations nested within a seed block",
+      "design": "Cross-play each focal configuration against validated policy mixtures and unfamiliar LLM opponents; rotate seats; randomize scheduling within treatment strata",
+      "controls": ["known opponent pool", "unfamiliar pool", "fixed response policies"],
+      "holdout": "Reserve seeds and opponent policy families before result inspection",
+      "hypothesis": "A configuration ordering estimated on training opponents predicts held-out opponent performance",
+      "decision_rule": "Report wins, censoring and policy-specific outcomes; do not infer matched dice opportunities after action-dependent divergence",
+      "prompt_change_required": false,
+      "blocked_on": ["validated strategic opponents", "approved roster and budget", "independent seed sampling and precision design"]
+    },
+    {
+      "id": "general_to_multiagent",
+      "questions": ["B", "Q8"],
+      "status": "not run",
+      "target": "Out-of-sample association of independently measured general capability with a defined multi-agent battery",
+      "units": "model configuration nested in family; repeated tasks and games supply outcome uncertainty",
+      "design": "Sample multiple tiers within several families; fix or factorially vary compute/resolution; measure general ability independently; hold out families or tiers for prediction",
+      "controls": ["family", "inference resources", "response policy", "task difficulty"],
+      "holdout": "Independent model/family holdout and independent task holdout",
+      "hypothesis": "Independent general capability predicts prespecified multi-agent outcomes beyond family and resource covariates",
+      "decision_rule": "Compare out-of-sample predictions with family/resource-only baselines; do not regress four heterogeneous names and call it a capability law",
+      "prompt_change_required": true,
+      "blocked_on": ["independent capability battery and licenses", "explicit authorization for new task conditions", "roster, budget and precision design"]
+    },
+    {
+      "id": "framing",
+      "questions": ["Q3", "Q7"],
+      "status": "optional, not run",
+      "target": "Effect of a specified disclosure/framing contrast on factual endorsement and action choice",
+      "units": "historical-state family by recipient replicate",
+      "design": "Randomize message variants while holding economic terms and delivered non-message facts fixed; randomize presentation order and check intervention validity",
+      "controls": ["truthful complete disclosure", "omission", "neutral wording"],
+      "holdout": "Hold out source-game families",
+      "hypothesis": "The specified information manipulation changes recipient action or factual endorsement",
+      "decision_rule": "Separate acceptance, premise endorsement and realized payoff; do not infer intent from a treatment effect",
+      "prompt_change_required": true,
+      "blocked_on": ["explicit message-intervention authorization", "approved budget and recipients", "frozen outcomes and sample allocation"]
+    }
+  ],
+  "paid_run_gate": {
+    "enabled": false,
+    "required_fields": ["approval_record", "maximum_total_usd", "model_roster", "prompt_treatment_hashes", "stopping_rule", "per_call_reservation_usd", "max_calls"],
+    "rule": "No provider adapter is implemented in this offline package; enabling a JSON flag must not enable model calls"
+  }
+}

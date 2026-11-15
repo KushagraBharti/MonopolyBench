@@ -1,0 +1,54 @@
+\section{Setting}
+\label{sec:setting}
+
+\subsection{The game and what the agents were told}
+
+Four players start with \$1,500 on the standard forty-space board. A player who declines to buy a deed sends it to an ascending auction. On its own turn a player may propose a trade of cash, deeds and jail cards to one opponent, who accepts, rejects or counters, for up to twenty exchanges. A deed whose color group carries buildings cannot be traded. Houses require a complete, unmortgaged group and even building. A player who owes more than its cash enters a liquidation menu that offers mortgages, building sales and bankruptcy. It cannot trade or build until the debt is settled, and it may declare bankruptcy even when it could pay.
+
+Bankruptcy is where this implementation departs most from the printed rules. A player-creditor receives the debtor's cash and every deed, with buildings standing and mortgages in place, and pays no interest on the transfer. Deeds returned to the bank are not auctioned. The identity of a failing player's creditor therefore matters to everyone at the table.
+
+The agents were told none of these rules. The system prompt states the goal, permits ``any legal strategy or personality'' and lists examples that include deceptive, manipulative and hostile play. Each tool carries a one-line description such as ``Build houses or a hotel on your monopolies.'' The passage that governs conduct reads as follows.
+\begin{promptbox}
+\input{sections/prompt_excerpt}
+\end{promptbox}
+Each prompt then gives every player's cash, deeds, buildings and mortgages, the bank's building stock, the last twenty public timeline entries and the player's own last ten private notes. Opponents appear under their model names. Board parameters arrive unevenly. The \fact{cond.board-fields-by-phase.BUY-OR-AUCTION-DECISION.prompts} purchase prompts give the landed deed's price, building cost, rent schedule and group, and the \fact{cond.board-fields-by-phase.AUCTION-BID-DECISION.prompts} auction prompts give its group. The \fact{cond.board-fields-by-phase.POST-TURN-ACTION-DECISION.prompts} management prompts, \fact{cond.board-fields-by-phase.TRADE-RESPONSE-DECISION.prompts} trade-response prompts and \fact{cond.board-fields-by-phase.LIQUIDATION-DECISION.prompts} liquidation prompts give no prices, rents, mortgage values or building costs. Valuation in those phases, and any expectation about who inherits an estate, rests on what a model already knows about Monopoly or carries over from earlier prompts. Appendix~\ref{app:rules} gives the full prompt and the rule conventions.
+
+\subsection{Cohort}
+
+Five seeds are each played in four cyclic seat rotations, which gives twenty games and eighty player-games. Every system sits in every seat five times, and each always moves directly after the same opponent. All games end by bankruptcy with no turn cap and last between 75 and 386 turns. We write G$n$ d$k$ for zero-based decision $k$ of game $n$. All calls go through OpenRouter to a pinned provider with reasoning effort set to medium. The requests set no temperature, nucleus or output-length parameter.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}lYrrrrrr@{}}
+\toprule
+& & & & Engine & Prompts & \multicolumn{2}{c}{Reported tokens}\\
+\cmidrule(l){7-8}
+System & OpenRouter identifier & Decisions & Attempts & defaults & with notes & Reasoning & Output\\
+\midrule
+\ConfigRows
+\bottomrule
+\end{tabularx}
+\caption{The four configured systems. An attempt is one saved provider response. An engine default is a decision the engine resolved after the response budget ran out. ``Prompts with notes'' counts delivered prompts whose private-note window held at least one note written by the model. Reasoning tokens are the per-attempt median and output tokens the per-attempt mean of provider-reported fields. Providers fill these fields differently, so they do not measure computation.}
+\label{tab:config}
+\end{table}
+
+\subsection{Response and information conditions}
+\label{sec:conditions}
+
+Three conditions change what the records mean. Each is attached to the results it touches, and Appendix~\ref{app:conditions} gives the full counts.
+
+\paragraph{Opus played mostly without private notes or a corrective retry.} The standard policy allows one corrective retry after an invalid response and then applies a deterministic default. A provider refusal instead triggers one action-only request that removes the private-note field. Every one of the \fact{cond.opus-refusals.refused-attempts} refused Opus responses carries the same provider message, which says the request ``was blocked as it seems to violate Anthropic's Terms of Service restrictions on reverse engineering or duplicating model outputs.'' The action-only prompt differs from the standard one in five places. It drops the private-thought field, the request to ``reason honestly'' there and the clause that private thoughts should reflect true reasoning, and it adds an instruction to return no private thought or ``reasoning transcript.'' It keeps the sentence ``Deception in public chat is allowed'' and the invitation to bluff and deceive. Opus answered that prompt \fact{cond.opus-refusals.action-only-attempts} times with no refusal. The refusal therefore follows the request for private reasoning. It is not a refusal to deceive. The provider's documentation describes refusals of requests to reproduce internal reasoning~\cite{anthropic2026opus55}, which fits, but the saved responses do not name the classifier and we do not claim to have identified the trigger.
+
+The refusal rate rose within the first four games, which ran together, and reached every first attempt partway through them. All \fact{d.opus.g520.refused} first attempts in G5 to G20 were refused. The cause of the change is unknown. In total Opus resolved \fact{cond.resolution.Opus.final-response-condition.same-model-without-private-thought} of its \fact{cond.resolution.Opus.decisions} decisions through the action-only request, including \fact{cond.opus-trade-response-conditions.same-model-without-private-thought} of its \fact{barg.census.by-recipient.Opus.n} trade responses. In \fact{d.opus.notes.absent} of its prompts the private-note window held no note of its own. It still received the full state and the public timeline. An invalid action-only response gets no correction, which produced \fact{cond.resolution.Opus.engine-default-after-action-only-attempt} of Opus's \fact{cond.resolution.Opus.fallback-used} engine defaults. Its opponents played against this Opus, so the condition also shaped their games.
+
+\paragraph{Grok's applied call sometimes contradicts its own text.} Grok's requests require a tool call. In \fact{barg.grok-sensitivity.grok-selected-content-names} of its \fact{cond.resolution.Grok.decisions} selected responses the accompanying text also names an action, and in \fact{barg.grok-sensitivity.grok-selected-conflicts} of those it names a different action from the call the engine applied. Such calls open \fact{barg.grok-sensitivity.threads-opened-by-conflicting-grok-call} of Grok's \fact{barg.grok-sensitivity.of-grok-threads} negotiation threads. The offers were real and other players answered them, so they stay in every population. We report the main bargaining contrasts with and without them, and we do not read them as evidence of what Grok intended.
+
+\paragraph{Some delivered history is wrong.} Summaries of past trades misattribute authors or terms in 2,054 delivered prompts, a count we inherit from an earlier audit. Current holdings, cash and offer terms in the same prompts are correct. Our event-derived state matches all \fact{track.prompts} delivered prompts on cash, ownership, mortgages and buildings.
+
+\subsection{Units, evidence and uncertainty}
+
+An \emph{offer} is one proposal or counter awaiting a response, and its \emph{author} wrote the current terms. An offer \emph{completes} a group for a party if that party would hold every deed of a color group after the trade and does not hold them all now. A \emph{completion request} is an offer that completes a group for its author only, and its recipient is the \emph{holder}. Cash means cash in the state delivered to the responder. A \emph{debt episode} is one debt that exceeds the debtor's cash, from its first liquidation menu to payment or elimination.
+
+We keep three kinds of evidence apart. \emph{Fresh} tabulations were rebuilt for this paper from the canonical event and decision files and include every count in the tables and figures unless marked (Appendix~\ref{app:definitions}). \emph{Inherited} results come from earlier work that we did not rerun. They are the legal payment sequences for three eliminations, the classification of first management turns, the replay of all games and two model-assisted readings of rejection reasons. \emph{Contextual} evidence is the eight incidents, chosen to show distinct mechanisms. They estimate no rate.
+
+Offers within a thread, pair or game are dependent, and there are five seed blocks. We therefore report counts, medians, the number of blocks in which a contrast holds and its range when each block is left out in turn. We attach no significance tests to offers. Same-seed games do not share later dice once play diverges, so block comparisons are descriptive. All money is game currency.

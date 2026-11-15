@@ -1,0 +1,59 @@
+Label
+OpenRouter identifier
+Decisions
+Attempts
+Sol
+openai/gpt-6.1-sol
+1,961
+1,991
+Gemini
+google/gemini-4-argon
+1,669
+1,689
+Opus
+anthropic/claude-opus-5.5
+1,696
+3,301
+Grok
+x-ai/grok-4.7
+1,663
+1,698
+Table 1: Evaluated configurations. All use the recorded medium reasoning setting. That label does not match
+computation across providers. Grok uses required tool choice; Opus predominantly follows refusal-specific
+recovery. These conditions remain attached to their results.
+tion. Removing all buildings from a group unlocks its mortgages. Downgrading a hotel requires four
+bank houses. The player may declare bankruptcy even when its own assets could pay the current
+debt; some exhausted positions instead terminate automatically. Player-creditor bankruptcy transfers
+properties with buildings intact. Assets returned to the bank are not immediately auctioned. These
+rules define the economic opportunities assessed here, rather than every possible Monopoly variant.
+2.2
+Twenty complete games
+The cohort contains eighty player-games, 50,918 events, 6,989 decisions and 8,679 response attempts.
+Five seeds are each used for four cyclic seat rotations, so every configuration occupies every seat five
+times. All twenty games end through bankruptcy without a turn cap; lengths range from 75 to 386
+turns. Gn dk denotes zero-based decision k in game n. Turns and decisions are different units.
+All calls use OpenRouter, with no temperature or nucleus parameter supplied. Recorded completion
+tokens average 128 per decision for Sol and 4,041 for Grok; provider token semantics differ. The
+configurations face the same three opponents, whose model names are visible. They are not randomized
+examples from a model or opponent population.
+2.3
+Response handling changes execution and memory
+The standard policy permits one corrective retry after invalid output, then a deterministic fallback.
+A first-attempt provider refusal instead triggers an action-only request that consumes the remaining
+attempt. For Opus, 1,604 of 1,696 first attempts refuse. One additional refusal follows an invalid first
+attempt at G2 d129, so 1,605 decisions contain a refusal but only 1,604 begin refusal recovery. An
+invalid action-only response receives no further corrective request. The repeated provider message
+cites Terms of Service; the triggering feature is unknown, and we do not interpret it as a safety objection
+to the game.
+Opus’s refusals affect 215 of 306 decisions in G1–4 and all 1,390 in G5–20. The boundary coincides
+with a source revision, but the inspected difference changes orchestration and application files rather
+than engine, prompt, resolver or model-client files. This coincidence identifies no cause. Recovery
+also removes the private-note field and its honesty request. In 1,394 Opus decisions, the later private-
+memory window contains either no note or only synthetic fallback notes. Its actions and its observed
+explanations therefore occur under different conditions from the standard path.
+Grok’s selected responses contain 139 disagreements between the action named in assistant content
+and the received tool call. The engine applies the call. Fifteen have equal parsed argument objects, but
+only five have literally identical argument substrings. These disagreements already appear in saved
+nonstreamed response bodies, excluding local streaming assembly in the checked records. Their origin
+within generation, provider processing or the gateway remains unresolved. Empty content for Sol
+3

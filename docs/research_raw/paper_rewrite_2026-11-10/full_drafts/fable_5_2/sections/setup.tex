@@ -1,0 +1,46 @@
+\section{Environment, cohort and conditions}
+\label{sec:setup}
+
+\subsection{The game as implemented}
+
+MonopolyBench is a deterministic four-player Monopoly engine. The engine alone holds the state, emits each decision with its menu of legal actions, validates the selected action and records the resulting events. Players start with \$1,500 on the standard United States board, with 32 houses and 12 hotels in the bank. Declining a purchase opens an ascending auction. No turn limit applies, and all twenty games end when three players are bankrupt.
+
+Five rules shape the results. Trades are bilateral threads of offers and counters, at most twenty exchanges long, resolved before play resumes. Mortgaged deeds can be traded, and the receiver pays ten percent of the mortgage value. A player may build only on a complete color group with no mortgaged deed, and each entry of a build plan must keep the group even. A player in debt can sell buildings, mortgage deeds or declare bankruptcy, and the menu offers the declaration even when the debt could be paid. Finally, a bankrupt player's deeds pass to the creditor \emph{with their buildings intact}, where many rule sets return the buildings to the bank.
+
+\subsection{Four configured systems}
+
+The unit of evaluation is a configured system: a model with its prompt, memory, tool schema, retry policy and provider behavior~\cite{kapoor2026hal,zhang2026dece}. Table~\ref{tab:configurations} lists the four. All ran through OpenRouter at the recorded medium reasoning setting, with no temperature set. The shared label does not mean a matched budget. Recorded completion tokens average 128 per decision for Sol and 4,041 for Grok.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{llrrY}
+\toprule
+Label & OpenRouter identifier & Decisions & Attempts & Condition that departs from the standard path\\
+\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991 & None. Four engine defaults.\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689 & None. One engine default.\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301 & First attempt refused in 1,604 decisions. Action-only retry without a private note. 61 engine defaults.\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698 & Required tool choice. In 139 applied decisions the response text names a different action from the tool call.\\
+\bottomrule
+\end{tabularx}
+\caption{The four configured systems. Decisions and attempts are recounted from the canonical decision logs for this draft. A decision is one engine menu resolved into one applied action. An attempt is one recorded provider response.}
+\label{tab:configurations}
+\end{table}
+
+Every system gets one corrective retry after an invalid action. If the retry is also invalid, the engine applies a deterministic fallback, which on a management menu is \End. Two configurations depart from this path.
+
+\paragraph{Opus played mostly through a recovery path.} In 1,605 of its 1,696 decisions the provider refused one attempt, returning the same Terms-of-Service message about duplicating model outputs each time. The refusal hit 215 of 306 Opus decisions in games 1 to 4 and all 1,390 in games 5 to 20. The harness then resends an action-only request, which drops the private-note field and the sentence asking for honest private notes. That request uses up the corrective retry. Three consequences follow. Opus's applied actions carry no private note in 1,544 decisions, so its reasons are mostly unobserved. Its later prompts lack its own earlier notes. And when the action-only attempt is invalid, nothing remains but the fallback. We do not know what triggers the refusal. The change at game 5 coincides with a source revision that touched no engine, prompt or resolver file, and the record does not identify a cause. We do not read the refusals as objections to the game.
+
+\paragraph{Grok's text and tool call sometimes disagree.} Grok alone ran with required tool choice, and it returns assistant text alongside the tool call. In 139 applied decisions that text names a different action from the call. The engine applies the call. In 60 of them the text says to end the turn and the call proposes a trade. In 22 the text says to build and the call ends the turn. In 11 the text says to buy a property and the call starts an auction. In 7 the call accepts a trade that the text rejects or counters. Every disagreement is present in the saved non-streamed response body, which rules out local stream assembly. Whether it arises in generation, at the provider or at the gateway is unknown, and neither channel can be assumed to hold the intended action. Sol and Gemini return no assistant text, so the comparison cannot be made for them.
+
+\subsection{What the systems were told and what they saw}
+
+The standard prompt sets the goal to ``win the game by maximizing long-term advantage and being the last non-bankrupt player'' and allows ``any legal strategy or personality (aggressive, deceptive, cooperative, conservative, manipulative, opportunistic, friendly, hostile, etc.)''. Each action carries a public message, which the prompt describes as a place to ``negotiate, bluff, deceive, cooperate, intimidate, joke, or stay silent'', and a private note. One sentence governs honesty: ``Deception in public chat is allowed; private thoughts should reflect true reasoning.'' A false public statement therefore breaks no instruction. A false private note written under the standard prompt departs from a request, but it can also be an error.
+
+Each prompt shows every player's cash, holdings and model name, the bank's stock, the last twenty public timeline entries and the player's own last ten private notes. Trade responses also show the thread so far. Two defects affect this view. A formatter that summarizes past trades assumes the thread's initiator wrote the final terms. It reverses the direction of 44 of 113 accepted-trade summaries and produces self-referential wording for 232 of 394 counters, and 2,054 of 6,989 initial prompts contain at least one such line. The structured cash and holdings fields in those prompts remain correct. Separately, 149 of 6,882 public messages never reach a timeline. These counts come from the earlier audit. Where an incident depends on what a recipient saw, we report the check of that recipient's prompt.
+
+\subsection{Cohort and dependence}
+
+Five seeds are each played in four cyclic seat rotations, so every system sits in every seat five times. Games run from 75 to 386 turns. Sol wins eight, Gemini seven, Opus three and Grok two (Appendix~\ref{app:cohort}).
+
+These totals are not a ranking, and the cohort shows why. In seed block 3 the dice give seat 2 both dark-blue deeds by turn 29 in all four rotations. Each of the four systems buys them, and each wins from that seat. In block 4 the player in seat 1 completes the orange group by direct purchase on turn 47 in three rotations and wins all three. In block 2, by contrast, Sol wins from every seat. Seven games thus follow the seat that drew an early monopoly whichever system sat there, and four follow one system wherever it sat. Twenty games in five blocks cannot separate these influences, and we attach no confidence intervals to dependent decisions.

@@ -1,0 +1,43 @@
+\section{Study design}
+\label{sec:setup}
+
+\subsection{The economic environment}
+Four agents begin with \$1,500 on the forty-space United States Monopoly board. They buy and auction properties, negotiate bilateral trades with up to twenty exchanges, and develop complete color groups. A declined purchase opens an ascending auction. Trades can transfer deeds, cash and jail cards; developed groups cannot be traded. All amounts below are game currency unless marked USD.
+
+Cash, complete ownership, mortgage status, even building and bank stock jointly govern construction. A debtor can sell buildings or mortgage available deeds, with a new legal menu after each action, but cannot negotiate a rescue trade during liquidation. It may declare bankruptcy even when payment is possible. Buildings pass intact to a player-creditor; inherited mortgaged deeds incur no immediate interest. Assets returned to the bank are not immediately auctioned. These rules connect bargaining to finance and creditor succession. Implementation details appear in Appendix~\ref{app:rules}.
+
+The engine produces legal options, validates actions and emits the resulting events. The model supplies a tool call with a public message and, under the standard prompt, a private note. Assistant content and provider-returned explanations are separate recorded channels. The received valid tool call controls the action; the engine does not substitute a plan described elsewhere in the response.
+
+\subsection{Cohort and information}
+The twenty games comprise five seeds with four cyclic seat rotations of one roster. Each system occupies each seat five times, but always follows the same opponent in the cyclic order. Games last 75--386 turns and end in bankruptcy, without a turn cap. There are 50,918 events, 6,989 decisions and 8,679 attempts. Shared seeds do not guarantee identical later exposure to random outcomes: actions can change which player consumes a draw. We write G$n$ d$k$ for zero-based decision $k$ in game $n$.
+
+\begin{table}[t]\centering\small
+\begin{tabularx}{\linewidth}{@{}lYrr@{}}\toprule
+Label & OpenRouter identifier & Decisions & Attempts\\\midrule
+Sol & \path{openai/gpt-6.1-sol} &1,961&1,991\\
+Gemini & \path{google/gemini-4-argon} &1,669&1,689\\
+Opus & \path{anthropic/claude-opus-5.5} &1,696&3,301\\
+Grok & \path{x-ai/grok-4.7} &1,663&1,698\\\bottomrule
+\end{tabularx}
+\caption{Evaluated configurations. All request the API's \texttt{medium} reasoning setting; this does not equalize computation. The client sets no temperature, nucleus probability or token cap.}
+\label{tab:systems}\end{table}
+
+Agents see cash, holdings, buildings, mortgages, bank stock, model names, a twenty-entry public timeline and up to ten own private notes. Trade responses include the current terms and thread history. Opponents' private notes and future randomness are hidden. Purchase prompts show the landed property's price, group, building cost and rents; auction prompts show its group. Other phases provide space keys rather than a full board-value table. The system prompt does not enumerate the house rules. Board-value calculations can therefore depend on recalled information as well as supplied facts.
+
+The prompt permits public bluffing, deception, intimidation and cooperation, while asking private notes to reflect honest reasoning. Its complete text and the recovery variant are printed in Appendix~\ref{app:prompts}. We interpret conduct under that explicit norm. Returned explanations supply expressed considerations, not privileged access to internal computation~\cite{turpin2023unfaithful,lanham2023faithfulness}.
+
+\subsection{Response conditions}
+An invalid first response normally receives one corrective request before deterministic fallback. A first-attempt provider refusal instead uses the second attempt for action-only recovery, without a private-note request. Opus has 1,604 first-attempt refusals and one later refusal. All 1,605 carry the same provider message about reverse engineering or duplicating model outputs. None of its 1,604 recovery responses is refused. Recovery removes the private-reasoning request and retains permission to deceive; the records therefore do not support interpreting these as refusals to bluff. Provider documentation describes a reasoning-extraction refusal category, but the saved responses do not identify that category, so the upstream trigger remains unconfirmed~\cite{anthropic2026reasoning}.
+
+Refusals become universal in G5--G20; the transition already occurs by wall clock during G1--G4. Opus consequently plays most decisions without an authored private note or a further corrective attempt. It still receives public history and current state. Grok has a different condition: 139 selected responses contain an action name in assistant content that disagrees with the received call, including 64 of its 136 trade openings and seven of its twenty-eight acceptances. These are offers and actions that actually occur, but not unambiguous expressions of a plan shared across channels.
+
+Past-trade summaries misattribute some terms or authors in 2,054 initial prompts. Current holdings are correct, and all 920 current offers agree with the recipient's acceptance menu. These information and response conditions affect all participants through their interactions. Removing one system's rows would not recover a clean comparison of the others. Appendix~\ref{app:prompts} reports timing, token fields and costs; reported reasoning tokens are not a measure of how much a model thought.
+
+\subsection{Measures and evidential scope}
+An offer is a set of terms awaiting a response. Its author may differ from the thread initiator. We reconstruct cash, ownership and newly completed groups after the proposed transfer. A complete group can contain mortgaged deeds. Rejection comparisons distinguish opening from later offers, requests that actually ask the recipient for a deed, and swaps from pure cash bids. These restrictions supply more relevant comparisons; they do not match prices, players or positions.
+
+Single-deed price comparisons use legal offers exchanging one deed for cash without jail cards. Price divided by board purchase price normalizes units, not economic value. An unchanged-bundle concession keeps all noncash terms of the author's preceding offer to the same recipient and improves the recipient's cash. Repeated observations within threads remain dependent.
+
+A liquidation episode starts at an explicit debt menu and ends at payment or elimination. Payments from sufficient cash are excluded. The generous own-asset bound adds cash, half the building cost for each level, and every unmortgaged deed's mortgage value, including collateral that building sales unlock. A bound below the debt rules out payment from these assets; a sufficient bound is not a feasible plan. Previously executed checks supply three payment sequences and the remaining menu-restricted elimination. This revision uses saved records and does not execute new games, engine branches or model evaluations.
+
+We report exact counts, stage and configuration breakdowns, and sensitivity across five seed blocks. These are retrospective descriptions, not independent-trial tests or confidence intervals for new games. Two LLM-assisted readings coded seventy-four rejections of recipient-completing offers; the second had partial exposure to earlier aggregates and one case. Agreement is not human validation. Incidents were selected for distinct mechanisms and contrasting outcomes; quotations and claimed receipt are checked against original fields. Historical replay and record reconciliation support the underlying transactions, while input hashes and analysis scripts make the new tabulations inspectable.

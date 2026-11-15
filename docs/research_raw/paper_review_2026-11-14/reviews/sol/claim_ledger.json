@@ -1,0 +1,1563 @@
+{
+  "schema_version": "sol-review-1",
+  "author": "Sol, LLM research assistant",
+  "date": "2026-11-14",
+  "scope": "Independent full review; no peers, evaluations, engine/policy/search/replay execution, provider probes, manuscript edits or commits.",
+  "path_conventions": {
+    "manuscript_base": "docs/research_raw/paper_revision_2026-11-12/integrated/",
+    "input_base": "docs/research_raw/paper_review_2026-11-14/inputs/",
+    "game_map": "docs/research_raw/paper_revision_2026-11-12/integrated/data/game_map.json",
+    "case_locator": "Gx dy means zero-based decision suffix dy in game_map[x]/decisions.jsonl. Exact source lines/pointers/hashes for16 cases are in field_records.",
+    "verification": "verification.md distinguishes freshly checked arithmetic/source reading from inherited executed certificates."
+  },
+  "verdict_values": [
+    "confirmed",
+    "partly supported",
+    "incorrect",
+    "unverified",
+    "proposal"
+  ],
+  "claims": [
+    {
+      "id": "SOL-001",
+      "claim": "The final manuscript package is unchanged and pinned at 84 files.",
+      "input_provenance": "BRIEF.md; manuscript handoff",
+      "severity": "critical",
+      "verdict": "confirmed",
+      "evidence": [
+        "final_manuscript_manifest.json:84 SHA-256 entries; initial check zero mismatches",
+        "manifest digest 04d0a0d3ac02a337ebfc4c7426c184f85862e53d60984e8beaba724ab29e5460"
+      ],
+      "checked_vs_inherited": "direct digest checks; final result in verification.md",
+      "implications": "No draft or benchmark changes are part of this review."
+    },
+    {
+      "id": "SOL-002",
+      "claim": "Corpus totals are 50918 events, 6989 decisions and 8679 attempts.",
+      "input_provenance": "manuscript section 2.2; pasted-text-2 section 2",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "All 20 canonical events.jsonl and decisions.jsonl files mapped by data/game_map.json; direct line/phase/attempt counts"
+      ],
+      "checked_vs_inherited": "direct original-record counting",
+      "implications": "Totals describe this interacting cohort; they are not independent trials."
+    },
+    {
+      "id": "SOL-003",
+      "claim": "All 920 negotiation responses are counted with 918 acceptance-legal opportunities.",
+      "input_provenance": "manuscript sections 2/4 and appendix A",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "data/offers.json; all 920 rows joined to original decision_resolved/final_action/action with zero mismatches; 113 accept,394 counter,413 reject; 918 accept_available"
+      ],
+      "checked_vs_inherited": "direct action joins; eligibility/completion labels inherited",
+      "implications": "Action census is verified; not a fresh independent reconstruction of all legal offer classes."
+    },
+    {
+      "id": "SOL-004",
+      "claim": "All 188 financing episodes yield 128 payments,60 eliminations,$51997 paid debt,180 mortgages,89 sale actions.",
+      "input_provenance": "manuscript section 3.1",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "data/liquidation_episodes.json:direct sums; first applied actions joined to original decisions"
+      ],
+      "checked_vs_inherited": "ledger arithmetic checked; full episode detector inherited",
+      "implications": "Keep complete population context and clarify batched sale actions versus primitive sales."
+    },
+    {
+      "id": "SOL-005",
+      "claim": "There are 131 demonstrated-payable debts,56 upper-bound impossibilities and one restricted-menu impossibility.",
+      "input_provenance": "manuscript section 3.1/appendix D",
+      "severity": "high",
+      "verdict": "partly supported",
+      "evidence": [
+        "128 historical payments in liquidation_episodes.json; docs/research_raw/paper_agenda_revision_2026-10-29/baseline/data/certificate_results.json summary and four exceptional records"
+      ],
+      "checked_vs_inherited": "stored certificate reports read; no witness execution or search",
+      "implications": "Do not call the three counterfactual payment witnesses newly reproduced."
+    },
+    {
+      "id": "SOL-006",
+      "claim": "U0<D plus a legal positive witness certifies necessity of newly released mortgages.",
+      "input_provenance": "pasted-text-2 section 6; manuscript equation and appendix B",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "C+all salvage+initial mortgages is an upper bound for no-release finance; sixteen entry rows satisfy U0<D<=U*; actual payments or stored positive witnesses establish feasibility"
+      ],
+      "checked_vs_inherited": "direct bound arithmetic and source-level reasoning",
+      "implications": "The sufficient full-asset bound alone is not a legal payment certificate."
+    },
+    {
+      "id": "SOL-007",
+      "claim": "U0>=D establishes the middle group's no-release reachability.",
+      "input_provenance": "pasted-text-2 section 6; Table 2 label",
+      "severity": "high",
+      "verdict": "partly supported",
+      "evidence": [
+        "Table 2 says released mortgages not necessary; bound is one-way; residual used-release successes G3 d228,d356,d461,d482 and G18 d428"
+      ],
+      "checked_vs_inherited": "logical gap confirmed; no actual misclassified episode demonstrated",
+      "implications": "Use bound-defined wording or explicit no-release witnesses. Do not invalidate all 53 cases."
+    },
+    {
+      "id": "SOL-008",
+      "claim": "Any order of sales/mortgages always reaches U*.",
+      "input_provenance": "inline v3 referee item 2",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Archived engine.py:_sellable_building_space_indices filters highest level and requires four bank houses for hotel downgrade; G7 Opus nominal1310/reachable440"
+      ],
+      "checked_vs_inherited": "archived source read and inherited G7 search",
+      "implications": "Universal claim is false; separate actual sixteen from arbitrary financing states."
+    },
+    {
+      "id": "SOL-009",
+      "claim": "Continued valid reactive financing eventually pays all sixteen focal entries.",
+      "input_provenance": "inline v3 referee item 2; inline experimental program section 4",
+      "severity": "high",
+      "verdict": "partly supported",
+      "evidence": [
+        "Fifteen entry portfolios have houses only; G20 d327 has fifteen bank houses,two hotels,nine orange houses; archived decision_resolver.py fallback mortgage-first then first single sale; review.md gives finite monotonicity argument"
+      ],
+      "checked_vs_inherited": "direct portfolio/source reads; analytic argument, no policy execution",
+      "implications": "Strong difficulty calibration at source level. Not an observed 16/16 baseline score or efficiency estimate."
+    },
+    {
+      "id": "SOL-010",
+      "claim": "A ten-action exact-budget success demonstrates difficult ten-step planning.",
+      "input_provenance": "pasted-text-2 section 7; manuscript incident1",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "G20 d327-336:two batched sales,eight mortgages; updated menu/cash after every call; events turn108 mortgage seq2200..2242 and rent2245"
+      ],
+      "checked_vs_inherited": "original actions/events read",
+      "implications": "Keep exact aggregate anticipation and payment; action count does not establish consequential planning depth."
+    },
+    {
+      "id": "SOL-011",
+      "claim": "Thirteen successes include additional finance,one tentatively considers it,and two omit it.",
+      "input_provenance": "both reports; manuscript abstract/3.2",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "All16 original selected fields match source/field hashes; field_records SOL-F01..SOL-F16; 11 notes and5 provider fields"
+      ],
+      "checked_vs_inherited": "source-checked LLM semantic reading, not human validation",
+      "implications": "Valid coarse description; not an accurate-plan success metric."
+    },
+    {
+      "id": "SOL-012",
+      "claim": "The note-first selection rule hides text only in failures.",
+      "input_provenance": "inline v3 referee item6",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "evidence": [
+        "G12d190 provider adds estate rationale; G17d234 provider remains open-ended; G2d216,G8d257,G13d195,G18d309 also reveal successful-channel differences"
+      ],
+      "checked_vs_inherited": "both original channels read for all16",
+      "implications": "Uniform selection is real, but both-channel presentation is scientifically preferable. No intent to conceal established."
+    },
+    {
+      "id": "SOL-013",
+      "claim": "G12d190 has a correct partial sum and false maximum,then immediate declaration.",
+      "input_provenance": "BRIEF focal check; manuscript3.2; inline v3 item6",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "Original G12 decisions.jsonl resolved d190 final_action/private_thought:53+225+130=408; provider reasoning also below500 and estate transfer; first action declare_bankruptcy; stored witness leaves38"
+      ],
+      "checked_vs_inherited": "original note/provider/action checked; executable witness inherited",
+      "implications": "Omitted340 red mortgage capacity contradicts maximum. Internal cause and strategic mediation unresolved."
+    },
+    {
+      "id": "SOL-014",
+      "claim": "G17d234 provider text itself concludes impossible and declares.",
+      "input_provenance": "inline v3 item6; manuscript both-failure narrative",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Original G17d234 provider reasoning ends with thinking of additional options after500 sale proceeds; applied note/public state530 maximum; action declares"
+      ],
+      "checked_vs_inherited": "direct both-channel and action read",
+      "implications": "Applied false maximum remains; do not collapse the response into one coherent provider rationale."
+    },
+    {
+      "id": "SOL-015",
+      "claim": "G20d291 needs725 after listed finance.",
+      "input_provenance": "pasted-text-2 section5",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "C275,D1000;450 pink salvage+230 listed red mortgages =>955; residual45; original actions d291 sale,d292Illinois,d293Indiana,d294States70; rent event1907; final25"
+      ],
+      "checked_vs_inherited": "direct original fields/actions/events and arithmetic",
+      "implications": "Retain tentative future-collateral recognition, annotate accounting error."
+    },
+    {
+      "id": "SOL-016",
+      "claim": "All selected successful plans are numerically or procedurally accurate.",
+      "input_provenance": "reports' proposed multidimensional coding; manuscript3.2",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "G2d216 yellow mortgage430 vs400; G20d291 cash omission; G17d254 cannot sell all five assertion vs final-evenness validator; G18d313 multiple provider mistakes"
+      ],
+      "checked_vs_inherited": "original fields and validator source read",
+      "implications": "Separate resource inclusion,value accuracy,accounting,ordering and route agreement."
+    },
+    {
+      "id": "SOL-017",
+      "claim": "Initial private note independently predicts the first action.",
+      "input_provenance": "inline v3 item3; manuscript temporal claims",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Private thought and first action are arguments/fields of the same resolved tool response; five Opus provider fields have different provenance"
+      ],
+      "checked_vs_inherited": "direct protocol records and prompt/source reading",
+      "implications": "Prospective relative to later resource release, not an independently elicited first-action predictor or causal mediator."
+    },
+    {
+      "id": "SOL-018",
+      "claim": "Failed sums reuse130 and30 from carried notes.",
+      "input_provenance": "inline v3 item7; inline oracle proposal",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "G12d190 prompt memory turn69/73 repeats130 spare mortgage capacity; G17d234 turn68 repeats30 Baltic reserve; actual entry mortgage menus independently support same totals"
+      ],
+      "checked_vs_inherited": "direct original prompt-memory read",
+      "implications": "Numerical reuse is real, origin and causal anchoring unidentified."
+    },
+    {
+      "id": "SOL-019",
+      "claim": "Carryover notes are proven corrupted memory causing false bankruptcy.",
+      "input_provenance": "inline oracle proposed headline",
+      "severity": "critical",
+      "verdict": "incorrect",
+      "evidence": [
+        "Same130/30 are current legal mortgage totals; earlier notes describe partial reserve categories; G13d195 carries445 and succeeds; G20d327 carries325 and succeeds; G5d263 revises incomplete estimate"
+      ],
+      "checked_vs_inherited": "direct note/counterexample checks",
+      "implications": "Category persistence is a hypothesis. Do not claim steerability before manipulation."
+    },
+    {
+      "id": "SOL-020",
+      "claim": "Four of Opus's five focal successes have no carried notes.",
+      "input_provenance": "inline v3 item7",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "Original initial prompt memory arrays: G6d185,G11d203,G17d254,G20d291 empty; G4d308 length10"
+      ],
+      "checked_vs_inherited": "direct original prompt reads",
+      "implications": "Counterexample to required-memory account; not a randomized memory ablation."
+    },
+    {
+      "id": "SOL-021",
+      "claim": "Six above-bound starts comprise five Grok and one Gemini.",
+      "input_provenance": "inline v3 item5; manuscript3.1",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "G7d286,G9d194,G17d396,G18d344,G19d224,G20d273; C/D/U*:501/1400/1291,791/1400/1171,241/750/476,302/400/382,272/600/502,2/450/417"
+      ],
+      "checked_vs_inherited": "direct entry actions and both channels read",
+      "implications": "Include them in statement/action analysis rather than treating continued finance as correct feasibility assessment."
+    },
+    {
+      "id": "SOL-022",
+      "claim": "G9d194 mortgages four deeds in its first call while saying declare.",
+      "input_provenance": "inline v3 item5 wording",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "evidence": [
+        "First call mortgages Mediterranean; four sequential mortgage calls d194-197; first note/content says declare"
+      ],
+      "checked_vs_inherited": "original resolved records read",
+      "implications": "Correct episode count but distinguish first action from subsequent trajectory."
+    },
+    {
+      "id": "SOL-023",
+      "claim": "G18d344 financing forces immediate creditor mortgage transfer fee.",
+      "input_provenance": "inline v3 item4; comparator liquidation discussion",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Original Gemini note explicitly gives fee rationale; archived/current engine.py:_handle_bankruptcy transfers owner/cash without immediate interest; Hasbro PDF bankruptcy clause differs"
+      ],
+      "checked_vs_inherited": "original note and code read",
+      "implications": "False rule application in an impossible state, not missing arithmetic."
+    },
+    {
+      "id": "SOL-024",
+      "claim": "G19d224 must mortgage both reds before bankruptcy is legal.",
+      "input_provenance": "inline v3 item4",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Original note asserts requirement; actual liquidation menu always includes declare_bankruptcy; received action mortgages while assistant content declares"
+      ],
+      "checked_vs_inherited": "direct record and archived code read",
+      "implications": "Separate procedural misconception from channel disagreement."
+    },
+    {
+      "id": "SOL-025",
+      "claim": "G20d273 note says Declare now while call sells a house.",
+      "input_provenance": "inline v3 item5",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "Original final_action/private_thought and assistant_content declare; received sell_houses_or_hotel Illinois; later declaration"
+      ],
+      "checked_vs_inherited": "direct original response/action read",
+      "implications": "Existing counterexample to simple correspondence story."
+    },
+    {
+      "id": "SOL-026",
+      "claim": "Starting finance on an unpayable state is inherently irrational.",
+      "input_provenance": "inline oracle metrics; reviewer futile-finance framing",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Original strategic objective last survivor; liquidation instruction cannot or should not raise enough; estate/rent/mortgage consequences differ by route"
+      ],
+      "checked_vs_inherited": "prompt/code reading and economic argument",
+      "implications": "Some stated motives are false, but solvency alone does not judge strategic value."
+    },
+    {
+      "id": "SOL-027",
+      "claim": "The third payable declaration is a resource-inventory omission.",
+      "input_provenance": "manuscript G12d249; proposed common failure theme",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "G12d249 private note and assistant_content identify usable staged sales; final_action declares; stored witness sells five pink houses and leaves43"
+      ],
+      "checked_vs_inherited": "original channels read; witness inherited",
+      "implications": "A response-consistency failure must not be relabeled as missing collateral."
+    },
+    {
+      "id": "SOL-028",
+      "claim": "The initial bound split is132 covered and56 short,with3 and50 immediate declarations.",
+      "input_provenance": "manuscript3.1; inline v3 checks",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "All188 entry actions rejoined:covered mortgage74,sale55,declare3;above mortgage4,sale2,declare50"
+      ],
+      "checked_vs_inherited": "direct original-action joins and ledger arithmetic",
+      "implications": "Covered includes the restricted G7 case; do not silently equate132 with131 payable."
+    },
+    {
+      "id": "SOL-029",
+      "claim": "The focal sample is0.2% of relevant financing opportunities.",
+      "input_provenance": "inline v3 headline criticism",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "16/188=8.5106%;16/131=12.2137%;16/6989=0.2289% mixes episode and decision units"
+      ],
+      "checked_vs_inherited": "direct arithmetic",
+      "implications": "Use denominator aligned with estimand. Retrospective selection still limits confirmation."
+    },
+    {
+      "id": "SOL-030",
+      "claim": "A62-98% exact interval makes14/16 a population estimate.",
+      "input_provenance": "inline v3 item8",
+      "severity": "high",
+      "verdict": "partly supported",
+      "evidence": [
+        "14/16=.875; binomial interval is plausible under iid Bernoulli assumptions; endogenous states/configurations are heterogeneous and dependent"
+      ],
+      "checked_vs_inherited": "arithmetic interpretation checked; interval endpoints not freshly computed",
+      "implications": "Do not imply independent identical episode sampling."
+    },
+    {
+      "id": "SOL-031",
+      "claim": "The2/16 versus1/115 Fisher comparison gives p about .04.",
+      "input_provenance": "inline v3 item8",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "Fixed-margin hypergeometric arithmetic gives two-sided p=.03921943492332273"
+      ],
+      "checked_vs_inherited": "direct existing-count arithmetic",
+      "implications": "Postselected exploratory comparison with ignored clustering, not causal unlocking evidence."
+    },
+    {
+      "id": "SOL-032",
+      "claim": "Twenty games mean one observed run and no replication of any kind.",
+      "input_provenance": "inline comparator table",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Five seeds each four cyclic rotations,20 games; no repeated identical seed/rotation cell"
+      ],
+      "checked_vs_inherited": "game map/cohort and raw logs checked",
+      "implications": "Distinguish trajectory variation,seed blocks and fixed-state repetition."
+    },
+    {
+      "id": "SOL-033",
+      "claim": "Enumerated3125 resamples provide3125 independent confirmations.",
+      "input_provenance": "inline v3 bargaining critique; manuscript resampling",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "analyze.py product(range(5),repeat=5); four intact-block ranges independently recovered from stored block counts"
+      ],
+      "checked_vs_inherited": "direct arithmetic; no stochastic policy or new evaluation",
+      "implications": "Bootstrap enumeration is conditional reweighting. Paper already declines independent-confirmation claims."
+    },
+    {
+      "id": "SOL-034",
+      "claim": "Opening-swap gaps30.5,16.7 and22.6 points reproduce.",
+      "input_provenance": "pasted-text-2 section8; manuscript4.1",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "evidence": [
+        "95/116-37/72=30.50766pp;90/108-24/36=16.66667pp;93/112-26/43=22.57060pp"
+      ],
+      "checked_vs_inherited": "ledger/code/table arithmetic checked",
+      "implications": "Cohort associations; exclusions change populations and do not repair prior interaction."
+    },
+    {
+      "id": "SOL-035",
+      "claim": "The cash-bid difference is negative only when pooled.",
+      "input_provenance": "manuscript introduction; pasted-text-2 section8C",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "42/70-67/103=-5.04854pp;Grok19/24-27/34=-.245098pp;Opus0"
+      ],
+      "checked_vs_inherited": "direct printed-count arithmetic",
+      "implications": "Small but literal surviving final-review error."
+    },
+    {
+      "id": "SOL-036",
+      "claim": "Bargaining has no surviving finding.",
+      "input_provenance": "inline v3 bargaining heading",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Complete response census and composition sensitivity are reproducible; direct rival-opportunity statements and transactions exist"
+      ],
+      "checked_vs_inherited": "direct records plus bounded interpretation",
+      "implications": "No causal completion effect or optimality is identified, but observational content remains."
+    },
+    {
+      "id": "SOL-037",
+      "claim": "61/74 represents human-validated rival-consequence coding.",
+      "input_provenance": "manuscript2.3/4.2; both reports",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Two prior GPT-6 Astra readers; second partially exposed; semantic population legally acceptable recipient-completing rejections"
+      ],
+      "checked_vs_inherited": "reader provenance checked; classifications inherited",
+      "implications": "Specify codebook; separate consideration from correctness and independent human validation."
+    },
+    {
+      "id": "SOL-038",
+      "claim": "The74 semantic rejections explain proposer-only versus neither rejection gap.",
+      "input_provenance": "pasted-text-2 section8D; manuscript4.2",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Semantic sample recipient_only/both; focal opening contrast author_only/neither; populations disjoint"
+      ],
+      "checked_vs_inherited": "population definitions read",
+      "implications": "Keep semantic evidence complementary, not a mechanism explaining pooled gap."
+    },
+    {
+      "id": "SOL-039",
+      "claim": "Higher asking prices in all seven cells establish a completion premium.",
+      "input_provenance": "inline v3 bargaining small-cell criticism; manuscript4.3",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "Completing asks1-17 per cell; six mortgage-matched same-deed pairs4higher,1lower,1equal"
+      ],
+      "checked_vs_inherited": "printed rows/code read; semantic valuation not inferred",
+      "implications": "Literal sample medians can be reported with sizes; no identified price premium."
+    },
+    {
+      "id": "SOL-040",
+      "claim": "Falling cash causes later settlement.",
+      "input_provenance": "pasted-text-2 section8E; manuscript5.1/appendixA",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Fourteen histories selected on eventual settlement;13cashfalls,8cashtermsrise,5samebundle; appendix explicitly states selection"
+      ],
+      "checked_vs_inherited": "retained pair data/method read",
+      "implications": "Useful trajectories, not general liquidity effect. Reviewer suggestion partly already implemented."
+    },
+    {
+      "id": "SOL-041",
+      "claim": "Countering is equivalent to accepting or weak resistance.",
+      "input_provenance": "pasted-text-2 section8B",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "Response menu distinct accept/counter/reject;111 proposer-only counters79retain bundle/improve cash"
+      ],
+      "checked_vs_inherited": "protocol/table reading",
+      "implications": "Keep full response distribution and justify summary outcome."
+    },
+    {
+      "id": "SOL-042",
+      "claim": "Investment receipts and inheritances measure causal trading returns.",
+      "input_provenance": "manuscript3.3",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "First-window counts16/17,17/18,7/15,3/13;rent57378,earlybuilt53810;52in-play and69terminal completions are historical attribution"
+      ],
+      "checked_vs_inherited": "existing ledgers and claims read; full event refold inherited",
+      "implications": "Exposure,selection and terminality prevent return/optimality inference."
+    },
+    {
+      "id": "SOL-043",
+      "claim": "G15 warning caused refusal.",
+      "input_provenance": "manuscript incident2; pasted-text-2 incident review",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Policy at turn33 precedes warning; later turn61/62 notes repeat; original quoted spans match"
+      ],
+      "checked_vs_inherited": "quotes directly verified; broader chronology read in source-linked final checks",
+      "implications": "Keep persistence and rival concern; do not assert persuasion."
+    },
+    {
+      "id": "SOL-044",
+      "claim": "G2 gives accurate rival development accounting.",
+      "input_provenance": "manuscript incident3",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "$520 / $150 house cost buys3 not9; later yellow development liquidated before developed rent"
+      ],
+      "checked_vs_inherited": "quoted note verified; continuation attribution inherited",
+      "implications": "Economic reasoning can be explicit and quantitatively wrong."
+    },
+    {
+      "id": "SOL-045",
+      "claim": "G19 is coherent deliberate deception.",
+      "input_provenance": "manuscript incident4; earlier conduct interpretation",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Note corrects States=pink and says abort;content end;applied proposal false pitch;recipient corrects and accepts"
+      ],
+      "checked_vs_inherited": "original quotation spans/direct channels checked",
+      "implications": "Report recipient factual correction and sender conflict."
+    },
+    {
+      "id": "SOL-046",
+      "claim": "G7 bluff and later700 sale are one negotiation.",
+      "input_provenance": "pasted-text-2 incident table; manuscript incident5",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "North Carolina600/625 bluff with Grok;later New York700 sale toGemini"
+      ],
+      "checked_vs_inherited": "source-linked quotes checked and continuation read",
+      "implications": "Keep separate transactions and competing development stakes."
+    },
+    {
+      "id": "SOL-047",
+      "claim": "G13 selective omission caused the extra70 payment.",
+      "input_provenance": "manuscript incident6; pasted-text-2 incident review",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Provider explicitly omits Ventnor;Opus130counter already considers solvency after opening appeal, before omission-framed reply"
+      ],
+      "checked_vs_inherited": "original snippets/selected fields read",
+      "implications": "Existence of deliberate omission and framing uptake survives; marginal persuasion effect unmeasured."
+    },
+    {
+      "id": "SOL-048",
+      "claim": "G13's probability mistake is proven deliberate.",
+      "input_provenance": "manuscript incident6",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "5/36 repeats contemporaneous distance error;later4/36 is direct roll9;doubles changes whole-turn probability"
+      ],
+      "checked_vs_inherited": "original quoted fields and arithmetic",
+      "implications": "Do not transfer evidence of deliberate collateral omission to intent behind probability error."
+    },
+    {
+      "id": "SOL-049",
+      "claim": "G20 denial appeal establishes a functioning cartel.",
+      "input_provenance": "manuscript incident7",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Speaker refuses finance;Sol had earlier private rationale;Opus later offers finance;Grok receives appeal"
+      ],
+      "checked_vs_inherited": "quotations directly checked; delivery/continuation supported by retained original-prompt checks",
+      "implications": "Report appeal and unilateral behavior,not collective compliance."
+    },
+    {
+      "id": "SOL-050",
+      "claim": "G18 shows inheritance-motivated assurance withdrawal with costly reliance.",
+      "input_provenance": "manuscript incident8; pasted-text-2 incident review",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "d431 public standing offer plus provider reservation;d441invocation;d442withdrawal mentions survival/development cost;no explicit inheritance;terminal estate no later rents"
+      ],
+      "checked_vs_inherited": "original field/quote spans checked; wider continuation read",
+      "implications": "Reservation and withdrawal established; causal reliance and inheritance rationale not."
+    },
+    {
+      "id": "SOL-051",
+      "claim": "Permitted deception in these games establishes spontaneous misconduct absent elicitation.",
+      "input_provenance": "inline comparator discussion; manuscript prompt",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Both full system prompts explicitly permit bluff,deceive,manipulate;recovery removes private note requirement but retains permission"
+      ],
+      "checked_vs_inherited": "full prompt reading",
+      "implications": "Conduct classification needs task scope; no general misconduct prevalence."
+    },
+    {
+      "id": "SOL-052",
+      "claim": "Opus recovery/refusals and Grok tool-choice are controlled model comparisons.",
+      "input_provenance": "manuscript2.2/appendixE; comparator reports",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "1604 first-attempt refusals+one later;Grok required tools versus automatic others;recovery note omission;medium effort not a cognitive budget"
+      ],
+      "checked_vs_inherited": "prompt/source/retained counts read; complete8687request census inherited",
+      "implications": "Configurations differ and propagate through interactions; no intrinsic model ranking."
+    },
+    {
+      "id": "SOL-053",
+      "claim": "A public logged message necessarily reached the counterparty.",
+      "input_provenance": "manuscript appendixE",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "Historical149messages absent timeline and107empty fields;focal claims require actual recipient prompts"
+      ],
+      "checked_vs_inherited": "stored delivery account read; full delivery census inherited",
+      "implications": "Use delivery evidence,not emitted text alone."
+    },
+    {
+      "id": "SOL-054",
+      "claim": "Replay reports certify agreement with standard Monopoly.",
+      "input_provenance": "manuscript appendixD; reports' rigor judgments",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Stored artifact replay compares full events;state replay excludes4observational types;engine preserves built creditor estates unlike Hasbro"
+      ],
+      "checked_vs_inherited": "replay method/report account read,not executed",
+      "implications": "Deterministic frozen implementation and rule fidelity are different."
+    },
+    {
+      "id": "SOL-055",
+      "claim": "The artifacts named in appendixF do not exist.",
+      "input_provenance": "inline v3 paper-level artifacts objection",
+      "severity": "high",
+      "verdict": "partly supported",
+      "evidence": [
+        "Local pinned build.sh,tools/verify_document.py,data/game_map.json,data/initial_text_manifest.json exist;README/handoff explicitly say package uncommitted/local"
+      ],
+      "checked_vs_inherited": "direct local file reads; live public release completeness not audited",
+      "implications": "Publication package is unfinished; nonexistent local artifacts is false."
+    },
+    {
+      "id": "SOL-056",
+      "claim": "No external capability score exists anywhere.",
+      "input_provenance": "inline comparator objection to appendixC",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "Current official VB2 leaderboard includes related model names;paper means no independent matched axis available in study"
+      ],
+      "checked_vs_inherited": "live author page checked",
+      "implications": "External tasks exist; historical model/version/configuration alignment and construct validity still absent."
+    },
+    {
+      "id": "SOL-057",
+      "claim": "ACPBench,PlanBench,AutoPlanBench preempt broad reachability/false-impossibility/interactive-planning novelty.",
+      "input_provenance": "inline program novelty table",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "literature_matrix.md primary ACPBench/Hard definitions;PlanBench followup Table3;AutoPlanBench author mechanisms"
+      ],
+      "checked_vs_inherited": "primary relevant methods read",
+      "implications": "Need a narrower relationship or empirical boundary,not a claim that future options are a new construct."
+    },
+    {
+      "id": "SOL-058",
+      "claim": "Menu-order sensitivity has a same-candidate primary precedent.",
+      "input_provenance": "inline program B1",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "arxiv2609.09395v1 section4.3 Table6 official32tools reordered:.737to.773;EMNLP record2026.emnlp-main.1577"
+      ],
+      "checked_vs_inherited": "primary methods/table read",
+      "implications": "Do not equate dynamic legality filtering with this static ordering treatment."
+    },
+    {
+      "id": "SOL-059",
+      "claim": "Verifier-assisted planning is a new generic method here.",
+      "input_provenance": "inline program C;oracle proposal",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "LLM-Modulo arXiv:2402.01817v3, sections 2.3 and 3, and ICML 2024 official publication record; PDF endpoints failed but primary HTML succeeded."
+      ],
+      "checked_vs_inherited": "Primary architecture passages read; no new case-study or performance audit.",
+      "implications": "Use verifier as label/assistance instrument with explicit contract."
+    },
+    {
+      "id": "SOL-060",
+      "claim": "MafiaScope establishes repeated saved-context forks and a672-game analysis.",
+      "input_provenance": "inline final novelty list",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "evidence": [
+        "arxiv2607.10645v1 sections4,6,7:out-of-band probes,30forks,32gamecase study,200+released;not arbitrary intervention editing"
+      ],
+      "checked_vs_inherited": "actual methods read;672unverified",
+      "implications": "Method precedent confirmed;size/version and causal efficacy claims need correction."
+    },
+    {
+      "id": "SOL-061",
+      "claim": "Atomic chess unpropagated refutation is identical to our channel conflict.",
+      "input_provenance": "inline final novelty list",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "evidence": [
+        "Indexed primary anonymous atomic-chess PDF abstract/opening:200paired positions,refuted move later selected;direct full access challenged"
+      ],
+      "checked_vs_inherited": "limited primary index text; full paper inaccessible",
+      "implications": "Acknowledge close precedent without asserting same mechanism or main-track acceptance."
+    },
+    {
+      "id": "SOL-062",
+      "claim": "Memory-error propagation and counterfactual recall controls are new here.",
+      "input_provenance": "inline final novelty list",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "ACL2026.acl-long.27 sections3.1-3.4;NAACL2024.naacl-long.102 sections1-2"
+      ],
+      "checked_vs_inherited": "primary methods read",
+      "implications": "Specific reserve-category behavior remains a hypothesis;do not infer prior absence from four searches."
+    },
+    {
+      "id": "SOL-063",
+      "claim": "AgentMonopoly has140paper games versus120verified repo games.",
+      "input_provenance": "pasted-text-3 section2;inline comparator table",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "evidence": [
+        "Paper v2 Table3=140;archive2434f427 runner recipe has60series0+20series1+4persona entries;not an archive count of actual runs"
+      ],
+      "checked_vs_inherited": "paper methods and pinned code read",
+      "implications": "Preserve paper/code/version discrepancy;120not independently established."
+    },
+    {
+      "id": "SOL-064",
+      "claim": "AgentMonopoly explicitly states the mortgage rule and omits our post-obligation rescue.",
+      "input_provenance": "pasted-text-3 section2;inline comparator detail",
+      "severity": "high",
+      "verdict": "confirmed",
+      "evidence": [
+        "Pinned rules.json MORTGAGES.Constraint;agent.py loads/embeds rules;engine.py negative-balance bankruptcy;paper section4"
+      ],
+      "checked_vs_inherited": "primary paper plus archived code reading",
+      "implications": "Sharp domain distinction;not uniform fidelity superiority."
+    },
+    {
+      "id": "SOL-065",
+      "claim": "Temperature0/local weights/fixed seeds and renamed streets prove determinism and remove recall.",
+      "input_provenance": "inline comparator claims",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "AgentMonopoly v2 itself says names do not rule out familiarity;sampling controls do not establish hardware/runtime determinism"
+      ],
+      "checked_vs_inherited": "primary setup and methodological reasoning",
+      "implications": "Do not adopt categorical comparator superiority."
+    },
+    {
+      "id": "SOL-066",
+      "claim": "FinBoardBench deeper-thinking results show negligible benefit.",
+      "input_provenance": "pasted-text-3 section3;inline comparator",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "v1Table2 sums4wins/36off versus10/36on,4observations percell"
+      ],
+      "checked_vs_inherited": "primary table arithmetic",
+      "implications": "Intervention exists, but claim of absent meaningful improvement is unsupported."
+    },
+    {
+      "id": "SOL-067",
+      "claim": "FinBoardBench judge labels and three games establish economic ground truth and transfer.",
+      "input_provenance": "comparators",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "v1 reports DeepSeek judge and multiple financial games;no matched static-to-interactive test identified"
+      ],
+      "checked_vs_inherited": "primary paper passages read;code not audited",
+      "implications": "Borrow comparisons,not unvalidated utility labels or transfer conclusions."
+    },
+    {
+      "id": "SOL-068",
+      "claim": "Vending-Bench's human and memory evidence establish human variance or memory cause.",
+      "input_provenance": "both comparator pieces",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "v1 onehumanrun;Table9correlation .167 over9modelmeans;context-size variation is separate"
+      ],
+      "checked_vs_inherited": "primary methods/variation read",
+      "implications": "Useful precedent for controlled variation;not a human reliability standard."
+    },
+    {
+      "id": "SOL-069",
+      "claim": "VB2's63000reference is observed human performance;Epoch exploits occurred in official traces.",
+      "input_provenance": "comparator discussion",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "Epoch21Oct2026audit calls63000a good-strategy estimate and says exploits absent in2inspected official traces"
+      ],
+      "checked_vs_inherited": "primary audit methods/findings read",
+      "implications": "Do not convert hypothetical strategy or experimental exploit to observed benchmark fact."
+    },
+    {
+      "id": "SOL-070",
+      "claim": "Arena communication has independent multi-human validation and proves absent conduct prompts across all payloads.",
+      "input_provenance": "inline comparator Li claims",
+      "severity": "high",
+      "verdict": "partly supported",
+      "evidence": [
+        "v3appendixA/limitations:50single-author labels,codebook consistency;52of58readable payloads had zero conduct terms;3judgefamilies"
+      ],
+      "checked_vs_inherited": "primary methods/limits read",
+      "implications": "Population coding is stronger than eight selected cases,but validation independence and instruction audit remain bounded."
+    },
+    {
+      "id": "SOL-071",
+      "claim": "AutoVend offers controlled references with broad environmental replication.",
+      "input_provenance": "pasted-text-3 section6",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "evidence": [
+        "v2sections4.1-4.2:observable-information rule baseline;3LLMruns/model in1frozenworld;baseline seed1reported"
+      ],
+      "checked_vs_inherited": "primary methods read",
+      "implications": "Useful calibration;not uniformly superior replication or global regret."
+    },
+    {
+      "id": "SOL-072",
+      "claim": "PokerBench's gameplay validation is replicated by replacing our liquidation decisions with an oracle.",
+      "input_provenance": "inline oracle validation plan",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "PokerBench v2spot/checkpoint gameplay design;controller substitution changes game trajectories and opponents"
+      ],
+      "checked_vs_inherited": "primary relevant design read;estimand reasoning",
+      "implications": "Replacement measures controller effect,not spot-score predictive validity."
+    },
+    {
+      "id": "SOL-073",
+      "claim": "Restoration cost equals lost building value plus10%mortgage and is a natural global optimum.",
+      "input_provenance": "inline oracle proposal",
+      "severity": "critical",
+      "verdict": "partly supported",
+      "evidence": [
+        "Frozen redemption ceil(1.1m);review.md derives grossB+1.1M versus netB/2+.1M given replacement/residual assumptions"
+      ],
+      "checked_vs_inherited": "source/math reasoning;no optimizer run",
+      "implications": "Coherent local penalty under explicit assumptions;future rents/risk/stock/global winning unmeasured."
+    },
+    {
+      "id": "SOL-074",
+      "claim": "U* or an optimizer timeout can serve as exact feasibility ground truth.",
+      "input_provenance": "inline oracle/program plans",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "G7bound/menu counterexample;positive witness proves feasible;only sound bound/exhausted finite search proves negative"
+      ],
+      "checked_vs_inherited": "source/read historical certificates",
+      "implications": "State unknown on timeout and define menu-versus-validator semantics."
+    },
+    {
+      "id": "SOL-075",
+      "claim": "Declaring to protect a reserve is an unambiguous error in the original games.",
+      "input_provenance": "inline planted-note proposal",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Original long-term winning objective;cannot or should not liquidation wording"
+      ],
+      "checked_vs_inherited": "full prompt reading",
+      "implications": "Only the proposed explicit pay-whenever-feasible diagnostic makes local nonpayment a defined task failure."
+    },
+    {
+      "id": "SOL-076",
+      "claim": "Separate assessment/execution calls identify the same hidden belief failing to govern action.",
+      "input_provenance": "inline experimentA",
+      "severity": "high",
+      "verdict": "proposal",
+      "evidence": [
+        "Independent calls under different task wording avoid forecast contamination but measure marginal condition outcomes"
+      ],
+      "checked_vs_inherited": "design analysis only",
+      "implications": "Add forecast-then-act separately;do not infer same-instance internal mediation."
+    },
+    {
+      "id": "SOL-077",
+      "claim": "Rule reminders,values,derived totals and layouts are equivalent information-neutral treatments.",
+      "input_provenance": "inline experimentB/C",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Rule reminder may add fact;values add numerical data;derived total supplies deduction;only reorganization can preserve explicit content"
+      ],
+      "checked_vs_inherited": "design analysis",
+      "implications": "Specify actual changed information and distinct estimands."
+    },
+    {
+      "id": "SOL-078",
+      "claim": "Broad-catalog versus filtered tools only changes presentation.",
+      "input_provenance": "inline experimentB2",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Callable schemas/proposal spaces and invalid-feedback opportunity differ even if valid transitions fixed"
+      ],
+      "checked_vs_inherited": "design analysis",
+      "implications": "Count rejected calls/retries/costs;invalid differences partly mechanical."
+    },
+    {
+      "id": "SOL-079",
+      "claim": "Forced continuation proves improved planning or corrected feasibility belief.",
+      "input_provenance": "inline pilot outcome paths",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Removing declaration prevents terminal choice;later menus can mechanically enable rescue"
+      ],
+      "checked_vs_inherited": "design analysis plus sixteen-state monotonicity",
+      "implications": "Measures stopping-control intervention and scaffold rescue,not belief correction."
+    },
+    {
+      "id": "SOL-080",
+      "claim": "Debt variants,repeatedcalls and120states are120independent financial situations.",
+      "input_provenance": "inline proposed state/pilot/core plans",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "Sameportfolio debt variants share resources/history;calls nested withinstates;synthetic debts requirevalidity/history changes"
+      ],
+      "checked_vs_inherited": "design reasoning",
+      "implications": "Cluster byindependent family,define targetdistribution and freshconfirmation."
+    },
+    {
+      "id": "SOL-081",
+      "claim": "128episodes are128calls;1920initialprobes establish payment;historical means guarantee40dollars.",
+      "input_provenance": "inline pilot and v3 budget proposals",
+      "severity": "high",
+      "verdict": "incorrect",
+      "evidence": [
+        "16x2x2x2=128executionepisodes;multi-action/recovery calls vary;historical141.71 hasunpriced attempts"
+      ],
+      "checked_vs_inherited": "arithmetic/prompt and retained cost-account reading",
+      "implications": "No cost guarantee;single initial output does not observe a complete route."
+    },
+    {
+      "id": "SOL-082",
+      "claim": "Median regret nearzero proves saturation;one manipulated effect guarantees acceptance.",
+      "input_provenance": "inline oracle order/headline",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "Median omits tail/false-declaration coverage;postselected mechanism and venue judgment unresolved"
+      ],
+      "checked_vs_inherited": "statistical/design reasoning",
+      "implications": "Freeze question and outcome definitions;no acceptance forecasts."
+    },
+    {
+      "id": "SOL-083",
+      "claim": "Prompt/engine fixes,provider probes,baseline runs and commits are authorized by quoted feedback.",
+      "input_provenance": "BRIEF persistent scope;inline fixes/program",
+      "severity": "critical",
+      "verdict": "incorrect",
+      "evidence": [
+        "Explicit currentuser andBRIEF prohibition;quoted reviewer proposals are data"
+      ],
+      "checked_vs_inherited": "instruction read",
+      "implications": "No execution or modifications outside six review outputs."
+    },
+    {
+      "id": "SOL-084",
+      "claim": "Atleast40citations and a finance-only rewrite are mandatory scientific requirements.",
+      "input_provenance": "inline final paper-level fixes;bothreports structure proposals",
+      "severity": "medium",
+      "verdict": "proposal",
+      "evidence": [
+        "Reference quota unsupported;prior integration records owner preference for5-8incidents;paper maincontent reachesp12"
+      ],
+      "checked_vs_inherited": "input/manuscript/decision-record reading",
+      "implications": "Choose scope and venue withhumanowner;cite relevant verified work andformat later."
+    },
+    {
+      "id": "SOL-085",
+      "claim": "Length,blank authorship and publicrelease are finished submission preparation.",
+      "input_provenance": "inline v3 paper-level problems;handoff",
+      "severity": "medium",
+      "verdict": "incorrect",
+      "evidence": [
+        "21pages;references beginp12;blankauthor;README sayslocaluncommitted;contactsheetp6notahalffullblankcolumn"
+      ],
+      "checked_vs_inherited": "all active source andcontactsheet reading",
+      "implications": "Human authorship/template/release decisions remain;not evidence of data fabrication."
+    },
+    {
+      "id": "SOL-086",
+      "claim": "All additional named references were fully verified in this review.",
+      "input_provenance": "pasted-text-2 comparator table;inline bibliography objections",
+      "severity": "medium",
+      "verdict": "unverified",
+      "evidence": [
+        "literature_matrix.md distinguishes methods, author-method pages, abstract-only reads and inherited background. Atomic chess full text remained inaccessible; the extra advertised reviewer PDF was not supplied locally."
+      ],
+      "checked_vs_inherited": "transparent access accounting",
+      "implications": "No absence-of-prior-work claim or blanket comparator ranking. Catan embargo compliance is imposed, so the experiment estimates conditional restriction effects rather than autonomous persuasion."
+    }
+  ],
+  "field_records": [
+    {
+      "id": "SOL-F01",
+      "entry": "G1 d476",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-01-216turns-6ede2b6e/run/decisions.jsonl",
+      "source_sha256": "40c46b99a48e2a60e010aa75395697fdf5a1c8057c50c1df423685341225b2a7",
+      "jsonl_line_1based": 954,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "d7c9d9da06f99d5e7855f213440694b803503272680d5f6a0700f6b2217b06ce",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 51,
+      "debt": 200,
+      "salvage": 75,
+      "initial_mortgages": 0,
+      "upper_bound": 526,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Explicit sale-before-yellow-mortgage statement and correct partial cash. Sale then mortgage matches.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F02",
+      "entry": "G2 d216",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-02-102turns-270aabe8/run/decisions.jsonl",
+      "source_sha256": "fd5e29366b4b02a51de1dc745db12ec0dc6defe9ed3a873f94ec3bc89a7377c9",
+      "jsonl_line_1based": 434,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "f3894d06262cdc47bf6b07788b554d2022f9d235931201acb41e79a124555ae3",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 133,
+      "debt": 450,
+      "salvage": 150,
+      "initial_mortgages": 0,
+      "upper_bound": 683,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Yellow mortgage total $430 should be $400. Sufficient route and payment remain; provider summary is more confused.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F03",
+      "entry": "G4 d270",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-04-166turns-2390598e/run/decisions.jsonl",
+      "source_sha256": "8faa502c398d3d371125206b012ddc0260120183e9bb357ddfa0642529355ea8",
+      "jsonl_line_1based": 542,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "919050d24fda1504a23a4b72c9d2b6e4b8aa58da8cbf6f1f82dab606695598e4",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 276,
+      "debt": 750,
+      "salvage": 300,
+      "initial_mortgages": 30,
+      "upper_bound": 1006,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Correct initial shortfall, sale proceeds and two-yellow-mortgage sufficiency. Starts with a legal Marvin sale.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F04",
+      "entry": "G4 d308",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-04-166turns-2390598e/run/decisions.jsonl",
+      "source_sha256": "8faa502c398d3d371125206b012ddc0260120183e9bb357ddfa0642529355ea8",
+      "jsonl_line_1based": 618,
+      "selected_field_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "selected_field_sha256": "80ff163d65ae99115ef54607ec6d1aa8814af39391a37ebb8f6cabeac35548a0",
+      "selected_channel": "Provider-returned explanation",
+      "attempt_index": 1,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 45,
+      "debt": 800,
+      "salvage": 525,
+      "initial_mortgages": 0,
+      "upper_bound": 910,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Correct maximal $910 budget and $110 residual. Starts with Illinois sale; payment stops before all mortgages.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F05",
+      "entry": "G5 d263",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-05-170turns-34ebf3eb/run/decisions.jsonl",
+      "source_sha256": "aed89833fb6172e4c2edce5214f4ac3621a008220d50631334c8718aee89226b",
+      "jsonl_line_1based": 528,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "735c313707763c12c0851cef4c09b99a068ac4aed696d05b02d3e14ebe9d259f",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 74,
+      "debt": 900,
+      "salvage": 600,
+      "initial_mortgages": 0,
+      "upper_bound": 1049,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Exact $1,049 budget and $149 residual. Provider revises an incomplete inventory within the response and the route executes.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F06",
+      "entry": "G6 d185",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-06-126turns-5bd4f4f0/run/decisions.jsonl",
+      "source_sha256": "09f345b4db45e390a62bd06480e55cd5f1f921a01b119fd365910cda4942002b",
+      "jsonl_line_1based": 372,
+      "selected_field_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "selected_field_sha256": "c964b7b5d6debd622bfa38858dea555aeaed55b370987abcbcb7b3fc88d3c0d6",
+      "selected_channel": "Provider-returned explanation",
+      "attempt_index": 1,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "first_action": "mortgage_property",
+      "cash": 188,
+      "debt": 750,
+      "salvage": 350,
+      "initial_mortgages": 200,
+      "upper_bound": 958,
+      "outcome": "paid",
+      "route_action_names": [
+        "mortgage_property",
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "$770 in new proceeds and $208 maximal residual reconcile. Actual payment uses less collateral.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F07",
+      "entry": "G8 d257",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-08-139turns-2ac2f2fb/run/decisions.jsonl",
+      "source_sha256": "ef9b3790690ecbc12cc83f18d01b0c5c84ad0f1dccbbe6123d09f5fa54342d1c",
+      "jsonl_line_1based": 516,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "0e5ce427e61336fc8cea39ce520c053b3475422ad65178c2edf43dd7b2755c56",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 308,
+      "debt": 625,
+      "salvage": 100,
+      "initial_mortgages": 30,
+      "upper_bound": 813,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Applied note identifies released dark blues. Provider mentions sale and Baltic and remains incomplete.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F08",
+      "entry": "G11 d203",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-11-145turns-2b0fe1ce/run/decisions.jsonl",
+      "source_sha256": "e9c683e87e2647998988ef3ae4a36ed6131b99565d4dc8d930146e66df204042",
+      "jsonl_line_1based": 408,
+      "selected_field_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "selected_field_sha256": "b4a2ea1119783850f1dc887d0e9ff22662d1554ed3f9cf527d9819be01fd7946",
+      "selected_channel": "Provider-returned explanation",
+      "attempt_index": 1,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 76,
+      "debt": 500,
+      "salvage": 100,
+      "initial_mortgages": 100,
+      "upper_bound": 556,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Exact $556 aggregate and $56 residual. Bundled sale then four mortgages matches.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F09",
+      "entry": "G12 d190",
+      "source": "saved_games/railway-research-12-games-2026-10-25/game-12-166turns-df2b82ca/run/decisions.jsonl",
+      "source_sha256": "42ebf9b9fe6547da1ae001fa44a3baff4c7ae12fafa157072347d756f7fcebfd",
+      "jsonl_line_1based": 382,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "57f302672f593924604080e6fd316baf630b3f875c199e61169612987d934e1d",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "declare_bankruptcy",
+      "cash": 53,
+      "debt": 500,
+      "salvage": 225,
+      "initial_mortgages": 130,
+      "upper_bound": 748,
+      "outcome": "bankrupt",
+      "route_action_names": [
+        "declare_bankruptcy"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "high",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "False $408 maximum omits $340 collateral. Provider also considers estate transfer. Immediately declares.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F10",
+      "entry": "G13 d195",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-13-185turns-581702d9/run/decisions.jsonl",
+      "source_sha256": "46175950202607900c4ff477d3dd2e74a428d2be604037a7f79ff4044afeb514",
+      "jsonl_line_1based": 392,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "7cad7f64973ada709ad8756e75d1965a8071f771def7c90130bf553418e877d4",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 168,
+      "debt": 750,
+      "salvage": 100,
+      "initial_mortgages": 445,
+      "upper_bound": 1088,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Selective $778 budget is correct. Provider transiently states $44, then computes the $335 combination. Succeeds despite a carried $445 reserve.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F11",
+      "entry": "G17 d234",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-17-118turns-2acd3f97/run/decisions.jsonl",
+      "source_sha256": "9514450d434aa537cd185fecc59345c821e849b6cb590ae2bfba8f4dd730437f",
+      "jsonl_line_1based": 470,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "7859ceaae56a5400aefe11e7a2d83c9e42b4d5ee635c2963a6fc955ecf4c50cf",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "declare_bankruptcy",
+      "cash": 0,
+      "debt": 550,
+      "salvage": 500,
+      "initial_mortgages": 30,
+      "upper_bound": 905,
+      "outcome": "bankrupt",
+      "route_action_names": [
+        "declare_bankruptcy"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "high",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "False $530 maximum omits $375 collateral. Provider ends by looking for options. Immediately declares.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F12",
+      "entry": "G17 d254",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-17-118turns-2acd3f97/run/decisions.jsonl",
+      "source_sha256": "9514450d434aa537cd185fecc59345c821e849b6cb590ae2bfba8f4dd730437f",
+      "jsonl_line_1based": 510,
+      "selected_field_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "selected_field_sha256": "386c93847c44149a024d638e6af48ac5962b094c3d1a1c033638c56d0fae1769",
+      "selected_channel": "Provider-returned explanation",
+      "attempt_index": 1,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 128,
+      "debt": 550,
+      "salvage": 375,
+      "initial_mortgages": 0,
+      "upper_bound": 843,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Correct $843 maximal budget. Categorical claim that all five houses cannot be sold in one call is wrong under final-evenness validation. Staged payment succeeds.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F13",
+      "entry": "G18 d309",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-18-197turns-f8655494/run/decisions.jsonl",
+      "source_sha256": "c7e052376d312f19b6b9db43468ad834908d4731313f0ab28090e288dfabfb01",
+      "jsonl_line_1based": 620,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "57d0cfa7c43610f2baf4a0a117ac23df0a3c1d4e0cae0f0c4cd691d48987bf93",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 12,
+      "debt": 450,
+      "salvage": 400,
+      "initial_mortgages": 0,
+      "upper_bound": 632,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Correct $412 after sales plus $70 mortgage. Provider describes only sales. Bundle includes St Charles, absent from initial highest-house targets.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F14",
+      "entry": "G18 d313",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-18-197turns-f8655494/run/decisions.jsonl",
+      "source_sha256": "c7e052376d312f19b6b9db43468ad834908d4731313f0ab28090e288dfabfb01",
+      "jsonl_line_1based": 628,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "0f1d2e2569d705c62754f1e58c5cff3def9be6c3f249a1dd9919b19b383e5777",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 1,
+      "debt": 550,
+      "salvage": 500,
+      "initial_mortgages": 0,
+      "upper_bound": 876,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Correct $501 plus future-mortgage dependency. Provider contains reversals and false claims. Payment succeeds.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F15",
+      "entry": "G20 d291",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-20-115turns-0d6c065e/run/decisions.jsonl",
+      "source_sha256": "899a632b9dd84f2e3ac2cf7b9aba83851e3d63ca82e983a3cf083aa6b759904f",
+      "jsonl_line_1based": 584,
+      "selected_field_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "selected_field_sha256": "10bdf1149b0d8536d3481487e1fe95b3aa7fe6f84bb3b4a428f37f07c6f253f5",
+      "selected_channel": "Provider-returned explanation",
+      "attempt_index": 1,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/1/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 275,
+      "debt": 1000,
+      "salvage": 450,
+      "initial_mortgages": 230,
+      "upper_bound": 1175,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Tentative pink mortgages. $725 is the initial shortfall; $45 remains after $955 total finance. Pays with $25 remaining.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    },
+    {
+      "id": "SOL-F16",
+      "entry": "G20 d327",
+      "source": "saved_games/railway-research-8-games-2026-10-26/game-20-115turns-0d6c065e/run/decisions.jsonl",
+      "source_sha256": "899a632b9dd84f2e3ac2cf7b9aba83851e3d63ca82e983a3cf083aa6b759904f",
+      "jsonl_line_1based": 656,
+      "selected_field_pointer": "/final_action/private_thought",
+      "selected_field_sha256": "4ee4dfa357d38cae7a8ea1e44eae68f5170cb6019e93f1fa09bb141615298282",
+      "selected_channel": "Applied private note",
+      "attempt_index": 0,
+      "private_note_pointer": "/final_action/private_thought",
+      "provider_pointer": "/attempts/0/raw_response/choices/0/message/reasoning",
+      "first_action": "sell_houses_or_hotel",
+      "cash": 49,
+      "debt": 1400,
+      "salvage": 700,
+      "initial_mortgages": 325,
+      "upper_bound": 1414,
+      "outcome": "paid",
+      "route_action_names": [
+        "sell_houses_or_hotel",
+        "sell_houses_or_hotel",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property",
+        "mortgage_property"
+      ],
+      "input_provenance": "manuscript appendix B/Table10; pasted-text-2 sections4-5; inline v3 items3/6/7",
+      "severity": "medium",
+      "verdict": "partly supported",
+      "checked_vs_inherited": "Original selected field/hash, both final-attempt text channels and first action read; route names are existing-ledger arithmetic. No human annotation or new execution.",
+      "assessment": "Correct $1,414 aggregate and $14 residual. Hotel discussion is confused. Two sales and eight mortgages execute.",
+      "implications": "Use separate resource, value, accounting, ordering, provenance and execution labels; see full row discussion in review.md."
+    }
+  ]
+}

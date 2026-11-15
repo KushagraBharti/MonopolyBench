@@ -1,0 +1,43 @@
+\section{Environment, records and measures}
+\label{sec:methods}
+\subsection{Games and information}
+Four players start with \$1,500 on the forty-space United States board. They purchase and auction deeds, exchange cash and properties, mortgage assets, and build on complete color groups. Declining a purchase starts an ascending auction. Negotiation permits up to twenty exchanges. Development requires ownership, cash, unmortgaged deeds, even building and available bank stock. Developed groups cannot be traded. A debtor may sell buildings or mortgage deeds, but cannot negotiate a rescue trade during liquidation. Bankruptcy remains a legal choice even when payment is possible.
+
+The implementation transfers buildings intact to a player-creditor and charges no immediate interest on inherited mortgages. Assets returned to the bank are not immediately auctioned. These rules make creditor identity consequential. The engine alone validates actions and changes state; the agents choose among explicit legal tools. After a financing action the engine returns the updated state and legal menu. Thus observed sequences combine model choices with external state and legality support. Appendix~\ref{app:rules} records menu restrictions and other implementation details that affect the interpretation.
+
+Five seeds each supply four cyclic seat rotations of the same roster. Each system occupies each seat five times, but relative opponent order stays fixed. Games last 75--386 global turns and end through bankruptcy without a turn cap. Equal initial seeds do not guarantee identical subsequent random exposure because actions can change who consumes a draw. We identify observations as G$n$ d$k$, with zero-based decision index $k$. The seeds and complete game/run map appear in Appendix~\ref{app:reproduce}.
+
+Agents receive cash, holdings, buildings, mortgages, bank stock, model names, twenty recent public timeline entries and up to ten own private notes. Trade responses include current terms and negotiation history. Opponents' notes and future random draws are hidden. Purchase prompts supply the property's price, group, house cost and rents; other phases do not consistently provide a complete board-value table. The prompt permits public deception, bluffing and cooperation, while requesting honest private reasoning. Both system prompts are reproduced in Appendix~\ref{app:prompts}. Statements therefore concern behavior under permission to deceive, rather than violations of a truthfulness instruction.
+
+\subsection{Configured systems and response channels}
+\begin{table}[t]\centering\small
+\begin{tabularx}{\linewidth}{@{}lYrrl@{}}\toprule
+Label & OpenRouter model & Decisions & Attempts & Tool choice\\\midrule
+Sol & \path{openai/gpt-6.1-sol}&1,961&1,991&auto\\
+Gemini & \path{google/gemini-4-argon}&1,669&1,689&auto\\
+Opus & \path{anthropic/claude-opus-5.5}&1,696&3,301&auto\\
+Grok & \path{x-ai/grok-4.7}&1,663&1,698&required\\\bottomrule
+\end{tabularx}
+\caption{Evaluated configurations. All request medium reasoning effort, without a client temperature, nucleus probability or token cap. Provider controls do not imply equal computation. Tool choice is verified from source at both recorded run commits, rather than inferred from responses.}\label{tab:systems}
+\end{table}
+The received valid tool call governs play. Public messages, applied private notes, assistant content and provider-returned explanations are distinct channels. A plan in content is not an applied action. We check receipt in the actual other-player request whenever an incident claims that a message reached its counterpart. A public-message field alone does not establish delivery or belief.
+
+Ordinary invalid outputs receive one corrective request before deterministic fallback. Explicit first-attempt provider refusal instead triggers same-model action-only recovery, removing the private-note request and using the remaining attempt. Opus records 1,604 first-attempt refusals and one later refusal. All share a provider message concerning reverse engineering or duplicating model outputs. None of its 1,604 recovery calls is refused. Refusals become universal in G5--G20; the change already appears by wall clock during the first four games. Opus consequently makes most choices without an applied private note or another corrective chance. The named fallback model is never invoked.
+
+Grok has 139 selected responses whose content names a different action from the received call, including 64 of 136 trade openings. Its required-tool setting is present at both recorded source commits. That source fact does not establish that forced tool choice caused the conflicts. Some faulty past-trade summaries also enter 2,054 initial prompts, although all 920 current offers agree with the recipient's acceptance menu and current holdings are correct. These conditions change the interacting population faced by every participant. The evaluated objects are configured systems, rather than isolated model abilities.
+
+\subsection{Operational definitions}
+An offer is a bundle awaiting a recipient response. Its author can differ from the thread initiator. We use the delivered state to classify whether accepting newly completes the proposer, recipient, both, or neither. A complete group can include mortgaged deeds. An opening has exchange index zero. Swaps transfer deeds in both directions and may include cash. Pure cash bids offer positive cash for deeds without reciprocal deeds or jail cards. All remaining forms stay in an explicit other category. Acceptance-legal offers form the common table population; two additional responses lack legal acceptance.
+
+A liquidation episode starts at a cash-shortfall menu and ends at payment or elimination. Ordinary bills paid from sufficient cash are excluded. Let $C$ be entry cash, $S$ all building salvage, $M_0$ the sum of initially listed mortgage principals, and $M$ all unmortgaged deed principals. The generous asset bound is $U=C+S+M$. We identify necessary additional collateral when
+\[
+ C+S+M_0<D\leq U,
+\]
+where $D$ is the debt. Even selling every building and exhausting listed mortgages cannot then pay. This arithmetic identifies a resource requirement; an upper bound alone is not proof of an executable route. Actual payments provide positive witnesses, and three earlier executed legal sequences establish payable bankruptcies. Their historical status is retained without rerunning them.
+
+We distinguish expressed consideration, correct state assessment, consistency with the applied action, response sensitivity under a suitable comparison, and strategic effectiveness. The first three can be observed locally. Sensitivity and effectiveness require comparisons this cohort does not provide. Prospective means recorded in the first resolved response before subsequent liquidation feedback, not independent of the state supplied in that request. Explanation-faithfulness research motivates treating such text as evidence of expressed assessment rather than privileged cognition~\cite{turpin2023unfaithful}.
+
+\subsection{Uncertainty and retrospective selection}
+All counts are exact descriptions of the saved cohort. The offer-form contrast, cash thresholds, semantic populations and incidents were selected after corpus inspection. To show variation, we report each seed block and delete one block at a time. We also enumerate all $5^5=3,125$ ordered resamples of five whole blocks, retaining all four rotations and every negotiation within a selected block. The target statistic is the offer-weighted rejection-rate difference between proposer-only and neither completion, separately by form. Resampling does not treat offers or the twenty rotations as independent seed draws.
+
+The central 95\% resampling bands describe sensitivity to reweighting these five observed blocks. Reading them as confidence intervals for new random seeds would require exchangeable seed sampling and a fixed provider regime, neither established here. They do not correct post-selection or control offer quality. We report no significance tests. Recounting the selected contrast and finding the same direction across already inspected blocks checks stability and arithmetic; it does not validate the selected hypothesis on independent evidence.

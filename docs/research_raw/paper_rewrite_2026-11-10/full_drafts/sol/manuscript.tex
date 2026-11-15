@@ -1,0 +1,209 @@
+\documentclass[11pt,letterpaper]{article}
+\input{preamble}
+\title{Bargaining for productive assets:\\Economic agency in twenty Monopoly games}
+\author{MonopolyBench project\\Independent complete draft by Sol}
+\date{10 November 2026}
+\begin{document}
+\input{transcript_quotes}
+\maketitle
+\begin{abstract}
+Economic agents must negotiate over assets whose value depends on rivals, execute development under resource constraints, and remain solvent long enough to benefit. We study these connected behaviors in twenty complete four-player Monopoly games involving four configured LLM systems. The record contains 526 negotiation threads, 920 responses and 113 settlements. Responses differ with the development opportunities exchanged: among acceptance-legal offers completing only the current author's color group, 159 of 289 are rejected; among those completing only the recipient's group, 38 of 140 are rejected. Cash terms also differ, and these observational comparisons do not identify a rival-completion effect. Recorded explanations and contextual exchanges document explicit attention to financing rivals, keeping blockers and denying creditor inheritance. Development then depends on access and execution: 43 of 63 trade-completed groups are built in their first management window, while the remainder include unavailable construction, defaults and conflicting response channels. Existing legal-sequence evidence distinguishes three currently payable eliminations from 56 debts beyond a generous own-asset bound and one stock-locked estate. Eventual winners receive 202 of 227 nonterminal inherited deeds. Seven contextual incidents show how these economic dependencies enter bluffing, solvency appeals, withdrawal and factual correction. We characterize the historical systems, including substantial observation and refusal-recovery defects. Provenance and replay support the behavioral conclusions; the study neither validates a general auditing method nor ranks underlying models.
+\end{abstract}
+
+\section{Introduction}
+
+An economic agent's acquisition is valuable only through what it can subsequently do with it. In Monopoly, completing a color group permits construction but does not supply the construction budget. Paying a rival for the missing deed can finance that rival's next development. Keeping a blocker can prevent a monopoly, yet bankruptcy can deliver the blocker to exactly the player it was meant to constrain. These dependencies make negotiation, investment and solvency parts of one strategic problem. They also give communication concrete content. An appeal to keep a weak player alive may concern the productive estate a stronger creditor would otherwise inherit.
+
+We examine this problem through twenty completed games by four configured LLM systems. Our central question is how their bargaining conduct connects to executable economic decisions and the subsequent distribution of assets. This is an observational behavioral study of a fixed historical cohort. It brings complete negotiation accounting together with development opportunities, financing evidence and contextual exchanges. The purpose is to explain recorded conduct at the level the evidence supports, rather than use Monopoly as a single score for intelligence.
+
+The negotiations are consequential and differentiated. The agents do not merely exchange deeds at bank prices. They counter, retain blockers, discuss opponents' building cash and sometimes buy time for an endangered player. Among 918 offers with legal acceptance, responses differ according to which party would gain a new color group. Offers that complete only their current author's group are rejected more often than offers completing only the recipient's group. The latter also ask the recipient for more cash on median. This combination is informative about the contested terms of development, although it cannot identify the effect of changing a rival's benefit while holding the rest of a trade fixed. Source-qualified reasons and exchanges provide the corresponding evidence that rival consequences enter some agents' expressed deliberation.
+
+Acquiring a group is only the next stage. Some owners build immediately, some cannot yet build, and some submit construction targets that fail at execution. All 61 defaulted Opus purchase multisets in the retained audit are feasible after legally reordering atomic purchases, but invalid in their submitted encoding. Those failures remain failures of the configured system. Their economic interpretation differs from a decision to preserve cash. Likewise, nominal property wealth sometimes exceeds legally accessible liquidity. The elimination census contains both feasible debt payments that were not made and a hotel-constrained estate whose nominal value exaggerates its accessible finance.
+
+The final stage is redistribution. Creditor inheritance transfers 397 deeds over the cohort, including repeated transfers of the same property. Eventual winners receive 202 of 227 deeds transferred before the final elimination. Under the implemented rule, buildings may survive creditor transfer intact. This connects a debtor's development to another player's productive portfolio. Our transcripts show agents discussing precisely that dependency. These are realized trajectories, with movement, prior decisions and rule choices jointly determining who becomes a creditor.
+
+Recent studies already examine negotiation tactics, persistent economic agents and Monopoly behavior \citep{bianchi2024negotiationarena,li2026arena,wu2026agentmonopoly,hu2026finboardbench}. Our contribution is a connected account of bargaining for productive assets in this cohort, supported by complete mechanical denominators and selected chronological incidents. Attempt provenance, delivered observations and previously executed legal witnesses support that account. We do not offer those tools as an independently validated general annotation method. The evidence includes substantial configuration and information defects, described before the results because they are conditions of the behavior being studied.
+
+\section{Environment, cohort and response conditions}
+
+\subsection{An economic game with explicit action access}
+
+MonopolyBench implements a forty-space United States board. Four players begin with \$1,500 each, receive \$200 for passing Go, acquire deeds and attempt to become the last nonbankrupt player. The bank begins with 32 houses and 12 hotels. A player declining a direct purchase starts an ascending auction with sequential bidding and withdrawal. A structured trade can exchange cash, deeds and jail cards; threads permit counters up to a twenty-exchange limit. No deed in a developed color group may be traded. These rules connect bargaining to development rather than allowing arbitrary disposal of a developed portfolio.
+
+The deterministic engine alone updates state, emits events and supplies legal actions. The orchestration layer constructs requests, validates responses and resolves failed attempts. The interface renders server records. At each decision, the agent receives public cash and holdings, current legal choices, public history and bounded private memory. Configured model names are visible. Opponents' private notes and future random and card state are hidden. Public memory contains twenty timeline entries, while private memory contains ten own notes. Trade responses also include structured negotiation history. A statement in the saved event stream therefore need not be present in a later player's request.
+
+Several rules materially shape the findings. Remaining in jail withholds that turn's management window. Mortgaging a developed color group requires removal of its buildings. A hotel downgrade requires houses available in the bank. Build-plan validation checks evenness after each entry; building-sale validation instead checks final evenness and net stock, so a legal bundled sale can differ from a sequence of individually legal sales. Mortgaged deeds can be traded with a ten-percent mortgage-transfer charge rounded upward. Liquidation allows own sales and mortgages but no new trade. The interface permits bankruptcy declaration even if another own-action sequence could pay. Four bankruptcies occur automatically after a final mortgage.
+
+Player-creditors can inherit developed buildings intact, while bank-returned deeds are not immediately auctioned. We interpret economic behavior under these implemented rules. They differ from other Monopoly variants and affect both collateral access and the value of keeping a rival solvent. The preserved implementation also has a floating-point redemption overcharge, sometimes charging \$111 on a \$100 mortgage instead of \$110. Reproducibility under that implementation does not establish conformity with intended rules. This rewrite performs no boundary experiment or outcome sensitivity test for that defect.
+
+\subsection{The twenty games}
+
+The cohort has five seeds and four cyclic seat rotations per seed. Each configured participant occupies every absolute seat five times. All twenty games terminate through bankruptcy without a turn cap. There are eighty player-games, 6,989 decisions, 8,679 attempts and 50,918 events. Decision indices in the text are zero-based; G13 d252 denotes decision 252 of game 13. Multiple decisions may occur during one global turn.
+
+Cyclic rotations balance absolute seats but preserve relative order within a block and cover four of the 24 labeled seating permutations. Every configuration faces the same three opponent configurations. Shared seeds cease to be matched movement histories when actions change the use of future draws. Two saved treatment fingerprints separate G1--G4 from G5--G20. Earlier source inspection found application and concurrency changes without changes to the engine, prompt, resolver or model-client files in that diff; this is inherited source evidence rather than an identified treatment effect. Win counts, retained as cohort context, are Sol eight, Gemini seven, Opus three and Grok two.
+
+\begin{table}[t]
+\centering\small
+\begin{tabularx}{\linewidth}{lYrr}
+\toprule Participant & Recorded OpenRouter identifier & Decisions & Attempts\\\midrule
+Sol & \path{openai/gpt-6.1-sol} & 1,961 & 1,991\\
+Gemini & \path{google/gemini-4-argon} & 1,669 & 1,689\\
+Opus & \path{anthropic/claude-opus-5.5} & 1,696 & 3,301\\
+Grok & \path{x-ai/grok-4.7} & 1,663 & 1,698\\\bottomrule
+\end{tabularx}
+\caption{Complete configured participants. All have the recorded medium reasoning-effort setting; it does not equalize effective budgets. The research assistants who analyze these records are separate systems.}
+\label{tab:systems}
+\end{table}
+
+\subsection{Information and response conditions precede interpretation}
+
+All LLM requests use OpenRouter. Ordinary invalid outputs receive a configured corrective retry and then deterministic fallback if needed. Grok additionally uses required tool choice. Opus's refusal path requests an action without a private note and consumes its remaining retry opportunity. Consequently, an invalid construction on that second request cannot receive another ordinary correction. Its configured fallback model is never used. No temperature or nucleus parameter is supplied. Provider token semantics differ; neither a common effort label nor reported completion length represents a matched resource budget.
+
+Opus has 1,605 refused attempts affecting 1,605 of 1,696 decisions. The returned message cites Terms of Service concerning reverse engineering or duplicating outputs. That is the provider's stated reason. The upstream trigger remains unresolved, and the changed refusal frequency across the source boundary does not establish a provider-policy change. The action-only recovery alters the prompt, schema, note field and later memory together. In 1,394 Opus decisions, the private-memory window has no model-authored note; 286 of those contain only synthetic fallback notes, while 1,108 are empty. These are central properties of the evaluated configuration.
+
+The historical trade-history formatter also confuses the thread initiator with the current offer author. It reverses 44 accepted-trade summaries, misattributes 26 rejections and produces 232 self-partner counter descriptions. At least one known manifestation appears in 2,054 initial prompts. Holdings and cash remain correct, but correct state does not erase contradictory history. We treat these records as behavior under inconsistent information. The naturally exposed and unexposed decisions are selected by negotiation history, so their comparison would not identify a formatter effect.
+
+Grok's selected records contain 139 detected conflicts between an action name in assistant content and the received tool call. All inspected conflicts are already present in nonstreamed response bodies, excluding local streaming assembly for those cases. Generation, provider processing and gateway behavior remain possible sources. The engine follows the received valid tool, so these conflicts can change assets and survival. Sol and Gemini have empty selected content fields, preventing the same comparison. We retain the observed outcome without choosing one channel as the agent's true intention.
+
+Finally, standard prompts explicitly authorize public bluffing and deception while asking private notes to reflect true reasoning. Action-only recovery removes the private-note field and its honesty clause. Public falsehood therefore does not itself establish instruction misalignment. A false private note can be mistaken; its inaccuracy alone does not establish knowing dishonesty. This normative condition applies to every incident below.
+
+\section{Methods and evidential support}
+
+\subsection{Units, reconstruction and economic endpoints}
+
+We use the twenty-game cohort as the population of description. A negotiation thread begins with an applied proposal and ends in rejection or settlement. Each counter creates a new response opportunity. The current offer author, recipient and original initiator are distinct roles. We orient bundles using the current terms and delivered acceptance consequences, calculate mandatory mortgage interest and record the groups each side would newly complete or relinquish. Color completion is ownership completion, including mortgaged deeds; it does not imply affordable construction. Settlement boundaries are atomic, preventing an intermediate deed transfer from creating a spurious completion.
+
+A completed-group episode records acquisition of a final color deed. Its first management window begins at the owner's first actual optional-management decision after settlement and includes subsequent management decisions in that global turn. Construction legal on entry differs from construction becoming legal after financing within the window. No opportunity is imputed after terminal bankruptcy. A spending unit is a game, player and color group with positive own house or hotel expenditure. Including hotels captures owners who inherit four-house deeds and only buy conversions.
+
+For a spending unit we report cumulative own construction expenditure and actual paid developed rent, with both whole-ownership and post-first-own-spending totals. We keep acquisition prices, mortgage cash, redemption, building salvage and estates separate. A terminal unpaid demand is economically consequential but is not a paid receipt. These accounts do not measure incremental return on investment, since inherited buildings, later spending and remaining exposure differ across units.
+
+Previously executed local checks restore a historical prefix and restrict alternatives to a named actor, admissible actions and endpoint. The financing endpoint is payment of the existing debt using own sales and mortgages, without assistance, new trades or future random movement. A generous bound is
+\begin{equation}
+ U=C+S+M,
+\end{equation}
+where $C$ is cash, $S$ is full nominal building salvage, and $M$ is mortgage capacity on every currently clear deed, including collateral unlocked after buildings are removed. Ignoring stock and even-selling restrictions enlarges the budget. Thus $U<D$ rules out self-payment of debt $D$; $U\geq D$ does not prove accessible liquidity. A legal witness establishes one payable sequence. Neither endpoint establishes future survival or justifies the earlier decisions that produced distress.
+
+\subsection{Checked evidence and inherited validation}
+
+The retained study reports event reductions matching all 6,989 initial decision states and 10,235 saved snapshots, accepted-transfer checks for all 113 settlements, memory-window reconstruction, and replay of all twenty action streams. A portable audit reports 60 elimination and 66 default-construction prefixes. Its construction intervention splits count-valued entries into atomic purchases and legally reorders them while preserving each deed/kind count, cash and stock. These historical results are supporting evidence, not new evaluations in this rewrite.
+
+We independently re-tabulate retained offer, spending, elimination and first-management ledgers for this draft. We also reload original fields for every retained quote, check file and field hashes and offsets, and preserve the generated quote definitions unchanged. These checks establish consistency and excerpt fidelity. We do not rerun the engine, legal witnesses, regression tests, reference policies or games. The evidence map distinguishes new consistency work from earlier source checking and engine execution. A clean document build is a separate check.
+
+The older negative-search checker required correction when review found a legal bundled sale missed by atomic enumeration. Its restricted negative graph result is retained only for a case with no sale action available. This is why we distinguish the 56 budget-bound cases, three positive payment witnesses and one restricted stock-lock result. Replaying events establishes implementation consistency; it cannot independently prove all rules correct or establish a general verifier's semantic accuracy.
+
+\subsection{Text, chronology and research assistance}
+
+Semantic evidence is LLM-assisted reading of recorded channels. Earlier overlapping research-assistance runs used GPT-6 Astra, GPT-6.1 Sol, Claude Opus 5.5 and Claude Fable 5.1; model families overlap with evaluated participants. The present complete rewrite is by GPT-6.1 Sol. No independent human-label standard is claimed. The earlier public and full-channel passes, 614 overlapping catalog entries and fixed 240-decision audit sample support case discovery, not a misconduct prevalence estimate. The sample selects three SHA-ranked public-unflagged decisions per player-game, and missing channels remain explicit.
+
+Two LLM readers examine all 74 rejections of acceptance-legal offers newly completing the recipient's group. They agree on 61 records with an expressed trade-linked rival consequence, while retaining boundary disagreements and other coding differences. The second reader had aggregate and limited label exposure. Agreement is inspectable semantic evidence, not construct validation. A single reader codes the temporal sample. The negotiation and temporal extensions and their later scoped reviews used native instances of Astra. Definitions developed retrospectively, so we use named endpoint chronologies rather than treating the labels as a frozen capability battery.
+
+Our seven main incidents are purposively selected for distinct economic stakes and evidential contrasts. Each supplies setup, exact channel-labelled excerpts, observed outcome and interpretation. Original prompt-delivery checks come from the retained bounded source reviews unless explicitly rechecked here. Private notes and provider explanations are fallible text. We use them to describe recorded reasons and contradictions, while keeping attention, belief and causal influence separate from delivery and settlement.
+
+\section{Bargaining over rival development}
+
+\subsection{A complete response population}
+
+The cohort contains 526 threads with 920 responses: 113 acceptances, 394 counters and 413 rejections. Acceptance is legal in 918 responses; the other two would leave a party cash-negative after mandatory charges. Every response resolves without deterministic default, although 168 use a retry. No thread spans a new global turn. The median thread has one response, the longest contains eleven counters, and 414 threads follow an earlier negotiation between the same pair. These are repeated encounters within evolving games.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrrr}
+\toprule New completion & Offers & Accept & Counter & Reject & Median cash\\\midrule
+Current author only & 289 & 19 & 111 & 159 & $+200$\\
+Recipient only & 140 & 24 & 78 & 38 & $-350$\\
+Both & 81 & 10 & 35 & 36 & $-100$\\
+Neither & 408 & 60 & 169 & 179 & $+100$\\\midrule
+All acceptance-legal & 918 & 113 & 393 & 412 & \\\bottomrule
+\end{tabular}
+\caption{Responses by immediate color completion. Cash is the median nominal net cash transfer to the recipient, in game dollars, before separately assessed mortgage interest. Author means current offer writer. Cells are dependent observational descriptions, with different prices, properties and states.}
+\label{tab:offers}
+\end{table}
+
+\begin{figure}[t]
+\centering\includegraphics[width=\linewidth]{offer_responses.pdf}
+\caption{Responses to acceptance-legal offers. Completion for the author alone accompanies the largest rejection share; recipient-only completion accompanies more counters. The chart describes received offers rather than a controlled change to one trade attribute. Absolute counts and cash terms appear in Table~\ref{tab:offers}.}
+\end{figure}
+
+The contrast in Table~\ref{tab:offers} is economically substantive. Author-only completion accompanies 55.0\% rejection and 6.6\% acceptance, despite a median \$200 transfer toward the recipient. Recipient-only completion accompanies 27.1\% rejection and 17.1\% acceptance, with a median \$350 transfer away from the recipient. The latter offers most often induce counters. Both sides completing a group is also contested, with 35 counters and 36 rejections in 81 opportunities. The pattern describes bargaining over development and cash together. It cannot separate cash, portfolio composition, timing, mortgages and rival benefit into independent effects.
+
+The text supports a narrower positive interpretation of that pattern. In the 74 recipient-completion rejections, the shared semantic codes identify explicit attention to the other side's consequences in 61 records. Some explanations concern funding rival construction or surrendering a blocking deed. Others misstate the actor's trading role, including G15 d106 and G17 d186, and are flagged rather than interpreted as coherent prices. The combination of complete consequences and source-qualified reasons establishes instances of rival-sensitive bargaining. It does not certify every rejected offer as strategically sound.
+
+\subsection{Initiating, countering and accepting are different behaviors}
+
+Sol initiates 132 threads, Opus 240, Gemini eighteen and Grok 136. Their shares of eligible own turns containing proposals are 10.0\%, 24.2\%, 2.1\% and 15.7\%, respectively. Counting turns avoids treating repeated management menus as new access. Gemini's eleven settled initial threads out of eighteen describe selective initiation in this cohort; Opus's forty-four out of 240 describe much more frequent proposing with lower conditional settlement. They do not establish an ordering of deal quality.
+
+Responder styles differ too. Across all 920 responses, Sol accepts 30, counters 140 and rejects 65; Opus records 29, 141 and nineteen; Gemini records 26, 36 and 180; Grok records 28, 77 and 149. Opus's 162 action-only responses out of 189 limit comparison of private rationales. These configurations encounter different offers because their own and others' prior decisions differ. The response counts characterize the encountered negotiations rather than agreement bias or its absence.
+
+Counters are central to settlement. Eighty-one settlements follow at least one counter and 32 do not. Of 138 threads containing a counter, 81 settle; of 388 without one, 32 settle. Continuing a thread and changing its terms are endogenous decisions, so that association is not an effect of countering. In 44 settlements, the final offer author is not the original initiator. Attribution to the initiator would reverse the meaning of those final terms, which is also the source of the historical formatter defect.
+
+The 113 settlements complete a group for neither party in sixty cases, one party in forty-three and both in ten. Group completion is one immediate consequence among several. The traded bundles contain 207 deed transfers and \$28,425 across 107 directed cash flows. Settlements can move blockers, consolidate incomplete portfolios or supply liquidity without completing a color group. Treating every non-completing exchange as purposeless would miss those functions, just as treating every completing exchange as mutually beneficial would impose an unsupported utility model.
+
+\section{From acquisition to productive and transferable assets}
+
+\subsection{Actual management opportunities}
+
+The games contain 475 direct, 72 auction, 207 trade and 397 inherited deed acquisitions, counting repeated acquisitions. At stable boundaries, 209 color-completion episodes arise through sixteen direct purchases, nine auctions, 63 trades and 121 inheritances. Sixty-nine inherited completions occur at the game-ending bankruptcy. They create no later decision to build. Trade is also unnecessary for some successful trajectories. Sol in G14 and Gemini in G15 participate in no accepted trade. In G15, Gemini purchases Tennessee to complete oranges, builds seven events later and collects \$3,250 in developed orange rent; oranges trigger the first two eliminations before inherited browns trigger the last.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrrrr}
+\toprule & Groups & Built & Never legal & Default & Conflict & Other END\\\midrule
+Sol & 17 & 16 & 0 & 1 & 0 & 0\\
+Gemini & 18 & 17 & 0 & 0 & 0 & 1\\
+Opus & 15 & 7 & 5 & 3 & 0 & 0\\
+Grok & 13 & 3 & 4 & 0 & 4 & 2\\\midrule
+Total & 63 & 43 & 9 & 4 & 4 & 3\\\bottomrule
+\end{tabular}
+\caption{First actual management window after trade completion. ``Never legal'' concerns that entire window; conflicts identify received END calls differing from accompanying named content. Other END records have no detected conflict and are not automatically verified reserve choices. Counts combine acquisition, liquidity access and resolution under the conditions above.}
+\label{tab:management}
+\end{table}
+
+Every trade-completed group has an observed first management window. Forty-three of 63 groups receive construction during it. The twenty residuals have distinct origins in Table~\ref{tab:management}. Nine never become buildable in that window, four encounter defaults, four have conflicting received END actions, and three have other valid END records. Conditioning on the 42 groups buildable at entry yields 34 built and eight unbuilt, the latter divided into three defaults, three conflicts and two stated holds. The entry-conditioned measure asks about a narrower state already reached; the whole-window measure retains earlier financing constraints.
+
+This decomposition matters for understanding economic execution. An agent may acquire ownership without an immediate development budget, or may attempt development that its response policy fails to execute. Neither is equivalent to selecting an undeveloped portfolio. Conversely, legal construction access does not establish that using it is prudent. The corpus has explicit reserve preferences. At G3 d176 Opus has \$204, can buy a \$150 house and gives a valid action-only END with a reserve rationale. At G1 d426 Grok consistently ends with \$488 rather than buy another Atlantic house, preserving liquidation capacity otherwise reduced by the purchase-to-resale loss. These examples prevent response-condition defects from becoming a blanket explanation for every hold.
+
+\subsection{Allocation and executable encoding}
+
+Across 1,225 management menus listing construction, 663 applied actions are END. Sixty-six are deterministic defaults, 24 have detected received-name conflicts, and 573 have no detected name conflict. The last category includes absent or unparseable content; it is not a census of coherent reserve policies. Availability of a construction tool also does not certify affordability of every particular target.
+
+The retained exact-prefix audit examines all 66 defaults. They contain seventy well-formed construction targets across attempts, one malformed target and 61 attempts without a parseable target. All seventy well-formed encodings are invalid as submitted. Sixty-three targets are reachable after atomic expansion and legal reordering; seven exceed current cash. At decision level, 63 of 66 defaults contain at least one reachable submitted target, including all 61 Opus defaults. No added cash, stock or action slot is supplied by this transformation.
+
+For sixty of the Opus chains, a refusal precedes the invalid action-only retry. The exceptional G2 d129 chain has the invalid action before the refusal. The configured resolution policy applies END after attempts are exhausted. These outcomes show a consequential separation between selecting a feasible allocation and encoding an executable sequence. The target does not become a valid submitted action retrospectively, and successful compilation is not a measured improvement in play. Defaults concentrate in seven games, with G5 and G13 supplying 55 of 66. Their frequency therefore documents recurrent execution under particular conditions rather than broad diversity of failure mechanisms.
+
+Ordinary correction sometimes preserves the original allocation. Across all decisions with the specific uneven-building error, exact-multiset recovery is 20/29 for Sol, 6/19 for Gemini, 5/5 for Grok and 0/61 for Opus under its exhausted retry condition. An applied legal build can also change the target. G2 d243's seven-house target is feasible and would leave \$208, while the actual retry and following decision buy six houses and leave \$358. G14 d145--148 attains its original eight-house objective through several same-turn decisions. These distinctions are useful behavioral endpoints: legal repair, allocation preservation and eventual attainment answer different questions.
+
+\subsection{Liquidation depends on legally accessible finance}
+
+The sixty eliminations comprise 56 declarations and four automatic bankruptcies after mortgages. For 56 estates, the generous own-asset bound falls below current debt. Three other states have existing legal payment witnesses. G7 d339 is the remaining case, with adequate nominal value but a restricted stock lock. This complete census describes debt at elimination, without converting unpayability into approval of prior purchases or investment.
+
+\begin{figure}[t]
+\centering\includegraphics[width=.88\linewidth]{debt_finance.pdf}
+\caption{All sixty elimination states. Open points show nominal own-asset bounds; filled green points identify states with recorded legal payment witnesses. Squares mark automatic elimination. The diagonal is equality of bound and debt. The orange segment isolates G7's nominal \$1,310 versus proved accessible \$440 against \$750 debt. Other bounds are not asserted accessible maxima. Coincident points can overlap.}
+\label{fig:finance}
+\end{figure}
+
+At G7 d339, Opus has \$390 cash and clear Oriental collateral worth \$50. Its pink group has four houses, four houses and one hotel. No bank house is available to downgrade the hotel, while even-selling prevents reducing a lower sibling. There is no sale action available. The sole financing action mortgages Oriental and triggers automatic bankruptcy at \$440 against \$750 debt. The recorded exhaustive mortgage-only continuation establishes the lock despite \$1,310 nominal resources. Earlier ways to release stock are different historical states.
+
+The payable cases differ in mechanism. Sol at G12 d190 owes \$500 and has a \$748 nominal bound; a retained route sells houses and mortgages unlocked collateral, pays and leaves \$38. Gemini at G17 d234 owes \$550 against a \$905 bound; a route leaves \$180. Their recorded accounts omit collateral unlocked by sales. Grok at G12 d249 owes \$250 against a \$613 bound, and five house sales can pay with \$43 left. Its response instead contains a declaration conflicting with a sale request and text opposing bankruptcy. We examine that incident below rather than count all three as the same reasoning error. Alternative retained witnesses can leave different remainders because they mortgage different collateral; witness cash is not an accessible-maximum estimate.
+
+The actual record also contains successful staged finance. In G20 d327--336, \$49 cash, \$700 salvage and \$665 mortgage proceeds pay \$1,400 and leave \$14. At G16 d602, extensive liquidation reaches \$1,393 against \$2,000, and the note reports the correct total. These contrasts show that staged financing is sometimes executed and sometimes unavailable or missed. They give positive economic evidence without requiring an optimal policy or alternate winner.
+
+\subsection{Receipts and creditor concentration}
+
+The 103 spending units incur \$103,450 in own construction expenditure. Whole-game paid developed rent totals \$93,000, of which \$92,550 occurs after first own spending. The difference is rent earned on inherited development before the winner's first own construction in G2. Forty units collect no developed rent, and 26 of those also trigger no creditor elimination on the group. This records zero cash receipts, not forty worthless investments. A terminal rent demand can eliminate an opponent without being paid; salvage, inheritance and observation time also differ.
+
+Successive G19 dark-blue owners illustrate the accounting problem. Opus spends \$1,200, receives \$175 developed rent and later recovers \$600 through building sales. Gemini inherits the deeds, spends \$2,000 over its later ownership and receives \$1,400 on a subsequent Sol landing. Those are different exposures to the same properties. Neither the board color nor an aggregate receipt-to-spending ratio isolates decision quality. Counting only house purchases would omit G10's winner, which inherits four-house light blues and buys only \$150 of hotel conversions.
+
+The wider transfer record contains 905 paid-rent events totaling \$121,154, of which eventual winners receive \$78,737. Estate cash totals \$11,830, including \$16 to the bank. Eventual winners receive 372 of 397 inherited deeds, with 170 of those deeds arriving at terminal bankruptcy. Excluding that mechanical terminal concentration, winners still receive 202 of 227 inherited deeds and \$7,148 of \$7,843 estate cash. They are creditors in 35 of forty nonterminal eliminations and 54 of sixty overall.
+
+These flows describe realized concentration through debt and inheritance. They do not estimate an inheritance effect on winning, since winner status conditions on the same trajectory that produces creditor identity. They nevertheless explain the stakes of bargaining over another player's survival. A transferred estate can include built assets, and an attempted blocker can become a creditor's completion. Of winners' 58 spending units, 34 contain an inherited deed when own spending begins, whereas thirty first become complete through inheritance. The distinction captures portfolios assembled through several routes rather than attributing every inherited component to an inherited completion.
+
+\input{conduct}
+\input{temporal_discussion}
+\begingroup\small
+\bibliographystyle{plainnat}
+\bibliography{references}
+\endgroup
+\clearpage\appendix
+\input{appendices}
+\end{document}
