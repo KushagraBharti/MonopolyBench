@@ -1,6 +1,6 @@
 # Final release gate
 
-Completed locally on 15 November 2026; repository publication is the final step.
+Completed and published on 15 November 2026.
 
 - [x] Four independent complete manuscripts read and compared.
 - [x] Fresh adversarial review and all three final whole-paper peer reviews adjudicated.
@@ -14,8 +14,8 @@ Completed locally on 15 November 2026; repository publication is the final step.
 - [x] Rebuilt PDF matches all 30 pages in text, geometry and rendered pixels.
 - [x] Active-source map, evidence map, build instructions, verification record and release manifest complete.
 - [x] Local environments, rendering intermediates and eleven superseded section fragments excluded from the portable archive.
-- [ ] Final commit and tag pushed; remote artifact paths verified.
+- [x] Final commit `d7664d008` and tag `paper-2026-11-15` pushed; remote artifact paths verified.
 
-The reviewed candidate is checkpoint `15c1e519b`. Final scientific verification is in `integrated/VERIFICATION.md` and `RELEASE_COMPLETION.json`. Remote publication is recorded only after its checks succeed.
+The reviewed candidate is checkpoint `15c1e519b`. Final scientific verification is in `integrated/VERIFICATION.md` and `RELEASE_COMPLETION.json`. `PUBLICATION.json` records the remote commit/tag, six GitHub file checks and byte-identical public downloads of the PDF and ZIP.
 
 No new game, engine execution, replay, policy run, state search, synthetic evaluation, model call or human annotation is part of this release process.

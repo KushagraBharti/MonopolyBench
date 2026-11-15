@@ -13,4 +13,4 @@ The four independent complete manuscripts are preserved under [Astra](full_draft
 
 All eight incidents, full focal response fields, prompts, game mapping and the original research-question map are retained. No new evaluations were run. LLM assistants are disclosed as tools; their reviews and text coding are not human validation. This is a named preprint, not a submitted or accepted conference paper.
 
-The reviewed candidate and earlier work are preserved in checkpoint `15c1e519b`. The intended final publication tag is `paper-2026-11-15`; the publication receipt records the actual pushed commit and verified artifact paths.
+The reviewed candidate and earlier work are preserved in checkpoint `15c1e519b`. The final paper is published at commit `d7664d008` and tag [`paper-2026-11-15`](https://github.com/KushagraBharti/MonopolyBench/tree/paper-2026-11-15/docs/research_raw/paper_finalization_2026-11-14/integrated). [PUBLICATION.json](PUBLICATION.json) records the verified artifact paths and matching public-download hashes.
