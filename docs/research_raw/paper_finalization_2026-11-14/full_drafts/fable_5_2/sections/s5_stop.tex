@@ -1,0 +1,25 @@
+\section{Continuing or stopping}
+\label{sec:stop}
+
+Table~\ref{tab:first} sets the applied first action against the full bound for all 188 episodes. Agents start financing in 129 of the 132 episodes where the bound covers the debt. They declare at once in 50 of the 56 where it does not, and eight of those fifty menus offered nothing else.
+
+\begin{table}[t]\centering\small
+\begin{tabularx}{\linewidth}{@{}Yrrr@{}}\toprule
+At the first menu & Episodes & Finance & Declare\\\midrule
+Full bound covers the debt & 132 & 129 & 3\\
+Full bound falls short & 56 & 6 & 50\\\bottomrule
+\end{tabularx}
+\caption{Applied first action in every financing episode. No first action is a fallback.}\label{tab:first}
+\end{table}
+
+We do not read this table as an accuracy score. The bound is not a feasibility label, as G7 shows. Eight declarations were forced. The prompt lets a player stop when it judges that it should not raise the cash, and a player may have reasons to finance a debt it cannot pay. The nine exceptions are more informative than the totals, and they fall into three kinds.
+
+\textbf{Two false budgets.} Sol in G12 d190 and Gemini in G17 d234 declare on payable debts after stating the listed-only total (\S\ref{sec:false}).
+
+\textbf{Six responses whose text and call disagree.} All six are Grok. In G12 d249 the debt was payable. Grok's assistant content names a house sale, and its note ends \Q{g12-conflict-note2} The call the engine received declares bankruptcy, and the public message in that call reads \Q{g12-conflict-public} In the other five, the debt exceeds the bound, the assistant content names bankruptcy and states a correct maximum, and the received call mortgages or sells. The notes inside those calls vary. Two say to declare, two claim that liquidation must come first, which the engine does not require, and one repeats a note from an earlier purchase. The note inside the sale call in G20 d273 reads \Q{g20-declare-note}
+
+Across all 338 financing decisions, Grok's assistant content names an action 27 times and the received call differs in nine. No other system's content names an action in these decisions, so the check says nothing about them. These are disagreements between channels of one response. The engine applied a valid call, as its contract states, and the prose does not show what Grok would have chosen under another interface. For Table~\ref{tab:first} it matters that five of the six starts on unpayable debts carry text that favors stopping.
+
+\textbf{One mortgage justified by a published rule.} Gemini in G18 d344 owes \$400, can raise \$382, and mortgages anyway. Its note says the mortgage will not cover the debt, but that \Q{g18-fee} Here p4 is Opus. The rulebook does charge the new owner of a mortgaged deed 10\% at once (Table~\ref{tab:rules}). This engine charges nothing. The belief matches the published rule and is wrong for this environment. Grok's provider field in G19 d224 states the uncertainty outright: \Q{g19-rules-provider}
+
+Other responses reason about settlement in the engine's actual terms. Grok in G18 d313 refuses to stop because \Q{g18-inherit} Here p1 is Sol. That is what the engine does and what the rulebook does not. Agents bring rule knowledge to the stop decision, sometimes the rulebook's and sometimes the engine's, and the prompt gives them neither. Stop decisions in this corpus therefore mix a judgment about what can be raised with beliefs about what the creditor will receive. Only the first has an exact answer in the records.

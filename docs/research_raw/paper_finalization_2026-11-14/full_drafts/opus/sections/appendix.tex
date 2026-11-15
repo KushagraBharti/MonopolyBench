@@ -1,0 +1,175 @@
+\section{Artifacts, provenance and build}
+\label{app:artifacts}
+\paragraph{Repository and versions.} The implementation and saved games are in the public repository \url{https://github.com/KushagraBharti/MonopolyBench}. At commit \path{863f8ef79c1366ee353ed460a097fae7833baf7f} the repository contains the twenty saved games under \path{saved_games/railway-research-12-games-2026-10-25/} (G1--G12) and \path{saved_games/railway-research-8-games-2026-10-26/} (G13--G20), together with the earlier integrated manuscript package at \path{docs/research_raw/paper_revision_2026-11-12/integrated/}, whose \path{data/game_map.json} maps each G label to its run directory. Games G1--G4 ran at source commit \path{42f85183fa772b2ab3759cc49987e5ed6cc9efcc} and G5--G20 at \path{d6808534a831862682a6940f394c6c87bb2691cb}, as recorded in each game's \path{cloud/execution_manifest.json}. The rule and resolver sources used in this paper are byte-identical at both run commits and at the repository head used for the build (Table~\ref{tab:sources}). This manuscript's own folder, \path{docs/research_raw/paper_finalization_2026-11-14/full_drafts/opus/}, was not committed at the time of writing; it becomes available from the repository only after a later checkpoint.
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}llr@{}}\toprule
+Source file & SHA-256 (first 16 hex) & Both run commits vs.\ head\\\midrule
+\rowsfile{sections/gen_app_sources.tex}
+\bottomrule\end{tabular}
+\caption{Versioned rule, resolver and board sources.}\label{tab:sources}
+\end{table}
+
+\paragraph{Cohort.} Each seed block has four cyclic seat rotations of one roster. Wins are 8, 7, 3 and 2 for Sol, Gemini, Opus and Grok, and 7, 7, 3 and 3 for seats one to four. Neither split supports a causal decomposition of skill, seat and luck.
+
+\begin{longtable}{@{}lrrlrll@{}}
+\toprule Game & Seed & Rotation & Seats 1--4 & Turns & Winner (seat) & Commit\\\midrule\endhead
+\rowsfile{sections/gen_app_cohort.tex}
+\bottomrule
+\end{longtable}
+
+\paragraph{Build.} From the draft folder, \texttt{bash build.sh} runs the analysis scripts in \path{tools/} and compiles the manuscript with LuaLaTeX. The scripts read saved decision and event records, board data, the retained 188-episode ledger and 920-response ledger of the earlier package, and git blobs. They do not import or execute the rules engine, replay a game, run a policy or search, or call any model. \path{tools/verify.py} checks quotations, numeric claims and source hashes. Table~\ref{tab:inherited} separates what this draft recomputed from what it inherits.
+
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}L{5.2cm}YY@{}}\toprule
+Item & Status in this draft & Source\\\midrule
+188-episode boundaries and outcomes & Inherited episode detector; every entry bound and route amount recomputed & \path{data/finance_census.json}\\
+62/53/16 partition, first actions, financing order & Recomputed by arithmetic & \path{tools/finance.py}\\
+Proposition~\ref{prop:continue} premises for all 131 entries & Recomputed from original entry prompts & \path{data/continuation_premises.json}\\
+Three payable-declaration witnesses; G7 menu search & Inherited engine-executed results, read only & earlier audit reports\\
+All channels for sixteen, six and G12 d249 & Extracted from original records with hashes & \path{data/focal_channels.json}\\
+Sixteen-text coding & Author's model-assisted reading & \path{data/sixteen_rubric.json}\\
+Named-action scan over 338 decisions & Recomputed & \path{data/named_action_scan.json}\\
+920-response classification and completion cells & Inherited ledger; all tabulations recomputed & \path{data/bargaining_census.json}\\
+Block resampling ranges & Inherited from the earlier package & \path{revision_analysis.json}\\
+61/74 rival-consequence reading & Inherited two-reader model coding & earlier package\\
+Incident continuations beyond quoted fields & Inherited traces from earlier rounds & earlier package\\
+All 55 quoted spans & Verified verbatim against original fields & \path{data/quote_manifest.json}\\
+Replay reports & Inherited; not rerun & saved games\\\bottomrule
+\end{tabularx}
+\caption{Recomputed and inherited evidence.}\label{tab:inherited}
+\end{table}
+
+\section{Published and implemented rules}
+\label{app:rules}
+The rulebook~\cite{hasbroMonopolyRules} states that ``before an improved property can be mortgaged, all the buildings on all the properties of its color-group must be sold back to the Bank at half price.'' On bankruptcy to another player, ``if you own houses or hotels, you must return these to the Bank in exchange for money to the extent of one-half the amount paid for them; this cash is given to the creditor,'' and the new owner of a mortgaged deed ``must at once pay the Bank the amount of interest on the loan, which is 10\% of the value of the property.'' A player is bankrupt ``if you owe more than you can pay.'' ``All hotels on one color-group may be sold at once.'' Assets owed to the Bank are auctioned.
+
+The engine (\path{python/packages/engine/src/monopoly_engine/engine.py}) differs as follows. \texttt{\_resolve\_pending\_payment} pays automatically once cash covers the amount, otherwise issues a new liquidation menu, and declares automatically only when no mortgage or sale is listed. \texttt{\_build\_liquidation\_decision} always offers \texttt{declare\_bankruptcy}. \texttt{\_mortgageable\_space\_indices} lists an owned unmortgaged deed only when its group has no buildings. \texttt{\_sellable\_building\_space\_indices} lists the highest-built deeds of a fully owned group and skips a hotel unless the bank holds four houses. \texttt{\_validate\_sell\_plan} checks bank stock and evenness only on the final state of a submitted plan. \texttt{\_handle\_bankruptcy} transfers cash, deeds, buildings and mortgages intact to a player creditor with no interest; deeds owed to the bank return unowned and unmortgaged without auction. Mortgage redemption uses a floating-point ceiling that exceeds an exact 10\% by one dollar for five principals. The resolver fallback (\path{decision_resolver.py}, \texttt{\_fallback\_action}) mortgages the first listed deed, otherwise sells one level on the first listed building, and declares only when neither is listed; a second copy in \path{llm_runner.py} is not called.
+
+\section{Proof of Proposition~\ref{prop:continue}}
+\label{app:proof}
+Fix an entry state among the 131 payable debts, with obligation $D$. Consider any sequence of valid mortgage or sale actions with positive proceeds, applied by the debtor alone until the engine pays.
+
+\emph{Invariant and termination.} Let $Q$ be cash plus the salvage value of remaining buildings plus the principal of remaining unmortgaged deeds. A mortgage moves its principal into cash. A house sale moves half a house price from salvage to cash. A hotel downgrade pays half a house price and leaves four houses, so salvage falls by exactly the cash received. Hence $Q$ is constant and equals its entry value $U_*\ge D$. The number of building levels (a hotel counts five) plus unmortgaged deeds falls by at least one at each step, so every such sequence is finite.
+
+\emph{No unpaid dead end.} The engine pays as soon as cash reaches $D$. Suppose a sequence stops unpaid; then no action is listed. Financing never adds buildings and never unmortgages, so a listed mortgage stays listed until used. At entry every developed group is fully owned and evenly built (checked for all 131). In a fully owned, even, hotel-free group some highest house is listed while houses remain, and selling it keeps the group even; once a group is clear its deeds are mortgageable. A stop with assets left therefore requires a hotel that is not listed because the bank holds fewer than four houses. The recorded entries fall into four classes, applied in order:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lr@{}}\toprule
+Class & Entries\\\midrule
+\rowsfile{sections/gen_app_premises.tex}
+\bottomrule\end{tabular}
+\end{table}
+
+\begin{enumerate}
+\item With no hotel, no blocked state exists, so the sequence ends with no assets, cash equal to $Q\ge D$, and payment, a contradiction.
+\item If cash plus listed mortgages cover $D$, a stop requires every listed mortgage to have been used, at which point cash is already at least $D$.
+\item If the bank holds at least four houses per hotel, each downgrade consumes four and house sales only return houses, so after $k$ downgrades of $h$ hotels the bank holds at least $4(h-k)\ge4$ while a hotel remains.
+\item Entries G3 d456 and G3 d461 each hold one hotel in light blue and one in dark blue, with houses in red. Let $R$ be bank houses plus houses in the debtor's hotel-free groups; $R=8$ at entry in both. A house sale moves a house from the debtor to the bank; a mortgage changes nothing; downgrading a group's only hotel takes four bank houses but makes that group hotel-free, moving its houses into the count. So $R$ never falls. While a hotel remains, either the bank holds four houses and the hotel is listed, or the bank holds at most three and some hotel-free group holds a listed house.
+\end{enumerate}
+In every class the sequence cannot stop unpaid. The premise arithmetic is in \path{tools/finance.py}; it reads entry prompts and board values only. The argument assumes the frozen source above, positive-proceeds actions, no interruption and no other actor. It is not an executed baseline and says nothing about cost.
+
+\section{Financing census details}
+\label{app:census}
+\paragraph{The middle class.} Of the 53 payable debts with $C+M_0<D\le U_0$, 47 payments used no mortgage absent from the entry menu, and the G12 d249 witness sells five pink houses without mortgaging. The other five payments used released collateral although none was needed:
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}llrrrrrrl@{}}\toprule
+Entry & System & $C$ & $D$ & $M_0$ & $S$ & $U_0$ & Bank houses & Hotels\\\midrule
+\rowsfile{sections/gen_app_middle.tex}
+\bottomrule\end{tabular}
+\end{table}
+\noindent G3 d228 and d356 hold houses only, so every house is saleable and $C+S\ge D$. G3 d482 needs four bank houses for its one hotel and has seventeen. G18 d428 needs twelve for three hotels and has twenty-nine. In G3 d461 the bank's six houses cover one downgrade; the downgraded group then becomes hotel-free, and selling its houses restores the stock for the second. Each route uses sales and listed mortgages only. These are derived from recorded holdings and the menu rules, not executed.
+
+\paragraph{Named-action scan.} The scan searches the final attempt's assistant content for the three liquidation action names and records a conflict when content names an action and the applied call differs.
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrr@{}}\toprule
+System & Liquidation decisions & With content & Content names action & Conflicts\\\midrule
+\rowsfile{sections/gen_app_scan.tex}
+\bottomrule\end{tabular}
+\end{table}
+\noindent The nine conflicts are G1 d471, G7 d286, G9 d194, G9 d195, G12 d249, G17 d396, G17 d397, G19 d224 and G20 d273. Seven are first actions of their episodes. The one not listed in Table~\ref{tab:departures}, G1 d471, names a sale while the call mortgages, and the debt is paid.
+
+\paragraph{Denominators and inference.} The sixteen are 8.5\% of 188 financing episodes and 12.2\% of 131 payable debts; they contain 58 of 338 liquidation decisions. We report no significance tests: the partition was defined after the failures were known, episodes cluster within systems and games, and three payable declarations cannot support one.
+
+\section{All channels for the sixteen first decisions}
+\label{app:texts}
+Each entry prints every text the record holds for the first liquidation decision: the applied private note, the provider reasoning field of each attempt with its detail type, and assistant content where present. Public messages are in \path{data/focal_channels.json}. Refused attempts return no text. Field order inside a response is not evidence of the order of generation.
+\input{sections/gen_app_texts}
+
+\section{Channels for the departures}
+\label{app:departures}
+The six above-bound financing starts and G12 d249. Long provider fields are truncated here and complete in \path{data/focal_channels.json}.
+\input{sections/gen_app_departures}
+
+\section{Bargaining tables}
+\label{app:bargaining}
+An offer is one set of terms awaiting a response; completion is evaluated on the proposed transfer, including mortgaged deeds. Swaps move deeds both ways; cash bids request deeds for cash; cash asks offer deeds for cash. Cells give N [accept/counter/reject] over the 918 responses where acceptance was legal.
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabular}{@{}llllll@{}}\toprule
+Stage & Form & Proposer only & Recipient only & Both & Neither\\\midrule
+\rowsfile{sections/gen_app_offers.tex}
+\bottomrule\end{tabular}
+\end{table}
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabular}{@{}lrrrrrrrrr@{}}\toprule
+& \multicolumn{3}{c}{Swaps by proposer} & \multicolumn{3}{c}{Swaps by recipient} & \multicolumn{3}{c}{Cash bids by recipient}\\
+System & Own only & Neither & Gap & Own only & Neither & Gap & Own only & Neither & Gap\\\midrule
+\rowsfile{sections/gen_app_strata.tex}
+\bottomrule\end{tabular}
+\caption*{Opening offers, rejected/received. A dash omits a gap when a cell has fewer than five offers.}
+\end{table}
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabular}{@{}lrlrrr@{}}\toprule
+Population & Gap & Five block gaps & Leave one out & Intact blocks & Games\\\midrule
+\rowsfile{sections/gen_app_blocks.tex}
+\bottomrule\end{tabular}
+\caption*{Retained resampling summaries (central 95\% of 3,125 enumerated intact-block draws, and of 20,000 game-level draws). They describe sensitivity within this cohort, not confidence about a population.}
+\end{table}
+
+\section{Further incidents}
+\label{app:incidents}
+\begin{incident}[Correcting a pitch and accepting the terms]
+In G19 Grok proposes Virginia and \$150 for States and argues \quoted{\Q{g19false}} Both deeds are pink. Grok's note in the same response says to abort, and its content names a different action, but the proposal reaches Sol, who replies \quoted{\Q{g19fix}} The trade executes and completes no group. The recipient separates a false premise from acceptable terms.
+\end{incident}
+
+\begin{incident}[A coordination appeal]
+In G20, after Opus sells Grok the last red, Gemini tells the table \quoted{\Q{g20appeal}} When Grok then offers Gemini Vermont for \$150, Gemini answers \quoted{\Q{g20refuse}} Sol had privately declined to buy Grok's New York for the same reason one turn before the appeal, and Opus later offers Grok cash for deeds, so the record shows an appeal and one player's matching refusal, not collective compliance.
+\end{incident}
+
+\begin{incident}[Withdrawing an assurance]
+In G18 only Opus and Sol remain. After a \$750 rent, Opus repeats \quoted{\Q{g18assure}} while its provider field in the same response records \quoted{\Q{g18reserve}} After another rent leaves Sol with \$49, Sol writes \quoted{\Q{g18invoke}} Opus replies \quoted{\Q{g18withdraw}} The record shows a renewed public assurance with a concurrent private reservation, then withdrawal; it does not show that Sol relied on the assurance at a cost.
+\end{incident}
+
+\section{Research questions and supported scope}
+\label{app:questions}
+\begin{longtable}{@{}L{3.2cm}L{6.9cm}L{6.1cm}@{}}
+\toprule Question & What these records support & Not established here\\\midrule\endhead
+Strategic reasoning & Rival development and estate consequences in refusals and offers; development-preserving financing & Optimal strategy or regret\\
+Opponent modeling & Explicit estimates of rivals' cash, liquidation capacity and building budgets & Calibrated beliefs or theory of mind\\
+Negotiation and deception & Complete response census; buyer-specific pricing, bluff, selective omission, correction, assurance withdrawal under a prompt that permits deception & Persuasive effect, welfare or prevalence of misconduct\\
+Long-horizon planning and memory & Policies restated across turns (G15); executed liquidation budgets; carried conditional inventories before successes and failures & Memory benefit or harm; plan success as a capability\\
+Adaptation & Revisions within a response (G5) and between offers & Learning from feedback or transfer\\
+Economic decisions and risk & All 188 debt episodes with exact bounds; valuation accuracy; mortgage-before-sale ordering & Optimal reserves, prices or risk-adjusted returns\\
+Collective behavior & One coordination appeal; estate transfers & Coalitions or collusion and their effects\\
+Evaluation validity & Every channel, applied action and response condition traceable; source argument for when payment is guaranteed & Performance under corrected or equalized conditions\\\midrule
+A. Talk versus action & Agreement and conflict between notes, content and calls; conflicts concentrated in one configuration's channel & Faithfulness of text to internal computation\\
+B. General versus multi-agent ability & Nothing beyond four configurations in one roster & A capability axis or transfer relation\\
+C. Skill versus luck & Seed and seat descriptions & Causal shares of winning\\\bottomrule
+\end{longtable}
+
+\section{Prompts}
+\label{app:prompts}
+Verbatim system prompts from a stored G1 refusal-and-recovery chain; line breaks are kept and blank lines and horizontal rules are omitted. The recovery prompt removes the private-note request and keeps permission to deceive.
+\subsection*{Standard system prompt}
+\input{sections/gen_standard_system_prompt}
+\subsection*{Action-only recovery prompt}
+\input{sections/gen_recovery_system_prompt}
+
+\section{Authorship and AI assistance}
+\label{app:assistance}
+Kushagra Bharti is the author of MonopolyBench and of this preprint. AI research assistants (Astra, Sol, Opus and Fable 5.2, all language models) supported analysis, reviewing and writing across the project; they are not authors. This draft was written by the Opus assistant (Claude Opus 5.5) from the saved records, earlier review packages and the primary sources listed in \path{evidence_map.md}; it ran no game, engine, replay, policy, search or model query. The coding of the sixteen texts is that assistant's reading, and Claude Opus 5.5 is also one of the evaluated systems. The 61-of-74 reading was made by two GPT-6 Astra instances in an earlier round. No human annotation was performed, and model agreement is not human validation.

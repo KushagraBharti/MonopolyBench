@@ -1,0 +1,117 @@
+{
+  "reviewer": "Opus (claude-opus-5.5), final whole-paper review",
+  "date": "2026-11-15",
+  "reviewed_pdf_sha256": "e5c44bebfb1d6b0b7c434d875261be63b11e4c6457396ee97596457a0c840dae",
+  "manifest_sha256": "a362c4c6d020adb115a50b919d85d3db6777d223189493d7c4edd1517885e269",
+  "pins": {"finalization_before": "2396/2396", "finalization_after": "2396/2396", "nov12_before": "84/84", "nov12_after": "84/84"},
+  "factual_blockers": [],
+  "material": [
+    {
+      "id": "M1",
+      "title": "28/30 development preservation described as a choice for a case with no sale offered",
+      "location": "integrated/sections/main.tex:74",
+      "passage": "Asset selection shows a consistent preference in one defined population. ... Twenty-eight pay without selling any; the other two, both Opus, sell one house each. These choices preserve development when mortgages already provide sufficient financing.",
+      "evidence": "Recount from raw decisions.jsonl and board.json (checks/recount_finance.py): population 30, all paid, 28 without sale, sellers G12 d282 and G18 d372 (Opus, one States Avenue house each). In G7 d318 (Opus, cash 16, debt 100, M0 150, S 650) the first and only menu lists sellable_building_space_keys = [] (Virginia hotel, two bank houses, St Charles/States at four houses), and the single action is a mortgage. Among debtors offered a sale, 27 of 29 keep every building.",
+      "decision_log": "INTEGRATION_DECISIONS adopts this as 'positive choice description'; G7 d318 not noted.",
+      "fix": "replacement_prose.tex [M1]"
+    },
+    {
+      "id": "M2",
+      "title": "Named-action scan observability overstated as relative rather than exclusive",
+      "location": "integrated/sections/main.tex:112; integrated/sections/final_supplement.tex:106",
+      "passage": "A broader scan finds nine named-action conflicts in 338 liquidation decisions, all Grok, but explicit action naming is much more observable in Grok's content; it is not an equivalent conflict-rate comparison across systems. / direct prose action naming is observable in 27 of Grok's 56 liquidation responses and not equivalently exposed by other configurations.",
+      "evidence": "Raw liquidation decisions, final attempt assistant_content: Grok 56 decisions, 56 with content, 27 naming a liquidation action; Sol 93/0/0; Gemini 89/0/0; Opus 100/19/0. No other system's content names an action, so its conflicts are unobservable, not merely less observable. Agrees with the frozen Opus draft's data/named_action_scan.json.",
+      "decision_log": "Not addressed.",
+      "fix": "replacement_prose.tex [M2], [M2b]"
+    },
+    {
+      "id": "M3",
+      "title": "61/74 readings presented as agreement without stating non-blindness or concentration",
+      "location": "integrated/sections/main.tex:133; integrated/sections/final_supplement.tex:6",
+      "passage": "Two Astra readings agree on explicit trade-linked rival consequences in 61 of 74 legally acceptable recipient-completing refusals",
+      "evidence": "integrated/data/reason_comparison.json scope: 'Shared source, first row exposure and category-boundary ambiguity prevent a blind validation claim.' Recount from data/offers.json: 74 acceptance-legal recipient-completing reject_trade rows (38 recipient_only, 36 both); common positives 27 + 34 = 61; disagreement keys G15 d106, G15 d108, G03 d506, G13 d303. Concentration: G1 22 rows, G15 12; recipients Grok 31, Gemini 31, Opus 8, Sol 4. The frozen Sol draft carried the exposure and concentration caveats.",
+      "decision_log": "M-02 accepted the criterion and counts but did not carry the exposure caveat.",
+      "fix": "replacement_prose.tex [M3], [M3b]"
+    },
+    {
+      "id": "M4",
+      "title": "Related work omits memory and statement/action literature required by the brief",
+      "location": "integrated/sections/main.tex:155-164 (Section 5); insertion after line 160",
+      "passage": "Task knowledge also matters. ... They support a more specific observational distinction between recognizing the inventory needed to pay and accepting the next legal financing action.",
+      "evidence": "BRIEF.md: 'Properly distinguish FinBoardBench financing, generic reachability, known false impossibility, menu sensitivity, memory and statement/action literature.' The integrated bibliography (build/manuscript.bbl, 21 entries) contains no memory or declared-plan/statement-action source; explanation faithfulness (Turpin, Lanham) is cited only in Section 2. Verified at primary pages on 15 Nov 2026: Oota et al., arXiv 2609.38108 (Plan+ReAct preserves declared structure in 22-45% of trajectories); Co and Konuganti, ICML 2026 Agents in the Wild workshop poster (agent reasons a move violates the stated rule and submits it); Xiong et al., ACL 2026 long 27, pp. 623-645 (experience-following; error propagation).",
+      "decision_log": "Disagrees with 'Keep the existing concise related-work discussion'; the fix is one paragraph (about 75 words), not an inventory.",
+      "fix": "replacement_prose.tex [M4] plus three bib entries"
+    },
+    {
+      "id": "M5",
+      "title": "Artifact appendix lacks per-game commit mapping and implemented-rules hashes",
+      "location": "integrated/sections/final_supplement.tex:173",
+      "passage": "The runs use source commits 42f85183fa772b2ab3759cc49987e5ed6cc9efcc and d6808534a831862682a6940f394c6c87bb2691cb.",
+      "evidence": "Every run's cloud/execution_manifest.json: G1-G4 git_sha 42f85183..., G5-G20 d6808534.... git show at both commits: engine.py SHA-256 122edf5f16db0c4b8e0bd475ded73bf70a2b08065304d0517b8f8e2c98d63e0d; contracts/data/board.json fc30829e23b8dc9df27235d967afc7f4861f4e116fb3cde576e29e8a178ab774; identical to the working tree. BRIEF.md requires 'commits, versioned rules'. The frozen Sol draft carried these hashes.",
+      "decision_log": "M-03 'in progress' (packaging); manuscript text not yet updated.",
+      "fix": "replacement_prose.tex [M5]"
+    }
+  ],
+  "optional": [
+    {
+      "id": "O1",
+      "title": "Strongest omitted positive insight: G7 counterparty correctly discounts a strategic understatement of financing capacity",
+      "location": "integrated/sections/main.tex:145; integrated/sections/casebook.tex:41,43",
+      "evidence": "G7 d143 Gemini public: '$700 leaves me with $45 cash and unable to build.' G7 d143 Gemini note: 'leaving me $225 cash plus $450 in mortgageable non-Orange properties'. G7 d144 Sol note: 'P1 can mortgage non-orange assets, so its claimed development constraint is overstated'. G7 d146-d150 Gemini mortgages Electric 75, Water Works 75, Vermont 50, Indiana 110, Marvin 140 = $450; d151 builds four orange houses for $400, leaving $95.",
+      "fix": "replacement_prose.tex [O1], [O1b], [O1c]"
+    },
+    {
+      "id": "O2",
+      "title": "Numeric-presence supplement: report the locked/unlocked split and the three listed-only maxima",
+      "location": "integrated/sections/final_supplement.tex:83",
+      "evidence": "checks/numeric_presence.py reproduces 43/48. All 27 entries with U0 = U* match; 16 of the 21 with U0 < U* match. Non-matches: G2 d215 and G10 d188 itemize released mortgages without a total; G3 d426 Sol ('maximum $914'), G5 d309 Opus ('only gets me to 639 total') and G8 d280 Grok ('total $386') state exactly U0 on unpayable debts. No exhaustive denominator is claimed: 121 entries have M* > M0.",
+      "fix": "replacement_prose.tex [O2]"
+    },
+    {
+      "id": "O3",
+      "title": "Main text never references the complete first-action table",
+      "location": "integrated/sections/main.tex:112; final_supplement.tex label tab:first-actions",
+      "evidence": "grep: tab:first-actions, tab:proposer and tab:rubric are defined but never referenced with \\ref. Recount reproduces 132 = 129 finance + 3 declare; 56 = 6 + 50, 8 forced.",
+      "fix": "replacement_prose.tex [O3]"
+    },
+    {
+      "id": "O4",
+      "title": "Third proof class asserted without its one-line argument",
+      "location": "integrated/sections/final_supplement.tex:94",
+      "passage": "In the third, hotel stock cannot obstruct continuation.",
+      "fix": "replacement_prose.tex [O4]"
+    },
+    {
+      "id": "O5",
+      "title": "PDF metadata author and title empty",
+      "location": "integrated/manuscript.tex:9",
+      "evidence": "pymupdf metadata of the pinned PDF: author '', title ''.",
+      "fix": "replacement_prose.tex [O5]"
+    },
+    {
+      "id": "O6",
+      "title": "State that the selected-field split equals an all-channel reading",
+      "location": "integrated/sections/final_supplement.tex:70",
+      "evidence": "Every channel of all sixteen read: no non-selected field moves a case to a stronger category; Fable's frozen all-channel tiers give the same 5/3/5/1/2. Closest calls: G6 d185 and G17 d254 (inclusive/ordered), G18 d313 provider text (ordered/explicit).",
+      "fix": "replacement_prose.tex [O6]"
+    },
+    {
+      "id": "O7",
+      "title": "Release hygiene",
+      "location": "integrated/README.md:1-3; integrated/release_manifest.json; integrated/qa/portability.json",
+      "evidence": "README heading 'finalization in progress' and 'awaits complete core-team cross-review'. release_manifest.json ships 11 section files that the manuscript never inputs: conduct, finance, interpretation, necessary_texts, negotiation, opening_complete, proposer_rows, scientific_introduction, sixteen_full (regenerated by refresh_records.py but not input), study, supplement. qa/portability.json reports 28 pages against the current 29 (provisional, to be regenerated).",
+      "fix": "Packaging step; no manuscript prose."
+    }
+  ],
+  "checked_and_confirmed": [
+    "188 episodes; 128 paid; 131 payable; 62/53/16 (paid 62/52/14); entry C, D, S, M0, M* match episodes_188.json for every row",
+    "first actions 129/3 (bound covers) and 6/50 (short; 8 forced); six starts G7 d286, G9 d194, G17 d396, G18 d344, G19 d224, G20 d273",
+    "920 responses 113/394/413; 918 acceptance-legal; proposer cells Sol 44/50 vs 9/11, Gemini 4/8 vs 0/2, Opus 42/50 vs 15/23, Grok 5/8 vs 13/36; pooled 95/116 vs 37/72 (30.5 pp); neither-completing accepts 17, Grok 15",
+    "G7 d139-d152 figures and three finalization quotes exact",
+    "G20 d327 returned explanation components sum to $700 salvage and $665 mortgage principal",
+    "131-entry continuation argument including the bundle paragraph; engine/board hashes identical at both commits",
+    "sixteen-row rubric arithmetic (remainders 56, 149, 56, 28, 32, 14; G20 d291 gap 45; G6 d185 958-750=208)",
+    "Cattle Trade (arXiv 2605.14537, ICLR 2026 MALGAI workshop) and DECE (arXiv 2610.35773, 'Diverse Eurogame Competitive Environments') exist and match their characterization",
+    "static rebuild in final_review/opus/build_check reproduces the pinned PDF text on all 29 pages; copied verify_document.py passes (23 quotes, 29 fields, 84 protected files, no diagnostics)"
+  ]
+}

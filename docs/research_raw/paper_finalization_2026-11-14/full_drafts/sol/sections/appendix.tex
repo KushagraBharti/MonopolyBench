@@ -1,0 +1,144 @@
+\section{Financing rubric and complete first-response fields}
+\label{app:channels}
+
+The rubric uses the authored note when present and otherwise the final attempt's provider field. An explicit dependency states that selling enables a mortgage. An ordered route places sales before released collateral without stating the general rule. An inclusive budget incorporates that collateral; a tentative resource raises it as a question. An omission leaves it out of a claimed maximum. These model-assisted categories describe the strongest relevant content, without certifying the entire response or unexpressed knowledge. Numerical annotations distinguish value errors, accounting errors, correct partial sums, maximal budgets, and unstated quantities. Auto-payment can stop execution before every budgeted resource is used. Both channels are retained below for inspection and alternative readings.
+
+\begin{longtable}{@{}lllrrL{0.37\linewidth}@{}}
+\caption{Every necessary-collateral first response. N0 is the authored note on ordinary attempt zero; R1 is the recovery provider field on attempt one. Amounts are game dollars.}\label{tab:rubric}\\
+\toprule Entry & Field & Content & $D$ & $U_0/U_*$ & Numerical assessment and observed result\\\midrule\endfirsthead
+\toprule Entry & Field & Content & $D$ & $U_0/U_*$ & Numerical assessment and observed result\\\midrule\endhead
+G1 d476 &N0&Explicit&200&126/526&Correct \$75 salvage and yellow values; sale then one mortgage, \$56 left.\\
+G2 d216 &N0&Explicit&450&283/683&Yellow total \$430 should be \$400. Pays with \$103. Provider accounting is also confused.\\
+G4 d270 &N0&Ordered&750&606/1,006&Correct \$300 salvage and \$174 residual shortfall; mortgage values unstated in note. Pays with \$86.\\
+G4 d308 &R1&Inclusive&800&570/910&Correct maximal \$910 budget and \$110 maximal remainder. Uses less and pays with zero cash.\\
+G5 d263 &N0&Explicit&900&674/1,049&Exact \$1,049 budget and realized \$149. Provider field revises an incomplete inventory.\\
+G6 d185 &R1&Inclusive&750&738/958&\$770 is new proceeds, with \$188 initial cash. Maximal remainder \$208 is correct; pays earlier with \$58.\\
+G8 d257 &N0&Explicit&625&438/813&Correct shortfall after \$100 sale. Mortgage values unstated in note; pays with \$13.\\
+G11 d203 &R1&Inclusive&500&276/556&Exact \$556 budget and realized \$56.\\
+G12 d190 &N0&Omission&500&408/748&\$408 is correct $U_0$, not a maximum. Declares; retained witness leaves \$38.\\
+G13 d195 &N0&Ordered&750&713/1,088&Correct selective \$778 balance, realizes \$28; preserves Boardwalk and Kentucky unmortgaged.\\
+G17 d234 &N0&Omission&550&530/905&\$530 is correct $U_0$, not a maximum. Declares; retained witness leaves \$180.\\
+G17 d254 &R1&Inclusive&550&503/843&Correct maximal \$843. Claim that all five houses cannot be sold in one call overstates the final-state validator restriction. Pays with \$63.\\
+G18 d309 &N0&Explicit&450&412/632&Correct \$412 after sales plus \$70 mortgage; realizes \$32.\\
+G18 d313 &N0&Ordered&550&501/876&Correct \$501 after sales and \$49 gap; pays with \$126. Provider text contains reversals.\\
+G20 d291 &R1&Tentative&1,000&955/1,175&\$725 is initial deficit; \$680 is proceeds; actual remaining gap after them is \$45. Pays with \$25.\\
+G20 d327 &N0&Inclusive&1,400&1,074/1,414&Exact full budget and realized \$14. Provider discussion of hotel proceeds is confused.\\\bottomrule
+\end{longtable}
+
+\clearpage
+The following fields are complete returned text, with typographic normalization only. Empty or unavailable fields are explicitly marked. They are not messages to opponents unless identified as assistant content, which itself is not presumed delivered. The machine-readable \path{data/sixteen_channels.json} preserves exact Unicode text, selected attempt, applied action, public message, provider detail types, assistant content, memory, holdings, and original decision IDs. \path{data/episodes_188.json} extends that objective extraction to every episode. We do not apply the semantic rubric to all 188 entries.
+
+\input{sections/sixteen_full}
+
+\section{Source argument and historical feasibility evidence}
+\label{app:proof}
+
+The engine source is identical at the two collection commits for the payment, mortgage, and building-sale routines considered here. The relevant file is \path{python/packages/engine/src/monopoly_engine/engine.py}. Functions \texttt{\_resolve\_pending\_payment}, \texttt{\_mortgageable\_space\_indices}, \texttt{\_sellable\_building\_space\_indices}, and \texttt{\_validate\_sell\_plan} specify the rule conditions used below. The active fallback in \path{python/packages/arena/src/monopoly_arena/decision_resolver.py} prefers an available mortgage, otherwise one listed building sale, and declares without either. The source proof concerns valid cash-raising continuations, not an evaluation of that implementation's runtime behavior.
+
+Before payment, let $Q$ be cash plus remaining nominal salvage plus unmortgaged principal. A mortgage exchanges remaining principal for cash. A house sale exchanges salvage for cash. A hotel downgrade exchanges one building-equivalent unit for cash and leaves four house levels. Therefore $Q$ is invariant. The sum of remaining building-equivalent levels and unmortgaged deeds decreases by at least one under every strictly cash-raising action, including valid bundles. The sequence is finite. To establish eventual payment it remains to exclude an unpaid state in which assets exist but the menu offers no financing.
+
+\begin{center}
+\begin{tabular}{@{}lrL{0.60\linewidth}@{}}\toprule
+Disjoint sufficient condition & Entries & Why an unpaid dead end cannot occur\\\midrule
+No hotels &108&In each complete even group, a highest house is sellable until empty. Its sale returns stock. Clearing buildings releases mortgages.\\
+Initial mortgages suffice &12&Initially available mortgages persist until used. Exhausting them already gives cash at least equal to the debt. Other financing cannot decrease cash or re-lock them.\\
+Stock covers all downgrades &9&Initial bank houses are at least four per hotel. Even downgrading every hotel before returning a house cannot block on stock.\\
+Recyclable stock &2&At most one hotel per developed group, with bank houses plus houses in hotel-free groups sufficient for a downgrade. See below.\\\bottomrule
+\end{tabular}
+\end{center}
+
+Recorded holdings satisfy complete ownership and evenness of every developed group in all 131 entries, and every initial $Q$ covers the current debt. The final two are G3 d456 and d461. Both have one light-blue hotel and one dark-blue hotel, plus red houses. The first has zero bank houses and eight houses in hotel-free groups; the second has six and two respectively. While hotels remain, define $R=B+H$, where $B$ is bank houses and $H$ houses in hotel-free groups. A sale from such a group moves a unit from $H$ to $B$. Mortgaging leaves $R$ unchanged. Downgrading a group's sole hotel spends four bank houses but places them, and any previously locked houses of that group, into $H$. Thus $R$ cannot decrease. Initially $R=8$. If $B\geq4$, a remaining hotel can be downgraded; otherwise $H>0$ supplies a highest-house sale. After all hotels are removed the hotel-free argument applies. Valid bundles preserve the same accounting.
+
+No continuing sequence under those premises can exhaust offered financing unpaid. If all resources were exhausted, cash would equal initial $Q\geq D$, and automatic payment would already have occurred. The argument is for the current obligation and excludes invalid actions, no-proceeds plans, interruptions, voluntary declaration, and subsequent debts. The extension from 129 to 131 was first supplied by Astra in the historical review; this draft independently checked its entry arithmetic and the invariant argument. That is a further model source review, not human verification or an executed baseline.
+
+The middle 53-case classification requires a different argument: a no-released-mortgage route exists. Forty-seven observed payment routes use only initially offered mortgages; G12 d249 has a retained five-house sale witness. The five remaining actual payments use released collateral despite $U_0\geq D$. G3 d228 and d356 have houses only. G3 d482 has seventeen bank houses and one hotel; G18 d428 has twenty-nine and three hotels. Selling their development is feasible without new mortgages. G3 d461 can downgrade either single hotel with six bank houses, clear that now hotel-free group to replenish stock, then downgrade the other. In each case initial cash, all realizable salvage, and initially offered mortgages cover the debt. These are constructive source arguments, not newly executed action sequences.
+
+Historical evidence for the three payable declarations is retained in the earlier executable audit. G12 d190 sells three red houses and mortgages Baltic, Illinois, and Indiana, then pays \$500 and leaves \$38. G17 d234 sells five dark-blue houses and mortgages Baltic and Boardwalk, pays \$550, and leaves \$180. G12 d249 sells five pink houses, pays \$250, and leaves \$43. The G7 restricted-menu search starts after a mortgage with \$390 and can raise only another \$50. It has no offered sale because bank stock is zero and the hotel is the group's highest development. These witnesses and search predate the present revision; they were not rerun.
+
+The menu and sale validator are distinct. Highest-building targets guide individual sales, while a bundle is checked for final evenness and net bank stock. G18 d309 actually sells St. Charles houses in a bundle even though only States and Virginia appear as highest targets. Conversely, the G7 sale action is unavailable altogether. Reachability claims must specify the actual menu. Historical replay passing under this implementation does not prove fidelity to all published Monopoly rules.
+
+\section{Complete bargaining populations and sensitivity}
+\label{app:bargaining}
+\input{sections/full_offer_table}
+
+Counts in the table total 918 offers where acceptance is legal: 113 accepts, 393 counters, and 412 rejections. One additional counter and one rejection give the complete 920-response census. G4 d219 is excluded from the recipient-completion semantic population because \$150 plus \$11 transfer interest exceeds \$156 cash. The remaining seventy-four recipient-completing rejections are the semantic population. Its 61 agreed rival-consequence labels are inherited from two model readings, one partly exposed to earlier classifications; a quantitatively false rival budget can still mention a consequence. These labels do not certify strategy quality.
+
+\begin{center}
+\begin{tabular}{@{}lrrrrrr@{}}\toprule
+&\multicolumn{3}{c}{Opening swaps}&\multicolumn{3}{c}{Opening cash bids}\\
+Recipient & Proposer only & Neither & Gap, pp & Proposer only & Neither & Gap, pp\\\midrule
+\input{sections/recipient_rows}
+\end{tabular}
+\end{center}
+All raw cells are retained, including small ones. The differences are descriptions of those cells, without system-comparison inference. The pooled cash-bid gap is negative, and Grok's within-recipient gap is approximately $-0.245$ points, so it is incorrect to say negativity occurs only when pooled.
+
+\input{sections/block_counts}
+\begin{center}
+\begin{tabular}{@{}lrrr@{}}\toprule
+Opening population & Intact blocks & Individual games & Blocks then games\\\midrule
+\input{sections/resampling_alternatives}
+\end{tabular}
+\end{center}
+The ranges are central 95\% bootstrap percentiles conditional on the observed cohort. Intact-block sampling enumerates all $5^5=3,125$ ordered five-block draws, representing 126 distinct count vectors with unequal multiplicities. The two alternative schemes use 20,000 retained draws each. Sampling games changes rotation balance; the two-stage scheme samples blocks then games within blocks. All schemes retain retrospective selection and do not add independent states. Leaving out one block gives 28.7--33.3 points for all opening swaps and 9.4--22.1 without Grok authors. Those omission ranges describe different sensitivity than the bootstrap.
+
+Seven seller-by-mortgage-status cells compare median asks to completing and other buyers; their completing-buyer counts range from one to seventeen. A separate same-game/seller/deed history comparison has seven pairs. Medians for completing versus other buyers are G1 Opus Boardwalk 125/350, G2 Sol Marvin 625/450, G4 Opus Boardwalk 175/280, G15 Opus Baltic 135/100, G16 Grok Marvin 1,200/400, G17 Grok Mediterranean 35/35, and G20 Grok New York 400/120. G4 changes mortgage status and is excluded from the six matched-status summary. These are selected histories with unmatched times, buyers, and terms.
+
+\section{Full incident coverage and supporting continuations}
+\label{app:incidents}
+
+The incident numbers below refer to this draft. Main-text Incidents 1--6 are G20 valuation, G15 resistance, G19 correction, G7 bluff/finance, G13 survival finance, and G20 denial. The following completes the original eight-incident release. Exact historical quotation manifests are packaged under \path{data/}; extracted fields must retain their original channel identities when reused.
+
+\subsection{Incident 7: buyer-specific pricing and changed ownership in G2}
+At G2 d124, Opus holds two yellows and offers \$325 for Sol's Marvin Gardens. Sol's public message asks \$650 because the deed completes the buyer. Its note reasons about the buyer's remaining \$520 but incorrectly calls it enough for nine yellow houses; at \$150 each it funds three. One turn earlier Grok, holding no yellow, offered \$200 as a blocker and received a \$450 ask. Grok called that a completing-buyer price. A later warning against completing Opus's yellow appears in Sol's next request, but Sol's own blocking policy predates the warning. Opus calls \$450 final while privately allowing \$475. Sol refuses at d128.
+
+At turn 69 the trade direction reverses. With \$17 cash, Opus sells its two yellows to Sol for two railroads and \$100. Sol builds, later liquidates those buildings at d216, and earns \$44 undeveloped yellow rent but no developed yellow rent before losing the group to Gemini through bankruptcy. This sequence supports buyer-specific valuation and consideration of development finance, with an actual numerical error and a continuation that does not validate the original price as economically optimal. Sources are G2 d119--128 and d197--198, and the subsequent ownership events. The earlier Opus responses are standard; the later sale uses recovery.
+
+\subsection{Incident 8: renewed assurance and withdrawal in G18}
+Only Opus and Sol remain. Opus offers \$200 then \$250 for mortgaged Pacific, which would complete its greens. Sol refuses. Opus publicly renews the standing offer four times. At d431, after collecting \$750 rent, its public message says the offer still stands. The provider field returned with that same renewal already considers whether buying Pacific would merely prolong Sol's survival and whether retaining cash is wiser. This reservation is concurrent observable text, without a claim about hidden intent.
+
+Another \$750 rent forces Sol to liquidate and leaves \$49. After larger packages fail, Sol invokes the \$250 offer at d441; Opus withdraws it at d442, saying circumstances changed. Its provider explanation cites prolonging a nearly bankrupt rival and green redemption/development costs, without explicitly invoking inheritance. Further bids of \$150 and \$225 and asks of \$450, \$350, and \$300 do not settle. Opus wins at terminal elimination. Sol's invocation is evidence of reception and reference to the assurance, not a demonstrated costly sacrifice in reliance on it. Terminal inherited assets have no subsequent earning window. Sources are G18 d421--461; Opus uses recovery.
+
+\subsection{Checks that constrain the six main-text incidents}
+G20 d327's two sale calls batch primitive sales; the eight mortgage calls are separate. G15's policy appears at turn 33, before the turn-63 public warning. Grok's refusal continues through three changing offers, and its blockers transfer to Gemini eighteen turns later. G19's false pitch is in Sol's delivered prompt; the sender's abort note must be retained alongside the applied proposal. G7's North Carolina bluff at d42 and New York sale from d141 involve distinct counterparties and terms. Gemini's subsequent oranges collect \$270 before elimination, which is a realized receipt, not an incremental return. G13's omission is explicit in provider text at d252; Opus's estate consideration is already present at the earlier counter. The 5/36 probability is wrong for a direct roll of nine, whose probability is 4/36, and neither describes all doubles-turn movement. G20's appeal at d96 is present in Grok's d97 request; Sol's private financial-denial reasoning precedes it, while Opus later offers finance. No collective compliance or marginal persuasion effect is established.
+
+\clearpage
+\section{Supported scope of the original questions}
+\label{app:questions}
+\begin{longtable}{@{}L{.22\linewidth}L{.39\linewidth}L{.33\linewidth}@{}}
+\caption{The original eight questions and A--C. Unmeasured behavior is not evidence of absent ability.}\\
+\toprule Question & Supported observation & Boundary\\\midrule\endhead
+1. Strategic reasoning & Dependency statements, selected financing, rival-development objections & No optimal strategy, exploitability, or game-value reference.\\
+2. Opponent modeling & Explicit estimates of rival budgets and estate recipients & No calibration of latent beliefs or unfamiliar-opponent transfer.\\
+3. Negotiation/cooperation & Complete responses and contextual bluff, omission, correction, and denial appeal & No causal persuasion, welfare, fairness, or spontaneous misconduct claim.\\
+4. Long-horizon planning/memory & G15 policy recurrence; G5 inventory revision; local routes & No measured memory benefit or representative long-horizon success rate.\\
+5. Adaptation/learning & Changed terms and revised assessments in particular histories & No identification of feedback-caused learning.\\
+6. Economics/risk & Resource feasibility, exact budgets, selective finance, realized ownership receipts & No globally rational prices, reserve policy, or risk-adjusted return.\\
+7. Collective dynamics & Inheritance, ownership concentration, attempted coordination & No stable coalition or collusion prevalence/effect.\\
+8. Evaluation validity & Traceable delivered information, applied actions, rule identity, response conditions & No controlled corrected-interface performance or general capability scale.\\
+A. Talk versus action & Both aligned routes and explicit channel conflicts & No internal cognitive trace or causal explanation faithfulness.\\
+B. General versus multi-agent ability & A question for matched cross-task measurements & Four unequal interacting configurations and outside business leaderboards do not identify a separate capability axis.\\
+C. Skill versus luck & Seed/seat outcomes and concrete financial mechanisms & No causal decomposition of winning or counterfactual winners.\\\bottomrule
+\end{longtable}
+
+\section{Artifact entry point, rules identity, and assistance}
+\label{app:release}
+
+The repository is \url{https://github.com/KushagraBharti/MonopolyBench}. The historical integrated evidence package is pinned at commit \path{863f8ef79c1366ee353ed460a097fae7833baf7f}, under \path{docs/research_raw/paper_revision_2026-11-12/integrated/}. This independent manuscript's repository-relative entry point is \path{docs/research_raw/paper_finalization_2026-11-14/full_drafts/sol/README.md}. The latter is a new local package for integration, not represented as already present at the pinned checkpoint. Its self-contained document build uses packaged TeX, bibliography, and data; optional original-record refresh requires the repository's saved games.
+
+Collection uses source commits \path{42f85183fa772b2ab3759cc49987e5ed6cc9efcc} and \path{d6808534a831862682a6940f394c6c87bb2691cb}. The frozen engine file SHA-256 is \path{122edf5f16db0c4b8e0bd475ded73bf70a2b08065304d0517b8f8e2c98d63e0d}; its collection versions are identical. Board-data SHA-256 is \path{fc30829e23b8dc9df27235d967afc7f4861f4e116fb3cde576e29e8a178ab774}. These hashes and the schema-v1 historical records identify the implemented rules precisely; we do not invent a new semantic rules version for the manuscript. \path{data/game_map.json} maps G1--G20 to full canonical run directories. Each retains events, actions, decisions, prompts/responses, state snapshots, summaries, and replay reports. \path{data/input_hashes.json} pins the files read for this draft's extraction.
+
+\input{sections/cohort_table}
+
+The twenty retained replay reports pass full artifact-event comparison and normalized state replay. Full artifact comparison excludes no event types and covers 50,918 events; state comparison excludes four observational LLM event types and normalizes identifiers/timestamps. These are inherited historical results, not reruns for this manuscript. The original executable audit directory is \path{docs/research_raw/paper_adversarial_2026-10-29/executable_audit/}. Its stored reports and the canonical saved-game reports are source evidence; this draft does not invoke their engine code.
+
+\subsection{Response details, delivery, and accounting}
+The historical request census has 8,687 outgoing records, a different unit from 8,679 resolved attempts. Required versus automatic tool choice is checked in those outgoing requests. A retained selected-response screen finds 139 Grok call/content conflicts, including 64 of 136 thread openings. A formatter misattributes some trade summaries in 2,054 initial prompts, while all 920 delivered offer terms and current holdings agree with acceptance menus. A historical delivery check reports 149 public messages absent from the timeline and 107 empty public-message fields. Focal reception claims use recipient prompts, not the public-message field alone.
+
+Readable provider reasoning accompanies 287/1,961 final Sol responses, 1,316/1,669 Gemini, 1,560/1,696 Opus, and 1,662/1,663 Grok. Missing fields and unfinished text are preserved. Opus first-attempt refusals in G1--G4 are 64/84, 40/60, 30/53, and 80/109, followed by all 1,390 first attempts in G5--G20. Refusal timing varies by wall clock; this is not a randomized recovery intervention. The configured Opus 4.8 fallback model is not invoked.
+
+Known upstream cost fields sum to USD 141.71, with 1,600 refused Opus attempts and three Grok attempts unpriced. Choosing a single BYOK-aware cost field per attempt gives USD 141.39. Overlapping fields must not be added. These historical conventions are not invoices or current cost quotes. Provider reasoning-token semantics differ and do not measure comparable amounts of thought. Mortgage redemption uses a floating ceiling that exceeds exact 10\% by one dollar for five principals; transferred-deed interest is exact across board principals. A model quoting exact 10\% need not have made an arithmetic error.
+
+\subsection{Research assistance and responsibility}
+Kushagra Bharti is the named human author, as recorded in \path{CITATION.cff}. No affiliation or email is inferred. Astra, Sol, Opus, and Fable 5.2 language-model assistants supported historical analysis, drafting, and review. This complete independent draft was written by Sol after reading the full brief, historical manuscript, feedback, and whole-paper reviews. It did not read other authors' new drafts. Assistants are not authors or human annotators. Some assistant families overlap the evaluated configurations; research tasks and effort settings differ. Human accountability for the preprint remains with its named author.
+
+The independent package includes \path{evidence_map.md}, \path{changes_and_dissent.md}, \path{verification.md}, and \path{handoff.md}. The records support a scoped observational paper. No submission, acceptance, rating, or validated intervention is claimed.

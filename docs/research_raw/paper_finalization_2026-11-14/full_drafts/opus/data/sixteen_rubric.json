@@ -1,0 +1,300 @@
+{
+ "coder": "Opus (claude-opus-5-5) reading the full fields in data/focal_channels.json against the episode actions in data/finance_census.json. Model-assisted coding, not human annotation.",
+ "rubric": {
+  "explicit_dependency": "The coded field states that selling buildings makes a mortgage available (for example 'unlock', 'must sell before ... can be mortgaged', 'will allow me to mortgage').",
+  "ordered_route": "The field gives a sale-then-mortgage order that uses a deed whose mortgage is not on the first menu, without stating the rule.",
+  "inclusive_budget": "The field gives a total or residual that includes the released mortgage values, without stating the rule or an order through the released deed.",
+  "tentative": "The field raises the released resource as a question or possibility.",
+  "omission": "The field's maximum or available-resource total excludes every released mortgage."
+ },
+ "limits": "Categories describe what the selected text says. An inclusive budget does not show ignorance of the rule, and an explicit sentence does not show that the rule caused the action. Silence is coded as not stated, not as error.",
+ "coded_field_rule": "Applied private note when present; otherwise the provider-returned reasoning field of the final (recovery) attempt. The other available channel is summarized in second_channel and printed in full in the appendix.",
+ "cases": [
+  {
+   "game": 1,
+   "decision": 476,
+   "category": "explicit_dependency",
+   "quote": "Must sell before yellows can be mortgaged.",
+   "stated_totals": [
+    {
+     "label": "cash after the listed sale",
+     "value": 126,
+     "compare": "U0"
+    }
+   ],
+   "values": "all stated values correct",
+   "accounting": "correct",
+   "route": "sells the Marvin house, then mortgages Atlantic as stated",
+   "second_channel": "provider field also states the dependency; assistant content: 'the only way to unlock the yellow mortgages'"
+  },
+  {
+   "game": 2,
+   "decision": 216,
+   "category": "explicit_dependency",
+   "quote": "Clearing buildings unlocks yellow mortgages worth $430",
+   "stated_totals": [
+    {
+     "label": "cash after sales",
+     "value": 283,
+     "compare": "U0"
+    }
+   ],
+   "values": "yellow mortgages stated as $430; true $400",
+   "accounting": "sufficient route survives the overstatement",
+   "route": "sells both houses, mortgages Marvin and Ventnor as stated",
+   "second_channel": "provider field mentions the $430 mortgage but its arithmetic is confused"
+  },
+  {
+   "game": 4,
+   "decision": 270,
+   "category": "ordered_route",
+   "quote": "sell my 4 houses on Yellow ($300 total) and then mortgage two Yellow properties",
+   "stated_totals": [],
+   "values": "sale value correct; mortgages not valued in the note",
+   "accounting": "correct",
+   "route": "sells the four houses, mortgages Atlantic and Ventnor",
+   "second_channel": "provider field values the three yellow mortgages at $400 (correct)"
+  },
+  {
+   "game": 4,
+   "decision": 308,
+   "category": "inclusive_budget",
+   "quote": "Selling back my 7 houses at half price gets 525, and mortgaging the three red properties adds 340, totaling 910",
+   "stated_totals": [
+    {
+     "label": "maximal finance",
+     "value": 910,
+     "compare": "Ustar"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct; 'roughly 110 left' is the maximal residual",
+   "route": "starts with the stated Illinois sale; payment uses two of the three red mortgages",
+   "second_channel": "none (recovery response; no private note)"
+  },
+  {
+   "game": 5,
+   "decision": 263,
+   "category": "explicit_dependency",
+   "quote": "unlock the ability to mortgage Park Place ($175) and Boardwalk ($200), allowing me to raise $1,049 total and survive with $149 cash",
+   "stated_totals": [
+    {
+     "label": "maximal finance",
+     "value": 1049,
+     "compare": "Ustar"
+    },
+    {
+     "label": "remainder",
+     "value": 149,
+     "compare": "cash_after"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct",
+   "route": "sells six houses, mortgages both dark blues; leaves the stated $149",
+   "second_channel": "provider field first counts $600 salvage only, then revises: 'I can mortgage Park Place and Boardwalk after selling the houses!'"
+  },
+  {
+   "game": 6,
+   "decision": 185,
+   "category": "inclusive_budget",
+   "quote": "Selling the houses ... for $350, plus mortgaging Boardwalk for $200 and those three properties for another $220, gives me access to $770 total",
+   "stated_totals": [
+    {
+     "label": "maximal finance (cash plus $770)",
+     "value": 958,
+     "compare": "Ustar"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "$770 is new proceeds; $208 maximal residual is correct",
+   "route": "mortgages Boardwalk first, then sells houses as stated; one pink mortgage suffices",
+   "second_channel": "none (recovery response; no private note)"
+  },
+  {
+   "game": 8,
+   "decision": 257,
+   "category": "explicit_dependency",
+   "quote": "which will also unlock Park Place and Boardwalk for mortgaging",
+   "stated_totals": [],
+   "values": "house value correct; mortgages not valued",
+   "accounting": "correct remaining shortfall ($217)",
+   "route": "sells the Boardwalk house, then mortgages",
+   "second_channel": "provider field lists only the house sale and Baltic, then 'I need to make a more holistic plan'"
+  },
+  {
+   "game": 11,
+   "decision": 203,
+   "category": "inclusive_budget",
+   "quote": "I get $276 without touching the other properties. Adding the remaining mortgages ... brings the total to $556 ... with $56 left over",
+   "stated_totals": [
+    {
+     "label": "first-stage total",
+     "value": 276,
+     "compare": "U0"
+    },
+    {
+     "label": "maximal finance",
+     "value": 556,
+     "compare": "Ustar"
+    },
+    {
+     "label": "remainder",
+     "value": 56,
+     "compare": "cash_after"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct",
+   "route": "sells both houses in one call, then four mortgages; leaves the stated $56",
+   "second_channel": "none (recovery response; no private note)"
+  },
+  {
+   "game": 12,
+   "decision": 190,
+   "category": "omission",
+   "quote": "maximum liquidity is $408, below $500 owed. No legal liquidation can save me.",
+   "stated_totals": [
+    {
+     "label": "stated maximum",
+     "value": 408,
+     "compare": "U0"
+    }
+   ],
+   "values": "all stated values correct",
+   "accounting": "sum correct; inventory omits $340 of red mortgages",
+   "route": "declares at the first menu",
+   "second_channel": "provider field repeats the $408 and adds 'It seems like bankruptcy might transfer property anyway'"
+  },
+  {
+   "game": 13,
+   "decision": 195,
+   "category": "ordered_route",
+   "quote": "sell the house on Boardwalk ($100) and mortgage Park Place ($175) plus $335 in non-Dark-Blue properties, keeping Boardwalk and Kentucky Avenue unmortgaged",
+   "stated_totals": [
+    {
+     "label": "listed mortgages",
+     "value": 445,
+     "compare": "M0"
+    },
+    {
+     "label": "planned route total",
+     "value": 778,
+     "compare": "route"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "planned selection sums to $778 against $750",
+   "route": "sells the Boardwalk house, mortgages Park Place, Pacific, Indiana and Electric; Boardwalk and Kentucky stay unmortgaged; leaves $28",
+   "second_channel": "provider field contains a transient wrong total ('$44'), then the same selective plan 'to maximize my rental income potential'"
+  },
+  {
+   "game": 17,
+   "decision": 234,
+   "category": "omission",
+   "quote": "my total liquidatable value is only $530 ... Since I cannot raise $550, I must declare bankruptcy.",
+   "stated_totals": [
+    {
+     "label": "stated maximum",
+     "value": 530,
+     "compare": "U0"
+    }
+   ],
+   "values": "all stated values correct",
+   "accounting": "sum correct; inventory omits $375 of dark-blue mortgages",
+   "route": "declares at the first menu",
+   "second_channel": "provider field counts $500 salvage and ends 'I will have to start thinking of additional options'"
+  },
+  {
+   "game": 17,
+   "decision": 254,
+   "category": "inclusive_budget",
+   "quote": "Selling back my 5 houses ... gives $375, and mortgaging those three properties adds $110+$110+$120=$340, totaling $843",
+   "stated_totals": [
+    {
+     "label": "maximal finance",
+     "value": 843,
+     "compare": "Ustar"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct; states that all five houses cannot be sold in one call, which the validator would have accepted",
+   "route": "staged sales, then one red mortgage suffices; leaves $63",
+   "second_channel": "none (recovery response; no private note)"
+  },
+  {
+   "game": 18,
+   "decision": 309,
+   "category": "explicit_dependency",
+   "quote": "which will allow me to mortgage St. Charles Place ($70) on the next step",
+   "stated_totals": [
+    {
+     "label": "cash after sales",
+     "value": 412,
+     "compare": "U0"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct remaining shortfall ($38)",
+   "route": "one bundled sale of all eight pink houses (including St. Charles houses not on the listed targets), then the St. Charles mortgage; leaves $32",
+   "second_channel": "provider field covers the sale only"
+  },
+  {
+   "game": 18,
+   "decision": 313,
+   "category": "ordered_route",
+   "quote": "Selling all 5 houses yields only $500, so I still need to mortgage PP or BW afterward (~$49 gap).",
+   "stated_totals": [
+    {
+     "label": "cash after all sales, implied by '$500' of sales and the '~$49 gap' with $1 cash",
+     "value": 501,
+     "compare": "U0",
+     "implied": true
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct",
+   "route": "sells two Boardwalk houses as stated, later the rest, then mortgages Park Place; leaves $126",
+   "second_channel": "provider field briefly concludes 'I cannot raise enough cash', then values both dark-blue mortgages and weighs survival against rivals' positions and bank stock"
+  },
+  {
+   "game": 20,
+   "decision": 291,
+   "category": "tentative",
+   "quote": "I'm checking whether mortgaging the pink lots themselves after clearing the houses could close the gap.",
+   "stated_totals": [
+    {
+     "label": "proceeds from listed mortgages and all sales",
+     "value": 680,
+     "compare": "U0_minus_C"
+    }
+   ],
+   "values": "all stated values correct",
+   "accounting": "'$725 short even after' reuses the initial shortfall, and $680 of proceeds is compared with the $1,000 debt without the $275 cash; the true residual is $45",
+   "route": "sells nine pink houses, mortgages Illinois and Indiana, then States; leaves $25",
+   "second_channel": "none (recovery response; no private note)"
+  },
+  {
+   "game": 20,
+   "decision": 327,
+   "category": "inclusive_budget",
+   "quote": "Full liquidation should yield $1,414 including cash and all mortgages, enough for $1,400 rent by $14.",
+   "stated_totals": [
+    {
+     "label": "maximal finance",
+     "value": 1414,
+     "compare": "Ustar"
+    },
+    {
+     "label": "remainder",
+     "value": 14,
+     "compare": "cash_after"
+    }
+   ],
+   "values": "all correct",
+   "accounting": "correct",
+   "route": "two bundled sales and eight mortgages; leaves the stated $14 (every remaining increment exceeds the $14 slack, so full liquidation is the only payable end state)",
+   "second_channel": "provider field reaches the same $1,414 by components"
+  }
+ ]
+}

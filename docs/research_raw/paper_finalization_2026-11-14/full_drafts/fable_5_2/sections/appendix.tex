@@ -1,0 +1,254 @@
+\section{What the corpus supports for each original question}
+\label{app:scope}
+The project began with eight research questions and three cross-cutting ones. Table~\ref{tab:scope} states, for each, what these twenty games establish and what they leave open. An open entry means the design cannot measure the construct. It is not evidence that an ability is absent.
+
+\begin{longtable}{@{}L{.20\linewidth}L{.40\linewidth}L{.34\linewidth}@{}}
+\caption{Supported scope for the eight questions and for A to C.}\label{tab:scope}\\
+\toprule Question & Established in this corpus & Not established\\\midrule\endfirsthead
+\toprule Question & Established in this corpus & Not established\\\midrule\endhead
+1. Strategic reasoning & Refusals and prices argued from a rival's building budget; first financing actions set against the asset bound for all 188 episodes, with the nine departures decomposed & Optimal play, regret, or a strategic score\\
+2. Opponent modeling & Stated figures for a counterparty's cash, costs and liquidation value, some exact (G20) and some wrong (G2) & Calibration of beliefs; transfer to unfamiliar opponents\\
+3. Negotiation and deception & All 920 responses by form and completion; two countering and two rejecting response styles; a permitted bluff, an omission, a correction, an appeal and a withdrawn assurance & Whether any tactic persuaded; prevalence of deception; welfare or fairness\\
+4. Planning and memory & Stated dependencies and ordered routes before the menu offers the resource; a named selection of assets carried out exactly (G13); what notes each agent carried & A general planning ability; any benefit or harm from memory\\
+5. Adaptation and learning & An inventory revised inside one response (G5); offers revised within threads & Learning from feedback across games or turns\\
+6. Economic judgment and risk & Exact asset bounds in 43 of 48 unpayable first assessments; five listed-only totals; mortgage-first financing that kept buildings in 28 of 30 cases & Least-cost liquidation, reserve policy, or risk-adjusted value\\
+7. Collective behavior & One public appeal to deny a rival cash, with the speaker's own refusal and another player's contrary offer & A coalition, collusion, or its effects\\
+8. Evaluation validity & That payment here follows from not stopping; undisclosed differences between published and implemented rules; unequal channels across systems & Performance under a corrected interface or disclosed rules\\\midrule
+A. Strategic language versus action & Agreement between first action and asset bound; six Grok responses whose text and call disagree; two false budgets acted on & A causal relation between a written assessment and the action\\
+B. General versus multi-agent ability & Nothing. The roster has four unequal configurations and no external capability measure was matched to them & Any relation between general ability and play\\
+C. Skill versus luck & Wins by system (8, 7, 3, 2) and by seat (7, 7, 3, 3) & Shares of skill, seat and luck in winning\\\bottomrule
+\end{longtable}
+
+\section{Why continued financing pays}
+\label{app:proof}
+This appendix gives the argument of \S\ref{sec:task} in full. It reads the engine source at the two commits used for the games, which are identical for the files involved, and the holdings recorded at the first menu of each payable debt. No policy, engine step, replay or search was run.
+
+\textbf{Claim.} In each of the 131 payable entry states, every uninterrupted sequence of valid financing actions that each raise cash ends with the current debt paid, provided the player does not declare bankruptcy.
+
+\textbf{What the claim excludes.} Invalid calls, empty sale plans, limits on calls or time, provider failures, a later debt in the same payment queue, and any state outside the 131. It is not a statement that an arbitrary agent would pay, and it says nothing about cost.
+
+\textbf{Source facts.} File \path{python/packages/engine/src/monopoly_engine/engine.py}.
+\begin{enumerate}
+\item \path{_resolve_pending_payment}: after each financing action, if cash covers the amount the engine pays. Otherwise it computes the available mortgages and sales. If neither list has an entry it ends the episode in bankruptcy. If either has an entry it issues another financing menu.
+\item \path{_mortgageable_space_indices}: an owned deed can be mortgaged if it is unmortgaged, carries no building, and no deed of its group carries a building.
+\item \path{_sellable_building_space_indices}: in a fully owned group, the deeds at the group's highest building level are listed for sale. A hotel is listed only if the bank holds at least four houses.
+\item \path{_validate_sell_plan}: a sale plan may bundle items. A house sale returns the house to the bank and pays half its cost. A hotel sale turns the hotel into four houses taken from the bank and pays half of one building cost. The plan is valid if the bank's house stock stays nonnegative at the end and each touched group ends with levels within one of each other.
+\end{enumerate}
+Financing never adds a building and never lifts a mortgage.
+
+\textbf{Invariant and termination.} Let $Q$ be cash, plus half the cost of every standing building level with a hotel counted as five, plus the mortgage value of every unmortgaged deed. A mortgage moves its value from the third term to the first. A house sale moves half a house cost from the second to the first, and so does a hotel sale, which reduces five levels to four. $Q$ is therefore constant. Each action that raises cash removes at least one building level or one unmortgaged deed, so the sequence is finite.
+
+\textbf{No unpaid dead end without a hotel.} Suppose the sequence stops unpaid because nothing is offered. If no building stands, every unmortgaged deed is mortgageable, so none remains and cash equals $Q\ge D$, a contradiction. If a building stands in a fully owned, evenly built group without a hotel, a highest house is listed. So an unpaid dead end needs a group whose highest level is a hotel while the bank holds fewer than four houses.
+
+\textbf{Coverage of the 131 entries.} At entry, every built group is fully owned and its levels differ by at most one, and $Q\ge D$, in all 131. Four sufficient conditions, applied in order, cover them (Table~\ref{tab:coverage}).
+
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}L{.36\linewidth}rY@{}}\toprule
+Condition at entry & Debts & Why no unpaid dead end can occur\\\midrule
+\rows{gen_coverage_rows}
+\bottomrule
+\end{tabularx}
+\caption{Sufficient conditions and the number of payable debts each is the first to cover. All sixteen debts that need released collateral fall under the first (fifteen) or third (one, G20 d327) condition.}\label{tab:coverage}
+\end{table}
+
+For the third condition, let $T$ be bank houses minus four times the hotels held. A house sale raises $T$ and a hotel sale leaves it unchanged, so $T\ge 0$ throughout, and a dead end would need a hotel with fewer than four bank houses, where $T<0$.
+
+For the fourth condition, let $R$ be bank houses plus houses standing in groups that hold no hotel. A house sale in a hotel-free group leaves $R$ unchanged. A house sale elsewhere, possible only inside a bundle, raises it. Selling the only hotel of a group takes four houses from the bank and adds at least four to the hotel-free count, so $R$ does not fall. A dead end with a hotel standing has no listed house, so no hotel-free group holds one, and fewer than four bank houses, so $R<4$. The two entries concerned start with $R=8$ (Table~\ref{tab:lastclass}).
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrr@{}}\toprule
+Entry & Bank houses & Houses in hotel-free groups & $R$\\\midrule
+\rows{gen_lastclass_rows}
+\bottomrule
+\end{tabular}
+\caption{The two entries under the fourth condition. Both are Gemini in G3 with one hotel in light blue, one in dark blue, and houses on red.}\label{tab:lastclass}
+\end{table}
+
+\textbf{Provenance.} All four authors of the earlier reviews derived the result for the sixteen necessary-collateral entries from the source. The first three conditions were stated and counted by this draft's author on 14 November. The fourth is Astra's argument from that day. This draft re-derived it, extended it to bundled plans as above, and recomputed its premises from the raw records. No one has executed a financing policy on these states.
+
+\section{The payable partition}
+\label{app:middle}
+The 53 debts in the middle row of Table~\ref{tab:partition} have $C+M_0<D\le U_0$. The bound shows that sales were needed. That released mortgages were not needed rests on three kinds of evidence. Forty-seven were paid by routes that used no mortgage absent from the first menu. One, Grok's G12 d249, was declared, and the stored audit paid it by selling five pink houses, leaving \$43. Five were paid by routes that did use a released mortgage. For each of those five, selling buildings alone, with the listed mortgages, covers the debt, and the bank's stock permits it (Table~\ref{tab:middle}).
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}llrrrrrY@{}}\toprule
+Entry & System & $D$ & $C$ & $M_0$ & $S$ & Bank houses & Buildings at entry\\\midrule
+\rows{gen_middle_rows}
+\bottomrule
+\end{tabularx}
+\caption{The five middle-row payments that used a released mortgage. In each, $C+M_0+S\ge D$.}\label{tab:middle}
+\end{table}
+
+G3 d228 and d356 hold houses only, and every house can be sold in turn. G3 d482 holds one hotel with seventeen bank houses, and G18 d428 three hotels with twenty-nine, so every exchange is affordable. G3 d461 holds two hotels with six bank houses. Exchanging one hotel leaves two bank houses, selling that group's houses restores the stock, and the second exchange follows. These five routes are arguments from recorded holdings and the sale rules. They were not executed.
+
+\section{Evidence tiers for the sixteen first responses}
+\label{app:coding}
+The tiers are defined over every available channel of the first response, and the first definition that applies is used.
+\begin{description}[leftmargin=1.4em,itemsep=1pt]
+\item[Explicit dependency.] A channel says that selling or clearing buildings enables, unlocks, allows or must precede mortgaging deeds of that group.
+\item[Ordered route.] No such statement, but a channel gives a sequence in which a building sale comes before a named mortgage of a deed in the same group.
+\item[Inclusive budget.] Neither of the above, but a stated total or itemization includes the mortgage value of deeds in a built group.
+\item[Tentative resource.] The released mortgages are raised as a possibility and not counted.
+\item[Omission.] No available channel mentions the mortgage value of deeds in a built group, and the stated maximum excludes it.
+\end{description}
+One LLM author assigned the tiers with the stored fields in hand. Two other LLM authors arrived at the same five-way split independently in the 14 November review. That is agreement among model readers of the same records. It is not human validation. The build checks that each evidence span occurs verbatim in the stored channel. Table~\ref{tab:coding} adds the arithmetic and the executed route for each case.
+
+{\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{.072\linewidth}L{.052\linewidth}rrrL{.08\linewidth}L{.285\linewidth}L{.185\linewidth}L{.07\linewidth}@{}}
+\caption{The sixteen first responses: sums, tier, figures and route. $U_0$ is the listed-only total and $U_*$ the full bound.}\label{tab:coding}\\
+\toprule Entry & System & $D$ & $U_0$ & $U_*$ & Tier & Figures and other statements & Route taken & Outcome\\\midrule\endfirsthead
+\toprule Entry & System & $D$ & $U_0$ & $U_*$ & Tier & Figures and other statements & Route taken & Outcome\\\midrule\endhead
+\rows{gen_sixteen_coding_rows}
+\bottomrule
+\end{longtable}}
+
+\section{All sixteen first responses, both channels}
+\label{app:texts}
+Each entry prints the complete authored note and the complete provider reasoning field of the first response in the episode. For Opus the first attempt was refused with no text, and the fields come from the action-only retry, which has no note. Text is reproduced character for character. Paragraph breaks in provider fields are kept. The machine-readable file \path{supplement/sixteen_first_texts.json} adds the public message, the assistant content, field hashes, source lines and the route.
+
+\input{sections/gen_sixteen_texts}
+
+\section{Stated totals on unpayable debts}
+\label{app:totals}
+Table~\ref{tab:totals} counts, for the 48 unpayable debts whose first menu offered a financing action, whether the first response contains a figure equal to the full bound $U_*$, the proceeds $U_*-C$ or the gap $D-U_*$. Figures equal to the debt, the cash or the initial shortfall are not counted. The match is made over the authored note, the provider field and the assistant content.
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrr@{}}\toprule
+System & First responses & Exact full bound & Itemized, no total & Listed-only total\\\midrule
+\rows{gen_stated_totals_rows}
+\bottomrule
+\end{tabular}
+\caption{First responses on unpayable debts with a financing option. In 27 of the 48 no building locks a deed, and all 27 state the exact bound. In the other 21 the counts are 16, 2 and 3.}\label{tab:totals}
+\end{table}
+
+The five responses without an exact figure were read directly. Two count the locked deeds without adding a total. Opus in G2 d215 lists \Q{g2-opus-locked} and Sol in G10 d188 writes \Q{g10-sol-locked}. Three give the listed-only total. Sol in G3 d426 writes \Q{g3-listed} That is \$914 against a full bound of \$1,074. Opus in G5 d309 writes \Q{g5-listed} against \$799. Grok in G8 d280 writes \Q{g8-listed} The full bound there was \$666, because \$280 of orange mortgages stood under the houses. All three debts exceeded the full bound, so the verdict was unaffected. Rows for all 56 unpayable debts are in \path{supplement/stated_totals_unpayable.json}.
+
+\section{The nine first actions that depart from the asset bound}
+\label{app:departures}
+Two of the nine are the false budgets of \S\ref{sec:false}, printed in Appendix~\ref{app:texts}. The other seven follow. Each block gives the applied call and the text of each channel. Long fields are cut at the stated length. The complete fields are in \path{supplement/nine_departures.json}.
+
+\input{sections/gen_departures}
+
+\medskip
+\noindent In G9 the text of later decisions moves toward the applied course. The provider field at d196, after two mortgage calls whose assistant content named bankruptcy, includes \Q{g9-later}.
+
+\section{Notes carried into the sixteen first requests}
+\label{app:carried}
+Each request includes the agent's ten most recent notes. Table~\ref{tab:carried} records what those notes said about raising cash. A conditional inventory is a figure that was correct when written, for the mortgages available while the buildings stood, and that excludes what a sale would release.
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}llrL{.17\linewidth}Yl@{}}\toprule
+Entry & System & Notes & Kind & What the carried notes contain & Outcome\\\midrule
+\rows{gen_carried_rows}
+\bottomrule
+\end{tabularx}
+\caption{Carried notes at the sixteen first requests. One LLM author read all ten notes of each request. Quoted spans are checked against the stored prompt by the build.}\label{tab:carried}
+\end{table}
+
+A conditional inventory precedes both declarations and four payments. Sol carried its figure in six notes before declaring and in three before paying. The \$130 and \$30 in the two false budgets equal the mortgage values the first menu lists, so an agent that counted only listed mortgages would write the same figures with no note at all. The table cannot separate these accounts. Grok's request at G18 d313 also showed, in its public timeline, another player selling houses and then mortgaging a deed of the same group one turn earlier.
+
+\section{Bargaining tables}
+\label{app:bargain}
+All tables are recomputed from the stored decisions. An offer's author can differ from the player who opened the thread. Two of the 920 response opportunities did not list acceptance as legal and are left out of the 918-offer tables.
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrr@{}}\toprule
+Recipient & Responses & Accepted & Countered & Rejected\\\midrule
+\rows{gen_recipient_rows}
+\bottomrule
+\end{tabular}
+\caption{All 920 responses by the system that responded. Seven of Grok's 28 acceptances came from calls whose assistant content named a different action.}
+\end{table}
+
+{\small
+\begin{longtable}{@{}lllrrrr@{}}
+\caption{Every legally acceptable offer by stage, form and completion. Empty cells are omitted.}\\
+\toprule Stage & Form & Completes & $N$ & Accepted & Countered & Rejected\\\midrule\endfirsthead
+\toprule Stage & Form & Completes & $N$ & Accepted & Countered & Rejected\\\midrule\endhead
+\rows{gen_full_offer_rows}
+\bottomrule
+\end{longtable}}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrrr@{}}\toprule
+Opening population & Proposer only & Neither & Gap, pp & Block bootstrap & Leave one out\\\midrule
+\rows{gen_contrast_rows}
+\bottomrule
+\end{tabular}
+\caption{Rejected over received, and the difference in rejection rates. The bootstrap column gives the 2.5 and 97.5 percentiles of the percentile bootstrap over the five seed blocks, with all 3,125 ordered resamples enumerated. The last column gives the range when one block is left out. It describes sensitivity to block weights within these games. It is not a confidence interval for a population of games, and the contrasts were chosen after inspection.}\label{tab:contrast}
+\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}lrrrrrrrrr@{}}\toprule
+&\multicolumn{3}{c}{Swaps by proposer}&\multicolumn{3}{c}{Swaps by recipient}&\multicolumn{3}{c}{Cash bids by recipient}\\
+System & Own & Neither & Gap & Own & Neither & Gap & Own & Neither & Gap\\\midrule
+\rows{gen_strata_rows}
+\bottomrule
+\end{tabular}
+\caption{Opening offers, rejected over received, when the system is the proposer or the recipient. ``Own'' completes only the proposer's group. A dash replaces a gap when either cell has fewer than five offers. That rule is applied to every gap in this paper.}
+\end{table}
+
+\begin{table}[H]\centering\small
+\begin{tabular}{@{}llrrrrr@{}}\toprule
+Opening population & Completes & Block 1 & Block 2 & Block 3 & Block 4 & Block 5\\\midrule
+\rows{gen_block_rows}
+\bottomrule
+\end{tabular}
+\caption{Rejected over received in each seed block (games 1 to 4, 5 to 8, 9 to 12, 13 to 16, 17 to 20). Without Grok-authored offers the neither cells hold 10, 11, 8, 4 and 3 offers, and one block has a negative gap.}
+\end{table}
+
+Counters often keep the disputed exchange and ask for more cash. Of 111 counters to offers that would complete only the proposer's group, 79 keep every deed and jail card of the offer and improve the counterer's cash. Two findings from the earlier package were not recomputed for this draft and are inherited as stated there. Of fourteen completing transfers that followed an earlier refusal or counter by the same holder to the same buyer, the holder's cash had fallen in thirteen. That selection conditions on a settlement and cannot show that falling cash produces one. And six same-game, same-seller, same-deed, same-mortgage-status price comparisons give a higher ask for the completing buyer in four, a lower ask in one and an equal ask in one.
+
+\section{Three further incidents}
+\label{app:incidents}
+The earlier versions of this study presented eight incidents. Six are in the main text: the two financing cases of \S\ref{sec:texts} and the four bargaining cases of \S\ref{sec:bargain}. Incident 2 is one of the original eight and Incident 1 is new here. The remaining three follow.
+
+\incident{7}{Accepting terms while correcting their premise (G19).} Grok proposes Virginia and \$150 for Sol's States Avenue with the message \Q{g19-false} Both deeds are pink. The note in the same call says \Q{g19-abort} and the assistant content names an end-of-turn action, so this is another Grok response whose channels disagree. The proposal reached Sol, who answered \Q{g19-correct} The trade executed and completed no group. Sol separated a false premise from terms it found acceptable.
+
+\incident{8}{An appeal to deny a rival cash (G20).} After Grok completes the reds with \$222 left, Gemini tells the table \Q{g20-appeal} Grok's next note reads \Q{g20-boycott} Grok builds one house on each red, mortgages New York, and offers Vermont to Gemini for \$150. Gemini answers \Q{g20-refuse} Grok mortgages Vermont for \$50. The earlier package records that Opus later offered Grok cash for deeds, so the appeal did not produce joint refusal. It shows one player asking others to withhold finance and acting on its own request.
+
+\incident{9}{A standing offer withdrawn (G18).} Only Opus and Sol remain. Opus has bid \$250 for Sol's mortgaged Pacific, which would complete its greens, and Sol has refused. After collecting a \$750 rent Opus says \Q{g18-assure} The provider field of that same response reads \Q{g18-reserve} A second \$750 rent leaves Sol with \$49. Sol then says \Q{g18-invoke} and Opus replies \Q{g18-withdraw} The public renewal and the private reservation were written in one response, before Sol's position worsened. The records do not show that Sol gave anything up by relying on the offer.
+
+\section{Prompts}
+\label{app:prompts}
+The system prompt below is the text stored with every first attempt. It is identical across all 6,989 decisions. The second prompt is the text stored with every action-only retry after a refusal, identical across all 1,604 such attempts. Lines are wrapped for print.
+
+\subsection*{Standard system prompt}
+\input{sections/gen_prompt_standard}
+\subsection*{Action-only recovery prompt}
+\input{sections/gen_prompt_recovery}
+
+\section{Response handling}
+\label{app:handling}
+\textbf{Attempts.} An invalid first response receives one corrective retry and then the engine's deterministic choice. A refused first response uses its retry for the action-only prompt instead. The deterministic choice was used in 66 decisions (61 Opus, 4 Sol, 1 Gemini), none of them in a financing episode's first action or in any payment.
+
+\textbf{Refusals.} Opus's first attempts were refused in 64 of 84, 40 of 60, 30 of 53 and 80 of 109 decisions in games 1 to 4, and in all 1,390 decisions of games 5 to 20. One second attempt was also refused. Every refusal carries the same provider message, which cites terms of service on reverse engineering or duplicating model outputs. We do not know why that policy applied to this prompt. No action-only retry was refused.
+
+\textbf{Reasoning fields.} A readable provider field accompanies the final response in 287 of Sol's 1,961 decisions, 1,316 of Gemini's 1,669, 1,560 of Opus's 1,696 and 1,662 of Grok's 1,663. The stored type is \texttt{reasoning.summary} for Sol and Grok and \texttt{reasoning.text} for Gemini and Opus. Sol, Gemini and Grok responses also carry encrypted reasoning that cannot be read. A label does not establish that the readable text is complete or faithful.
+
+\textbf{Tool choice and conflicts.} Grok's requests required a tool call. The other systems used automatic tool choice. This setting and the earlier package's check of it against the saved request files are inherited. Grok's assistant content names an action in 1,068 decisions and names one other than the received call in 139, of which 99 are end-of-turn management decisions, 11 trade responses and 9 financing decisions.
+
+\textbf{Cost.} The earlier package reports USD 141.39 in gateway-recorded cost for the twenty games, with 1,600 refused attempts and three others unpriced. We did not recompute it.
+
+\section{Artifacts and reproduction}
+\label{app:artifacts}
+\textbf{Repository.} \url{https://github.com/KushagraBharti/MonopolyBench}. Games 1 to 4 ran at source commit \path{42f85183fa772b2ab3759cc49987e5ed6cc9efcc} and games 5 to 20 at \path{d6808534a831862682a6940f394c6c87bb2691cb}. The engine, resolver and runner files are identical at both. The rules described here are those of that frozen engine with board data \path{contracts/data/board.json}.
+
+\textbf{Games.} Each saved game sits under \path{saved_games/railway-research-12-games-2026-10-25/} (games 1 to 12) or \path{saved_games/railway-research-8-games-2026-10-26/} (games 13 to 20) in the folder named in Table~\ref{tab:cohort}. Its \path{run/} directory holds \path{decisions.jsonl}, \path{events.jsonl}, the prompt and response files, state snapshots and replay reports. Decision numbers in this paper are the zero-based suffix of the stored decision identifier.
+
+\textbf{This paper.} The source is in \path{docs/research_raw/paper_finalization_2026-11-14/full_drafts/fable_5_2/}. From that folder, \path{bash build.sh} runs seven read-only scripts over the saved games and then compiles the document. The scripts rebuild the 188 episodes and 920 responses, compute every table, extract every quotation from its stored field, and write the files under \path{supplement/}: the 188-episode census, both text channels of the sixteen first responses, the nine departures, the stated totals and both prompts. \path{tools/08_verify.py} then checks the compiled PDF.
+
+\textbf{What was not rerun.} The build does not import the rules engine or call a model. The three legal payment sequences for the declared payable debts, the G7 menu search and the replay comparisons of all twenty games come from audits stored with the earlier paper package under \path{docs/research_raw/paper_revision_2026-11-12/integrated/}. We cite them as retained results.
+
+{\footnotesize
+\begin{longtable}{@{}lrlrlrll@{}}
+\caption{The twenty games. Seats list the systems at seats 1 to 4 (Sol, Gem, Opu, Gro). Turns is the final turn index.}\label{tab:cohort}\\
+\toprule Game & Seed & Seats 1 to 4 & Turns & Winner & Seat & Commit & Folder\\\midrule\endfirsthead
+\toprule Game & Seed & Seats 1 to 4 & Turns & Winner & Seat & Commit & Folder\\\midrule\endhead
+\rows{gen_cohort_rows}
+\bottomrule
+\end{longtable}}
+
+\section{Use of AI assistance}
+\label{app:ai}
+The author leads the MonopolyBench project, set the research questions, and authorized the twenty games and the scope of this analysis. Four LLM research assistants, called Astra, Sol, Opus and Fable 5.2 in the project records, analysed the saved records, wrote analysis code, drafted text and reviewed one another's work under the author's direction. This manuscript was drafted by one of them, Claude Fable 5.2, as a complete independent version. The Sol and Opus assistants share a model family or identifier with systems that played the games. They worked on research tasks and had no part in play. The assistants are not authors. Every reading of model text reported here was made by an LLM assistant, and none was checked by a human annotator. The author is responsible for the content.

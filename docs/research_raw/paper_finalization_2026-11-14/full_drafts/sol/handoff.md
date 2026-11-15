@@ -1,0 +1,19 @@
+# Frozen independent whole-paper draft
+
+**Financial assessment and strategic conduct in twenty LLM Monopoly games**
+
+Complete independent manuscript by Sol for integration, with Kushagra Bharti as the named human author. I read the complete brief, historical active paper, all three supplied feedback files, all four whole-paper reviews/cross-reviews and corrections, and the relevant source/evidence entry points. I did not read any other author's new draft. No subagents were used.
+
+Deliverables are `manuscript.pdf`, `manuscript.tex`, complete `sections/` and `references.bib`, `README.md`, `evidence_map.md`, `changes_and_dissent.md`, `verification.md`, and this handoff. `release.zip` is the portable document/support package. `release_manifest.json` pins the shipped sources, PDF, support files, data, and verification summaries. The local `.venv`, build intermediates, and page PNGs are not required for compilation and are excluded from the archive.
+
+The paper has seven normal 10-point two-column main pages, two reference pages, and fourteen appendix pages. Six compact main-text incidents cover exact valuation, persistent resistance, factual correction, bluffing/competing finance, selective survival disclosure, and attempted financial denial. G2 pricing/reversal and G18 assurance/withdrawal complete all eight in the appendix. The 16-row financial rubric fits on one appendix page; every available focal note, provider field, and assistant-content field is printed in full afterward.
+
+The central independent decision is to write a positive observational account of financial representations and strategic economic conduct. Continued financing is a source property, not agent planning performance. Exact budgets and selective resource choices retain empirical value. Both failed budgets, six above-bound starts, the payable Grok declaration, and unequal channel observability constrain the account without becoming a failure catalogue. The bargaining census is exploratory and the 61/74 population remains separate.
+
+I accept the 131-entry source proof after checking the final two-state recyclable-stock argument. This is a new independent model review of Astra's extension, not four-author historical confirmation or an executed baseline. Entry premises are re-extracted in `data/continuation_premises.json`; the argument and assumptions are in appendix B. The middle 53-case partition is justified by observed routes, one inherited witness, and five source constructions rather than by a sufficient bound alone.
+
+Substantive dissent is recorded in `changes_and_dissent.md`. In particular, I reject a failure-only or planted-number headline, a 179/188 accuracy score, universal rulebook-following claims, no-effect conclusions from wide intervals, and treating inclusive budgets as devoid of useful financial content. I also decline to promote G13 to the only choice case or G20 to ten difficult planning decisions.
+
+Verification confirms all corpus/partition counts, 920 response/action joins, all 59 retained quote-manifest entries, all 29 nonempty focal fields in the PDF, 84 unchanged protected historical files, and the historical replay report status without rerunning any replay. A clean local build using only copied document inputs produces 23 pages with identical extracted text. No LaTeX diagnostics or clipped text remain. The final PDF hash is recorded in `verification.md` and `qa/verification.json`.
+
+No cuts are needed to meet the requested nine-main-page ceiling. If integration requires further shortening, the exact optional cuts are recorded in `changes_and_dissent.md`; the positive finance examples and proof scope should remain. No evaluation, engine execution, solver search, provider call, judge call, prompt edit, commit, or push occurred. The draft is complete and frozen for integration. Further review is a fresh task.

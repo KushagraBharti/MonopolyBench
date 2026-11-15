@@ -293,8 +293,8 @@ add("I2-18", "I2", "paper-level", "About 8,200 words over 12 two-column pages.",
     "checked", "The main text is long for any nine-page format.")
 add("I2-19", "I2", "paper-level", "Appendix F names files that are not at the cited repository, whose last commit is 29 October.",
     "artifact", "medium", "confirmed",
-    "Local origin/main is a10419d23, dated 29 October 2026. docs/research_raw/paper_revision_2026-11-12/ is untracked. I did not query the public remote.",
-    "checked", "The handoff already says the package is local. The appendix should not point readers at paths that are not published.")
+    "True when the referee looked and when this round began: local origin/main was a10419d23 of 29 October 2026 and docs/research_raw/paper_revision_2026-11-12/ was untracked. At 19:18 on 14 November a checkpoint commit 863f8ef7, which I did not make, added that folder, and the local origin/main ref now points at it. I did not query the remote. The named files now sit under docs/research_raw/paper_revision_2026-11-12/integrated/, a path the appendix does not give.",
+    "checked", "The appendix should cite the folder path and commit.")
 add("I2-20", "I2", "paper-level", "The repository URL carries the owner's name, there is no author block, and the human contribution is unstated. Appendix C is still present. Page 6 has a half-column blank and Incident 2 is split by a table and a figure.",
     "editorial", "low", "confirmed",
     "manuscript.tex author is empty. supplement.tex prints the URL and the question map with the row 'No independent capability axis available'. Rendered pages 6 and 7.",

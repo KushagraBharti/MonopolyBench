@@ -1,0 +1,226 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+\input{preamble}
+\hypersetup{pdftitle={Financial Assessment and Strategic Conduct of LLM Agents in Twenty Monopoly Games},pdfauthor={Kushagra Bharti}}
+\title{\vspace{-0.6em}Financial Assessment and Strategic Conduct of\\LLM Agents in Twenty Monopoly Games}
+\author{Kushagra Bharti}
+\date{Preprint, 14 November 2026}
+\begin{document}
+\input{sections/gen_quotes}
+\maketitle
+
+\begin{abstract}
+We study how four configured large language model (LLM) agents assess and use money in twenty complete four-player Monopoly games. Debt episodes provide an exact local check: holdings fix what a player can raise, and the engine records what it did. Across all 188 financing episodes, first moves track asset coverage. Agents declare bankruptcy at the first menu in 3 of 132 episodes whose own-asset bound covers the debt and in 50 of 56 where it does not. We show from the frozen engine source that in each of the 131 demonstrated-payable episodes, continuing to choose valid cash-raising actions is sufficient for payment. The 128 payments therefore show that agents kept financing, not that they solved hard routing problems; the written assessments carry the further information. In sixteen debts that need mortgages released only by selling buildings, the first texts price assets the menu leaves unpriced, with one aggregate error. Five state the sale-to-mortgage dependency, three give an ordered route through it, five give budgets that include it and one raises it as a question. Three predict the final remainder to the dollar. Both failures total exactly cash, building salvage and listed mortgages, then declare. When listed mortgages suffice, agents keep their buildings in 28 of 30 episodes. Every observed conflict between a response's named action and its applied call comes from Grok, the only configuration whose free text names actions, and one stated motive follows a published rule that the engine does not apply. Exploratory bargaining records show agents computing rivals' development budgets, pricing deeds by buyer, bluffing and bargaining over survival. All findings are observational and specific to this roster and its response conditions.
+\end{abstract}
+
+\section{Introduction}
+An economic agent needs to know what it can pay, what a payment costs it, and what its trades enable for others. Monopoly puts these questions into a game with exact accounting and real strategic stakes. When rent comes due, a player can sell buildings back to the bank at half price and mortgage deeds, but a developed deed cannot be mortgaged until its whole color group has been cleared. The player may instead declare bankruptcy and hand its assets to the creditor. Whether payment is possible follows from the holdings and the rules, so every financial claim an agent writes in that moment can be checked.
+
+We study twenty complete games played by four configured LLM systems, recorded as 6,989 decisions with their delivered prompts, returned texts and applied actions. Our central question is narrow. \emph{When an obligation arrives, what resources do these agents count, how accurately do they value them, and does the applied action follow the count?} We then ask how the same agents reason about rivals' finances when they bargain.
+
+One property of the environment shapes the answer. The engine pays a debt automatically as soon as cash covers it and offers a fresh menu after every action. We prove from the frozen source that in every payable debt in the corpus, a player that keeps choosing valid cash-raising actions must eventually pay (Proposition~\ref{prop:continue}). Payment is thus evidence of continuing, not of constructing a difficult route. The choices that carry information are whether to stop, which assets to give up, and what the agent says it can raise. These are what we measure.
+
+The main observations are these.
+\begin{itemize}
+\item \textbf{Stopping tracks coverage.} Agents declare at the first menu in 3 of 132 episodes whose generous own-asset bound covers the debt and in 50 of 56 where it does not (Table~\ref{tab:firstmenu}).
+\item \textbf{Agents value what the menu does not price.} Liquidation menus list deeds by key only. In the sixteen debts that need collateral released by building sales, the first texts give correct values for every asset they price except one aggregate. Five state the dependency, three give an ordered route through it, one raises it as a question and five give inclusive budgets; three predict the remainder to the dollar (Table~\ref{tab:sixteen}).
+\item \textbf{Financing preserves development.} When listed mortgages suffice, 28 of 30 building owners pay without selling a building.
+\item \textbf{Failures are specific.} The two payable debts declared on a written assessment have totals equal to cash plus all building salvage plus the listed mortgages. The third payable declaration is a call that contradicts its own note.
+\item \textbf{Bargaining is economically situated.} Agents compute rivals' development budgets, quote buyer-specific prices, bluff, and bargain over survival. A retrospective completion contrast is sensitive to who wrote the offers.
+\end{itemize}
+The study contributes a complete, source-linked census of financing decisions with exact resource bounds and a source argument for when continuing suffices; a finer reading of written financial assessments that separates dependency statements, routes, budgets and omissions; and observational evidence on strategic conduct over persistent assets. It does not rank models, estimate causal effects or introduce a planning construct. Section~\ref{sec:related} places each element against prior work.
+
+\section{Setting and measurement}
+\label{sec:setting}
+\subsection{Games, agents and information}
+Four players start with \$1,500 on the standard US board. Declined purchases go to auction; players negotiate bilateral trades of cash, deeds and jail cards with up to twenty exchanges per thread; developed groups cannot be traded. Five seeds each receive four cyclic seat rotations of one roster, giving games G1--G20 of 75--386 turns with no turn cap. The corpus holds 50,918 events, 6,989 resolved decisions and 8,679 response attempts. Table~\ref{tab:roster} lists the systems. The client requests medium reasoning effort and sets no temperature or token cap. Appendix~\ref{app:artifacts} gives seeds, seats, winners, commits and paths.
+
+\begin{table}[t]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}lXrrr@{}}\toprule
+Label & OpenRouter identifier & Decisions & Debts & Paid\\\midrule
+\rowsfile{sections/gen_roster.tex}
+\bottomrule\end{tabularx}
+\caption{Participants. \emph{Debts} counts financing episodes; \emph{Paid} is paid over demonstrated-payable debts. Exposure differs by system, so per-system rates are descriptions, not rankings.}\label{tab:roster}
+\end{table}
+
+Each request carries the player's holdings (deed keys with houses, hotel and mortgage flags), cash, bank stock, other players' public state, a twenty-entry public timeline and up to ten of the player's own earlier notes. A liquidation request adds the amount owed, the shortfall, and lists of mortgageable deed keys and sellable building keys. It contains no prices, mortgage values, salvage values or color-group labels, and the system prompt states no game rules (Appendix~\ref{app:prompts}). Any value an agent writes comes from its own knowledge or its earlier context.
+
+We distinguish four text channels. The \emph{applied private note} and the \emph{public message} are arguments of the applied tool call; the note returns to the same player as memory and the message goes to the others. \emph{Assistant content} is free text returned beside the call. The \emph{provider reasoning field} is a separate readable field returned by the gateway (labelled \texttt{reasoning.summary} for Sol and Grok and \texttt{reasoning.text} for Gemini and Opus). It is neither a tool argument nor delivered to anyone, and it may be summarized or incomplete. A note and its action are produced in one response. We treat the note as a statement generated together with the action, not as a forecast elicited before it, and we draw no inference about cognitive order from the order of fields.
+
+Response conditions differ by system and are part of what was evaluated. Opus's standard request was refused on 1,604 first attempts, all with one provider message, including every first attempt from G5 onward; the harness then issued an action-only recovery request without a note field. Opus's focal texts are therefore provider fields. Grok runs with required tool choice and the others with automatic choice. After an invalid response the harness retries once and then applies a fallback that mortgages or sells before it ever declares; no paid episode used it.
+
+\subsection{Published and implemented rules}
+The agents were told no rules, and the engine departs from the published rulebook~\cite{hasbroMonopolyRules} in ways that matter for debts (Table~\ref{tab:rules}). The mortgage-release rule the successful texts apply is standard. The settlement rules that make stopping more or less attractive are not, and the agents could not see them. A belief that matches the rulebook can therefore be wrong about this engine. We use the engine to check feasibility statements and do not score the motives for stopping against a single objective.
+
+\begin{table}[t]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{1.9cm}YY@{}}\toprule
+Rule & Published rulebook & This engine\\\midrule
+Mortgage an improved deed & Sell all buildings in the group first & Same\\
+When to declare & ``if you owe more than you can pay'' & Offered at every debt menu, payable or not\\
+Buildings of a player bankrupt to a player & Sold to the bank; half price to the creditor & Pass to the creditor intact\\
+Inherited mortgaged deeds & Creditor pays 10\% interest at once & No charge\\
+Selling hotels & ``may be sold at once'' & Menu lists a hotel only if the bank holds four houses\\\bottomrule
+\end{tabularx}
+\caption{Debt-relevant rules. The prompt adds: ``Declare bankruptcy only when you cannot or should not raise enough cash.'' Appendix~\ref{app:rules} gives source lines.}\label{tab:rules}
+\end{table}
+
+\subsection{Financing episodes and resource bounds}
+A financing episode starts at the first liquidation menu for an obligation and ends in payment or elimination. Debts paid from cash alone never reach a menu. At entry let $D$ be the debt, $C$ cash, $S$ the salvage value of all buildings (a hotel counts five units), $M_0$ the mortgage value of deeds on the first menu and $M_*$ that of all unmortgaged owned deeds. We use
+\[U_0=C+S+M_0,\qquad U_*=C+S+M_*.\]
+$U_*<D$ means the player's own assets cannot pay even under the generous bound. If a debt is payable and $U_0<D$, payment must use a mortgage that only a building sale can release. The \emph{payable} set contains the 128 paid episodes and three declarations for which an earlier audit executed a legal payment sequence in the engine; we read those stored witnesses and did not rerun them.
+
+\begin{proposition}[Continued financing]\label{prop:continue}
+Fix any of the 131 payable entry states and its current obligation. Suppose the debtor submits only valid mortgages or building sales with positive proceeds, no other player acts, and execution is not interrupted. Then the obligation is paid.
+\end{proposition}
+\noindent\emph{Sketch.} Before payment, $Q=$ cash $+$ remaining salvage $+$ remaining unmortgaged principal is invariant, and the count of building levels plus unmortgaged deeds falls at every step, so any such sequence is finite. It can end unpaid only at a state with assets left and no listed action. In a hotel-free group the highest house is always sellable, and a cleared group's deeds become mortgageable. Only a hotel whose downgrade needs four bank houses can block. Checking the recorded entry holdings shows that the 131 states fall into four classes that rule this out (Appendix~\ref{app:proof}): 108 hold no hotel; 12 more can pay from cash and listed mortgages, which stay listed until used; 9 more have bank stock for every downgrade in any order; and the last 2 have one hotel per group with enough recyclable house stock. At a final state with nothing listed, cash would equal $Q\ge D$, a contradiction. \qed
+
+The proposition is an argument from source and recorded holdings, not an executed baseline. It excludes invalid-call loops, call or time limits, provider failure, other actors and later obligations, and it says nothing about cost or strategy. It does not extend to every Monopoly state: in G7, Opus held \$1,310 in nominal resources against a \$750 debt but only \$440 was reachable through the menu, because the bank held no houses for a hotel downgrade.
+
+\subsection{Reading the texts}
+For each of the sixteen debts with $U_0<D\le U_*$ we code one field: the applied note when present, otherwise the provider field of the final attempt. A five-way rubric records whether the field states the sale-to-mortgage dependency (\emph{explicit}), gives a sale-then-mortgage order through a released deed without stating the rule (\emph{ordered}), gives a total or residual that includes released mortgages (\emph{inclusive}), raises the resource as a question (\emph{tentative}), or excludes every released mortgage (\emph{omission}). Separately we check each stated value against the board and each stated total against $U_0$, $U_*$ and the realized remainder by arithmetic. The coding is the author's model-assisted reading (Appendix~\ref{app:assistance}); it is not human annotation. An inclusive budget does not show ignorance of the rule, an explicit sentence does not show that the rule caused the action, and silence is coded as not stated. Appendix~\ref{app:texts} prints every available channel for all sixteen in full; \texttt{data/focal\_channels.json} carries them with hashes.
+
+\section{Financial assessment under debt}
+\label{sec:finance}
+\subsection{What agents do when a debt arrives}
+Of 188 financing episodes, 128 end in payment and 60 in elimination. Payments use 180 mortgages and 89 sale actions to meet \$51,997 in obligations; 67 take one action and 61 take two to ten. Among the 131 payable debts, 62 can be met from cash and listed mortgages (all paid), 53 also need sales but not released mortgages (52 paid), and 16 need released mortgages (14 paid). The middle class rests on more than the bound $U_0\ge D$, which alone would not prove a route: 47 of its payments used no released mortgage, the G12 d249 witness sells houses only, and the remaining five have no-release routes that follow from their recorded holdings and bank stock (Appendix~\ref{app:census}).
+
+\begin{table}[t]\centering\small
+\begin{tabular}{@{}lrrrrr@{}}\toprule
+Entry region & Sol & Gemini & Opus & Grok & All\\\midrule
+\rowsfile{sections/gen_firstmenu.tex}
+\bottomrule\end{tabular}
+\caption{Declarations at the first liquidation menu over episodes, by entry region. The 116 episodes with $U_0\ge D$ include G7, which is not menu-payable. Eight of the 56 episodes with $U_*<D$ offer only bankruptcy.}\label{tab:firstmenu}
+\end{table}
+
+Table~\ref{tab:firstmenu} shows where agents stop. When the bound covers the debt they almost never declare. When it does not, they usually declare at once: Opus and Sol in every such episode, Gemini in 11 of 12, Grok in 12 of 17. Of the 48 short menus that offer more than bankruptcy, six start financing; Section~\ref{sec:diverge} shows what those six responses say. The table describes concordance with a generous bound. It is not an accuracy score: the bound overstates what is reachable in G7, eight short menus offer only bankruptcy, and the prompt allows a player to stop when it should not raise cash.
+
+How agents pay is also informative. Selling a building returns half its price, while a mortgage costs 10\% interest to lift later. In the 62 debts payable from cash and listed mortgages, 30 players held buildings; 28 paid with mortgages alone and two (both Opus) sold one \$50 house each. In the 47 payments that needed sales but used no released mortgage, sale proceeds exceeded the amount still needed after every listed mortgage by \$2 to \$94 (median \$38), never by a full \$100 house. The agents thus mortgage before they sell and sell little beyond need. This is a description under one cost ordering, not an optimum; it ignores rent, position and future rebuilding.
+
+\subsection{What the first texts count}
+\begin{figure}[t]\centering
+\input{sections/gen_fig_sixteen}
+\caption{The sixteen debts that need released collateral, ordered by debt. Dark bars show $U_0$ (cash, all salvage, listed mortgages); pale extensions show released mortgages up to $U_*$; red ticks mark the debt. Crosses mark the two declarations.}\label{fig:sixteen}
+\end{figure}
+
+\begin{table*}[t]\centering\small
+\begin{tabular}{@{}lllrrrlll@{}}\toprule
+Entry & System & Field & $D$ & $U_0$ & $U_*$ & Category & Stated totals and remainders & Outcome\\\midrule
+\rowsfile{sections/gen_sixteen.tex}
+\bottomrule\end{tabular}
+\caption{First texts in the sixteen debts that need released collateral (model-assisted coding). Stated totals are checked by arithmetic against $U_0$, $U_*$ and the realized remainder; ``rem.'' marks a stated remainder realized to the dollar. Every channel is printed in Appendix~\ref{app:texts}.}\label{tab:sixteen}
+\end{table*}
+
+Figure~\ref{fig:sixteen} shows the sixteen debts. Each lies between the menu-bounded total $U_0$ and the full bound $U_*$, so payment needs a mortgage that appears only after a sale. These are 8.5\% of financing episodes and 12.2\% of payable debts.
+
+\paragraph{Values.} The menus price nothing, yet every individual mortgage and salvage value the sixteen texts state is correct. The one wrong figure is Sol's aggregate of \$430 for yellow mortgages worth \$400 in G2, and Sol's route still pays. Six texts state a total equal to $U_*$, and three state a remainder that the route then meets to the dollar: Gemini's \$149 in G5, Opus's \$56 in G11 and Sol's \$14 in G20.
+
+\paragraph{The dependency.} Five texts state it in words, for example Grok in G1 (\quoted{\Q{g1dep}}), Gemini in G8 (\quoted{\Q{g8dep}}) and Gemini in G18 (\quoted{\Q{g18dep}}). Three give an ordered route through a released deed without naming the rule, as in Grok's G18 note: \quoted{\Q{g18route}} Five give inclusive budgets: four Opus provider fields and Sol's G20 note. An agent that summed every deed without knowing the rule could have written such budgets, so they are weaker evidence about the prerequisite, although most of them also fix a sale-first order (Opus in G4: \quoted{\Q{g4ord}}). Opus in G20 d291 raises the released pink mortgages as a question and then uses one. Many successful texts pass through the menu-bounded total before adding released collateral: the stated \$126, \$283 and \$412 in G1, G2 and G18 d309 each equal $U_0$, Grok's G18 d313 note implies the same total, and Opus's G11 text states \$276 $=U_0$ before its \$556 $=U_*$.
+
+\paragraph{Selection.} G13 is the clearest choice among routes. With \$1,088 available against \$750, Gemini writes \quoted{\Q{g13plan}} It then mortgages exactly those deeds and leaves \$28, and its provider field gives the reason: \quoted{\Q{g13why}} The record shows a selective plan carried out under slack; it does not show that the selection was optimal or unique.
+
+\begin{incident}[An exact valuation by both sides]\label{inc:g20}
+In G20 only Sol and Gemini remain. Gemini's note before it raises Pennsylvania's rent to \$1,400 reads \quoted{\Q{g20cred}} Sol lands there with \$49 and writes \quoted{\Q{g20plan}} It sells its buildings in two bundled calls and mortgages eight deeds; its last note reads \quoted{\Q{g20last}} Both players valued nineteen assets the menus never priced, and Gemini's component sums are off by offsetting \$25 amounts. Every remaining asset increment exceeded the \$14 slack, so full liquidation was the only payable end state. The case shows exact valuation and an executed budget, not a difficult choice of route.
+\end{incident}
+
+\paragraph{Errors inside successes.} Opus in G20 d291 writes \quoted{\Q{g20short}}, which reuses the initial \$725 shortfall and compares \$680 of proceeds with the whole \$1,000 debt without the \$275 in cash; the true residual is \$45. Opus in G17 d254 writes that \quoted{\Q{g17even}}, although the sale validator checks only the end state. Gemini's G13 provider field passes through a wrong \$44 total before reaching its plan. Success and error therefore coexist: resource inclusion, numerical accuracy, route specificity and the applied action are separate properties.
+
+\paragraph{The second channel.} In the nine successful note cases, seven provider fields also include released collateral. Gemini's G5 field revises itself: \quoted{\Q{g5rev}} Two stop short. Gemini's G8 field lists only the house sale and Baltic and ends \quoted{\Q{g8prov}}, while its note in the same response states the dependency. Provider fields can end before the conclusion the note reaches.
+
+\subsection{Two false budgets}
+\label{sec:false}
+In G12 d190 Sol writes \quoted{\Q{g12note}} In G17 d234 Gemini writes \quoted{\Q{g17note}} Both totals equal $U_0$ to the dollar. Each sum is correct for what it counts and omits the mortgages that selling the buildings would release, \$340 of reds and \$375 of dark blues. Both calls declare at the first menu. The stored witnesses pay these debts and leave \$38 and \$180. The same systems pay their other necessity debts (Sol two of three, Gemini five of six), and Gemini had counted the same two dark-blue mortgages when it paid in G5.
+
+The second channel adds to the picture without changing the budget. Sol's provider field repeats the \$408 and adds \quoted{\Q{g12prov}} That is a belief about settlement, which the agent could not check. Gemini's provider field counts only the \$500 salvage and ends \quoted{\Q{g17prov}}; similar unfinished endings occur in successful fields (G8, G18 d309), so we do not read it as a considered rejection.
+
+Both agents carried earlier notes with matching figures: Sol's six notes from turns 57 to 73 keep \$130 of \quoted{emergency mortgage capacity}, and Gemini's turn-68 note keeps Baltic as a \$30 reserve. Each figure equals the mortgages the first menu listed, so its reappearance cannot separate memory from recomputing the menu. Similar conditional inventories preceded successes (Gemini's \$445 in G13, Sol's \$325 in G20, Grok's salvage-only maximum in G18 d313), and four of the five Opus successes carried no notes. Current-menu emphasis, reuse of a conditional inventory, incomplete application of a known rule and response variability all fit two cases observed once each. We therefore report two false budgets followed by declaration. The budgets are checkable errors; the full motive for each declaration is not identified.
+
+\subsection{Where statement and action diverge}
+\label{sec:diverge}
+\begin{table}[t]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}llllY@{}}\toprule
+Entry & System & Bound & Call & Text in the same response\\\midrule
+\rowsfile{sections/gen_departures.tex}
+\bottomrule\end{tabularx}
+\caption{The nine first actions that go against what the bound alone suggests. \emph{Bound}: whether $U_*$ covers the debt. Appendix~\ref{app:departures} prints every channel.}\label{tab:departures}
+\end{table}
+
+Table~\ref{tab:departures} lists every first action that goes against the bound. Besides the two false budgets, seven remain. In five above-bound Grok episodes the assistant content names a declaration while the applied call mortgages or sells; in G9 and G20 the note inside the financing call itself says to declare (\quoted{\Q{g20dnote}}). In G12 d249, the third payable declaration, Grok's content names a two-house sale and the note inside its declaration call reads \quoted{\Q{g12dnote}}
+
+A scan of all 338 liquidation decisions finds nine calls that contradict an action named in assistant content, all Grok. The scan can only see such conflicts where content names an action, which happens in 27 of Grok's 56 liquidation decisions and never for the other systems, whose content is empty or names no action. It is therefore no evidence that the others' texts and actions always agree. Under the declared contract the structured call is the applied action, and we do not infer an agent's true intent from conflicting prose. Required tool choice is a configuration difference, not an identified cause.
+
+Several texts reason explicitly about settlement. Gemini in G18 mortgages on an unpayable debt because \quoted{\Q{g18fee}} The rulebook imposes exactly that interest; this engine charges nothing. Grok's G17 d396 provider field argues that \quoted{\Q{g17std}} and in G19 it notes \quoted{\Q{g19eng}} Grok's G19 note also asserts a false precondition, \quoted{\Q{g19rule}}. On an unpayable debt, liquidating first changes only what the creditor receives, so these are choices about the estate under uncertain rules. They differ in kind from the false budgets: a false budget misstates what can be raised, while these texts weigh what stopping hands over.
+
+\section{Strategic conduct around assets}
+\label{sec:conduct}
+\subsection{Responses and composition}
+Across 526 threads, recipients accept 113 offers, counter 394 and reject 413 (Table~\ref{tab:responses}). Sol and Opus mostly counter; Gemini and Grok mostly reject; each accepts 26 to 30. Counters often keep the proposed exchange and ask for more money: in 79 of 111 counters to offers completing only the proposer's group, the whole non-cash exchange is unchanged.
+
+\begin{table}[t]\centering\small
+\begin{tabular}{@{}lrrrr@{}}\toprule
+Recipient & Responses & Accept & Counter & Reject\\\midrule
+\rowsfile{sections/gen_responses.tex}
+\bottomrule\end{tabular}\\[4pt]
+\begin{tabularx}{\linewidth}{@{}Yrrrr@{}}\toprule
+Population & Own only & Neither & Gap & Blocks\\\midrule
+\rowsfile{sections/gen_contrast.tex}
+\bottomrule\end{tabularx}
+\caption{Top: all 920 responses. Bottom: rejected/received for offers completing only the proposer's group versus neither group; gap in percentage points; range of the five seed-block gaps. Exploratory and selected after inspection.}\label{tab:responses}
+\end{table}
+
+Opening swaps that would complete only the proposer's group are rejected 95 of 116 times, against 37 of 72 for swaps completing neither group. This 30.5-point gap is retrospective, and it depends on who wrote the offers. Grok wrote 36 of the 72 neither-completing swaps and 15 of their 17 acceptances, and 13 of those 15 came from opening calls whose content named a different action. Without Grok-authored offers the gap is 16.7 points, the seed-block gaps run from $-23.5$ to $45.5$, and the resampling ranges retained from the earlier analysis include zero (Appendix~\ref{app:bargaining}). That supports neither a completion effect nor its absence. Opening cash bids show $-5.0$ points pooled and $-0.2$ to $+8.5$ within recipients.
+
+\subsection{Reasoning about rivals' finances}
+The texts carry economic content that the counts omit. Among 74 legally acceptable rejections of offers that would complete the recipient's own group, two model readings agree that 61 name a trade-linked consequence for the rival; this is a different population from the swap contrast and cannot explain it. Agents also track rivals' liquidity between debts. Grok's G18 note reads \quoted{\Q{g18liq}}, a calculation of which rent each opponent could survive. The five incidents below, with the G20 valuation above, are illustrations chosen for their content. Three more are in Appendix~\ref{app:incidents}.
+
+\begin{incident}[Refusing one's own monopoly]
+In G15 Sol offers \quoted{\Q{g15offer}} Grok, with \$333, would complete green but refuses: \quoted{\Q{g15note}} Its notes had ruled out selling Ventnor to Sol from turn 33, before Opus publicly warned against the deal. Sol adds Kentucky and then \$250; Grok answers \quoted{\Q{g15final}} Grok's estimate counts Sol's mortgage capacity as building money. The continuation shows the stakes, not whether refusing helped: Grok's blockers pass to Gemini through bankruptcy eighteen turns later, and Sol never completes either group.
+\end{incident}
+
+\begin{incident}[Pricing a deed by its buyer]
+In G2 Grok, which owns no yellow, bids for Sol's Marvin Gardens as a blocker. Sol asks \$450, and Grok replies \quoted{\Q{g2grok}} When Opus, which holds the other two yellows, bids \$325, Sol answers \quoted{\Q{g2sol}} Opus calls \$450 its final offer while its note keeps a higher ceiling (\quoted{\Q{g2opusceil}}), and Sol keeps the deed. Sol's note also says Opus's remaining \$520 buys \quoted{nine yellow houses}; at \$150 each it buys three. The pricing is buyer-specific and partly miscalculated.
+\end{incident}
+
+\begin{incident}[Bargaining over development budgets]
+In G7 Grok publicly calls \$600 \quoted{final} for North Carolina while its note says \quoted{\Q{g7private}}; Sol accepts \$600, a bluff under the prompt's permission. Later Gemini bids \$350 for Sol's New York. Sol's note sets the price by both budgets: \quoted{\Q{g7solask}} Gemini counters at \$520 because it \quoted{\Q{g7gemcounter}}. Sol holds, noting \quoted{\Q{g7solreply}}. Gemini pays \$700, mortgages five deeds and builds four orange houses that turn. Each side priced the other's mortgage-backed building capacity correctly enough to reach a deal; the record does not identify why it settled at \$700.
+\end{incident}
+
+\begin{incident}[Bargaining over survival]
+In G13 Grok holds \$35 one roll from Sol's Short Line and offers Opus a mortgaged deed for \$200 as insurance: \quoted{\Q{g13pitch}} When Opus counters \$130, Grok's provider field plans the reply: \quoted{\Q{g13omit}} Opus accepts \$200 and pays \$16 transfer interest; its own field weighs that \quoted{\Q{g13buyer}}. Opus's solvency reasoning already appears in its \$130 counter, before the omission-framed reply, so the record shows a selective presentation and an estate-based purchase, not that the omission moved the price.
+\end{incident}
+
+\section{Related work}
+\label{sec:related}
+\paragraph{Reachability, impossibility and interaction.} Whether an action can become applicable through other actions is an established planning construct. ACPBench tests action reachability as single-turn questions over planning domains~\cite{kokel2025acpbench}, and ACPBench Hard adds generative versions with validators~\cite{kokel2026acpbenchhard}. False claims that solvable problems are impossible are documented: the PlanBench evaluation of o1 reports them on 11.5\% of solvable instances in a randomized domain~\cite{valmeekam2024o1,valmeekam2023planbench}. AutoPlanBench compares whole-plan generation with step-by-step action choice under feedback~\cite{stein2025autoplanbench}, as ReAct-style agents do~\cite{yao2023react}, and work on zero-shot planners separates learned task knowledge from admissible actions~\cite{huang2022zeroshot}. Diagnostic decompositions of agent behavior into goal, sequence and transition components are established~\cite{li2024eai}. Our released-collateral debts are an instance of reachability met in naturally reached multi-agent states, with an exact arithmetic certificate, an irreversible voluntary stop and the agent's own money at stake. We do not claim the construct, false impossibility or the gap between plans and interaction as new. Because the release rule is standard, our successes show application of a familiar rule; counterfactual rule variants are the established way to separate recall from rule following~\cite{wu2024reciting}, and this corpus has none.
+
+\paragraph{Menus, verifiers and memory.} Tool menus affect agents: reordering the same candidate tools changes success~\cite{yan2026menu}. Our menus refresh with eligibility, and our measure is what agents count beyond them, not a menu manipulation. External verifiers can check LLM proposals~\cite{kambhampati2024modulo}; the engine plays that role here only as the source of feasibility labels. Errors in stored experience can propagate into later decisions~\cite{xiong2026memory}, and saved-state branching and repeated probes are available instruments~\cite{karpov2026mafiascope}. Our carried-note observations are consistent with such effects but do not test them.
+
+\paragraph{Statements and actions.} Model explanations need not reflect the computation behind an output~\cite{turpin2023unfaithful,lanham2023faithfulness}. Agents can identify an action as unsafe and take it anyway~\cite{co2026atomic}, and declared plans often differ in structure from executed ones~\cite{oota2026declare}. Our channel conflicts belong to this family; we add only that they concentrate in one configuration's response channel and are visible because the harness keeps every channel.
+
+\paragraph{Economic games and agents.} AgentMonopoly compares models and persona instructions in complete Monopoly games; its rules eliminate a player at negative cash, so no debt-rescue phase arises~\cite{wu2026agentmonopoly}. FinBoardBench's Monopoly does include fund-raising by mortgage and building sale, with bankruptcy described as the option ``when recovery is impossible'' and settlement rules that follow the rulebook~\cite{hu2026finboardbench}. Multi-step financing is therefore not unique to our setting. What our engine adds is voluntary declaration on payable debts, which makes a stop on a payable debt observable, together with exact bounds for every episode. Vending-Bench measures sustained business operation with repeated runs and resource variations~\cite{backlund2025vendingbench}; its successor scores a one-year balance against a calculated reference strategy~\cite{andon2026vb2}, and an independent audit reports environment and context problems~\cite{epoch2026vb2review}. AutoVend calibrates agents against a rule-based inventory policy~\cite{shi2026autovend}; Proposition~\ref{prop:continue} plays a similar calibrating role for payment, derived from source rather than executed. Li et al.\ code a complete population of inter-agent messages with judges from several model families~\cite{li2026arena}; our incidents are selected illustrations, and our conduct occurs under a prompt that permits deception.
+
+\paragraph{Negotiation.} Negotiation agents have been evaluated by language and outcome under explicit utilities~\cite{lewis2017deal}, with strategy separated from generation~\cite{he2018decoupling}, and in controlled LLM negotiation games~\cite{bianchi2024negotiationarena}. Guhe and Lascarides simulate Catan trade embargoes in which the persuaded players always comply, measuring the value of successful persuasion rather than its efficacy~\cite{guhe2014persuasion}. Identity-dependent externalities explain why a seller may price a deed by its buyer~\cite{jehiel1996externalities}; G2 is an instance, not a test of that theory.
+
+\section{Discussion and scope}
+\label{sec:discussion}
+\paragraph{What the records show.} These agents treat a debt as a financial calculation. They value assets that no menu prices, and their first move tracks whether their assets can cover the debt. Most texts that face released collateral count it, often with the dependency in words, and several plans are executed to the dollar. When they can, agents pay with mortgages and keep their buildings. The same agents bring that accounting into bargaining: they estimate how much a rival could build with a payment, price a deed by who would buy it, and reason about who inherits an estate.
+
+\paragraph{What payment does not show.} Because continuing valid financing is sufficient in every payable episode, the 128 payments, the ten-action G20 sequence and the 14 of 16 necessity payments are not evidence of hard planning. The agent's contribution in those episodes lies in what it wrote, what it preserved and whether it stopped.
+
+\paragraph{What the failures show.} Two of 131 payable debts end on false budgets that equal the menu-bounded total, and one ends on a call that contradicts its own note. The false budgets are clear errors of inventory, not arithmetic. Their cause is not identified, and the declaration may also reflect beliefs about settlement that the engine never disclosed. We give no rate of premature abandonment.
+
+\paragraph{Limits.} Twenty games are five seed blocks with rotated seats of one roster, with no repeated seed-rotation cell. Seed, seat, opponent and system effects are confounded, and each state was observed once. The sixteen debts and the bargaining contrasts were selected after inspection. The text coding is model-assisted and has no human validation. Response conditions differ by system, so no comparison here ranks models. No reference policy, value reference for trades or intervention was run.
+
+\paragraph{Research questions.} The project began with eight questions on strategic reasoning, opponent modeling, negotiation, planning and memory, adaptation, economic judgment, collective behavior and evaluation validity, and three on talk versus action, general versus multi-agent ability, and skill versus luck. Appendix~\ref{app:questions} records what this corpus supports for each; for several the answer is that it is not established here.
+
+\section{Conclusion}
+In twenty complete Monopoly games, four LLM agents mostly handled debt competently: they priced unpriced assets, stopped when their assets fell short, kept development when mortgages sufficed, and in eight of the sixteen debts that needed released collateral stated the dependency or an ordered route through it. Because the environment pays any agent that keeps financing, these are findings about assessment and choice, not about routing. Two failures stop at the menu-bounded total, and the observed conflicts between stated and applied actions all come from the one configuration whose free text names actions. In bargaining, the same agents reason about rivals' budgets and survival. The complete records, both text channels and the build are released for inspection.
+
+\begingroup\small\setlength{\bibsep}{1.5pt}
+\bibliographystyle{plainnat}
+\bibliography{references}
+\endgroup
+
+\clearpage
+\onecolumn
+\appendix
+\input{sections/appendix}
+\end{document}

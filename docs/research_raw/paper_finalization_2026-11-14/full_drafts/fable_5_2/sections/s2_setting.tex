@@ -1,0 +1,41 @@
+\section{Games, agents and records}
+\label{sec:setting}
+
+\subsection{The games}
+MonopolyBench~\cite{bharti2026monopolybench} runs four players on the standard forty-space board, each starting with \$1,500. Players buy or auction properties, trade through proposals and counters, build on complete color groups, and mortgage deeds. A game ends when one player remains, with no turn cap.
+
+The roster is fixed: Sol (\path{openai/gpt-6.1-sol}), Gemini (\path{google/gemini-4-argon}), Opus (\path{anthropic/claude-opus-5.5}) and Grok (\path{x-ai/grok-4.7}), all called through OpenRouter at medium reasoning effort with no temperature or token limit set. Five seeds each receive four cyclic seat rotations, giving twenty games of 75 to 386 turns with 50,918 events, 6,989 decisions and 8,679 response attempts. Sol, Gemini, Opus and Grok win 8, 7, 3 and 2 games. Appendix~\ref{app:artifacts} lists seeds, source commits and game directories. Dollar amounts are game currency.
+
+\subsection{What an agent is told}
+The system prompt tells each agent to win, permits deception in public messages, and asks that private notes reflect true reasoning (Appendix~\ref{app:prompts}). It states no rules of play. Each request carries every player's cash, deeds, mortgages and buildings, the bank's building stock, twenty recent public events, and the agent's own ten most recent notes. Agents may choose only among actions the engine lists as legal.
+
+When a player cannot pay a debt, the engine opens a financing menu. The menu names the deeds that can be mortgaged and the buildings that can be sold. It gives no dollar values. It carries one instruction: ``Choose exactly one liquidation action now. The engine will apply it, update your cash/assets, and ask you again if you still cannot pay. Declare bankruptcy only when you cannot or should not raise enough cash.'' The values and rules an agent writes down at this menu therefore come from what the model already knows, from its carried notes, or from earlier requests in the game.
+
+\subsection{Published rules and implemented rules}
+Table~\ref{tab:rules} compares the published rulebook~\cite{hasbroMonopolyRules} with the engine on the five rules that govern a debt. The rule that decides what can be raised is the same in both: a deed in a built group cannot be mortgaged until the group's buildings are sold. The rules that decide what stopping costs differ. The engine lets a player declare bankruptcy on a debt it could pay, passes buildings to a creditor intact, and charges nothing on inherited mortgages. Agents were told none of this. An agent that applies the rulebook is therefore right about what its assets can raise and can be wrong about what happens if it stops (\S\ref{sec:stop}).
+
+\begin{table}[t]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}L{.20\linewidth}YY@{}}\toprule
+Rule & Published rulebook & Engine in these games\\\midrule
+Mortgaging in a built group & All buildings on the group must be sold first & Same\\
+When bankruptcy occurs & When a player owes more than it can pay & Any financing menu, including on a payable debt\\
+Buildings of a player bankrupt to another player & Sold to the bank at half price; creditor gets the cash & Pass to the creditor intact\\
+Mortgaged deeds a creditor inherits & New owner pays 10\% interest at once & No charge\\
+Selling hotels & All buildings on a group may be sold at once & A hotel becomes four houses, which the bank must have in stock\\\bottomrule
+\end{tabularx}
+\caption{Rules that govern a debt. The prompt states none of them. The financing menu shows the bankruptcy action and the currently legal mortgages and sales.}\label{tab:rules}
+\end{table}
+
+\subsection{Response channels and conditions}
+The engine applies the tool call it receives. Four kinds of text can accompany that call. The \emph{authored note} is the private-thought argument of the applied call. The agent writes it, and the game returns it as memory in later requests. The \emph{public message} is another argument of the call and goes to all players. The \emph{provider reasoning field} is readable text that the gateway returns beside a response. The stored metadata labels it a reasoning summary for Sol and Grok and reasoning text for Gemini and Opus. No player receives it, and it can be summarized or end before a conclusion. \emph{Assistant content} is any other text returned with the call. The engine ignores it.
+
+A note and the action it accompanies are parts of one response. The note is not a forecast taken before the action, and neither the order of fields nor the provider text shows which was computed first. A note can still come before what it describes in game time, as when it names collateral that no menu has yet offered.
+
+Two response conditions matter. The provider refused 1,604 of Opus's first attempts, including every one in games 5 to 20, with a terms-of-service message about duplicating model outputs. The retry uses an action-only prompt that requests no note, and no retry was refused. Opus therefore has provider text but no authored note in most decisions. Grok ran with a required tool call while the others used automatic tool choice. In 139 Grok decisions the action named in its assistant content differs from the call received. Only Grok's content names actions, so this check can detect such a conflict for Grok alone, and the records do not show its cause.
+
+\subsection{Measures}
+A \emph{financing episode} begins at the first financing menu for a debt and ends at payment or elimination. At entry let $D$ be the debt, $C$ the cash, $S$ the resale value of all buildings, $M_0$ the mortgage value of the deeds the first menu lists, and $M_*$ the mortgage value of every unmortgaged deed. We use two sums:
+\[U_0 = C + S + M_0,\qquad U_* = C + S + M_*.\]
+$U_*$ is the \emph{full bound}. $U_0$ is the \emph{listed-only total}. It stops short of $U_*$ when buildings lock some deeds. A debt is \emph{payable} if the agent paid it or if a stored engine audit that predates this paper executed a legal payment sequence from the same state. A bound alone does not make a debt payable (\S\ref{sec:task}).
+
+We read first responses in two ways. A number match asks whether a dollar figure equal to $U_*$ or $U_0$, or to the matching proceeds or gap, appears in the text. One LLM author also assigned each of sixteen focal responses to an evidence tier, with the supporting span printed in Appendix~\ref{app:coding}. Both readings have limits that we state once here. Neither is human annotation. A number match shows that a figure was written, not how the agent reached it. A provider field can be incomplete, so a resource missing from it may still have been considered. A total that includes a resource does not show knowledge of the rule that frees it. A stated dependency does not show that the statement produced the action.

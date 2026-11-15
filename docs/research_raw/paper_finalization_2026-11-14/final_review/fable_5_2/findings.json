@@ -1,0 +1,467 @@
+{
+  "reviewer": "Fable 5.2 (whole-paper final review)",
+  "date": "2026-11-15",
+  "candidate": {
+    "path": "docs/research_raw/paper_finalization_2026-11-14/integrated",
+    "manuscript_pdf_sha256": "e5c44bebfb1d6b0b7c434d875261be63b11e4c6457396ee97596457a0c840dae",
+    "integration_review_manifest_sha256": "a362c4c6d020adb115a50b919d85d3db6777d223189493d7c4edd1517885e269",
+    "pinned_files_checked_before_and_after": 2396,
+    "november_12_pin_files": 84
+  },
+  "severity_scale": {
+    "factual_blocker": "A sentence the records contradict. It blocks leaving that sentence unchanged. No result or count changes.",
+    "material": "An interpretive, coherence or release problem that a reader would be misled by, or a supported result the paper needs and lacks.",
+    "optional": "A precision or presentation improvement."
+  },
+  "counts": {
+    "factual_blocker": 1,
+    "material": 7,
+    "optional": 6
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "severity": "factual_blocker",
+      "title": "The main text places the buyer's estate reasoning before the omission-framed reply in G13",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 149,
+          "pdf_page": 6
+        }
+      ],
+      "passage": "The buyer already considers that estate logic before the omission-framed reply.",
+      "evidence": [
+        "G13 d251 (Opus counter at $130), returned explanation: \"That payment also keeps p4 solvent enough to cover Short Line rent to p2, which matters for how the game continues.\" This is solvency reasoning. It does not weigh who inherits the yellows.",
+        "G13 d252 is Grok's omission-framed reply.",
+        "G13 d253 (Opus acceptance), returned explanation: \"if player 4 goes bankrupt to player 2, player 2 would inherit the yellows plus Pennsylvania\" and \"If grok goes bankrupt to me instead, that could hand me the yellows\". The estate weighing is recorded here, after the reply.",
+        "The casebook in the same package states it correctly: \"Its solvency reasoning already appears in the $130 counter, after Grok's opening appeal and before the omission-framed reply.\" (integrated/sections/casebook.tex, Incident 5).",
+        "Source: saved_games/railway-research-8-games-2026-10-26/game-13-185turns-581702d9/run/decisions.jsonl, decisions 250 to 253, read directly."
+      ],
+      "why_it_matters": "The sentence supports the scope statement that the omission cannot be credited with the extra $70. The correct chronology supports the same statement, so only the sentence changes.",
+      "proposed_change": "R1 in replacement_prose.tex",
+      "check_status": "checked against raw records in this review",
+      "does_not_change": "The incident, its quotations, and the conclusion that the omission's effect is not identified."
+    },
+    {
+      "id": "M-01",
+      "severity": "material",
+      "title": "G12 d249 is described as not an omitted-resource case, and two of its channels first count only the listed sale target",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 110,
+          "pdf_page": 5
+        },
+        {
+          "file": "integrated/sections/final_supplement.tex",
+          "line": 104,
+          "pdf_page": 21
+        }
+      ],
+      "passage": "The third payable declaration, G12 Grok d249, is not an omitted-resource case. Grok's note recognizes a sale-based route and its assistant content names a sale, while its received tool call declares.",
+      "evidence": [
+        "First menu at G12 d249 lists one sale target, VIRGINIA_AVENUE, and no mortgage. Holdings are St. Charles 2, States 2, Virginia 3 houses. Cash $43, debt $250.",
+        "Returned explanation, in order: \"I can only sell houses on Virginia Avenue.\" \"Selling all three houses on Virginia Avenue would raise $150. That leaves a $57 shortfall after paying the $250 rent.\" \"I cannot raise enough cash to cover the rent. I will declare bankruptcy.\" Then: \"I can raise enough cash by selling houses on St Charles Place and States Avenue too. Together with Virginia Avenue, that yields $393 total.\"",
+        "The private note inside the received declare call opens \"Full even liquidation cannot cover the $250.\" It ends \"The sell_houses call was the correct action. Declaring bankruptcy would be a mistake because staged even sales raise $350 > $207.\"",
+        "Assistant content names sell_houses_or_hotel with Virginia Avenue, count 2. The public message of the received call is \"Bankruptcy. The pinks go with the rest.\"",
+        "The package retains one quotation for this note (transcript_quotes.tex, g12_d249_private_final), which is its last three sentences. The compiled paper displays no quotation for this case and paraphrases only that ending.",
+        "The supplement's own rule for the sixteen: \"Channel selection must not hide a qualification in another field.\""
+      ],
+      "why_it_matters": "The paper separates false budgets from conflicting responses. This response contains both a provisional count of listed resources with a bankruptcy conclusion and a later correct route. Saying it is not an omitted-resource case, and reporting only the end of the note, hides the first part. The classification as a text and call conflict survives, because the last stated assessment in every channel is a sufficient route.",
+      "proposed_change": "R2 in replacement_prose.tex (three short replacements)",
+      "check_status": "checked against raw records in this review",
+      "does_not_change": "The count of three payable declarations, the inherited five-house witness, and the distinction between the two failures and this case."
+    },
+    {
+      "id": "M-02",
+      "severity": "material",
+      "title": "The main text names decisions to stop as informative and gives no population for them",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 72,
+          "pdf_page": 3
+        },
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 112,
+          "pdf_page": 5
+        }
+      ],
+      "passage": "The more discriminating observations are their financial inventories, decisions to stop, selected assets and agreement between text and calls. [...] Six above-bound episodes start financing rather than declaring immediately.",
+      "evidence": [
+        "Recomputed from raw decisions: 56 episodes have U* < D. Eight first menus offer only bankruptcy. Of the other 48 first calls, 42 declare and 6 start financing. Of 132 episodes with U* >= D, 129 start financing and 3 declare.",
+        "The only place these counts appear is Table 13 in Appendix D, introduced as context for the departures.",
+        "final_review/fable_5_2/checks/finance_checks.json, keys first_actions and first_menu_declare_by_region_model."
+      ],
+      "why_it_matters": "A reader of the main text cannot tell whether six is most or few. One sentence gives the denominator. It does not make the table a headline or an accuracy score, and the appendix caption already states why it is not one.",
+      "proposed_change": "R3 in replacement_prose.tex",
+      "check_status": "checked against raw records in this review",
+      "does_not_change": "The decision not to headline 3/132 against 50/56."
+    },
+    {
+      "id": "M-03",
+      "severity": "material",
+      "title": "The 28 of 30 paragraph says preference, and the mortgage action is always listed first",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 74,
+          "pdf_page": 3
+        }
+      ],
+      "passage": "Asset selection shows a consistent preference in one defined population. [...] These choices preserve development when mortgages already provide sufficient financing.",
+      "evidence": [
+        "Count confirmed: 62 class members, 30 building owners, 28 without any sale. Membership equals integrated/data/development_preservation.json. The two sellers are Opus G12 d282 and G18 d372, one States Avenue house each.",
+        "In all 61 first menus that offer both actions, available_actions is [mortgage_property, sell_houses_or_hotel, declare_bankruptcy]. The options object also lists mortgageable keys before sellable keys.",
+        "A building sale is offered in 29 of the 30 first menus. One building owner had no sale option.",
+        "Nineteen of the 30 payments take one action.",
+        "The two Opus exceptions have only railroads listed as mortgageable. Their returned explanations compare a railroad mortgage with a house sale: G12 d282 \"mortgaging a railroad would give $100, while selling a house, like one on States Avenue, would only net $50 and drop the rent tier\"; G18 d372 \"mortgaging one of my three railroads gets $100 but lowers RR rent for the others\".",
+        "The paper cites yan2026menu for the point that menu presentation can affect execution, and says these records do not identify a menu effect."
+      ],
+      "why_it_matters": "The count is right and the finding is worth keeping. The word preference attributes it to the agents, and the paper's own related work says order can matter. Stating the order and the 29 keeps the paragraph descriptive.",
+      "proposed_change": "R4 in replacement_prose.tex",
+      "check_status": "checked against raw records in this review",
+      "does_not_change": "The 28 of 30 count, its place in the abstract, or the G13 selective route."
+    },
+    {
+      "id": "M-04",
+      "severity": "material",
+      "title": "The assessment the abstract asks about is on record in 37 first responses, and the paper reports sixteen",
+      "location": [
+        {
+          "file": "integrated/sections/final_supplement.tex",
+          "line": 81,
+          "pdf_page": 13
+        },
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 107,
+          "pdf_page": 4
+        }
+      ],
+      "passage": "In 43 of the 48 responses, at least one readable channel contains a numeral equal to $U_*$, the total asset proceeds $U_*-C$, or the remaining deficit $D-U_*$.",
+      "evidence": [
+        "Split of the 48 by whether buildings lock further mortgages (listed total below full bound): 27 unlocked with 27 matches, 21 locked with 16 matches. None of the 8 forced menus has locked collateral.",
+        "I read all 21 locked contexts. In each of the 16 matches the text itemizes the released mortgages. Examples: Grok G3 d601 \"After that, pink mortgages are only $70+$70+$80=$220. Total raisable $147+$250+$220=$617\"; Gemini G11 d225 \"Selling all 5 Red houses ($375) and mortgaging all three Red properties ($340) would only raise $715\"; Opus G3 d240 \"It seems mortgaging the yellows requires selling Marvin's h[ouse]\".",
+        "Two itemize released mortgages without a total: Opus G2 d215 (\"mortgaging the light-blue properties themselves for $160 once the houses are gone\"), Sol G10 d188 (\"even subsequently mortgaging light blues adds only $160\").",
+        "Three state the listed total as a maximum: Sol G3 d426 \"maximum $914\" (U* 1,074); Opus G5 d309 \"only gets me to 639 total\" (U* 799); Grok G8 d280 \"total $386. No unmortgaged properties.\" (U* 666).",
+        "With the sixteen payable necessity episodes: 37 episodes have U0 < D and M* > M0. 32 first responses count or raise the locked collateral (14 + 16 + 2). Five give a listed-only maximum (Sol twice; Gemini, Opus, Grok once each).",
+        "The 121 entries with M* > M0 are 16 + 53 + 30 + 21 + G7. In the 84 outside the 37, U0 >= D.",
+        "final_review/fable_5_2/checks/totals_checks.json holds every context. integrated/data/stated_totals_check.json holds the numeral matches."
+      ],
+      "why_it_matters": "The abstract's first question is how agents assess resources that become usable after an action. The supplement's 43 of 48 mixes 27 cases with nothing locked and 21 where the question applies, and the split is where the information is. The 37 episodes more than double the evidence, come from all four configurations, and give the two failures a denominator. The decision log declines 5/37 because 37 is not every entry with unlisted collateral. That is right about the label and leaves the defined population untouched.",
+      "proposed_change": "R5 in replacement_prose.tex (one supplement paragraph pair and three main-text sentences)",
+      "check_status": "numeral matches reproduced from the shipped file; the 21 contexts read in this review; the reading is model-assisted",
+      "does_not_change": "The supplement-only status and narrow wording of 43 of 48. The abstract."
+    },
+    {
+      "id": "M-05",
+      "severity": "material",
+      "title": "Both failed totals equal the listed-only total, which five successful fields also state on the way to the full budget",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 103,
+          "pdf_page": 4
+        }
+      ],
+      "passage": "Both declare immediately. Their addition is correct. Their statements of available resources are not exhaustive.",
+      "evidence": [
+        "G12 d190: stated $408, U0 = 408. G17 d234: stated $530, U0 = 530.",
+        "Successful selected fields that contain their own U0: G1 d476 ($126), G2 d216 ($283), G5 d263 ($674), G11 d203 ($276), G18 d309 ($412). G18 d313 states $501 in its returned explanation and implies it in the note.",
+        "final_review/fable_5_2/checks/u0_waypoint.json.",
+        "The identity appears in the rubric table (\"$408 is correct $U_0$, not a maximum\") and not in the main text. Opus's frozen draft states the observation in its section 3.2."
+      ],
+      "why_it_matters": "It is the most exact description of what the two failures are: the first step of the computation that five successes complete. It is a statement about texts and claims no cause.",
+      "proposed_change": "R5 in replacement_prose.tex (first block)",
+      "check_status": "checked by numeral match and by reading the sixteen fields",
+      "does_not_change": "The statement that the records do not identify why the two inventories stopped."
+    },
+    {
+      "id": "M-06",
+      "severity": "material",
+      "title": "The Arena comparison overstates that study's human check",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 162,
+          "pdf_page": 6
+        }
+      ],
+      "passage": "Unlike commerce work classifying a full message corpus with a human annotation check~\\cite{li2026arena}, our semantic counts and selected conduct remain model-assisted observations.",
+      "evidence": [
+        "arXiv 2608.14825 abstract page, fetched 15 November 2026: 2,583 emails, a primary classifier, replication with judges from two other model families. The abstract page mentions no human annotation.",
+        "My 14 November reading of the HTML (paper_review_2026-11-14/reviews/fable_5_2/literature_matrix.md): a 50-email set labeled by one person who also wrote the codebook, described by the authors as codebook consistency.",
+        "The fresh adversarial review reaches the same reading: \"a 50-email author-label consistency check, while the full pipeline is model-assisted\"."
+      ],
+      "why_it_matters": "The sentence sets a human-checked study against this one. Both rely on model readers. The accurate contrast is population coverage and cross-family judges.",
+      "proposed_change": "R6 in replacement_prose.tex",
+      "check_status": "abstract checked now; Appendix A reading inherited from 14 November",
+      "does_not_change": "The citation or the paragraph's point."
+    },
+    {
+      "id": "M-07",
+      "severity": "material",
+      "title": "Release package: stale sources ship, one recheck is not byte-stable, and the entry point is not yet at any commit",
+      "location": [
+        {
+          "file": "integrated/tools/package_release.py",
+          "line": 24
+        },
+        {
+          "file": "integrated/tools/refresh_records.py",
+          "line": 68
+        },
+        {
+          "file": "integrated/README.md",
+          "line": 1
+        },
+        {
+          "file": "integrated/qa/portability.json"
+        },
+        {
+          "file": "integrated/sections/final_supplement.tex",
+          "line": 177,
+          "pdf_page": 28
+        }
+      ],
+      "passage": "This manuscript's entry point is \\path{docs/research_raw/paper_finalization_2026-11-14/integrated/README.md}.",
+      "evidence": [
+        "release_manifest.json lists 101 files. Eleven section files are not read by the build: finance, conduct, negotiation, study, interpretation, scientific_introduction, supplement, necessary_texts, opening_complete, proposer_rows (byte-identical to the 12 November package) and sixteen_full. finance.tex contains \"before choosing whether to proceed\", \"reproducible result\" and \"survives ten actions\"; scientific_introduction.tex contains \"negative only when pooled\". The 14 November review withdrew all four.",
+        "I ran the five README recheck scripts on a copy in my folder. All exit 0. 85 of 86 files come out byte-identical. data/continuation_premises.json differs in key order (32 lines) because refresh_records.py line 68 builds a set of group names and line 71 iterates it. Content is equal. A user who reruns the README command changes that file's hash, and package_release.py --verify then fails.",
+        "The five recheck scripts overwrite files inside the package. The README says they read stored records and perform arithmetic.",
+        "A static build in another directory gives 29 pages and identical extracted text, and a PDF that differs in 60 bytes near the trailer. The published hash identifies the shipped file and cannot be reproduced elsewhere.",
+        "qa/portability.json records an earlier archive (e8139549…, 28 pages). During this review another process regenerated the unpinned release.zip, release.sha256, release_manifest.json and wrote qa/portability_candidate.json at 00:15. That newer record agrees with my build: 29 pages, identical text, 101 packaged files, and a rebuilt PDF hash (4eabfddd…) that differs from the pinned one. The stale qa/portability.json is still in the folder, and the regenerated manifest still lists the eleven unused section files.",
+        "git status: docs/research_raw/paper_finalization_2026-11-14/ is untracked at HEAD 863f8ef7. The entry-point path exists at no commit. The decision log records this as M-03 in progress.",
+        "README.md line 1 reads \"Integrated manuscript — finalization in progress\".",
+        "PDF Info has empty Title and Author."
+      ],
+      "why_it_matters": "The science is unaffected. A reader who opens the sources finds withdrawn claims in files that look current, and a reader who follows the README can break the hash check.",
+      "proposed_change": "The five items under \"Release changes that are not prose\" in replacement_prose.tex",
+      "check_status": "checked in this review; the commit and archive are the owner's to make",
+      "does_not_change": "Any number or sentence in the paper, apart from naming the commit in Appendix I."
+    },
+    {
+      "id": "O-01",
+      "severity": "optional",
+      "title": "G13 d195: the three deeds are named in the returned explanation, the note gives the amount",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 96,
+          "pdf_page": 3
+        }
+      ],
+      "passage": "Its note specifies selling Boardwalk's house for \\$100, mortgaging Park Place for \\$175 and three other deeds for \\$335 while leaving Boardwalk and Kentucky unmortgaged.",
+      "evidence": [
+        "Note: \"mortgage Park Place ($175) plus $335 in non-Dark-Blue properties\". Returned explanation: \"Pacific, Indiana, and Electric Avenue combined give me $335\"."
+      ],
+      "proposed_change": "R7",
+      "check_status": "read in the printed channels"
+    },
+    {
+      "id": "O-02",
+      "severity": "optional",
+      "title": "8,687 requests and 8,679 attempts appear without saying they are different units",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 43,
+          "pdf_page": 2
+        }
+      ],
+      "passage": "confirmed in all 8,687 saved outgoing requests",
+      "evidence": [
+        "main.tex line 28 gives 8,679 attempts. Sol's frozen appendix says the request census is \"a different unit from 8,679 resolved attempts\". I did not recount the request records."
+      ],
+      "proposed_change": "R8",
+      "check_status": "inherited"
+    },
+    {
+      "id": "O-03",
+      "severity": "optional",
+      "title": "Gemini's acceptance note in G7 budgets exactly what the turn then does",
+      "location": [
+        {
+          "file": "integrated/sections/casebook.tex",
+          "line": 43,
+          "pdf_page": 23
+        }
+      ],
+      "passage": "Gemini pays \\$700, mortgages five deeds and builds four orange houses that turn.",
+      "evidence": [
+        "G7 d145 note: \"With $45 remaining cash plus up to $450 from mortgaging non-Orange properties, I can immediately build 4 houses on the Oranges this turn.\" d146 to d150 mortgage Electric Company, Water Works, Vermont, Indiana and Marvin Gardens for 75+75+50+110+140 = $450. d151 builds four orange houses."
+      ],
+      "proposed_change": "R9",
+      "check_status": "checked against raw records in this review"
+    },
+    {
+      "id": "O-04",
+      "severity": "optional",
+      "title": "One sentence groups three negotiation papers under a description that fits one of them",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 162,
+          "pdf_page": 6
+        }
+      ],
+      "passage": "Negotiation research separates linguistic communication from strategic choice~\\cite{lewis2017deal,he2018decoupling,bianchi2024negotiationarena}.",
+      "evidence": [
+        "He et al. 2018 decouples strategy from generation. Lewis et al. 2017 trains end-to-end dialogue agents. NegotiationArena evaluates LLM negotiation in defined scenarios."
+      ],
+      "proposed_change": "R10",
+      "check_status": "from titles, abstracts and prior knowledge; NegotiationArena's body not reread"
+    },
+    {
+      "id": "O-05",
+      "severity": "optional",
+      "title": "PDF metadata carries no title or author",
+      "location": [
+        {
+          "file": "integrated/manuscript.tex"
+        }
+      ],
+      "passage": "/Author()/Title()",
+      "evidence": [
+        "strings output of integrated/manuscript.pdf. Sol's and Opus's drafts set pdftitle and pdfauthor."
+      ],
+      "proposed_change": "R11",
+      "check_status": "checked"
+    },
+    {
+      "id": "O-06",
+      "severity": "optional",
+      "title": "Astra is named in the main text before the paper says what it is",
+      "location": [
+        {
+          "file": "integrated/sections/main.tex",
+          "line": 133,
+          "pdf_page": 5
+        }
+      ],
+      "passage": "Two Astra readings agree on explicit trade-linked rival consequences in 61 of 74 legally acceptable recipient-completing refusals",
+      "evidence": [
+        "Appendix I introduces the assistants. Sol is also the label of an evaluated system, so an unexplained assistant name in the results can confuse. The two readings come from the same assistant."
+      ],
+      "proposed_change": "Write \"Two readings by one LLM research assistant (Appendix I) agree ...\" in the main text and keep the name in the supplement.",
+      "check_status": "editorial"
+    }
+  ],
+  "priority_checks": [
+    {
+      "check": "131-entry continuation argument stated as a conditional source result",
+      "result": "pass",
+      "basis": "Premises recomputed (131 complete and even; 108/12/9/2). Engine functions read. Bundled-sale paragraph is correct. Main text and Appendix C state the exclusions and say no policy was run."
+    },
+    {
+      "check": "Continuation separated from asset selection, valuation and internal planning",
+      "result": "pass",
+      "basis": "main.tex lines 70 to 74, Incident 1, and section 5."
+    },
+    {
+      "check": "28 of 30 defined and counted correctly",
+      "result": "pass on count; wording finding M-03",
+      "basis": "Recomputed from raw actions; membership equals the shipped file."
+    },
+    {
+      "check": "Selected-field 5/3/5/1/2 rubric",
+      "result": "pass",
+      "basis": "I read all sixteen selected fields and assign the same categories. Eleven notes and five Opus explanations. Every remainder in the rubric table matches route arithmetic."
+    },
+    {
+      "check": "Separate 61 of 74 coding population",
+      "result": "pass",
+      "basis": "63/63/61/4/9 and 27/38, 34/36 reproduced from the two shipped files. Keys equal the ledger's 74 recipient-completing rejections. Disjoint from the swap contrast."
+    },
+    {
+      "check": "G7 development-budget negotiation",
+      "result": "pass",
+      "basis": "d138 to d151 and events traced. All three quotations, $84, $350, $700, $520, five mortgages, four houses, turn 71 build, turn 72 sale and $270 rent confirmed."
+    },
+    {
+      "check": "Eight incidents keep their economic meaning",
+      "result": "pass with F-01",
+      "basis": "All eight are in Appendix E with five in the main text. One main-text sentence about G13 is wrong."
+    },
+    {
+      "check": "Whole-population and contrary evidence",
+      "result": "pass with M-02",
+      "basis": "Six above-bound starts, the payable Grok declaration and the first-action table are present. The main text lacks one denominator."
+    },
+    {
+      "check": "Literature positioning",
+      "result": "pass with M-06 and O-04",
+      "basis": "Twenty references, each tied to a distinction. No priority claim. Cattle Trade and DECE abstracts fetched and match the sentence that cites them."
+    },
+    {
+      "check": "Release can be built and inspected",
+      "result": "builds; findings M-07",
+      "basis": "Static build and five recheck scripts run on copies in my folder."
+    },
+    {
+      "check": "Nine-page main text at 10 point, legible supplement",
+      "result": "pass",
+      "basis": "Main text ends on page 7 of 29. No LaTeX warnings. Pages 1 to 12 and 19 to 24 inspected."
+    }
+  ],
+  "integration_decisions": [
+    {
+      "decision": "Adopt Sol's two-case opening, portable build, proof review, bootstrap terms, numerical rubric",
+      "position": "agree"
+    },
+    {
+      "decision": "Adopt Opus's 28 of 30 and G7 budget negotiation",
+      "position": "agree, with M-03 on wording"
+    },
+    {
+      "decision": "Adopt Fable's bundled-sale detail and first-action table in the supplement",
+      "position": "agree, with M-02"
+    },
+    {
+      "decision": "Keep 43 of 48 in the supplement as numeric presence",
+      "position": "agree",
+      "reason": "G8 d287 and G17 d267 show a matching numeral beside a wrong or misdescribed quantity. My own draft's wording claimed more than a numeral match shows."
+    },
+    {
+      "decision": "Decline 5/37 because 121 entries have unlisted collateral",
+      "position": "partial dissent",
+      "reason": "The label was wrong. The population with U0 < D and M* > M0 is exactly 37 and the log itself says the reading may describe its selected subset. See M-04."
+    },
+    {
+      "decision": "Do not headline 3/132 against 50/56",
+      "position": "agree on headline, dissent on omitting the denominator from the main text",
+      "reason": "See M-02."
+    },
+    {
+      "decision": "Do not headline one value error; keep the rubric",
+      "position": "agree"
+    },
+    {
+      "decision": "Do not say published rules and engine always agree on what can be raised",
+      "position": "agree",
+      "reason": "The hotel-sale difference changes reachable finance, as G7 shows."
+    },
+    {
+      "decision": "Keep the selected-field rule and print other channels",
+      "position": "agree"
+    },
+    {
+      "decision": "Keep five main incidents and eight in the appendix",
+      "position": "agree"
+    },
+    {
+      "decision": "No new rival-liquidity incident; no sales-excess summary",
+      "position": "agree"
+    }
+  ],
+  "strongest_omitted_positive_insight": {
+    "statement": "In the 37 episodes where listed resources fall short of the debt and buildings lock further mortgages, 32 first responses count or raise the locked collateral. The five that stop at the listed total come from all four configurations, and three of them concern debts that were unpayable either way. Both payable failures state exactly the subtotal that five successes state before continuing.",
+    "findings": [
+      "M-04",
+      "M-05"
+    ]
+  }
+}

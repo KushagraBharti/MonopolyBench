@@ -1,0 +1,31 @@
+\section{The financing task}
+\label{sec:task}
+
+\subsection{Every debt that required financing}
+The twenty games contain 188 financing episodes. Agents paid 128 and were eliminated in sixty. The payments cover \$51,997 of debt through 180 mortgages and 89 building-sale calls. Sixty-seven took one action and sixty-one took two to ten. No first action and no payment came from the engine's fallback.
+
+Three eliminations were declarations on debts that a stored audit shows were payable, so 131 debts were payable and agents paid 128. Fifty-six eliminations had $U_*<D$. One elimination, Opus in G7, shows why a bound is not a route. Its assets summed to \$1,310 against \$750 owed, but its only buildings were a hotel beside four-house lots and the bank held no houses, so the menu offered no sale. The published rules let all buildings on a group be sold at once (Table~\ref{tab:rules}). Opus wrote that its two listed mortgages would bring the total to \$440, took both, and the engine then closed the episode.
+
+Table~\ref{tab:partition} divides the payable debts by what they required. The bound $U_0\ge D$ does not by itself prove that the middle group could be paid without released mortgages, since $S$ counts buildings the menu might not let a player sell. Here the evidence is direct. Forty-seven of the 53 were paid with no released mortgage. One has a stored sale-only payment sequence. The other five were paid with a released mortgage, and each also has a route without one that follows from its holdings and the bank's stock (Appendix~\ref{app:middle}).
+
+\begin{table}[t]\centering\small
+\begin{tabularx}{\linewidth}{@{}Yrr@{}}\toprule
+What a payable debt required & Debts & Paid\\\midrule
+Cash and listed mortgages ($C+M_0\ge D$) & 62 & 62\\
+Building sales too; no released mortgage needed & 53 & 52\\
+Mortgages released by sales ($U_0<D\le U_*$) & 16 & 14\\\midrule
+All payable debts & 131 & 128\\\bottomrule
+\end{tabularx}
+\caption{The 131 payable debts. Payment establishes 128; a stored audit, not rerun here, executed legal payment sequences for the three declared.}\label{tab:partition}
+\end{table}
+
+\subsection{Continuing is enough to pay}
+The engine pays a pending debt by itself as soon as cash covers it. If cash falls short and any mortgage or building sale is legal, it issues another menu. A mortgage never removes a sale option. A house sale never removes a mortgage option, and it returns a house to the bank.
+
+Let $Q$ be cash plus the resale value of standing buildings plus the mortgage value of unmortgaged deeds. Every valid financing action leaves $Q$ unchanged and removes a building level or an unmortgaged deed, so a sequence of such actions is finite. If it ended unpaid with nothing left to sell or mortgage, cash would equal $Q$, which is at least the debt. The only other way to end unpaid is a state where assets remain but none is offered. That needs a hotel the bank cannot exchange.
+
+We checked the 131 payable entry states against this. In all of them every built group is fully owned and evenly built. No hotel is present in 108. In twelve more, cash and listed mortgages already cover the debt. In nine more, the bank holds at least four houses per hotel. The last two hold one hotel in each of two groups, and a count of bank houses plus houses in hotel-free groups shows that a sale or an exchange always stays available (Appendix~\ref{app:proof}). So in every one of the 131 states, any uninterrupted sequence of valid cash-raising actions on the same debt ends in payment, provided the player never declares.
+
+This is an argument from the frozen source and the recorded holdings. We ran no policy and report no baseline score. The argument does not cover invalid calls, call limits, provider failures or states outside these 131, and G7 shows that another state can strand its assets.
+
+The argument changes what the outcomes mean. In these states payment follows from not stopping, so 128 payments do not show 128 planned routes, and a ten-action payment is not ten planning decisions. Three things remain free to vary: the first choice to continue or stop, what the agent says its assets can raise, and which assets it gives up.

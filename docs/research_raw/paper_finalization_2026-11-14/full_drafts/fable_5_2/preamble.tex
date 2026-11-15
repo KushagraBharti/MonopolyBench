@@ -1,0 +1,54 @@
+% Venue-neutral preprint layout: 10pt, two columns, one-inch margins.
+\usepackage[letterpaper,margin=1in]{geometry}
+\setlength{\columnsep}{0.25in}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}
+\setsansfont[Scale=0.9]{TeX Gyre Heros}
+\setmonofont[Scale=0.82]{Latin Modern Mono}
+% Quoted fields keep every stored character: no TeX ligature substitutions.
+\newfontfamily\fieldfont{TeX Gyre Heros}[Scale=0.88,RawFeature=-tlig]
+% Math letters and digits are set in the text face so that symbols match the prose.
+\DeclareSymbolFont{textitalic}{TU}{\rmdefault}{m}{it}
+\DeclareSymbolFont{textroman}{TU}{\rmdefault}{m}{n}
+\makeatletter
+\@tfor\x:=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\do{%
+  \expandafter\DeclareMathSymbol\expandafter{\x}{\mathalpha}{textitalic}{\expandafter`\x}}
+\@tfor\x:=0123456789\do{%
+  \expandafter\DeclareMathSymbol\expandafter{\x}{\mathalpha}{textroman}{\expandafter`\x}}
+\makeatother
+\usepackage{microtype,graphicx,booktabs,tabularx,longtable,array,amsmath,amssymb}
+\usepackage{enumitem,caption,xcolor,xurl,needspace,float}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!35!black,citecolor=blue!35!black,urlcolor=blue!35!black]{hyperref}
+\graphicspath{{assets/}}
+\setlength{\emergencystretch}{2em}
+\setlist{itemsep=1pt,topsep=3pt,leftmargin=1.4em}
+\captionsetup{font=small,labelfont=bf,skip=5pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\definecolor{meta}{HTML}{52514E}
+\definecolor{rule}{HTML}{C9C8C2}
+
+% Quotations. Text comes from sections/gen_quotes.tex, written by tools/06_quotes.py.
+\makeatletter
+\newcommand{\DeclareQuote}[2]{\expandafter\gdef\csname q@#1\endcsname{#2}}
+\newcommand{\DeclareQuoteMeta}[2]{\expandafter\gdef\csname qm@#1\endcsname{#2}}
+\newcommand{\Q}[1]{``{\fieldfont\csname q@#1\endcsname}''}
+\newcommand{\QM}[1]{\csname qm@#1\endcsname}
+\newcommand{\QB}[1]{\par\addvspace{3pt}\noindent\hspace{0.8em}\begin{minipage}{\dimexpr\linewidth-0.8em\relax}%
+  \raggedright{\fieldfont\small \csname q@#1\endcsname}\par\vspace{1pt}{\footnotesize\color{meta}\csname qm@#1\endcsname}\end{minipage}\par\addvspace{4pt}}
+% Table rows are read with the primitive so that a rule may follow them.
+\newcommand{\rows}[1]{\@@input sections/#1.tex }
+\makeatother
+\newcommand{\incident}[2]{\par\addvspace{4pt}\noindent\textbf{Incident #1. #2}\ }
+\newcommand{\src}[1]{{\footnotesize\color{meta}[#1]}}
+
+% Appendix blocks for full stored fields.
+\newcommand{\fieldhead}[2]{\par\addvspace{9pt}\Needspace{6\baselineskip}\noindent\textbf{#1.}\ {\small #2}\par}
+\newcommand{\fieldtext}[2]{\par\addvspace{3pt}\noindent{\footnotesize\color{meta}#1}\par\nopagebreak
+  \noindent\hspace{0.9em}\begin{minipage}[t]{\dimexpr\linewidth-0.9em\relax}\raggedright\fieldfont\small\setlength{\parskip}{3pt}#2\end{minipage}\par}
+\newcommand{\fieldtextlong}[2]{\par\addvspace{3pt}\noindent{\footnotesize\color{meta}#1}\par\nopagebreak
+  \begingroup\leftskip=0.9em\raggedright\fieldfont\small\setlength{\parskip}{3pt}\noindent #2\par\endgroup}
+\newcommand{\fieldabsent}[2]{\par\addvspace{3pt}\noindent{\footnotesize\color{meta}#1.} {\small #2}\par}
+\newcommand{\entry}[2]{G#1~d#2}
