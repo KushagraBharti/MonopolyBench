@@ -4,8 +4,6 @@ A deterministic multi-agent LLM research benchmark testing long-horizon planning
 
 Instead of asking models isolated questions, MonopolyBench places tool-calling agents inside a persistent economic system where every decision affects later liquidity, bargaining power, rent exposure, property control, and survival. Every action is constrained by the rules engine, validated against legal moves, and preserved in a replayable research artifact.
 
-**Research paper forthcoming.**
-
 The current executable treatment is `audit_corrected_v2`. See the
 [audit fixes and evaluation limits](docs/benchmark_audit_fixes.md) for rule variants,
 observation limits, fixture quarantine, recovery guarantees, and verification.
@@ -14,6 +12,12 @@ Historical runs used earlier treatments and remain exploratory evidence.
 ![MonopolyBench live UI](MonopolyBench.png)
 
 [Video demo](https://youtu.be/44xiBJf1nDk)
+
+## Research paper
+
+[Financial Assessment and Strategic Bargaining by LLM Agents in Twenty Complete Monopoly Games](docs/research_raw/paper_finalization_2026-11-14/integrated/manuscript.pdf), by Kushagra Bharti, November 2026.
+
+The preprint studies financial assessment and bargaining in twenty recorded games. It has seven main pages and a complete evidence supplement. The [paper index](paper/README.md) links the PDF, LaTeX source, evidence package, build instructions and review history. The released version is tagged `paper-2026-11-15`.
 
 ## Run everything with Docker
 
@@ -145,6 +149,9 @@ MonopolyBench/
 │   │   └── microbench/         # Frozen scenarios, scoring, reports, review queues
 │   └── apps/api/               # FastAPI lifecycle, run APIs, WebSocket streaming
 ├── runs/                       # Generated games, batches, reports, and artifacts
+├── saved_games/                # Preserved game records and historical analyses
+├── paper/                      # Current paper index and legacy paper materials
+├── docs/                       # Documentation, dated manuscripts, and review history
 ├── batches/                    # Batch configurations
 ├── scripts/                    # Verification and repository tooling
 ├── research_direction.md       # Research roadmap
